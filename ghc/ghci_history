@@ -1,0 +1,51 @@
+:q
+;q
+print $ 1+1
+:q
+recursion 
+:l src/recursion.hs 
+:q
+main2
+:r
+main2
+:l func.hs
+:q
+:r
+main
+:l type.hs 
+:l type.hs 
+:r
+:l type.hs 
+:l type.hs 
+:q
+;l type.hs
+main
+:l tuple.hs 
+main
+:l tuple.hs 
+;l t
+:q
+main
+:r
+main
+:r
+;r
+main
+:l list.hs
+:q
+ls
+:q
+doubleSmallNumber 199
+doubleSmallNumber 19
+doubleSmallNumber 
+:r
+main
+hello.hs
+:l hello.hs 
+hello.hs
+:q
+:r
+:l hello.hs 
+hello.hs
+:q
+1+1
