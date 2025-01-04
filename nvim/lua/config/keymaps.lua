@@ -31,3 +31,6 @@ map("n", "<Leader>d", ":lua vim.diagnostic.open_float()<CR>", { noremap = true }
 -- rebind embeded command
 map("n", "<C-_>", "gcc", { noremap = false })
 map("v", "<C-_>", "gc", { noremap = false })
+
+-- quick open LazyVim plugin
+map("n", "<Leader>p", ":Lazy\n", { noremap = true })
