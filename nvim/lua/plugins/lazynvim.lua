@@ -1,6 +1,3 @@
-return {
-  "LazyVim/LazyVim",
-  opts = {
-    colorscheme = "gruvbox",
-  },
-}
+return { "LazyVim/LazyVim", opts = {
+  colorscheme = "tokyonight",
+} }
