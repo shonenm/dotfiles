@@ -14,7 +14,7 @@ return {
         insert_mappings = true,
         terminal_mappings = true,
         persist_size = true,
-        direction = "horizontal", -- 'vertical' | 'horizontal' | 'tab' | 'float'
+        direction = "float", -- 'vertical' | 'horizontal' | 'tab' | 'float'
         close_on_exit = true,
         shell = vim.o.shell,
         float_opts = {
