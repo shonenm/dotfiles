@@ -5,19 +5,6 @@
             "complex_modifications": {
                 "rules": [
                     {
-                        "description": "Shift + Space -> Half-width Space",
-                        "manipulators": [
-                            {
-                                "from": {
-                                    "key_code": "spacebar",
-                                    "modifiers": { "mandatory": ["shift"] }
-                                },
-                                "to": [{ "key_code": "spacebar" }],
-                                "type": "basic"
-                            }
-                        ]
-                    },
-                    {
                         "description": "Custom Hyper+Tab for App Switcher and Shift key modifications",
                         "manipulators": [
                             {
