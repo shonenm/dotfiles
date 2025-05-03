@@ -5,80 +5,6 @@
             "complex_modifications": {
                 "rules": [
                     {
-                        "description": "Left Shift alone -> Eisu, Right Shift alone -> Kana",
-                        "manipulators": [
-                            {
-                                "from": {
-                                    "key_code": "left_shift",
-                                    "modifiers": { "optional": ["any"] }
-                                },
-                                "to": [{ "key_code": "left_shift" }],
-                                "to_if_alone": [{ "key_code": "japanese_eisuu" }],
-                                "type": "basic"
-                            },
-                            {
-                                "from": {
-                                    "key_code": "right_shift",
-                                    "modifiers": { "optional": ["any"] }
-                                },
-                                "to": [{ "key_code": "right_shift" }],
-                                "to_if_alone": [{ "key_code": "japanese_kana" }],
-                                "type": "basic"
-                            }
-                        ]
-                    },
-                    {
-                        "description": "Option (alone) -> Escape",
-                        "manipulators": [
-                            {
-                                "from": {
-                                    "key_code": "left_option",
-                                    "modifiers": { "optional": ["any"] }
-                                },
-                                "to": [{ "key_code": "left_option" }],
-                                "to_if_alone": [{ "key_code": "escape" }],
-                                "type": "basic"
-                            }
-                        ]
-                    },
-                    {
-                        "description": "全角スペース->半角スペース",
-                        "enabled": false,
-                        "manipulators": [
-                            {
-                                "conditions": [
-                                    {
-                                        "input_sources": [{ "language": "ja" }],
-                                        "type": "input_source_if"
-                                    }
-                                ],
-                                "from": { "key_code": "spacebar" },
-                                "to": [
-                                    {
-                                        "key_code": "spacebar",
-                                        "modifiers": ["left_shift"]
-                                    }
-                                ],
-                                "type": "basic"
-                            }
-                        ]
-                    },
-                    {
-                        "description": "Control (alone) -> Escape",
-                        "enabled": false,
-                        "manipulators": [
-                            {
-                                "from": {
-                                    "key_code": "left_control",
-                                    "modifiers": { "optional": ["any"] }
-                                },
-                                "to": [{ "key_code": "left_control" }],
-                                "to_if_alone": [{ "key_code": "escape" }],
-                                "type": "basic"
-                            }
-                        ]
-                    },
-                    {
                         "description": "Shift + Space -> Half-width Space",
                         "manipulators": [
                             {
@@ -153,7 +79,6 @@
                     },
                     {
                         "description": "Use fn + number keys as function keys (F1-F13)",
-                        "enabled": false,
                         "manipulators": [
                             {
                                 "from": {
@@ -732,7 +657,7 @@
             },
             "name": "Default profile",
             "selected": true,
-            "virtual_hid_keyboard": { "keyboard_type_v2": "ansi" }
+            "virtual_hid_keyboard": { "keyboard_type_v2": "jis" }
         }
     ]
 }
