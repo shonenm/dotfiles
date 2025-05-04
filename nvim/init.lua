@@ -18,6 +18,40 @@ vim.opt.wrap = true
 
 require("lazy").setup({
   spec = {
-    { "nvim-lualine/lualine.nvim" }, -- 軽い UI系（正常起動だけ確認用）
+    { import = "lazyvim.plugins" },
+    -- { import = "lazyvim.plugins.extras.lang.python" },
+    { import = "plugins" },
+    { "akinsho/bufferline.nvim", enabled = false },
+  },
+  ui = {
+    icons = {
+      cmd = "⌘",
+      config = "🛠",
+      event = "📅",
+      ft = "📂",
+      init = "⚙",
+      keys = "🗝",
+      plugin = "🔌",
+      runtime = "💻",
+      require = "🌙",
+      source = "📄",
+      start = "🚀",
+      task = "📌",
+      lazy = "💤 ",
+    },
+  },
+  checker = { enabled = true },
+  diff = { cmd = "delta" },
+  rtp = {
+    disabled_plugins = {
+      "gzip",
+      "matchit",
+      "matchparen",
+      "netrwPlugin",
+      "tarPlugin",
+      "tohtml",
+      "tutor",
+      "zipPlugin",
+    },
   },
 })
