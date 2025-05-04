@@ -12,7 +12,7 @@ return {
         throttle_ms = 100, -- 更新の頻度をミリ秒単位で制御
         handle = {
           text = " ",
-          blend = 30, -- 透明度 (0 = 不透明, 100 = 完全に透明)
+          blend = 0, -- 透明度 (0 = 不透明, 100 = 完全に透明)
           color = nil,
           color_nr = nil,
           highlight = "CursorColumn",
@@ -110,6 +110,18 @@ return {
           ale = false,
         },
       })
+      -- 色のカスタマイズ（見やすくする）
+      local hl = vim.api.nvim_set_hl
+      hl(0, "ScrollbarHandle", { bg = "#5c5cff" })
+      hl(0, "ScrollbarCursor", { fg = "#ffffff", bg = "#005f87" })
+      hl(0, "ScrollbarSearch", { bg = "#ffaf00" })
+      hl(0, "ScrollbarError", { bg = "#ff5f5f" })
+      hl(0, "ScrollbarWarn", { bg = "#ffaf5f" })
+      hl(0, "ScrollbarInfo", { bg = "#5fafff" })
+      hl(0, "ScrollbarHint", { bg = "#87ffaf" })
+      hl(0, "ScrollbarGitAdd", { bg = "#5fff5f" })
+      hl(0, "ScrollbarGitChange", { bg = "#ffff5f" })
+      hl(0, "ScrollbarGitDelete", { bg = "#ff5f87" })
     end,
   },
 }

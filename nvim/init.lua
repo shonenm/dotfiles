@@ -8,70 +8,16 @@ if not vim.loop.fs_stat(lazypath) then
     "clone",
     "--filter=blob:none",
     "https://github.com/folke/lazy.nvim.git",
-    "--branch=stable", -- latest stable release
+    "--branch=stable",
     lazypath,
   })
 end
 
-local opt = vim.opt
-local api = vim.api
+vim.opt.rtp:prepend(lazypath)
+vim.opt.wrap = true
 
-opt.rtp:prepend(lazypath)
-opt.wrap = true
-api.nvim_set_keymap("n", "gj", "gj<SID>g", { noremap = false })
-api.nvim_set_keymap("n", "gk", "gk<SID>g", { noremap = false })
-api.nvim_set_keymap("n", "<SID>gj", "gj<SID>g", { noremap = true, silent = true })
-api.nvim_set_keymap("n", "<SID>gk", "gk<SID>g", { noremap = true, silent = true })
-api.nvim_set_keymap("n", "<SID>g", "<Nop>", { noremap = false })
-
-require("lazy").setup("plugins", {
-  ui = {
-    icons = {
-      cmd = "⌘",
-      config = "🛠",
-      event = "📅",
-      ft = "📂",
-      init = "⚙",
-      keys = "🗝",
-      plugin = "🔌",
-      runtime = "💻",
-      require = "🌙",
-      source = "📄",
-      start = "🚀",
-      task = "📌",
-      lazy = "💤 ",
-    },
-  },
-  checker = {
-    enabled = true, -- プラグインのアップデートを自動的にチェック
-  },
-  diff = {
-    cmd = "delta",
-  },
-  rtp = {
-    disabled_plugins = {
-      "gzip",
-      "matchit",
-      "matchparen",
-      "netrwPlugin",
-      "tarPlugin",
-      "tohtml",
-      "tutor",
-      "zipPlugin",
-    },
-  },
+require("lazy").setup({
   spec = {
-    { "akinsho/bufferline.nvim", enabled = false },
-  },
-})
-
-
-require("neo-tree").setup({
-  filesystem = {
-    filtered_items = {
-      visible = true, -- This is what you want: If you set this to `true`, all "hide" just mean "dimmed out"
-      hide_dotfiles = false,
-      hide_gitignored = true,
-    },
+    { "nvim-lualine/lualine.nvim" }, -- 軽い UI系（正常起動だけ確認用）
   },
 })
