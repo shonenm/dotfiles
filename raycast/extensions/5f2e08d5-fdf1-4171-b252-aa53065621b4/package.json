@@ -20,7 +20,8 @@
     "dariuszpaluch",
     "zsidnam",
     "edomora97",
-    "samuelkraft"
+    "samuelkraft",
+    "abesto"
   ],
   "categories": [
     "Applications",
@@ -321,6 +322,15 @@
       "required": false,
       "default": "Notion",
       "description": "Choose where to open Notion page."
+    },
+    {
+      "name": "properties_in_page_previews",
+      "type": "checkbox",
+      "title": "Properties in Previews",
+      "required": false,
+      "default": false,
+      "description": "Show properties in page previews.",
+      "label": "Show properties in page previews."
     }
   ],
   "dependencies": {
@@ -349,5 +359,9 @@
     "fix-lint": "ray lint --fix",
     "lint": "ray lint",
     "publish": "npx @raycast/api@latest publish"
-  }
+  },
+  "platforms": [
+    "Windows",
+    "macOS"
+  ]
 }
