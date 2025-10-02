@@ -1,0 +1,18 @@
+# This is Git's per-user configuration file.
+[user]
+	name = shonenm
+	email = kotamatsu05223233@gmail.com
+# Please adapt and uncomment the following lines:
+#	name = 松島弘汰
+#	email = USERNAME@matsushimahiroshinoMacBook-Air.local
+[core]
+    pager = delta
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    navigate = true  # use n and N to move between diff sections
+    dark = true      # or light = true, or omit for auto-detection
+
+[merge]
+    conflictstyle = zdiff3
