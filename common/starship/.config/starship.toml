@@ -209,7 +209,9 @@ symbol = "󱘗 "
 symbol = " "
 
 [status]
-symbol = " "
+disabled = false
+symbol = " "
+format = '[$symbol$status]($style) '
 
 [swift]
 symbol = " "
@@ -219,3 +221,10 @@ symbol = " "
 
 [zig]
 symbol = " "
+
+[cmd_duration]
+min_time = 5000
+format = "took [$duration]($style) "
+
+[sudo]
+disabled = false
