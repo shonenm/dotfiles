@@ -18,6 +18,7 @@ format = '([$all_status$ahead_behind]($style))'
 disabled = false
 
 [aws]
+disabled = true
 symbol = " "
 
 [buf]
@@ -48,6 +49,7 @@ symbol = " "
 symbol = " "
 
 [directory]
+truncation_length = 3
 read_only = " 󰌾"
 
 [docker_context]
