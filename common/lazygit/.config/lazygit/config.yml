@@ -1,0 +1,6 @@
+gui:
+  # 日本語の文字幅を正しく扱う
+  nerdFontsVersion: "3"
+git:
+  paging:
+    colorArg: always
