@@ -3,12 +3,15 @@ $os\
 $directory\
 $git_branch\
 $git_status\
+$git_metrics\
 $fill\
+$cmd_duration\
 $nodejs\
 $bun\
 $deno\
-$aws\
-$cmd_duration\
+$docker_context\
+$memory_usage\
+$battery\
 $shell\
 $time\
 $username\
@@ -39,10 +42,10 @@ format = '[](fg:red)[$symbol ](fg:primary bg:red)[](fg:red)'
 disabled = false
 
 [os.symbols]
-Macos = ''
+Macos = '󰊠'
 
 [directory]
-format = '[─](fg:current_line)[](fg:pink)[󰝏 ](fg:primary bg:pink)[](fg:pink bg:box)[ $read_only$truncation_symbol$path](fg:foreground bg:box)[](fg:box)'
+format = '[─](fg:current_line)[](fg:pink)[󰉖 ](fg:primary bg:pink)[](fg:pink bg:box)[ $read_only$truncation_symbol$path](fg:foreground bg:box)[](fg:box)'
 home_symbol = " ~/"
 truncation_symbol = ' '
 truncation_length = 2
@@ -54,7 +57,14 @@ format = '[─](fg:current_line)[](fg:green)[](fg:primary bg:green)[](f
 symbol = ' '
 
 [git_status]
-format = '[( $all_status)](fg:foreground bg:box)[](fg:box)'
+format = '[( $all_status$ahead_behind)](fg:foreground bg:box)[](fg:box)'
+ahead = '⇡${count}'
+behind = '⇣${count}'
+diverged = '⇕⇡${ahead_count}⇣${behind_count}'
+
+[git_metrics]
+format = '[─](fg:current_line)[](fg:cyan)[󰊤 ](fg:primary bg:cyan)[](fg:cyan bg:box)[ +$added/-$deleted](fg:foreground bg:box)[](fg:box)'
+disabled = false
 
 [nodejs]
 format = '[─](fg:current_line)[](fg:green)[󰣙](fg:primary bg:green)[](fg:green bg:box)[ $version](fg:foreground bg:box)[](fg:box)'
@@ -66,8 +76,20 @@ format = '[─](fg:current_line)[](fg:green)[🥟](fg:primary bg:green)[](
 [deno]
 format = '[─](fg:current_line)[](fg:green)[🦕](fg:primary bg:green)[](fg:green bg:box)[ $version](fg:foreground bg:box)[](fg:box)'
 
-[aws]
-format = '[─](fg:current_line)[](fg:purple)[☁️ ](fg:primary bg:purple)[](fg:purple bg:box)[ $profile](fg:foreground bg:box)[](fg:box)'
+[docker_context]
+format = '[─](fg:current_line)[](fg:cyan)[󰡨 ](fg:primary bg:cyan)[](fg:cyan bg:box)[ $context](fg:foreground bg:box)[](fg:box)'
+
+[memory_usage]
+format = '[─](fg:current_line)[](fg:orange)[󰍛 ](fg:primary bg:orange)[](fg:orange bg:box)[ $ram](fg:foreground bg:box)[](fg:box)'
+disabled = false
+threshold = 0
+
+[battery]
+format = '[─](fg:current_line)[](fg:green)[$symbol](fg:primary bg:green)[](fg:green bg:box)[ $percentage](fg:foreground bg:box)[](fg:box)'
+
+[[battery.display]]
+threshold = 100
+style = 'fg:foreground bg:box'
 
 [fill]
 symbol = '─'

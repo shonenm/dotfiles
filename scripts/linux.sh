@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# APT packages for Linux (Debian/Ubuntu)
+# Linux (Debian/Ubuntu) Setup Script
 
 APT_PACKAGES=(
   # Essentials
@@ -9,6 +9,7 @@ APT_PACKAGES=(
   wget
   git
   unzip
+  gpg
 
   # Shell tools
   fish
@@ -34,13 +35,31 @@ install_apt_packages() {
       log_success "$pkg already installed"
     fi
   done
+
+  # Debian/Ubuntu specific command name fixes
+  # fd-find -> fd
+  if command_exists fdfind && ! command_exists fd; then
+    log_info "Linking fdfind to fd..."
+    sudo ln -s $(which fdfind) /usr/local/bin/fd
+  fi
+
+  # batcat -> bat
+  if command_exists batcat && ! command_exists bat; then
+    log_info "Linking batcat to bat..."
+    sudo ln -s $(which batcat) /usr/local/bin/bat
+  fi
 }
 
 install_modern_tools() {
+  # Create ~/.local/bin if not exists
+  mkdir -p ~/.local/bin
+
   # Starship
   if ! command_exists starship; then
     log_info "Installing Starship..."
     curl -sS https://starship.rs/install.sh | sh -s -- -y
+  else
+    log_success "Starship already installed"
   fi
 
   # Neovim (latest)
@@ -51,40 +70,52 @@ install_modern_tools() {
     sudo tar -C /opt -xzf nvim-linux64.tar.gz
     sudo ln -sf /opt/nvim-linux64/bin/nvim /usr/local/bin/nvim
     rm nvim-linux64.tar.gz
+  else
+    log_success "Neovim already installed"
   fi
 
   # eza (modern ls)
   if ! command_exists eza; then
     log_info "Installing eza..."
     sudo mkdir -p /etc/apt/keyrings
-    wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
+    wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/gierens.gpg
     echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list
     sudo apt update
     sudo apt install -y eza
+  else
+    log_success "eza already installed"
   fi
 
   # mise (version manager)
   if ! command_exists mise; then
     log_info "Installing mise..."
     curl https://mise.run | sh
+  else
+    log_success "mise already installed"
   fi
 
   # sheldon (plugin manager)
   if ! command_exists sheldon; then
     log_info "Installing sheldon..."
     curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin
+  else
+    log_success "sheldon already installed"
   fi
 
   # zoxide
   if ! command_exists zoxide; then
     log_info "Installing zoxide..."
     curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
+  else
+    log_success "zoxide already installed"
   fi
 
   # atuin
   if ! command_exists atuin; then
     log_info "Installing atuin..."
     curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+  else
+    log_success "atuin already installed"
   fi
 
   # lazygit
@@ -95,9 +126,13 @@ install_modern_tools() {
     tar xf lazygit.tar.gz lazygit
     sudo install lazygit /usr/local/bin
     rm lazygit lazygit.tar.gz
+  else
+    log_success "lazygit already installed"
   fi
 }
 
 # Run if sourced
 install_apt_packages
 install_modern_tools
+
+log_success "Linux packages installed!"

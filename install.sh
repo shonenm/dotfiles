@@ -44,11 +44,11 @@ install_packages() {
   case "$os" in
     mac)
       log_info "Installing Mac packages..."
-      source "$DOTFILES_DIR/scripts/brew.sh"
+      source "$DOTFILES_DIR/scripts/mac.sh"
       ;;
     linux)
       log_info "Installing Linux packages..."
-      source "$DOTFILES_DIR/scripts/apt.sh"
+      source "$DOTFILES_DIR/scripts/linux.sh"
       ;;
   esac
 }
@@ -68,7 +68,7 @@ stow_dotfiles() {
 
   # Stow OS-specific packages
   if [[ "$os" == "mac" && -d "$DOTFILES_DIR/mac" ]]; then
-    log_info "Stowing Mac-specific dotfiles..."
+    log_info "Stowing macOS-specific dotfiles..."
     cd "$DOTFILES_DIR/mac"
     for pkg in */; do
       pkg_name="${pkg%/}"

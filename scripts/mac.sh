@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Homebrew packages for Mac
+# macOS Setup Script (Homebrew packages)
 
 BREW_PACKAGES=(
   # Shell & Terminal
@@ -64,3 +64,5 @@ install_brew_casks() {
 # Run if sourced
 install_brew_packages
 install_brew_casks
+
+log_success "macOS packages installed!"

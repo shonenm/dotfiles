@@ -12,7 +12,7 @@ PLUGIN_DIR="$CONFIG_DIR/plugins"
 # If you are looking for other colors, see the color picker:
 # https://felixkratz.github.io/SketchyBar/config/tricks#color-picker
 
-sketchybar --bar position=top height=40 blur_radius=30 color=0x40000000
+sketchybar --bar position=top height=40 blur_radius=30 color=0xff1e1f29 topmost=on
 
 ##### Changing Defaults #####
 # We now change some default values, which are applied to all further items.
@@ -86,6 +86,24 @@ sketchybar --add item clock right \
            --add item battery right \
            --set battery update_freq=120 script="$PLUGIN_DIR/battery.sh" \
            --subscribe battery system_woke power_source_change
+
+##### Menu Bar Aliases #####
+# Third-party apps
+sketchybar --add alias "RunCat" right \
+           --add alias "MenubarX" right \
+           --add alias "Notion Calendar" right \
+           --add alias "VPNStatus" right \
+           --add alias "AlDente" right \
+           --add alias "AutoRaise" right \
+           --add alias "Reminders MenuBar" right \
+           --add alias "com.apple.weather.menu" right
+
+# macOS Control Center items
+sketchybar --add alias "コントロールセンター,FocusModes" right \
+           --add alias "コントロールセンター,UserSwitcher" right \
+           --add alias "コントロールセンター,Amphetamine" right \
+           --add alias "コントロールセンター,WiFi" right \
+           --add alias "コントロールセンター,Battery" right
 
 ##### Force all scripts to run the first time (never do this in a script) #####
 sketchybar --update
