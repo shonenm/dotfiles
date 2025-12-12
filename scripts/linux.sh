@@ -1,6 +1,44 @@
 #!/bin/bash
 
-# Linux (Debian/Ubuntu) Setup Script
+# --- 1. Helper Functions (必須: これがないと動きません) ---
+log_info() {
+  echo -e "\033[1;34m[INFO]\033[0m $1"
+}
+
+log_success() {
+  echo -e "\033[1;32m[OK]\033[0m $1"
+}
+
+log_error() {
+  echo -e "\033[1;31m[ERROR]\033[0m $1"
+}
+
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+# --- 2. Dependency Check (ご要望の機能) ---
+check_dependencies() {
+  local fatal_error=0
+
+  # このスクリプトは apt と sudo を前提としています
+  if ! command_exists apt; then
+    log_error "This script requires 'apt' (Debian/Ubuntu)."
+    fatal_error=1
+  fi
+
+  if ! command_exists sudo; then
+    log_error "'sudo' command is missing. Please install sudo first."
+    fatal_error=1
+  fi
+
+  if [ $fatal_error -eq 1 ]; then
+    log_error "Missing required dependencies. Exiting."
+    exit 1
+  fi
+}
+
+# --- 3. Configuration ---
 
 APT_PACKAGES=(
   # Essentials
@@ -40,23 +78,25 @@ install_apt_packages() {
   # fd-find -> fd
   if command_exists fdfind && ! command_exists fd; then
     log_info "Linking fdfind to fd..."
-    sudo ln -s $(which fdfind) /usr/local/bin/fd
+    sudo ln -sf "$(which fdfind)" /usr/local/bin/fd
   fi
 
   # batcat -> bat
   if command_exists batcat && ! command_exists bat; then
     log_info "Linking batcat to bat..."
-    sudo ln -s $(which batcat) /usr/local/bin/bat
+    sudo ln -sf "$(which batcat)" /usr/local/bin/bat
   fi
 }
 
 install_modern_tools() {
   # Create ~/.local/bin if not exists
   mkdir -p ~/.local/bin
+  export PATH="$HOME/.local/bin:$PATH"
 
   # Starship
   if ! command_exists starship; then
     log_info "Installing Starship..."
+    # 依存関係として curl が必要 (aptでインストール済みのはず)
     curl -sS https://starship.rs/install.sh | sh -s -- -y
   else
     log_success "Starship already installed"
@@ -131,7 +171,12 @@ install_modern_tools() {
   fi
 }
 
-# Run if sourced
+# --- Main Execution ---
+
+# 1. 依存関係チェック (ここに追加しました)
+check_dependencies
+
+# 2. パッケージインストール
 install_apt_packages
 install_modern_tools
 
