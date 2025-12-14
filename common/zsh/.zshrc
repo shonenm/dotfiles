@@ -3,6 +3,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 eval "$(mise activate zsh)"
 
 export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/dotfiles/scripts:$PATH"
 
 # --- Completion Init (最重要: これをプラグインより先に書く) ---
 autoload -Uz compinit
@@ -209,6 +210,25 @@ export NVM_DIR="$HOME/.nvm"
 # --- Modern Aliases ---
 alias cat="bat"
 alias grep="rg"
+
+# --- 1Password CLI ---
+if command -v op &>/dev/null; then
+  # シークレット取得関数
+  op_secret() {
+    op read "$1" 2>/dev/null
+  }
+
+  # 遅延読み込み（初回使用時にTouch ID）
+  export_op_secret() {
+    local var_name="$1"
+    local op_ref="$2"
+    export "$var_name"="$(op read "$op_ref" 2>/dev/null)"
+  }
+
+  # API Keys (必要時にコメント解除)
+  # export_op_secret "OPENAI_API_KEY" "op://Personal/OpenAI API/credential"
+  # export_op_secret "GITHUB_TOKEN" "op://Personal/GitHub Token/credential"
+fi
 
 # --- History ---
 HISTFILE="$HOME/.zsh_history"
