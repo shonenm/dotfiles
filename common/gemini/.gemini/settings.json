@@ -3,5 +3,15 @@
     "auth": {
       "selectedType": "oauth-personal"
     }
+  },
+  "hooks": {
+    "PostAgentLoop": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "ai-notify.sh gemini complete"
+        }]
+      }
+    ]
   }
 }
