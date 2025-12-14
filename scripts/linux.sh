@@ -1,13 +1,25 @@
 #!/bin/bash
 
-# --- Helper Functions ---
-log_info() { echo -e "\033[1;34m[INFO]\033[0m $1"; }
-log_success() { echo -e "\033[1;32m[OK]\033[0m $1"; }
-log_error() { echo -e "\033[1;31m[ERROR]\033[0m $1"; }
+# Linux (Debian/Ubuntu/Alpine) Setup Script
 
-command_exists() {
-  command -v "$1" >/dev/null 2>&1
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/utils.sh"
+
+# Setup SUDO variable
+if [[ $EUID -eq 0 ]]; then
+  SUDO=""
+elif command_exists sudo; then
+  SUDO="sudo"
+else
+  log_warn "sudo not found, some installations may fail"
+  SUDO=""
+fi
+
+NPM_PACKAGES=(
+  # AI CLI tools
+  "@openai/codex"
+  "@google/gemini-cli"
+)
 
 # --- 1. Pre-flight Check (ご要望の機能) ---
 check_requirements() {
@@ -91,7 +103,7 @@ install_system_packages() {
   # Debian/Ubuntu (apt)
   elif command_exists apt; then
     log_info "Debian/Ubuntu detected. Using apt..."
-    sudo apt update
+    $SUDO apt update
 
     APT_PACKAGES=(
       build-essential
@@ -103,14 +115,14 @@ install_system_packages() {
       fzf
       ripgrep
     )
-    sudo apt install -y "${APT_PACKAGES[@]}"
+    $SUDO apt install -y "${APT_PACKAGES[@]}"
 
     # Ubuntu固有のコマンド名リンク修正
     if command_exists fdfind && ! command_exists fd; then
-      sudo ln -sf "$(which fdfind)" /usr/local/bin/fd
+      $SUDO ln -sf "$(which fdfind)" /usr/local/bin/fd
     fi
     if command_exists batcat && ! command_exists bat; then
-      sudo ln -sf "$(which batcat)" /usr/local/bin/bat
+      $SUDO ln -sf "$(which batcat)" /usr/local/bin/bat
     fi
   fi
 }
@@ -137,13 +149,31 @@ install_modern_tools() {
     if ! command_exists nvim; then
       log_info "Installing Neovim..."
       curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
-      sudo rm -rf /opt/nvim
-      sudo tar -C /opt -xzf nvim-linux64.tar.gz
-      sudo ln -sf /opt/nvim-linux64/bin/nvim /usr/local/bin/nvim
+      $SUDO rm -rf /opt/nvim
+      $SUDO tar -C /opt -xzf nvim-linux64.tar.gz
+      $SUDO ln -sf /opt/nvim-linux64/bin/nvim /usr/local/bin/nvim
       rm nvim-linux64.tar.gz
     fi
     # ezaなどは必要ならここでバイナリDL、もしくは mise で管理推奨
   fi
+}
+
+install_npm_packages() {
+  if ! command_exists npm; then
+    log_warn "npm not found, skipping npm packages"
+    return
+  fi
+
+  log_info "Installing npm packages..."
+
+  for pkg in "${NPM_PACKAGES[@]}"; do
+    if ! npm list -g "$pkg" &>/dev/null; then
+      log_info "Installing $pkg..."
+      npm install -g "$pkg"
+    else
+      log_success "$pkg already installed"
+    fi
+  done
 }
 
 # --- Main Execution ---
@@ -151,5 +181,6 @@ install_modern_tools() {
 check_requirements
 install_system_packages
 install_modern_tools
+install_npm_packages
 
 log_success "Linux setup complete!"

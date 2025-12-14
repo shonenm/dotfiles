@@ -2,6 +2,9 @@
 
 # macOS Setup Script (Homebrew packages)
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/utils.sh"
+
 BREW_PACKAGES=(
   # Shell & Terminal
   fish
@@ -35,6 +38,12 @@ BREW_CASKS=(
   karabiner-elements
 )
 
+NPM_PACKAGES=(
+  # AI CLI tools
+  "@openai/codex"
+  "@google/gemini-cli"
+)
+
 install_brew_packages() {
   log_info "Installing Homebrew packages..."
 
@@ -61,8 +70,27 @@ install_brew_casks() {
   done
 }
 
+install_npm_packages() {
+  if ! command_exists npm; then
+    log_warn "npm not found, skipping npm packages"
+    return
+  fi
+
+  log_info "Installing npm packages..."
+
+  for pkg in "${NPM_PACKAGES[@]}"; do
+    if ! npm list -g "$pkg" &>/dev/null; then
+      log_info "Installing $pkg..."
+      npm install -g "$pkg"
+    else
+      log_success "$pkg already installed"
+    fi
+  done
+}
+
 # Run if sourced
 install_brew_packages
 install_brew_casks
+install_npm_packages
 
 log_success "macOS packages installed!"
