@@ -32,8 +32,8 @@ install_stow() {
 
   log_info "Installing GNU Stow..."
   case "$(detect_os)" in
-    mac)   brew install stow ;;
-    linux) sudo apt install -y stow ;;
+  mac) brew install stow ;;
+  linux) sudo apt install -y stow ;;
   esac
 }
 
@@ -42,14 +42,14 @@ install_packages() {
   local os=$(detect_os)
 
   case "$os" in
-    mac)
-      log_info "Installing Mac packages..."
-      source "$DOTFILES_DIR/scripts/mac.sh"
-      ;;
-    linux)
-      log_info "Installing Linux packages..."
-      source "$DOTFILES_DIR/scripts/linux.sh"
-      ;;
+  mac)
+    log_info "Installing Mac packages..."
+    source "$DOTFILES_DIR/scripts/mac.sh"
+    ;;
+  linux)
+    log_info "Installing Linux packages..."
+    source "$DOTFILES_DIR/scripts/linux.sh"
+    ;;
   esac
 }
 
