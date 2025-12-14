@@ -1,2 +1,5 @@
+[notify]
+command = "ai-notify.sh codex complete"
+
 [projects."/Users/USERNAME/dotfiles"]
 trust_level = "trusted"
