@@ -1,6 +1,29 @@
 {
   "alwaysThinkingEnabled": true,
-  "feedbackSurveyState": {
-    "lastShownTime": 1754471284897
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "ai-notify.sh claude stop"
+        }]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [{
+          "type": "command",
+          "command": "ai-notify.sh claude permission"
+        }]
+      },
+      {
+        "matcher": "idle_prompt",
+        "hooks": [{
+          "type": "command",
+          "command": "ai-notify.sh claude idle"
+        }]
+      }
+    ]
   }
 }
