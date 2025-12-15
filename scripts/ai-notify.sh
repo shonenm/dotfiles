@@ -23,8 +23,13 @@ fi
     INPUT=$(timeout 1 cat 2>/dev/null || echo "{}")
   fi
 
-  # 1Password から Webhook URL 取得
-  WEBHOOK=$(op read "op://Personal/AI CLI Webhook/credential" 2>/dev/null || echo "")
+  # 1Password からツール別 Webhook URL 取得
+  case "$TOOL" in
+    claude) WEBHOOK=$(op read "op://Personal/Claude Webhook/password" 2>/dev/null || echo "") ;;
+    codex)  WEBHOOK=$(op read "op://Personal/Codex Webhook/password" 2>/dev/null || echo "") ;;
+    gemini) WEBHOOK=$(op read "op://Personal/Gemini Webhook/password" 2>/dev/null || echo "") ;;
+    *)      WEBHOOK="" ;;
+  esac
   [[ -z "$WEBHOOK" ]] && exit 0
 
   # JSON から情報抽出
@@ -44,25 +49,13 @@ fi
     *)          ICON="📢"; TITLE="通知"; COLOR="#6c757d"; MENTION="" ;;
   esac
 
-  # ツール別アイコン
-  case "$TOOL" in
-    claude) TOOL_ICON="🤖" ;;
-    codex)  TOOL_ICON="💻" ;;
-    gemini) TOOL_ICON="💎" ;;
-    *)      TOOL_ICON="🔧" ;;
-  esac
-
   TIMESTAMP=$(date "+%H:%M:%S")
 
-  # ツール名を大文字化 (bash 4.0+)
-  TOOL_UPPER="${TOOL^}"
-
-  # Slack 通知送信
-  # "text" フィールドにメンションを入れることでプッシュ通知が飛ぶ
+  # Slack 通知送信（App のアイコン・名前はSlack App設定で管理）
   curl -s -X POST "$WEBHOOK" \
     -H "Content-Type: application/json" \
     -d "{
-      \"text\": \"${MENTION} ${TOOL_UPPER}: ${TITLE}\",
+      \"text\": \"${MENTION} ${TITLE}\",
       \"attachments\": [{
         \"color\": \"$COLOR\",
         \"blocks\": [
@@ -73,7 +66,6 @@ fi
           {
             \"type\": \"section\",
             \"fields\": [
-              {\"type\": \"mrkdwn\", \"text\": \"*Tool:*\n$TOOL_ICON $TOOL_UPPER\"},
               {\"type\": \"mrkdwn\", \"text\": \"*Project:*\n\`$PROJECT\`\"},
               {\"type\": \"mrkdwn\", \"text\": \"*Time:*\n$TIMESTAMP\"}
             ]
