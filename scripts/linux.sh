@@ -201,6 +201,33 @@ install_npm_packages() {
   done
 }
 
+install_1password_cli() {
+  if command_exists op; then
+    log_success "1Password CLI already installed"
+    return
+  fi
+
+  # Debian/Ubuntu only
+  if ! command_exists apt; then
+    log_warn "1Password CLI installation only supported on Debian/Ubuntu"
+    return
+  fi
+
+  log_info "Installing 1Password CLI..."
+
+  # Add 1Password apt repository
+  curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+    $SUDO gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg
+
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
+    $SUDO tee /etc/apt/sources.list.d/1password.list
+
+  $SUDO apt update
+  $SUDO apt install -y 1password-cli
+
+  log_success "1Password CLI installed"
+}
+
 # --- Main Execution ---
 
 check_requirements
