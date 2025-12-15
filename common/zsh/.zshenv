@@ -1,2 +1,2 @@
 ulimit -S -n 2048
-. "$HOME/.cargo/env"
+[[ -f "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"

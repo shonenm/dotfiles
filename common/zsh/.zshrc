@@ -72,9 +72,9 @@ alias ll="eza --icons --git -l"
 alias la="eza --icons --git -la"
 alias l='ls -CF'
 
-# cd
-alias cd='z'
-alias ..2='cd ../..'
+# cd (use zoxide if available)
+command -v zoxide &>/dev/null && alias cd='z'
+alias ..2='builtin cd ../..'
 alias ..3='cd ../../..'
 alias ..4='cd ../../../..'
 alias ..5='cd ../../../../..'
