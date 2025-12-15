@@ -1,10 +1,7 @@
-# This is Git's per-user configuration file.
+# Git user configuration
+# Name and email are loaded from 1Password via .zshrc
 [user]
-	name = shonenm
-	email = kotamatsu05223233@gmail.com
-# Please adapt and uncomment the following lines:
-#	name = 松島弘汰
-#	email = USERNAME@matsushimahiroshinoMacBook-Air.local
+	# Configured dynamically by shell
 [core]
     pager = delta
 [interactive]

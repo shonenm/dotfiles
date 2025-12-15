@@ -225,6 +225,12 @@ if command -v op &>/dev/null; then
     export "$var_name"="$(op read "$op_ref" 2>/dev/null)"
   }
 
+  # Git user config (1Password)
+  GIT_USER_NAME=$(op read "op://Personal/Git Config/username" 2>/dev/null)
+  GIT_USER_EMAIL=$(op read "op://Personal/Git Config/email" 2>/dev/null)
+  [[ -n "$GIT_USER_NAME" ]] && git config --global user.name "$GIT_USER_NAME"
+  [[ -n "$GIT_USER_EMAIL" ]] && git config --global user.email "$GIT_USER_EMAIL"
+
   # API Keys (必要時にコメント解除)
   # export_op_secret "OPENAI_API_KEY" "op://Personal/OpenAI API/credential"
   # export_op_secret "GITHUB_TOKEN" "op://Personal/GitHub Token/credential"

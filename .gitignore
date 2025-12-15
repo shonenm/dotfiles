@@ -132,6 +132,10 @@ dist
 .DS_Store
 **/.DS_Store
 .history/
+*.sql
+*.dump
+*.sql.gz
+
 common/configstore/
 common/github-copilot/
 mac/raycast/.config/raycast/config.json
