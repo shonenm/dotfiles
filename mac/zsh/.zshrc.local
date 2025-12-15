@@ -1,0 +1,65 @@
+# Mac-specific zsh configuration
+
+# --- Homebrew ---
+[[ -f /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# --- Homebrew Node (fallback) ---
+[[ -d "/opt/homebrew/Cellar/node/23.2.0/bin" ]] && export PATH="/opt/homebrew/Cellar/node/23.2.0/bin:$PATH"
+
+# --- Mac Tools Init ---
+command -v sheldon &>/dev/null && eval "$(sheldon source)"
+command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
+command -v atuin &>/dev/null && eval "$(atuin init zsh)"
+
+# --- Aliases: open ---
+alias o='open'
+
+# --- VPN (vpnutil for Mac) ---
+alias vpn='vpnutil'
+alias vpns='check_vpn_status'
+alias vpnc='vpn_connect_with_fzf'
+alias vpnd='vpn_disconnect_if_connected'
+
+check_vpn_status() {
+  vpn_data=$(vpnutil list)
+  connected_vpns=$(echo "$vpn_data" | jq -r '.VPNs[] | select(.status == "Connected") | "\(.name) (\(.status))"')
+
+  if [[ -z "$connected_vpns" ]]; then
+    echo "No Connected"
+  else
+    echo "Connected VPN:"
+    echo "$connected_vpns"
+  fi
+}
+
+vpn_connect_with_fzf() {
+  vpn_data=$(vpnutil list)
+  selected_vpn=$(echo "$vpn_data" | jq -r '.VPNs[] | "\(.name) (\(.status))"' | fzf --prompt="choose a vpn: ")
+
+  if [[ -z "$selected_vpn" ]]; then
+    echo "VPN selection canceled."
+    return
+  fi
+
+  vpn_name=$(echo "$selected_vpn" | sed 's/ (.*)//')
+  echo "connection: $vpn_name"
+  vpnutil start "$vpn_name"
+}
+
+vpn_disconnect_if_connected() {
+  vpn_data=$(vpnutil list)
+  connected_vpns=$(echo "$vpn_data" | jq -r '.VPNs[] | select(.status == "Connected") | .name')
+
+  if [[ -z "$connected_vpns" ]]; then
+    echo "No vpn connected."
+  else
+    echo "Disconnect the following VPN connections:"
+    echo "$connected_vpns"
+
+    for vpn in $connected_vpns; do
+      echo "cutting: $vpn"
+      vpnutil stop "$vpn"
+    done
+    echo "Disconnected all vpn connections."
+  fi
+}

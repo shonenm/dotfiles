@@ -1,0 +1,20 @@
+# Linux-specific zsh configuration
+
+# --- Linux Tools Init ---
+command -v sheldon &>/dev/null && eval "$(sheldon source)"
+command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
+command -v atuin &>/dev/null && eval "$(atuin init zsh)"
+
+# --- Aliases: apt ---
+alias agi='sudo apt install'
+alias agr='sudo apt remove'
+alias agu='sudo apt update'
+
+# --- Aliases: apt-get ---
+alias ag='sudo apt-get'
+alias agi='sudo apt-get install'
+alias agr='sudo apt-get remove'
+alias agu='sudo apt-get update'
+
+# --- Aliases: open (xdg-open) ---
+command -v xdg-open &>/dev/null && alias o='xdg-open'
