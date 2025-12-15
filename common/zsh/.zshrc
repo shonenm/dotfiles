@@ -1,8 +1,14 @@
 # --- Path & Mise ---
-eval "$(/opt/homebrew/bin/brew shellenv)"
-eval "$(mise activate zsh)"
+# Homebrew (Mac only)
+[[ -f /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
 
-export PATH="$HOME/.cargo/bin:$PATH"
+# Mise
+command -v mise &>/dev/null && eval "$(mise activate zsh)"
+
+# Cargo
+[[ -d "$HOME/.cargo/bin" ]] && export PATH="$HOME/.cargo/bin:$PATH"
+
+# Dotfiles scripts
 export PATH="$HOME/dotfiles/scripts:$PATH"
 
 # --- Completion Init (最重要: これをプラグインより先に書く) ---
@@ -86,7 +92,6 @@ alias h='cd ~'
 # alias d='cd ~/Dropbox'
 
 # git
-eval "$(gh completion -s zsh)"
 alias g='git'
 alias ga='git add'
 alias gd='git diff'
@@ -117,14 +122,16 @@ alias agi='sudo apt-get install'
 alias agr='sudo apt-get remove'
 alias agu='sudo apt-get update'
 
-[ -f "/Users/USERNAME/.ghcup/env" ] && . "/Users/USERNAME/.ghcup/env" # ghcup-env
+# ghcup (Haskell)
+[[ -f "$HOME/.ghcup/env" ]] && . "$HOME/.ghcup/env"
 
 # --- Modern Tools ---
-eval "$(sheldon source)"
-eval "$(starship init zsh)"
-eval "$(zoxide init zsh)"
-eval "$(atuin init zsh)"
-. "$HOME/.local/bin/env"
+command -v gh &>/dev/null && eval "$(gh completion -s zsh)"
+command -v sheldon &>/dev/null && eval "$(sheldon source)"
+command -v starship &>/dev/null && eval "$(starship init zsh)"
+command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
+command -v atuin &>/dev/null && eval "$(atuin init zsh)"
+[[ -f "$HOME/.local/bin/env" ]] && . "$HOME/.local/bin/env"
 
 # lazygit
 alias lzg='lazygit'
