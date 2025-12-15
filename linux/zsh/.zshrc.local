@@ -2,7 +2,6 @@
 
 # --- Linux Tools Init ---
 command -v sheldon &>/dev/null && eval "$(sheldon source)"
-command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
 command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 
 # --- Aliases: apt ---

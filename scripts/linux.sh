@@ -168,6 +168,25 @@ install_modern_tools() {
     curl https://mise.run | sh
   fi
 
+  # Sheldon (zsh plugin manager)
+  if ! command_exists sheldon; then
+    log_info "Installing Sheldon..."
+    curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh \
+      | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin
+  fi
+
+  # Zoxide (smarter cd)
+  if ! command_exists zoxide; then
+    log_info "Installing Zoxide..."
+    curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+  fi
+
+  # Atuin (shell history)
+  if ! command_exists atuin; then
+    log_info "Installing Atuin..."
+    curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+  fi
+
   # Ubuntuの場合のみ、aptで入らないツールを補完 (Alpineはapkで全部入るため不要)
   if command_exists apt; then
     # Neovim (Binary)
@@ -179,7 +198,26 @@ install_modern_tools() {
       $SUDO ln -sf /opt/nvim-linux64/bin/nvim /usr/local/bin/nvim
       rm nvim-linux64.tar.gz
     fi
-    # ezaなどは必要ならここでバイナリDL、もしくは mise で管理推奨
+
+    # Eza (modern ls)
+    if ! command_exists eza; then
+      log_info "Installing Eza..."
+      $SUDO mkdir -p /etc/apt/keyrings
+      wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | $SUDO gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
+      echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | $SUDO tee /etc/apt/sources.list.d/gierens.list
+      $SUDO chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list
+      $SUDO apt update
+      $SUDO apt install -y eza
+    fi
+
+    # Bat (aptではbatcat)
+    if ! command_exists bat && ! command_exists batcat; then
+      log_info "Installing Bat..."
+      $SUDO apt install -y bat
+    fi
+    if command_exists batcat && ! command_exists bat; then
+      $SUDO ln -sf "$(which batcat)" /usr/local/bin/bat
+    fi
   fi
 }
 
