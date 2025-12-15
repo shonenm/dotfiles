@@ -75,6 +75,31 @@ check_requirements() {
   log_success "Prerequisites met."
 }
 
+# --- 1.5. 1Password CLI Check ---
+check_1password() {
+  # op コマンドがなければエラー
+  if ! command_exists op; then
+    log_error "1Password CLI not installed."
+    log_error "Install: https://developer.1password.com/docs/cli/get-started/"
+    exit 1
+  fi
+
+  # サインイン状態を確認
+  if op whoami &>/dev/null; then
+    log_success "1Password CLI: signed in"
+  else
+    log_error "1Password CLI: not signed in"
+    echo "  ----------------------------------------"
+    echo "  Run the following command to sign in:"
+    echo ""
+    echo "    eval \$(op signin)"
+    echo ""
+    echo "  Then re-run this script."
+    echo "  ----------------------------------------"
+    exit 1
+  fi
+}
+
 # --- 2. Install Functions ---
 
 install_system_packages() {
@@ -182,5 +207,7 @@ check_requirements
 install_system_packages
 install_modern_tools
 install_npm_packages
+install_1password_cli
+check_1password
 
 log_success "Linux setup complete!"
