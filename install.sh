@@ -91,12 +91,14 @@ stow_package() {
   local output
   output=$(stow -n -t "$HOME" "$pkg_name" 2>&1) || true
 
-  # Check for conflicts (existing files not owned by stow)
-  if echo "$output" | grep -q "existing target is not owned by stow"; then
-    # Extract conflicting files
+  # Check for conflicts (existing files not owned by stow or regular files)
+  if echo "$output" | grep -q "existing target"; then
+    # Extract conflicting files from error messages like:
+    # "existing target is not owned by stow: .gitconfig"
+    # "existing target is neither a link nor a directory: .gitconfig"
     local files
-    files=$(echo "$output" | grep "existing target is not owned by stow" | \
-            sed -n 's/.*existing target is not owned by stow: \(.*\)/\1/p')
+    files=$(echo "$output" | grep "existing target" | \
+            grep -oE ': [^ ]+$' | sed 's/: //')
 
     # Backup each conflicting file
     for file in $files; do
