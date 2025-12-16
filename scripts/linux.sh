@@ -187,6 +187,12 @@ install_modern_tools() {
     curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
   fi
 
+  # dotenvx (encrypted .env management)
+  if ! command_exists dotenvx; then
+    log_info "Installing dotenvx..."
+    curl -sfS https://dotenvx.sh | sh
+  fi
+
   # Ubuntuの場合のみ、aptで入らないツールを補完 (Alpineはapkで全部入るため不要)
   if command_exists apt; then
     # Neovim (Binary)

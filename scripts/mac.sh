@@ -88,9 +88,20 @@ install_npm_packages() {
   done
 }
 
+install_dotenvx() {
+  if command_exists dotenvx; then
+    log_success "dotenvx already installed"
+    return
+  fi
+
+  log_info "Installing dotenvx..."
+  brew install dotenvx/brew/dotenvx
+}
+
 # Run if sourced
 install_brew_packages
 install_brew_casks
 install_npm_packages
+install_dotenvx
 
 log_success "macOS packages installed!"
