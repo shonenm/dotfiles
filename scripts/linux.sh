@@ -198,11 +198,11 @@ install_modern_tools() {
     # Neovim (Binary)
     if ! command_exists nvim; then
       log_info "Installing Neovim..."
-      curl -fLO https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz
-      $SUDO rm -rf /opt/nvim
-      $SUDO tar -C /opt -xzf nvim-linux64.tar.gz
-      $SUDO ln -sf /opt/nvim-linux64/bin/nvim /usr/local/bin/nvim
-      rm nvim-linux64.tar.gz
+      curl -fLO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+      $SUDO rm -rf /opt/nvim-linux-x86_64
+      $SUDO tar -C /opt -xzf nvim-linux-x86_64.tar.gz
+      $SUDO ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+      rm nvim-linux-x86_64.tar.gz
     fi
 
     # Eza (modern ls)

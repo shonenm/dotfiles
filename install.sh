@@ -76,7 +76,11 @@ backup_file() {
   local relative_path="${file#$HOME/}"
   local backup_path="$BACKUP_DIR/$relative_path"
   mkdir -p "$(dirname "$backup_path")"
-  mv "$file" "$backup_path"
+
+  # Try mv first, if fails (device busy), use cp + rm
+  if ! mv "$file" "$backup_path" 2>/dev/null; then
+    cp -a "$file" "$backup_path" && rm -f "$file"
+  fi
   log_warn "  Backed up: ~/$relative_path"
 }
 
