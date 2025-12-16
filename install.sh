@@ -60,6 +60,56 @@ setup_environment() {
 }
 
 # --- 3. Link Dotfiles (Stow) ---
+BACKUP_DIR=""
+
+# Initialize backup directory (called once per install)
+init_backup_dir() {
+  BACKUP_DIR="$HOME/.dotfiles_backup/$(date +%Y%m%d_%H%M%S)"
+}
+
+# Backup a file preserving directory structure
+backup_file() {
+  local file="$1"
+  if [[ -z "$BACKUP_DIR" ]]; then
+    init_backup_dir
+  fi
+  local relative_path="${file#$HOME/}"
+  local backup_path="$BACKUP_DIR/$relative_path"
+  mkdir -p "$(dirname "$backup_path")"
+  mv "$file" "$backup_path"
+  log_warn "  Backed up: ~/$relative_path"
+}
+
+# Stow a package with conflict handling
+stow_package() {
+  local pkg_dir="$1"
+  local pkg_name="$2"
+
+  cd "$pkg_dir"
+
+  # Dry-run to detect conflicts
+  local output
+  output=$(stow -n -t "$HOME" "$pkg_name" 2>&1) || true
+
+  # Check for conflicts (existing files not owned by stow)
+  if echo "$output" | grep -q "existing target is not owned by stow"; then
+    # Extract conflicting files
+    local files
+    files=$(echo "$output" | grep "existing target is not owned by stow" | \
+            sed -n 's/.*existing target is not owned by stow: \(.*\)/\1/p')
+
+    # Backup each conflicting file
+    for file in $files; do
+      if [[ -n "$file" && -e "$HOME/$file" ]]; then
+        backup_file "$HOME/$file"
+      fi
+    done
+  fi
+
+  # Now stow (should succeed after backing up conflicts)
+  stow -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:" || true
+}
+
 link_dotfiles() {
   log_info "Linking dotfiles..."
 
@@ -76,11 +126,10 @@ link_dotfiles() {
   # Stow common packages
   if [[ -d "$DOTFILES_DIR/common" ]]; then
     log_info "Linking common dotfiles..."
-    cd "$DOTFILES_DIR/common"
-    for pkg in */; do
-      pkg_name="${pkg%/}"
+    for pkg in "$DOTFILES_DIR/common"/*/; do
+      pkg_name="$(basename "$pkg")"
       log_info "  Linking $pkg_name..."
-      stow --adopt -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:" || true
+      stow_package "$DOTFILES_DIR/common" "$pkg_name"
     done
   fi
 
@@ -88,17 +137,20 @@ link_dotfiles() {
   local os=$(detect_os)
   if [[ -d "$DOTFILES_DIR/$os" ]]; then
     log_info "Linking $os-specific dotfiles..."
-    cd "$DOTFILES_DIR/$os"
-    for pkg in */; do
-      pkg_name="${pkg%/}"
+    for pkg in "$DOTFILES_DIR/$os"/*/; do
+      pkg_name="$(basename "$pkg")"
       log_info "  Linking $pkg_name..."
-      stow --adopt -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:" || true
+      stow_package "$DOTFILES_DIR/$os" "$pkg_name"
     done
   fi
 
-  # Reset any changes caused by --adopt
-  cd "$DOTFILES_DIR"
-  git checkout . 2>/dev/null || true
+  # Show backup location if any files were backed up
+  if [[ -n "$BACKUP_DIR" && -d "$BACKUP_DIR" ]]; then
+    echo
+    log_warn "Some existing files were backed up to:"
+    log_warn "  $BACKUP_DIR"
+    log_info "You can restore them manually if needed."
+  fi
 
   log_success "Dotfiles linked successfully"
 }

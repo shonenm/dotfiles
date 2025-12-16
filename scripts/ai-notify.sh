@@ -9,10 +9,45 @@ set -euo pipefail
 TOOL="${1:-claude}"
 EVENT="${2:-notification}"
 
-# 1. 依存チェック (jq, op がない場合は何もしない)
-if ! command -v jq &> /dev/null || ! command -v op &> /dev/null; then
+# 1. 依存チェック (jq がない場合は何もしない)
+if ! command -v jq &> /dev/null; then
   exit 0
 fi
+
+# キャッシュディレクトリ
+CACHE_DIR="${HOME}/.cache/ai-notify"
+mkdir -p "$CACHE_DIR"
+
+# Webhook URL取得関数（キャッシュ優先、なければ1Passwordから取得してキャッシュ）
+get_webhook() {
+  local tool="$1"
+  local cache_file="${CACHE_DIR}/${tool}_webhook"
+
+  # キャッシュがあればそれを使用
+  if [[ -f "$cache_file" ]]; then
+    cat "$cache_file"
+    return
+  fi
+
+  # 1Password CLIがなければ空を返す
+  if ! command -v op &> /dev/null; then
+    return
+  fi
+
+  # 1Passwordから取得してキャッシュ
+  local op_path
+  case "$tool" in
+    claude) op_path="op://Personal/Claude Webhook/password" ;;
+    codex)  op_path="op://Personal/Codex Webhook/password" ;;
+    gemini) op_path="op://Personal/Gemini Webhook/password" ;;
+    *)      return ;;
+  esac
+
+  local webhook
+  webhook=$(op read "$op_path" 2>/dev/null) || return
+  [[ -n "$webhook" ]] && echo "$webhook" > "$cache_file" && chmod 600 "$cache_file"
+  echo "$webhook"
+}
 
 # 2. 非同期実行のためにサブシェル化
 (
@@ -23,13 +58,8 @@ fi
     INPUT=$(timeout 1 cat 2>/dev/null || echo "{}")
   fi
 
-  # 1Password からツール別 Webhook URL 取得
-  case "$TOOL" in
-    claude) WEBHOOK=$(op read "op://Personal/Claude Webhook/password" 2>/dev/null || echo "") ;;
-    codex)  WEBHOOK=$(op read "op://Personal/Codex Webhook/password" 2>/dev/null || echo "") ;;
-    gemini) WEBHOOK=$(op read "op://Personal/Gemini Webhook/password" 2>/dev/null || echo "") ;;
-    *)      WEBHOOK="" ;;
-  esac
+  # Webhook URL取得（キャッシュ優先）
+  WEBHOOK=$(get_webhook "$TOOL")
   [[ -z "$WEBHOOK" ]] && exit 0
 
   # JSON から情報抽出

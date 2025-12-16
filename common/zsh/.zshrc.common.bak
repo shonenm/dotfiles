@@ -124,15 +124,14 @@ if command -v op &>/dev/null; then
     export "$var_name"="$(op read "$op_ref" 2>/dev/null)"
   }
 
-  # Git user config from 1Password (run manually: setup_git_from_op)
-  setup_git_from_op() {
-    local name email
-    name=$(op read "op://Personal/Git Config/username") || { echo "Failed to read username"; return 1; }
-    email=$(op read "op://Personal/Git Config/email") || { echo "Failed to read email"; return 1; }
-    git config --global user.name "$name"
-    git config --global user.email "$email"
-    echo "Git config updated: $name <$email>"
-  }
+  # Git user config (1Password)
+  # 標準入力がターミナルに接続されている場合のみ実行（VS Code環境解決プロセスを除外）
+  if [[ -t 0 ]] && [[ -t 1 ]]; then
+    GIT_USER_NAME=$(op read "op://Personal/Git Config/username" 2>/dev/null)
+    GIT_USER_EMAIL=$(op read "op://Personal/Git Config/email" 2>/dev/null)
+    [[ -n "$GIT_USER_NAME" ]] && git config --global user.name "$GIT_USER_NAME"
+    [[ -n "$GIT_USER_EMAIL" ]] && git config --global user.email "$GIT_USER_EMAIL"
+  fi
 fi
 
 # --- History ---
