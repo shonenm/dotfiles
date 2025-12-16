@@ -13,6 +13,33 @@ for arg in "$@"; do
   [[ "$arg" == "-y" ]] && SKIP_PROMPT=true
 done
 
+# --- 0. 1Password CLI Check (Required) ---
+check_1password_cli() {
+  # Check if op is installed
+  if ! command_exists op; then
+    log_error "1Password CLI is not installed."
+    echo
+    echo "  Install instructions:"
+    echo "    Mac:   brew install 1password-cli"
+    echo "    Linux: https://developer.1password.com/docs/cli/get-started/"
+    echo
+    exit 1
+  fi
+
+  # Check if signed in
+  if ! op whoami &>/dev/null; then
+    log_error "1Password CLI is not signed in."
+    echo
+    echo "  Run the following command to sign in:"
+    echo "    eval \$(op signin)"
+    echo
+    echo "  Then re-run this script."
+    exit 1
+  fi
+
+  log_success "1Password CLI: ready"
+}
+
 # --- 1. Install Homebrew (Mac only) ---
 install_homebrew() {
   if [[ "$(detect_os)" != "mac" ]]; then
@@ -167,6 +194,9 @@ main() {
   log_info "OS: $(detect_os)"
   log_info "Dotfiles: $DOTFILES_DIR"
   echo
+
+  # 0. Check 1Password CLI first
+  check_1password_cli
 
   # 1. Install Homebrew (Mac only, required before other packages)
   install_homebrew
