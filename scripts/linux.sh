@@ -152,9 +152,35 @@ install_system_packages() {
   fi
 }
 
+install_nerd_font() {
+  local font_dir="$HOME/.local/share/fonts"
+  mkdir -p "$font_dir"
+
+  # Check if UDEV Gothic NF is already installed
+  if fc-list 2>/dev/null | grep -qi "UDEVGothic"; then
+    log_success "UDEV Gothic Nerd Font already installed"
+    return
+  fi
+
+  log_info "Installing UDEV Gothic Nerd Font..."
+  local version="v2.0.0"
+  local zip_file="UDEVGothic_NF_${version}.zip"
+  local url="https://github.com/yuru7/udev-gothic/releases/download/${version}/${zip_file}"
+
+  curl -fLO "$url"
+  unzip -o "$zip_file" -d /tmp/udev-gothic-nf
+  cp /tmp/udev-gothic-nf/UDEVGothic_NF_*/UDEVGothicNF-*.ttf "$font_dir/"
+  rm -rf "$zip_file" /tmp/udev-gothic-nf
+  fc-cache -fv >/dev/null 2>&1
+  log_success "UDEV Gothic Nerd Font installed"
+}
+
 install_modern_tools() {
   mkdir -p ~/.local/bin
   export PATH="$HOME/.local/bin:$PATH"
+
+  # Nerd Font (for terminal icons)
+  install_nerd_font
 
   # Starship
   if ! command_exists starship; then
