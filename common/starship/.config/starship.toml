@@ -43,6 +43,7 @@ disabled = false
 
 [os.symbols]
 Macos = '󰊠'
+Linux = ''
 
 [directory]
 format = '[─](fg:current_line)[](fg:pink)[󰉖 ](fg:primary bg:pink)[](fg:pink bg:box)[ $read_only$truncation_symbol$path](fg:foreground bg:box)[](fg:box)'
