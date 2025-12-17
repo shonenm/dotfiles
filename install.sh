@@ -14,16 +14,49 @@ for arg in "$@"; do
 done
 
 # --- 0. 1Password CLI Check (Required) ---
-check_1password_cli() {
-  # Check if op is installed
-  if ! command_exists op; then
-    log_error "1Password CLI is not installed."
-    echo
-    echo "  Install instructions:"
-    echo "    Mac:   brew install 1password-cli"
-    echo "    Linux: https://developer.1password.com/docs/cli/get-started/"
-    echo
+install_1password_cli() {
+  local os=$(detect_os)
+
+  if [[ "$os" == "mac" ]]; then
+    if command_exists brew; then
+      log_info "Installing 1Password CLI via Homebrew..."
+      brew install 1password-cli
+    else
+      log_error "Homebrew not found. Please install Homebrew first."
+      exit 1
+    fi
+  elif [[ "$os" == "linux" ]]; then
+    if command_exists apt; then
+      log_info "Installing 1Password CLI via apt..."
+      # Setup SUDO
+      local SUDO=""
+      [[ $EUID -ne 0 ]] && SUDO="sudo"
+
+      # Add 1Password apt repository
+      curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+        $SUDO gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg 2>/dev/null || true
+
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
+        $SUDO tee /etc/apt/sources.list.d/1password.list >/dev/null
+
+      $SUDO apt update
+      $SUDO apt install -y 1password-cli
+    else
+      log_error "apt not found. Please install 1Password CLI manually:"
+      echo "  https://developer.1password.com/docs/cli/get-started/"
+      exit 1
+    fi
+  else
+    log_error "Unsupported OS. Please install 1Password CLI manually."
     exit 1
+  fi
+}
+
+check_1password_cli() {
+  # Check if op is installed, install if not
+  if ! command_exists op; then
+    log_warn "1Password CLI is not installed."
+    install_1password_cli
   fi
 
   # Check if signed in
