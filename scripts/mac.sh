@@ -18,6 +18,7 @@ BREW_PACKAGES=(
   lazygit
   gh
   mise
+  uv
 
   # Modern CLI tools
   eza

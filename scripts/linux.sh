@@ -122,6 +122,7 @@ install_system_packages() {
       bat
       fzf
       eza
+      rsync
     )
     $SUDO apk add --no-cache "${PACKAGES[@]}"
 
@@ -139,6 +140,7 @@ install_system_packages() {
       unzip
       fzf
       ripgrep
+      rsync
     )
     $SUDO apt install -y "${APT_PACKAGES[@]}"
 
@@ -217,6 +219,12 @@ install_modern_tools() {
   if ! command_exists dotenvx; then
     log_info "Installing dotenvx..."
     curl -sfS https://dotenvx.sh | sh
+  fi
+
+  # uv (Python package installer)
+  if ! command_exists uv; then
+    log_info "Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
   fi
 
   # Ubuntuの場合のみ、aptで入らないツールを補完 (Alpineはapkで全部入るため不要)
