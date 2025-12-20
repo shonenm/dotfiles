@@ -1,0 +1,83 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ============================================
+# 1. 基本パッケージ（dotfiles実行に必要な最小限）
+# ============================================
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    sudo \
+    ca-certificates \
+    locales \
+    openssh-client \
+    openssh-server \
+    && rm -rf /var/lib/apt/lists/*
+
+# ロケール設定
+RUN localedef -f UTF-8 -i ja_JP ja_JP.UTF-8
+ENV LANG=ja_JP.UTF-8
+ENV LANGUAGE=ja_JP:ja
+ENV LC_ALL=ja_JP.UTF-8
+ENV TZ=Asia/Tokyo
+ENV TERM=xterm-256color
+
+# ============================================
+# 2. プロジェクト固有ツール（dotfilesに含めないもの）
+# ============================================
+
+# Docker CLI & Compose
+RUN apt-get update && apt-get install -y docker.io iptables uidmap && \
+    rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /usr/libexec/docker/cli-plugins && \
+    curl -SL https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-x86_64 \
+    -o /usr/libexec/docker/cli-plugins/docker-compose && \
+    chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+
+# AWS CLI
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && ./aws/install && rm -rf awscliv2.zip ./aws
+
+# AWS Session Manager
+RUN curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" \
+    -o "session-manager-plugin.deb" && dpkg -i session-manager-plugin.deb && rm session-manager-plugin.deb
+
+# PostgreSQL Client
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# 3. SSHサーバー設定
+# ============================================
+RUN mkdir -p /var/run/sshd && \
+    sed -i 's/#PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's@#AuthorizedKeysFile.*@AuthorizedKeysFile /root/.ssh/authorized_keys@' /etc/ssh/sshd_config
+EXPOSE 22
+
+# ============================================
+# 4. dotfiles セットアップ
+# ============================================
+# 1Password CLIのインストール（dotfilesのinstall.shが必要とする）
+RUN curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+    gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/amd64 stable main" | \
+    tee /etc/apt/sources.list.d/1password.list && \
+    apt-get update && apt-get install -y 1password-cli && \
+    rm -rf /var/lib/apt/lists/*
+
+# dotfilesをクローン
+RUN git clone https://github.com/shonenm/dotfiles.git /root/dotfiles
+
+# ============================================
+# 5. プロジェクト設定
+# ============================================
+WORKDIR /root/andtopic
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# ============================================
+# 6. 起動
+# ============================================
+# dotfilesのinstall.shは初回起動時に手動で実行
+# (1Password認証が必要なため)
+CMD ["/bin/bash", "-c", "/usr/local/bin/entrypoint.sh & exec zsh"]
