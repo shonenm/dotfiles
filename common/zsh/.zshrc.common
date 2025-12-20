@@ -1,4 +1,10 @@
 # --- Path ---
+# Local bin (sheldon, zoxide, mise, etc.)
+[[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH"
+
+# Atuin
+[[ -d "$HOME/.atuin/bin" ]] && export PATH="$HOME/.atuin/bin:$PATH"
+
 # Mise
 command -v mise &>/dev/null && eval "$(mise activate zsh)"
 
