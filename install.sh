@@ -272,6 +272,21 @@ main() {
   echo
   log_success "=== Installation Complete! ==="
   log_info "Please restart your shell or run: source ~/.zshrc"
+
+  # Show mise-managed tools info
+  echo
+  echo "────────────────────────────────────────────────────────"
+  echo "  mise-managed tools"
+  echo "────────────────────────────────────────────────────────"
+  echo "  node   (lts)    - Node.js / npm"
+  echo "  python (latest) - Python"
+  echo ""
+  echo "  Commands:"
+  echo "    mise install        # Install all tools"
+  echo "    mise list           # Show installed versions"
+  echo "    mise use node@20    # Switch version (project)"
+  echo "    mise use -g node@22 # Switch version (global)"
+  echo "────────────────────────────────────────────────────────"
 }
 
 main "$@"
