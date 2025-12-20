@@ -1,3 +1,7 @@
+# --- Shell ---
+# Ensure $SHELL is set correctly when running zsh
+[[ "$SHELL" != */zsh ]] && export SHELL=$(which zsh)
+
 # --- Path ---
 # Local bin (sheldon, zoxide, mise, etc.)
 [[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH"
