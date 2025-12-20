@@ -236,6 +236,13 @@ install_modern_tools() {
     curl -LsSf https://astral.sh/uv/install.sh | sh
   fi
 
+  # Rust (via rustup)
+  if ! command_exists cargo; then
+    log_info "Installing Rust via rustup..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    source "$HOME/.cargo/env"
+  fi
+
   # Ubuntuの場合のみ、aptで入らないツールを補完 (Alpineはapkで全部入るため不要)
   if command_exists apt; then
     # Neovim (Binary)

@@ -19,6 +19,7 @@ BREW_PACKAGES=(
   gh
   mise
   uv
+  rust
 
   # Modern CLI tools
   eza
