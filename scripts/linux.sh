@@ -17,6 +17,7 @@ fi
 
 NPM_PACKAGES=(
   # AI CLI tools
+  "@anthropic-ai/claude-code"
   "@openai/codex"
   "@google/gemini-cli"
 )
