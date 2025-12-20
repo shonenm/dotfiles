@@ -10,7 +10,7 @@ $nodejs\
 $bun\
 $deno\
 $docker_context\
-$docker_compose\
+${custom.docker_compose}\
 $memory_usage\
 $battery\
 $shell\
