@@ -306,6 +306,36 @@ install_1password_cli() {
   log_success "1Password CLI installed"
 }
 
+set_default_shell() {
+  if [[ "$SHELL" == *"zsh"* ]]; then
+    log_success "Zsh is already the default shell"
+    return
+  fi
+
+  local zsh_path
+  zsh_path=$(which zsh)
+
+  if [[ -z "$zsh_path" ]]; then
+    log_warn "Zsh not found, skipping default shell change"
+    return
+  fi
+
+  # Add zsh to /etc/shells if not present
+  if ! grep -q "$zsh_path" /etc/shells 2>/dev/null; then
+    echo "$zsh_path" | $SUDO tee -a /etc/shells >/dev/null
+  fi
+
+  log_info "Setting zsh as default shell..."
+  if [[ $EUID -eq 0 ]]; then
+    # Root user
+    chsh -s "$zsh_path"
+  else
+    # Non-root user
+    chsh -s "$zsh_path" || $SUDO usermod --shell "$zsh_path" "$USER"
+  fi
+  log_success "Default shell changed to zsh (restart terminal to apply)"
+}
+
 # --- Main Execution ---
 
 check_requirements
@@ -314,5 +344,6 @@ install_modern_tools
 install_npm_packages
 install_1password_cli
 check_1password
+set_default_shell
 
 log_success "Linux setup complete!"

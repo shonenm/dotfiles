@@ -99,10 +99,22 @@ install_dotenvx() {
   brew install dotenvx/brew/dotenvx
 }
 
+set_default_shell() {
+  if [[ "$SHELL" == *"zsh"* ]]; then
+    log_success "Zsh is already the default shell"
+    return
+  fi
+
+  log_info "Setting zsh as default shell..."
+  chsh -s /bin/zsh
+  log_success "Default shell changed to zsh (restart terminal to apply)"
+}
+
 # Run if sourced
 install_brew_packages
 install_brew_casks
 install_npm_packages
 install_dotenvx
+set_default_shell
 
 log_success "macOS packages installed!"
