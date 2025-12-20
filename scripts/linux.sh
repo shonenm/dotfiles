@@ -124,6 +124,7 @@ install_system_packages() {
       fzf
       eza
       rsync
+      github-cli
     )
     $SUDO apk add --no-cache "${PACKAGES[@]}"
 
@@ -245,6 +246,16 @@ install_modern_tools() {
 
   # Ubuntuの場合のみ、aptで入らないツールを補完 (Alpineはapkで全部入るため不要)
   if command_exists apt; then
+    # GitHub CLI (gh)
+    if ! command_exists gh; then
+      log_info "Installing GitHub CLI..."
+      curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | $SUDO dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
+      $SUDO chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | $SUDO tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+      $SUDO apt update
+      $SUDO apt install -y gh
+    fi
+
     # Neovim (Binary)
     if ! command_exists nvim; then
       log_info "Installing Neovim..."
