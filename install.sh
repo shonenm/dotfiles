@@ -128,6 +128,7 @@ init_backup_dir() {
 }
 
 # Backup a file preserving directory structure
+# Returns 0 on success, 1 if file couldn't be removed (e.g., bind mount)
 backup_file() {
   local file="$1"
   if [[ -z "$BACKUP_DIR" ]]; then
@@ -137,17 +138,30 @@ backup_file() {
   local backup_path="$BACKUP_DIR/$relative_path"
   mkdir -p "$(dirname "$backup_path")"
 
-  # Try mv first, if fails (device busy), use cp + rm
-  if ! mv "$file" "$backup_path" 2>/dev/null; then
-    cp -a "$file" "$backup_path" && rm -f "$file"
+  # Try mv first
+  if mv "$file" "$backup_path" 2>/dev/null; then
+    log_warn "  Backed up: ~/$relative_path"
+    return 0
   fi
-  log_warn "  Backed up: ~/$relative_path"
+
+  # mv failed, try cp + rm (for some edge cases)
+  if cp -a "$file" "$backup_path" 2>/dev/null; then
+    if rm -f "$file" 2>/dev/null; then
+      log_warn "  Backed up: ~/$relative_path"
+      return 0
+    fi
+  fi
+
+  # Can't remove file (likely bind mount in Docker)
+  log_warn "  Skipped: ~/$relative_path (cannot remove, possibly bind mounted)"
+  return 1
 }
 
 # Stow a package with conflict handling
 stow_package() {
   local pkg_dir="$1"
   local pkg_name="$2"
+  local has_unbacked_files=false
 
   cd "$pkg_dir"
 
@@ -167,13 +181,20 @@ stow_package() {
     # Backup each conflicting file
     for file in $files; do
       if [[ -n "$file" && -e "$HOME/$file" ]]; then
-        backup_file "$HOME/$file"
+        if ! backup_file "$HOME/$file"; then
+          has_unbacked_files=true
+        fi
       fi
     done
   fi
 
-  # Now stow (should succeed after backing up conflicts)
-  stow -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:" || true
+  # Run stow (may partially fail if some files couldn't be backed up)
+  if [[ "$has_unbacked_files" == "true" ]]; then
+    # Some files couldn't be removed, stow will fail for those - suppress errors
+    stow -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:\|existing target" || true
+  else
+    stow -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:" || true
+  fi
 }
 
 link_dotfiles() {
