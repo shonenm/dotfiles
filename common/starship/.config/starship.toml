@@ -133,5 +133,5 @@ running=$(docker compose ps --status running --quiet 2>/dev/null | wc -l | tr -d
 if [ "$total" -gt 0 ]; then echo "${running}/${total}"; fi
 '''
 when = "test -f compose.yaml -o -f compose.yml -o -f docker-compose.yaml -o -f docker-compose.yml"
-format = '[─](fg:current_line)[](fg:cyan)[󰡨](fg:primary bg:cyan)[](fg:cyan bg:box)[ $output](fg:foreground bg:box)[](fg:box)'
+format = '[─](fg:current_line)[](fg:cyan)[󰡨](fg:primary bg:cyan)[](fg:cyan bg:box)[ $output](fg:foreground bg:box)[](fg:box)'
 shell = ["bash", "--noprofile", "--norc"]
