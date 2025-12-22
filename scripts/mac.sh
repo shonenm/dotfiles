@@ -16,6 +16,7 @@ BREW_PACKAGES=(
   # Development
   neovim
   lazygit
+  lazydocker
   gh
   mise
   uv

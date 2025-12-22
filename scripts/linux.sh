@@ -244,6 +244,22 @@ install_modern_tools() {
     source "$HOME/.cargo/env"
   fi
 
+  # Lazygit
+  if ! command_exists lazygit; then
+    log_info "Installing Lazygit..."
+    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+    tar xf lazygit.tar.gz lazygit
+    $SUDO install lazygit /usr/local/bin
+    rm -f lazygit lazygit.tar.gz
+  fi
+
+  # Lazydocker
+  if ! command_exists lazydocker; then
+    log_info "Installing Lazydocker..."
+    curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
+  fi
+
   # Ubuntuの場合のみ、aptで入らないツールを補完 (Alpineはapkで全部入るため不要)
   if command_exists apt; then
     # GitHub CLI (gh)
