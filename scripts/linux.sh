@@ -260,6 +260,12 @@ install_modern_tools() {
     curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
   fi
 
+  # Tokei (code statistics)
+  if ! command_exists tokei; then
+    log_info "Installing Tokei..."
+    cargo install tokei
+  fi
+
   # Ubuntuの場合のみ、aptで入らないツールを補完 (Alpineはapkで全部入るため不要)
   if command_exists apt; then
     # GitHub CLI (gh)

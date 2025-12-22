@@ -30,6 +30,7 @@ BREW_PACKAGES=(
   fzf
   jq
   yazi
+  tokei
 )
 
 BREW_CASKS=(
