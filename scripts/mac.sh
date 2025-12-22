@@ -101,6 +101,17 @@ install_dotenvx() {
   brew install dotenvx/brew/dotenvx
 }
 
+install_mise_tools() {
+  if ! command_exists mise; then
+    log_warn "mise not found, skipping mise tools"
+    return
+  fi
+
+  log_info "Installing tools via mise..."
+  eval "$(mise activate bash)"
+  mise install node python pnpm -y 2>/dev/null || true
+}
+
 set_default_shell() {
   if [[ "$SHELL" == *"zsh"* ]]; then
     log_success "Zsh is already the default shell"
@@ -115,6 +126,7 @@ set_default_shell() {
 # Run if sourced
 install_brew_packages
 install_brew_casks
+install_mise_tools
 install_npm_packages
 install_dotenvx
 set_default_shell

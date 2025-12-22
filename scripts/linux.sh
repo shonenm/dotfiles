@@ -198,12 +198,12 @@ install_modern_tools() {
     curl https://mise.run | sh
   fi
 
-  # Activate mise and install runtimes (Node.js, Python)
+  # Activate mise and install runtimes (Node.js, Python, pnpm)
   if [[ -f "$HOME/.local/bin/mise" ]]; then
     export PATH="$HOME/.local/bin:$PATH"
     eval "$($HOME/.local/bin/mise activate bash)"
-    log_info "Installing Node.js and Python via mise..."
-    $HOME/.local/bin/mise install node python -y 2>/dev/null || true
+    log_info "Installing Node.js, Python, and pnpm via mise..."
+    $HOME/.local/bin/mise install node python pnpm -y 2>/dev/null || true
   fi
 
   # Sheldon (zsh plugin manager)
