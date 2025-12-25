@@ -3,6 +3,14 @@
 source "$CONFIG_DIR/plugins/icon_map.sh"
 source "$CONFIG_DIR/plugins/accent_color.sh"
 
+# Get current mode and set highlight color
+MODE=$(aerospace list-modes --current 2>/dev/null)
+if [ "$MODE" = "service" ]; then
+    HIGHLIGHT_COLOR=$SERVICE_MODE_COLOR
+else
+    HIGHLIGHT_COLOR=$ACCENT_COLOR
+fi
+
 # Get focused workspace and focused app
 FOCUSED_WS=$(aerospace list-workspaces --focused)
 FOCUSED_APP=$(aerospace list-windows --focused --format '%{app-name}' 2>/dev/null)
@@ -51,14 +59,14 @@ if [ "$CURRENT_APPS" != "$PREV_APPS" ]; then
                    background.drawing=off
     done <<< "$APPS"
 
-    # Create bracket for unified black background with accent border
+    # Create bracket for unified black background with mode-aware border
     if [ ${#APP_ITEMS[@]} -gt 0 ]; then
         sketchybar --add bracket apps_bracket "${APP_ITEMS[@]}" \
                    --set apps_bracket \
                    background.color=0xff1e1f29 \
                    background.corner_radius=5 \
                    background.height=24 \
-                   background.border_color=$ACCENT_COLOR \
+                   background.border_color=$HIGHLIGHT_COLOR \
                    background.border_width=2 \
                    background.drawing=on
 
@@ -87,7 +95,7 @@ if [ -n "$APPS" ]; then
                 label="$app" \
                 label.drawing=on \
                 icon.background.drawing=on \
-                icon.background.color=$ACCENT_COLOR \
+                icon.background.color=$HIGHLIGHT_COLOR \
                 icon.background.corner_radius=4 \
                 icon.background.height=20
         else

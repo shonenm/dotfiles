@@ -57,7 +57,7 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", 
 # A callback that runs every time binding mode changes
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
 # See: https://nikitabobko.github.io/AeroSpace/commands#mode
-on-mode-changed = []
+on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
 
 # Possible values: (qwerty|dvorak|colemak)
 # See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
@@ -208,8 +208,8 @@ on-mode-changed = []
     alt-s = 'exec-and-forget sketchybar --bar hidden=toggle'
 
     # Navigate between non-empty workspaces
-    alt-left = ['exec-and-forget aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin prev --wrap-around']
-    alt-right = ['exec-and-forget aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin next --wrap-around']
+    alt-left = 'exec-and-forget bash -c "aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin prev --wrap-around"'
+    alt-right = 'exec-and-forget bash -c "aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin next --wrap-around"'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
     alt-tab = 'workspace-back-and-forth'

@@ -17,6 +17,27 @@ sketchybar --default "${default[@]}"
 
 ##### AeroSpace Events #####
 sketchybar --add event aerospace_workspace_change
+sketchybar --add event aerospace_mode_change
+
+##### Mode Indicator (always visible) #####
+sketchybar --add item mode_indicator right \
+           --subscribe mode_indicator aerospace_mode_change \
+           --set mode_indicator \
+           icon="󰍹" \
+           icon.font="Hack Nerd Font:Bold:12.0" \
+           icon.color=0xffffffff \
+           icon.padding_left=8 \
+           icon.padding_right=4 \
+           label="MAIN" \
+           label.font="Hack Nerd Font:Bold:10.0" \
+           label.color=0xffffffff \
+           label.padding_left=0 \
+           label.padding_right=8 \
+           background.color=$ACCENT_COLOR \
+           background.corner_radius=5 \
+           background.height=24 \
+           background.drawing=on \
+           script="$PLUGIN_DIR/mode.sh"
 
 ##### Trigger for app updates #####
 sketchybar --add item app_trigger right \
