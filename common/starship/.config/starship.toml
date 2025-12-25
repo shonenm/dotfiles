@@ -6,9 +6,6 @@ $git_status\
 $git_metrics\
 $fill\
 $cmd_duration\
-$nodejs\
-$bun\
-$deno\
 $time\
 $username\
 $line_break\
@@ -68,16 +65,6 @@ diverged = '⇕⇡${ahead_count}⇣${behind_count}'
 [git_metrics]
 format = '[─](fg:current_line)[](fg:cyan)[󰊤 ](fg:primary bg:cyan)[](fg:cyan bg:box)[ +$added/-$deleted](fg:foreground bg:box)[](fg:box)'
 disabled = false
-
-[nodejs]
-format = '[─](fg:current_line)[](fg:green)[󰣙](fg:primary bg:green)[](fg:green bg:box)[ $version](fg:foreground bg:box)[](fg:box)'
-detect_files = ["package.json", ".node-version", "!bunfig.toml", "!bun.lockb"]
-
-[bun]
-format = '[─](fg:current_line)[](fg:green)[🥟](fg:primary bg:green)[](fg:green bg:box)[ $version](fg:foreground bg:box)[](fg:box)'
-
-[deno]
-format = '[─](fg:current_line)[](fg:green)[🦕](fg:primary bg:green)[](fg:green bg:box)[ $version](fg:foreground bg:box)[](fg:box)'
 
 [fill]
 symbol = '─'
