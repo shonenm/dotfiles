@@ -9,8 +9,13 @@ config-version = 2
 # Available commands : https://nikitabobko.github.io/AeroSpace/commands
 after-startup-command = []
 
+# Notify sketchybar on workspace change
+exec-on-workspace-change = ['/bin/bash', '-c',
+  'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE'
+]
+
 # Start AeroSpace at login
-start-at-login = false
+start-at-login = true
 
 # Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
 enable-normalization-flatten-containers = true
@@ -19,7 +24,7 @@ enable-normalization-opposite-orientation-for-nested-containers = true
 # See: https://nikitabobko.github.io/AeroSpace/guide#layouts
 # The 'accordion-padding' specifies the size of accordion padding
 # You can set 0 to disable the padding feature
-accordion-padding = 30
+accordion-padding = 0
 
 # Possible values: tiles|accordion
 default-root-container-layout = 'tiles'
@@ -68,12 +73,12 @@ on-mode-changed = []
 #                 See:
 #                 https://nikitabobko.github.io/AeroSpace/guide#assign-workspaces-to-monitors
 [gaps]
-    inner.horizontal = 0
-    inner.vertical =   0
-    outer.left =       0
-    outer.bottom =     0
-    outer.top =        0
-    outer.right =      0
+    inner.horizontal = 2
+    inner.vertical =   2
+    outer.left =       2
+    outer.bottom =     2
+    outer.top =        10
+    outer.right =      2
 
 # 'main' binding mode declaration
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -138,28 +143,31 @@ on-mode-changed = []
     alt-7 = 'workspace 7'
     alt-8 = 'workspace 8'
     alt-9 = 'workspace 9'
-    alt-a = 'workspace A' # In your config, you can drop workspace bindings that you don't need
+    # alt-a = 'workspace A' # In your config, you can drop workspace bindings that you don't need
     alt-b = 'workspace B'
     alt-c = 'workspace C'
-    alt-d = 'workspace D'
-    alt-e = 'workspace E'
+    # alt-d = 'workspace D'
+    # alt-e = 'workspace E'
     alt-f = 'workspace F'
-    alt-g = 'workspace G'
-    alt-i = 'workspace I'
-    alt-m = 'workspace M'
-    alt-n = 'workspace N'
-    alt-o = 'workspace O'
-    alt-p = 'workspace P'
-    alt-q = 'workspace Q'
-    alt-r = 'workspace R'
-    alt-s = 'workspace S'
+    # alt-g = 'workspace G'
+    # alt-i = 'workspace I'
+    # alt-m = 'workspace M'
+    # alt-n = 'workspace N'
+    # alt-o = 'workspace O'
+    # alt-p = 'workspace P'
+    # alt-q = 'workspace Q'
+    # alt-r®®®©©© = 'workspace R'
+    # alt-s = 'workspace S'
     alt-t = 'workspace T'
-    alt-u = 'workspace U'
+    # alt-u = 'workspace U'
     alt-v = 'workspace V'
-    alt-w = 'workspace W'
-    alt-x = 'workspace X'
-    alt-y = 'workspace Y'
-    alt-z = 'workspace Z'
+    # alt-w = 'workspace W'
+    # alt-x = 'workspace X'
+    # alt-y = 'workspace Y'
+    # alt-z = 'workspace Z'
+
+    alt-shift-minus = 'resize smart -50'
+    alt-shift-equal = 'resize smart +50'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
     alt-shift-1 = 'move-node-to-workspace 1'
@@ -170,29 +178,38 @@ on-mode-changed = []
     alt-shift-6 = 'move-node-to-workspace 6'
     alt-shift-7 = 'move-node-to-workspace 7'
     alt-shift-8 = 'move-node-to-workspace 8'
-    alt-shift-9 = 'move-node-to-workspace 9'
+    # alt-shift-9 = 'move-node-to-workspace 9'
     alt-shift-a = 'move-node-to-workspace A'
     alt-shift-b = 'move-node-to-workspace B'
     alt-shift-c = 'move-node-to-workspace C'
-    alt-shift-d = 'move-node-to-workspace D'
-    alt-shift-e = 'move-node-to-workspace E'
-    alt-shift-f = 'move-node-to-workspace F'
-    alt-shift-g = 'move-node-to-workspace G'
-    alt-shift-i = 'move-node-to-workspace I'
-    alt-shift-m = 'move-node-to-workspace M'
-    alt-shift-n = 'move-node-to-workspace N'
-    alt-shift-o = 'move-node-to-workspace O'
-    alt-shift-p = 'move-node-to-workspace P'
-    alt-shift-q = 'move-node-to-workspace Q'
+    # alt-shift-d = 'move-node-to-workspace D'
+    # alt-shift-e = 'move-node-to-workspace E'
+    # alt-shift-f = 'move-node-to-workspace F'
+    # alt-shift-g = 'move-node-to-workspace G'
+    # alt-shift-i = 'move-node-to-workspace I'
+    # alt-shift-m = 'move-node-to-workspace M'
+    # alt-shift-n = 'move-node-to-workspace N'
+    # alt-shift-o = 'move-node-to-workspace O'
+    # alt-shift-p = 'move-node-to-workspace P'
+    # alt-shift-q = 'move-node-to-workspace Q'
     alt-shift-r = 'move-node-to-workspace R'
-    alt-shift-s = 'move-node-to-workspace S'
-    alt-shift-t = 'move-node-to-workspace T'
-    alt-shift-u = 'move-node-to-workspace U'
+    # alt-shift-s = 'move-node-to-workspace S'
+    # alt-shift-t = 'move-node-to-workspace T'
+    # alt-shift-u = 'move-node-to-workspace U'
     alt-shift-v = 'move-node-to-workspace V'
-    alt-shift-w = 'move-node-to-workspace W'
-    alt-shift-x = 'move-node-to-workspace X'
-    alt-shift-y = 'move-node-to-workspace Y'
-    alt-shift-z = 'move-node-to-workspace Z'
+    # alt-shift-w = 'move-node-to-workspace W'
+    # alt-shift-x = 'move-node-to-workspace X'
+    # alt-shift-y = 'move-node-to-workspace Y'
+    # alt-shift-z = 'move-node-to-workspace Z'
+
+    alt-shift-f = 'fullscreen'
+
+    # Toggle sketchybar visibility
+    alt-s = 'exec-and-forget sketchybar --bar hidden=toggle'
+
+    # Navigate between non-empty workspaces
+    alt-left = ['exec-and-forget aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin prev --wrap-around']
+    alt-right = ['exec-and-forget aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin next --wrap-around']
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
     alt-tab = 'workspace-back-and-forth'
@@ -217,3 +234,30 @@ on-mode-changed = []
     alt-shift-j = ['join-with down', 'mode main']
     alt-shift-k = ['join-with up', 'mode main']
     alt-shift-l = ['join-with right', 'mode main']
+
+[[on-window-detected]]
+if.app-id = 'com.apple.finder'
+run = 'move-node-to-workspace F'
+
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+run = 'move-node-to-workspace T'
+
+[[on-window-detected]]
+if.app-id = 'com.cron.electron'
+run = 'move-node-to-workspace C'
+
+[workspace-to-monitor-force-assignment]
+1 = 'secondary'
+2 = 'secondary'
+3 = 'secondary'
+4 = 'secondary'
+5 = 'secondary'
+6 = 'secondary'
+7 = 'secondary'
+8 = 'secondary'
+9 = 'secondary'
+B = 'main'
+T = 'main'
+C = 'main'
+F = 'main'

@@ -41,6 +41,9 @@ BREW_CASKS=(
   raycast
   karabiner-elements
   aerospace
+
+  # Fonts
+  font-sketchybar-app-font
 )
 
 NPM_PACKAGES=(
