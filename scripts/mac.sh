@@ -40,6 +40,7 @@ BREW_CASKS=(
   # Productivity
   raycast
   karabiner-elements
+  aerospace
 )
 
 NPM_PACKAGES=(
