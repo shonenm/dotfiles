@@ -126,12 +126,23 @@ set_default_shell() {
   log_success "Default shell changed to zsh (restart terminal to apply)"
 }
 
+link_ai_scripts() {
+  mkdir -p "$HOME/.local/bin"
+
+  # ai-notify.sh - required for Claude/Codex/Gemini CLI notifications
+  if [[ -f "$SCRIPT_DIR/ai-notify.sh" ]]; then
+    ln -sf "$SCRIPT_DIR/ai-notify.sh" "$HOME/.local/bin/ai-notify.sh"
+    log_success "Linked ai-notify.sh to ~/.local/bin"
+  fi
+}
+
 # Run if sourced
 install_brew_packages
 install_brew_casks
 install_mise_tools
 install_npm_packages
 install_dotenvx
+link_ai_scripts
 set_default_shell
 
 log_success "macOS packages installed!"

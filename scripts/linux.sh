@@ -385,12 +385,25 @@ set_default_shell() {
   log_success "Default shell changed to zsh (restart terminal to apply)"
 }
 
+# --- 3. Link AI CLI notification scripts ---
+link_ai_scripts() {
+  local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  mkdir -p "$HOME/.local/bin"
+
+  # ai-notify.sh - required for Claude/Codex/Gemini CLI notifications
+  if [[ -f "$script_dir/ai-notify.sh" ]]; then
+    ln -sf "$script_dir/ai-notify.sh" "$HOME/.local/bin/ai-notify.sh"
+    log_success "Linked ai-notify.sh to ~/.local/bin"
+  fi
+}
+
 # --- Main Execution ---
 
 check_requirements
 install_system_packages
 install_modern_tools
 install_npm_packages
+link_ai_scripts
 install_1password_cli
 check_1password
 set_default_shell
