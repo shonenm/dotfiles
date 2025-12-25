@@ -33,6 +33,9 @@ if [ "$MODE" = "service" ]; then
                background.border_width=2 \
                background.drawing=on
 
+    # Change JankyBorders color to service mode
+    borders active_color=$SERVICE_MODE_COLOR 2>/dev/null
+
     # Change all brackets to service mode color
     sketchybar --set apps_bracket background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
     sketchybar --set workspaces background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
@@ -61,6 +64,9 @@ else
 
     # Remove keybind help
     sketchybar --remove keybind_help 2>/dev/null
+
+    # Restore JankyBorders color to accent
+    borders active_color=$ACCENT_COLOR 2>/dev/null
 
     # Restore accent color for brackets
     sketchybar --set apps_bracket background.border_color=$ACCENT_COLOR 2>/dev/null
