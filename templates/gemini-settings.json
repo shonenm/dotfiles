@@ -9,7 +9,7 @@
       {
         "hooks": [{
           "type": "command",
-          "command": "ai-notify.sh gemini complete"
+          "command": "__HOME__/dotfiles/scripts/ai-notify.sh gemini complete"
         }]
       }
     ]

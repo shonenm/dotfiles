@@ -1,0 +1,1 @@
+notify = ["__HOME__/dotfiles/scripts/ai-notify.sh", "codex", "complete"]

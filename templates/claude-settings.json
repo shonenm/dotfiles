@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "ai-notify.sh claude stop"
+            "command": "__HOME__/dotfiles/scripts/ai-notify.sh claude stop"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "ai-notify.sh claude permission"
+            "command": "__HOME__/dotfiles/scripts/ai-notify.sh claude permission"
           }
         ]
       },
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "ai-notify.sh claude idle"
+            "command": "__HOME__/dotfiles/scripts/ai-notify.sh claude idle"
           }
         ]
       }

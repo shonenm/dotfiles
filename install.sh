@@ -242,6 +242,35 @@ link_dotfiles() {
   log_success "Dotfiles linked successfully"
 }
 
+# --- 4. Generate AI CLI configs from templates ---
+# These configs need absolute paths for hooks to work in non-interactive shells
+generate_ai_cli_configs() {
+  log_info "Generating AI CLI configs..."
+
+  local templates_dir="$DOTFILES_DIR/templates"
+
+  # Claude CLI
+  if [[ -f "$templates_dir/claude-settings.json" ]]; then
+    mkdir -p "$HOME/.claude"
+    sed "s|__HOME__|$HOME|g" "$templates_dir/claude-settings.json" > "$HOME/.claude/settings.json"
+    log_success "  Generated ~/.claude/settings.json"
+  fi
+
+  # Codex CLI
+  if [[ -f "$templates_dir/codex-config.toml" ]]; then
+    mkdir -p "$HOME/.codex"
+    sed "s|__HOME__|$HOME|g" "$templates_dir/codex-config.toml" > "$HOME/.codex/config.toml"
+    log_success "  Generated ~/.codex/config.toml"
+  fi
+
+  # Gemini CLI
+  if [[ -f "$templates_dir/gemini-settings.json" ]]; then
+    mkdir -p "$HOME/.gemini"
+    sed "s|__HOME__|$HOME|g" "$templates_dir/gemini-settings.json" > "$HOME/.gemini/settings.json"
+    log_success "  Generated ~/.gemini/settings.json"
+  fi
+}
+
 # --- Main ---
 main() {
   log_info "=== Dotfiles Installation Start ==="
@@ -268,6 +297,9 @@ main() {
 
   # 3. Link dotfiles (stow)
   link_dotfiles
+
+  # 4. Generate AI CLI configs (with absolute paths)
+  generate_ai_cli_configs
 
   echo
   log_success "=== Installation Complete! ==="
