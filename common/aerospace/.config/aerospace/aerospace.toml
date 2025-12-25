@@ -208,8 +208,8 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     alt-s = 'exec-and-forget sketchybar --bar hidden=toggle'
 
     # Navigate between non-empty workspaces
-    alt-left = 'exec-and-forget bash -c "aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin prev --wrap-around"'
-    alt-right = 'exec-and-forget bash -c "aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin next --wrap-around"'
+    ctrl-alt-left = 'exec-and-forget bash -c "aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin prev --wrap-around"'
+    ctrl-alt-right = 'exec-and-forget bash -c "aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin next --wrap-around"'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
     alt-tab = 'workspace-back-and-forth'
