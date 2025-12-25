@@ -9,11 +9,6 @@ $cmd_duration\
 $nodejs\
 $bun\
 $deno\
-$docker_context\
-${custom.docker_compose}\
-$memory_usage\
-$battery\
-$shell\
 $time\
 $username\
 $line_break\
@@ -84,21 +79,6 @@ format = '[─](fg:current_line)[](fg:green)[🥟](fg:primary bg:green)[](
 [deno]
 format = '[─](fg:current_line)[](fg:green)[🦕](fg:primary bg:green)[](fg:green bg:box)[ $version](fg:foreground bg:box)[](fg:box)'
 
-[docker_context]
-format = '[─](fg:current_line)[](fg:cyan)[󰡨 ](fg:primary bg:cyan)[](fg:cyan bg:box)[ $context](fg:foreground bg:box)[](fg:box)'
-
-[memory_usage]
-format = '[─](fg:current_line)[](fg:orange)[󰍛 ](fg:primary bg:orange)[](fg:orange bg:box)[ $ram](fg:foreground bg:box)[](fg:box)'
-disabled = false
-threshold = 0
-
-[battery]
-format = '[─](fg:current_line)[](fg:green)[$symbol](fg:primary bg:green)[](fg:green bg:box)[ $percentage](fg:foreground bg:box)[](fg:box)'
-
-[[battery.display]]
-threshold = 100
-style = 'fg:foreground bg:box'
-
 [fill]
 symbol = '─'
 style = 'fg:current_line'
@@ -106,10 +86,6 @@ style = 'fg:current_line'
 [cmd_duration]
 min_time = 500
 format = '[─](fg:current_line)[](fg:orange)[ ](fg:primary bg:orange)[](fg:orange bg:box)[ $duration ](fg:foreground bg:box)[](fg:box)'
-
-[shell]
-format = '[─](fg:current_line)[](fg:blue)[ ](fg:primary bg:blue)[](fg:blue bg:box)[ $indicator](fg:foreground bg:box)[](fg:box)'
-disabled = false
 
 [time]
 format = '[─](fg:current_line)[](fg:purple)[󰙦 ](fg:primary bg:purple)[](fg:purple bg:box)[ $time](fg:foreground bg:box)[](fg:box)'
@@ -125,13 +101,3 @@ format = '$symbol '
 success_symbol = '[❯❯](fg:bold green)'
 error_symbol = '[❯❯](fg:bold red)'
 
-[custom.docker_compose]
-description = "Docker Compose container status"
-command = '''
-total=$(docker compose ps --quiet 2>/dev/null | wc -l | tr -d ' ')
-running=$(docker compose ps --status running --quiet 2>/dev/null | wc -l | tr -d ' ')
-if [ "$total" -gt 0 ]; then echo "${running}/${total}"; fi
-'''
-when = "test -f compose.yaml -o -f compose.yml -o -f docker-compose.yaml -o -f docker-compose.yml"
-format = '[─](fg:current_line)[](fg:cyan)[󰡨](fg:primary bg:cyan)[](fg:cyan bg:box)[ $output](fg:foreground bg:box)[](fg:box)'
-shell = ["bash", "--noprofile", "--norc"]
