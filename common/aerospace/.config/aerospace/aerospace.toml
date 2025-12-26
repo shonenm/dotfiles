@@ -117,6 +117,9 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     alt-slash = 'layout tiles horizontal vertical'
     alt-comma = 'layout accordion horizontal vertical'
 
+    # Show current layout overview
+    alt-shift-slash = 'exec-and-forget ~/.config/sketchybar/plugins/show_layout.sh'
+
     # See: https://nikitabobko.github.io/AeroSpace/commands#focus
     alt-h = 'focus left'
     alt-j = 'focus down'

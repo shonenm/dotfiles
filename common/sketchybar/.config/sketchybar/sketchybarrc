@@ -56,4 +56,20 @@ sketchybar --add item workspace_trigger right \
 ##### Initial workspace setup #####
 "$PLUGIN_DIR/workspaces.sh"
 
+##### Layout Popup Anchor (invisible, center position) #####
+sketchybar --add item layout_anchor center \
+           --set layout_anchor \
+           icon.drawing=off \
+           label.drawing=off \
+           background.drawing=off \
+           width=0 \
+           popup.horizontal=off \
+           popup.align=center \
+           popup.y_offset=300 \
+           popup.background.color=0xee1e1f29 \
+           popup.background.corner_radius=12 \
+           popup.background.border_color=$ACCENT_COLOR \
+           popup.background.border_width=2 \
+           popup.background.drawing=on
+
 sketchybar --update
