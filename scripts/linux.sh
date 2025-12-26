@@ -222,7 +222,8 @@ install_modern_tools() {
   # Atuin (shell history)
   if ! command_exists atuin; then
     log_info "Installing Atuin..."
-    curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
+    # --yes: skip confirmation, shell config is managed by dotfiles
+    curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh -s -- --yes
   fi
 
   # dotenvx (encrypted .env management)
@@ -234,14 +235,16 @@ install_modern_tools() {
   # uv (Python package installer)
   if ! command_exists uv; then
     log_info "Installing uv..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+    # UV_NO_MODIFY_PATH: shell config is managed by dotfiles
+    curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh
   fi
 
   # Rust (via rustup)
   if ! command_exists cargo; then
     log_info "Installing Rust via rustup..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    source "$HOME/.cargo/env"
+    # --no-modify-path: shell config is managed by dotfiles
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+    [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
   fi
 
   # Lazygit

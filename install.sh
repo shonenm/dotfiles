@@ -210,6 +210,17 @@ link_dotfiles() {
   # Create .config if not exists
   mkdir -p "$HOME/.config"
 
+  # Clean up shell config files created by tool installers (atuin, rustup, uv, etc.)
+  # These will be replaced by dotfiles symlinks
+  local shell_configs=(".zshrc" ".zshenv" ".zprofile" ".bashrc" ".bash_profile" ".profile")
+  for config in "${shell_configs[@]}"; do
+    local config_path="$HOME/$config"
+    # Only backup if it's a regular file (not a symlink) and not empty
+    if [[ -f "$config_path" && ! -L "$config_path" ]]; then
+      backup_file "$config_path" || true
+    fi
+  done
+
   # Stow common packages
   if [[ -d "$DOTFILES_DIR/common" ]]; then
     log_info "Linking common dotfiles..."
