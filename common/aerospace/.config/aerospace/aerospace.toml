@@ -66,8 +66,8 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
 
 # Gaps between windows (inner-*) and between monitor edges (outer-*).
 # Possible values:
-# - Constant:     gaps.outer.top = 10
-# - Per monitor:  gaps.outer.top = 10[{ monitor.main = 16 }, { monitor."some-pattern" = 32 }, 24]
+# - Constant:     gaps.outer.top = 2
+# - Per monitor:  gaps.outer.top = 2[{ monitor.main = 16 }, { monitor."some-pattern" = 32 }, 24]
 #                 In this example, 24 is a default value when there is no match.
 #                 Monitor pattern is the same as for 'workspace-to-monitor-force-assignment'.
 #                 See:
@@ -77,7 +77,7 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     inner.vertical =   2
     outer.left =       2
     outer.bottom =     2
-    outer.top = 10
+    outer.top = 2
     outer.right =      2
 
 # 'main' binding mode declaration
