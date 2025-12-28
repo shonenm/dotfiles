@@ -56,8 +56,10 @@ if [ "$MODE" = "service" ]; then
     # Update layout popup colors if visible
     POPUP_STATE=$(sketchybar --query layout_anchor 2>/dev/null | jq -r '.popup.drawing' 2>/dev/null)
     if [ "$POPUP_STATE" = "on" ]; then
-        FOCUSED_WS_LAYOUT=$(aerospace list-workspaces --focused 2>/dev/null)
+        # Update popup border color
+        sketchybar --set layout_anchor popup.background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
         # Find and update the focused workspace item in the popup
+        FOCUSED_WS_LAYOUT=$(aerospace list-workspaces --focused 2>/dev/null)
         INDEX=0
         for WS in $(aerospace list-workspaces --monitor all --empty no 2>/dev/null | sort); do
             if [ "$WS" = "$FOCUSED_WS_LAYOUT" ]; then
@@ -102,8 +104,10 @@ else
     # Update layout popup colors if visible
     POPUP_STATE=$(sketchybar --query layout_anchor 2>/dev/null | jq -r '.popup.drawing' 2>/dev/null)
     if [ "$POPUP_STATE" = "on" ]; then
-        FOCUSED_WS_LAYOUT=$(aerospace list-workspaces --focused 2>/dev/null)
+        # Update popup border color
+        sketchybar --set layout_anchor popup.background.border_color=$ACCENT_COLOR 2>/dev/null
         # Find and update the focused workspace item in the popup
+        FOCUSED_WS_LAYOUT=$(aerospace list-workspaces --focused 2>/dev/null)
         INDEX=0
         for WS in $(aerospace list-workspaces --monitor all --empty no 2>/dev/null | sort); do
             if [ "$WS" = "$FOCUSED_WS_LAYOUT" ]; then

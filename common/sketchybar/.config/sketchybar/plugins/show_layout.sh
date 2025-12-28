@@ -112,5 +112,7 @@ for WS in $WORKSPACES; do
     INDEX=$((INDEX + 1))
 done
 
-# Show popup
-sketchybar --set layout_anchor popup.drawing=on
+# Show popup with theme-colored border
+sketchybar --set layout_anchor \
+    popup.background.border_color=$THEME_COLOR \
+    popup.drawing=on
