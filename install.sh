@@ -163,11 +163,9 @@ stow_package() {
   local pkg_name="$2"
   local has_unbacked_files=false
 
-  cd "$pkg_dir"
-
-  # Dry-run to detect conflicts
+  # Dry-run to detect conflicts (use -d flag instead of cd)
   local output
-  output=$(stow -n -t "$HOME" "$pkg_name" 2>&1) || true
+  output=$(stow -d "$pkg_dir" -n -t "$HOME" "$pkg_name" 2>&1) || true
 
   # Check for conflicts (existing files not owned by stow or regular files)
   if echo "$output" | grep -q "existing target"; then
@@ -191,9 +189,9 @@ stow_package() {
   # Run stow (may partially fail if some files couldn't be backed up)
   if [[ "$has_unbacked_files" == "true" ]]; then
     # Some files couldn't be removed, stow will fail for those - suppress errors
-    stow -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:\|existing target" || true
+    stow -d "$pkg_dir" -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:\|existing target" || true
   else
-    stow -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:" || true
+    stow -d "$pkg_dir" -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:" || true
   fi
 }
 
