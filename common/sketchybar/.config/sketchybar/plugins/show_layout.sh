@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Ensure CONFIG_DIR is set (for when called directly, not via sketchybar)
+: "${CONFIG_DIR:=$HOME/.config/sketchybar}"
+
 source "$CONFIG_DIR/plugins/accent_color.sh"
 
 # Get current mode and set theme color
