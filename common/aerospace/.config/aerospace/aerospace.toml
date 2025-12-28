@@ -231,6 +231,9 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     f = ['layout floating tiling', 'mode main'] # Toggle between floating and tiling layout
     backspace = ['close-all-windows-but-current', 'mode main']
 
+    # Show current layout overview (same as main mode)
+    alt-shift-slash = 'exec-and-forget ~/.config/sketchybar/plugins/show_layout.sh'
+
     # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
     #s = ['layout sticky tiling', 'mode main']
 
