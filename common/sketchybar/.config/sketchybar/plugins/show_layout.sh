@@ -2,6 +2,14 @@
 
 source "$CONFIG_DIR/plugins/accent_color.sh"
 
+# Get current mode and set theme color
+MODE=$(aerospace list-modes --current 2>/dev/null)
+if [ "$MODE" = "service" ]; then
+    THEME_COLOR=$SERVICE_MODE_COLOR
+else
+    THEME_COLOR=$ACCENT_COLOR
+fi
+
 # App icon mapping
 get_app_icon() {
     case "$1" in
@@ -76,7 +84,7 @@ for WS in $WORKSPACES; do
 
     # Highlight current workspace
     if [ "$WS" = "$FOCUSED" ]; then
-        BG_COLOR=$ACCENT_COLOR
+        BG_COLOR=$THEME_COLOR
         WS_ICON="󰄯"
     else
         BG_COLOR="0x00000000"
