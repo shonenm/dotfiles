@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "__HOME__/dotfiles/scripts/ai-notify.sh claude stop"
+            "command": "__HOME__/dotfiles/scripts/ai-notify.sh claude complete"
           }
         ]
       }

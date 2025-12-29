@@ -20,6 +20,10 @@ fi
 TOOL="${1:-claude}"
 EVENT="${2:-notification}"
 
+# デバッグログ
+DEBUG_LOG="${CACHE_DIR}/debug.log"
+echo "$(date '+%Y-%m-%d %H:%M:%S') TOOL=$TOOL EVENT=$EVENT ARGS=$* \$0=$0 \$#=$# ALL_ARGS=[$@]" >> "$DEBUG_LOG"
+
 # 1. 依存チェック (jq がない場合は何もしない)
 if ! command -v jq &> /dev/null; then
   exit 0
@@ -85,8 +89,8 @@ get_webhook() {
     error)      ICON="❌"; TITLE="エラー発生"; COLOR="#dc3545"; MENTION="<!here>" ;;
 
     # 後で確認でOK（メンションなし → 静かにログ）
-    stop)       ICON="🛑"; TITLE="中断"; COLOR="#6c757d"; MENTION="" ;;
-    complete)   ICON="✅"; TITLE="完了"; COLOR="#28a745"; MENTION="" ;;
+    # Claude CodeのStopフックは自動的に "stop" を渡すため、完了として扱う
+    stop)       ICON="✅"; TITLE="完了"; COLOR="#28a745"; MENTION="" ;;
     *)          ICON="📢"; TITLE="通知"; COLOR="#6c757d"; MENTION="" ;;
   esac
 
