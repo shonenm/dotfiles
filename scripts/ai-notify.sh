@@ -72,8 +72,10 @@ get_webhook() {
   [[ -z "$WEBHOOK" ]] && exit 0
 
   # JSON から情報抽出
-  CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || pwd)
+  CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
+  [[ -z "$CWD" ]] && CWD=$(pwd)
   PROJECT=$(basename "$CWD")
+  DEVICE=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
 
   # イベントに応じてメンションと色を使い分ける
   case "$EVENT" in
@@ -94,18 +96,19 @@ get_webhook() {
   curl -s -X POST "$WEBHOOK" \
     -H "Content-Type: application/json" \
     -d "{
-      \"text\": \"${MENTION} ${TITLE}\",
+      \"text\": \"${MENTION} ${ICON} ${TITLE} - ${PROJECT} (${DEVICE})\",
       \"attachments\": [{
         \"color\": \"$COLOR\",
         \"blocks\": [
           {
             \"type\": \"header\",
-            \"text\": {\"type\": \"plain_text\", \"text\": \"$ICON $TITLE\", \"emoji\": true}
+            \"text\": {\"type\": \"plain_text\", \"text\": \"$ICON $TITLE - $PROJECT\", \"emoji\": true}
           },
           {
             \"type\": \"section\",
             \"fields\": [
               {\"type\": \"mrkdwn\", \"text\": \"*Project:*\n\`$PROJECT\`\"},
+              {\"type\": \"mrkdwn\", \"text\": \"*Device:*\n\`$DEVICE\`\"},
               {\"type\": \"mrkdwn\", \"text\": \"*Time:*\n$TIMESTAMP\"}
             ]
           }
