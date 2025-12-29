@@ -256,6 +256,13 @@ link_dotfiles() {
 generate_ai_cli_configs() {
   log_info "Generating AI CLI configs..."
 
+  # Clear webhook cache to ensure fresh URLs from 1Password
+  local cache_dir="$HOME/.cache/ai-notify"
+  if [[ -d "$cache_dir" ]]; then
+    rm -rf "$cache_dir"
+    log_info "  Cleared webhook cache"
+  fi
+
   local templates_dir="$DOTFILES_DIR/templates"
 
   # Claude CLI

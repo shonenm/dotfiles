@@ -1,10 +1,21 @@
 #!/bin/bash
 # AI CLI Slack Notification Script
 # Usage: ai-notify.sh <tool> <event>
+#        ai-notify.sh --clear-cache
 # tool: claude | codex | gemini
 # event: stop | complete | permission | idle | error
 
 set -euo pipefail
+
+# キャッシュディレクトリ
+CACHE_DIR="${HOME}/.cache/ai-notify"
+
+# --clear-cache オプション
+if [[ "${1:-}" == "--clear-cache" ]]; then
+  rm -rf "$CACHE_DIR"
+  echo "Cache cleared: $CACHE_DIR"
+  exit 0
+fi
 
 TOOL="${1:-claude}"
 EVENT="${2:-notification}"
@@ -14,8 +25,6 @@ if ! command -v jq &> /dev/null; then
   exit 0
 fi
 
-# キャッシュディレクトリ
-CACHE_DIR="${HOME}/.cache/ai-notify"
 mkdir -p "$CACHE_DIR"
 
 # Webhook URL取得関数（キャッシュ優先、なければ1Passwordから取得してキャッシュ）
