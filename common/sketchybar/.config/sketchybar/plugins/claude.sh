@@ -1,13 +1,14 @@
 #!/bin/bash
 # Claude Code Status Plugin for SketchyBar
-# Displays Claude Code session status with aerospace workspace integration
+# Updates workspace badges based on Claude session status
 
 STATUS_DIR="/tmp/claude_status"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# バッジ色（service mode と同じオレンジで固定）
+BADGE_COLOR="0xffff6600"
 
 # VS Code にフォーカスした時、そのプロジェクトの通知を解除
 handle_focus_change() {
-  # フォーカス中のウィンドウを取得
   local focused
   focused=$(aerospace list-windows --focused --json 2>/dev/null)
 
@@ -20,7 +21,7 @@ handle_focus_change() {
   local title
   title=$(echo "$focused" | jq -r '.[0]["window-title"] // ""' 2>/dev/null)
 
-  # コンテナ名を抽出 (例: "開発コンテナー: syntopic-dev @ remote" → "syntopic-dev")
+  # コンテナ名を抽出
   local container_name
   container_name=$(echo "$title" | sed -n 's/.*開発コンテナー: \(.*\) @.*/\1/p')
 
@@ -29,7 +30,6 @@ handle_focus_change() {
   if [[ -n "$container_name" ]]; then
     proj="$container_name"
   else
-    # "— projectname [" のパターンでプロジェクト名を抽出
     proj=$(echo "$title" | sed -n 's/.*— \([^ []*\).*/\1/p')
   fi
 
@@ -41,62 +41,59 @@ handle_focus_change() {
   fi
 }
 
-# 状態がないか、全て none の場合は非表示
-has_active_status() {
-  [[ ! -d "$STATUS_DIR" ]] && return 1
+# 全ワークスペースのバッジを更新
+update_workspace_badges() {
+  # ワークスペース別の通知を集計
+  declare -A ws_idle_count
+  declare -A ws_permission_count
 
-  local found=0
-  for f in "$STATUS_DIR"/*.json; do
-    [[ -f "$f" ]] || continue
-    local st
-    st=$(jq -r '.status // "none"' "$f" 2>/dev/null)
-    if [[ "$st" == "idle" || "$st" == "permission" ]]; then
-      found=1
-      break
-    fi
-  done
+  if [[ -d "$STATUS_DIR" ]]; then
+    for f in "$STATUS_DIR"/*.json; do
+      [[ -f "$f" ]] || continue
+      local ws st
+      ws=$(jq -r '.workspace // ""' "$f" 2>/dev/null)
+      st=$(jq -r '.status // "none"' "$f" 2>/dev/null)
 
-  [[ $found -eq 1 ]]
-}
+      [[ -z "$ws" ]] && continue
 
-# アクティブな待機セッションをカウント
-count_sessions() {
-  local idle_count=0
-  local permission_count=0
+      case "$st" in
+        idle)
+          ws_idle_count[$ws]=$((${ws_idle_count[$ws]:-0} + 1))
+          ;;
+        permission)
+          ws_permission_count[$ws]=$((${ws_permission_count[$ws]:-0} + 1))
+          ;;
+      esac
+    done
+  fi
 
-  [[ ! -d "$STATUS_DIR" ]] && echo "0 0" && return
+  # アクティブなワークスペースを取得
+  local workspaces
+  workspaces=$(aerospace list-workspaces --monitor all --empty no 2>/dev/null)
 
-  for f in "$STATUS_DIR"/*.json; do
-    [[ -f "$f" ]] || continue
-    local st
-    st=$(jq -r '.status // "none"' "$f" 2>/dev/null)
+  # 各ワークスペースのバッジを更新
+  for ws in $workspaces; do
+    local idle_count=${ws_idle_count[$ws]:-0}
+    local perm_count=${ws_permission_count[$ws]:-0}
+    local total=$((idle_count + perm_count))
 
-    case "$st" in
-      idle) ((idle_count++)) ;;
-      permission) ((permission_count++)) ;;
-    esac
-  done
-
-  echo "$idle_count $permission_count"
-}
-
-# プロジェクト一覧を取得（ワークスペース付き）
-get_project_list() {
-  [[ ! -d "$STATUS_DIR" ]] && return
-
-  for f in "$STATUS_DIR"/*.json; do
-    [[ -f "$f" ]] || continue
-    local st proj ws
-    st=$(jq -r '.status // "none"' "$f" 2>/dev/null)
-    proj=$(jq -r '.project // "unknown"' "$f" 2>/dev/null)
-    ws=$(jq -r '.workspace // ""' "$f" 2>/dev/null)
-
-    [[ "$st" == "idle" || "$st" == "permission" ]] || continue
-
-    if [[ -n "$ws" ]]; then
-      echo "${ws}:${proj}"
+    if [[ $total -eq 0 ]]; then
+      # 通知なし: 空表示（固定幅スペースは維持）
+      sketchybar --set "space.${ws}_badge" \
+        label="" \
+        label.drawing=off \
+        background.drawing=off 2>/dev/null
     else
-      echo "$proj"
+      # 1件以上: 数字表示
+      sketchybar --set "space.${ws}_badge" \
+        label="$total" \
+        label.drawing=on \
+        label.color=0xffffffff \
+        label.width=14 \
+        label.align=center \
+        label.y_offset=1 \
+        background.drawing=on \
+        background.color="$BADGE_COLOR" 2>/dev/null
     fi
   done
 }
@@ -108,42 +105,8 @@ main() {
     handle_focus_change
   fi
 
-  if ! has_active_status; then
-    # アクティブなセッションなし - アイテムを非表示
-    sketchybar --set claude drawing=off
-    return
-  fi
-
-  read -r idle_count permission_count <<< "$(count_sessions)"
-  local total=$((idle_count + permission_count))
-
-  # プロジェクトリスト（最初の2つまで表示）
-  local projects
-  projects=$(get_project_list | head -2 | tr '\n' ' ' | sed 's/ $//')
-
-  # 色とアイコンを決定
-  local icon_color label
-
-  if (( permission_count > 0 )); then
-    # 承認待ちあり - オレンジ
-    icon_color="0xffffb86c"
-  else
-    # 入力待ちのみ - 黄色
-    icon_color="0xfff1fa8c"
-  fi
-
-  # ラベル: 数字 + プロジェクト名（短縮）
-  if (( total == 1 )); then
-    label="$projects"
-  else
-    label="$total"
-  fi
-
-  sketchybar --set claude \
-    drawing=on \
-    icon.color="$icon_color" \
-    label="$label" \
-    label.color="$icon_color"
+  # バッジを更新
+  update_workspace_badges
 }
 
 main

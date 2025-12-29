@@ -42,24 +42,11 @@ sketchybar --add item mode_indicator right \
            background.drawing=on \
            script="$PLUGIN_DIR/mode.sh"
 
-##### Claude Code Status (hidden by default, shown when waiting) #####
-sketchybar --add item claude right \
-           --subscribe claude claude_status_change front_app_switched aerospace_workspace_change \
-           --set claude \
+##### Claude Code Badge Trigger (updates workspace badges) #####
+sketchybar --add item claude_trigger right \
+           --subscribe claude_trigger claude_status_change front_app_switched aerospace_workspace_change \
+           --set claude_trigger \
            drawing=off \
-           icon="󰚩" \
-           icon.font="Hack Nerd Font:Bold:14.0" \
-           icon.color=0xff6c757d \
-           icon.padding_left=8 \
-           icon.padding_right=4 \
-           label="" \
-           label.font="Hack Nerd Font:Bold:10.0" \
-           label.padding_left=0 \
-           label.padding_right=8 \
-           background.color=0x331e1f29 \
-           background.corner_radius=5 \
-           background.height=24 \
-           background.drawing=on \
            script="$PLUGIN_DIR/claude.sh"
 
 ##### Trigger for app updates #####

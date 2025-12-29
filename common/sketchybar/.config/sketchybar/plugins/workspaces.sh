@@ -29,10 +29,33 @@ if [ "$CURRENT_WS_LINE" != "$PREV_WS" ]; then
     sketchybar --remove '/space\..*/' 2>/dev/null
     sketchybar --remove workspaces 2>/dev/null
 
-    # Create new workspace items
+    # Create new workspace items with badge
     SPACE_ITEMS=()
     for sid in $CURRENT_WS; do
         SPACE_ITEMS+=("space.$sid")
+
+        # バッジアイテム（常に表示、固定幅、ラベル中央揃え）
+        sketchybar --add item "space.${sid}_badge" right \
+            --set "space.${sid}_badge" \
+            drawing=on \
+            icon.drawing=off \
+            label="" \
+            label.drawing=off \
+            label.font="Hack Nerd Font:Bold:9.0" \
+            label.color=0xffffffff \
+            label.width=14 \
+            label.align=center \
+            label.y_offset=1 \
+            background.color=0xffff6600 \
+            background.corner_radius=7 \
+            background.height=14 \
+            background.drawing=off \
+            width=14 \
+            y_offset=6 \
+            padding_left=-5 \
+            padding_right=0
+
+        # ワークスペースアイテム
         sketchybar --add item space.$sid right \
             --subscribe space.$sid aerospace_workspace_change \
             --set space.$sid \

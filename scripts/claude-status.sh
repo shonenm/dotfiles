@@ -13,20 +13,24 @@ set -euo pipefail
 STATUS_DIR="/tmp/claude_status"
 STALE_THRESHOLD=3600  # 1時間以上更新なしは削除
 
-# aerospace で VS Code ウィンドウからプロジェクトのワークスペースを検索
+# aerospace で VS Code ウィンドウからプロジェクト/コンテナ名のワークスペースを検索
 find_workspace() {
   local project="$1"
 
   # aerospace がなければスキップ
   command -v aerospace &>/dev/null || return
 
-  # VS Code ウィンドウを検索してプロジェクト名でマッチング
+  # VS Code ウィンドウを検索（プロジェクト名またはコンテナ名でマッチング）
   local result
   result=$(aerospace list-windows --all --json 2>/dev/null | \
     jq -r --arg proj "$project" '
       .[] |
       select(.["app-name"] == "Code") |
-      select(.["window-title"] | contains("— " + $proj + " [") or contains("— " + $proj + " —")) |
+      select(
+        (.["window-title"] | contains("— " + $proj + " [")) or
+        (.["window-title"] | contains("— " + $proj + " —")) or
+        (.["window-title"] | contains("開発コンテナー: " + $proj + " @"))
+      ) |
       .["window-id"]
     ' 2>/dev/null | head -1)
 
