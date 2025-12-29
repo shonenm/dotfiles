@@ -1,0 +1,157 @@
+#!/bin/bash
+# Claude Code 状態管理スクリプト（複数セッション対応 + aerospace 連携）
+# Usage:
+#   claude-status.sh set <project> <status> [session_id] [tty]
+#   claude-status.sh get <project>
+#   claude-status.sh list
+#   claude-status.sh clear <project>
+#   claude-status.sh cleanup
+#   claude-status.sh find-workspace <project>
+
+set -euo pipefail
+
+STATUS_DIR="/tmp/claude_status"
+STALE_THRESHOLD=3600  # 1時間以上更新なしは削除
+
+# aerospace で VS Code ウィンドウからプロジェクトのワークスペースを検索
+find_workspace() {
+  local project="$1"
+
+  # aerospace がなければスキップ
+  command -v aerospace &>/dev/null || return
+
+  # VS Code ウィンドウを検索してプロジェクト名でマッチング
+  local result
+  result=$(aerospace list-windows --all --json 2>/dev/null | \
+    jq -r --arg proj "$project" '
+      .[] |
+      select(.["app-name"] == "Code") |
+      select(.["window-title"] | contains("— " + $proj + " [") or contains("— " + $proj + " —")) |
+      .["window-id"]
+    ' 2>/dev/null | head -1)
+
+  if [[ -n "$result" ]]; then
+    # ウィンドウIDからワークスペースを取得
+    for ws in 1 2 3 4 5 6 7 8 9; do
+      if aerospace list-windows --workspace "$ws" --json 2>/dev/null | \
+         jq -e --arg wid "$result" '.[] | select(.["window-id"] == ($wid | tonumber))' &>/dev/null; then
+        echo "$ws"
+        return
+      fi
+    done
+  fi
+}
+
+# 状態を設定
+set_status() {
+  local project="$1"
+  local status="$2"
+  local session_id="${3:-}"
+  local tty="${4:-}"
+
+  mkdir -p "$STATUS_DIR"
+
+  # ワークスペースを検索
+  local workspace
+  workspace=$(find_workspace "$project" 2>/dev/null || echo "")
+
+  cat > "$STATUS_DIR/${project}.json" <<EOF
+{
+  "status": "$status",
+  "project": "$project",
+  "workspace": "$workspace",
+  "session_id": "$session_id",
+  "tty": "$tty",
+  "updated": $(date +%s)
+}
+EOF
+
+  # SketchyBar 通知
+  if command -v sketchybar &>/dev/null; then
+    sketchybar --trigger claude_status_change &>/dev/null || true
+  fi
+}
+
+# 状態を取得
+get_status() {
+  local project="$1"
+  local file="$STATUS_DIR/${project}.json"
+
+  if [[ -f "$file" ]]; then
+    cat "$file"
+  else
+    echo "{}"
+  fi
+}
+
+# 全セッションをリスト
+list_status() {
+  [[ ! -d "$STATUS_DIR" ]] && echo "[]" && return
+
+  local files=("$STATUS_DIR"/*.json)
+  if [[ ! -e "${files[0]}" ]]; then
+    echo "[]"
+    return
+  fi
+
+  cat "$STATUS_DIR"/*.json 2>/dev/null | jq -s '.'
+}
+
+# 状態をクリア
+clear_status() {
+  local project="$1"
+  rm -f "$STATUS_DIR/${project}.json"
+
+  # SketchyBar 通知
+  if command -v sketchybar &>/dev/null; then
+    sketchybar --trigger claude_status_change &>/dev/null || true
+  fi
+}
+
+# 古いセッションをクリーンアップ
+cleanup() {
+  [[ ! -d "$STATUS_DIR" ]] && return
+
+  local now
+  now=$(date +%s)
+
+  for f in "$STATUS_DIR"/*.json; do
+    [[ -f "$f" ]] || continue
+    local updated
+    updated=$(jq -r '.updated // 0' "$f" 2>/dev/null || echo "0")
+    if (( now - updated > STALE_THRESHOLD )); then
+      rm -f "$f"
+    fi
+  done
+
+  # SketchyBar 通知
+  if command -v sketchybar &>/dev/null; then
+    sketchybar --trigger claude_status_change &>/dev/null || true
+  fi
+}
+
+# メイン
+case "${1:-}" in
+  set)
+    set_status "${2:-}" "${3:-}" "${4:-}" "${5:-}"
+    ;;
+  get)
+    get_status "${2:-}"
+    ;;
+  list)
+    list_status
+    ;;
+  clear)
+    clear_status "${2:-}"
+    ;;
+  cleanup)
+    cleanup
+    ;;
+  find-workspace)
+    find_workspace "${2:-}"
+    ;;
+  *)
+    echo "Usage: claude-status.sh <set|get|list|clear|cleanup|find-workspace> [args]" >&2
+    exit 1
+    ;;
+esac

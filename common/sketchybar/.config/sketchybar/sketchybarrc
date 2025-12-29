@@ -19,6 +19,9 @@ sketchybar --default "${default[@]}"
 sketchybar --add event aerospace_workspace_change
 sketchybar --add event aerospace_mode_change
 
+##### Claude Code Events #####
+sketchybar --add event claude_status_change
+
 ##### Mode Indicator (always visible) #####
 sketchybar --add item mode_indicator right \
            --subscribe mode_indicator aerospace_mode_change \
@@ -38,6 +41,26 @@ sketchybar --add item mode_indicator right \
            background.height=24 \
            background.drawing=on \
            script="$PLUGIN_DIR/mode.sh"
+
+##### Claude Code Status (hidden by default, shown when waiting) #####
+sketchybar --add item claude right \
+           --subscribe claude claude_status_change front_app_switched aerospace_workspace_change \
+           --set claude \
+           drawing=off \
+           icon="󰚩" \
+           icon.font="Hack Nerd Font:Bold:14.0" \
+           icon.color=0xff6c757d \
+           icon.padding_left=8 \
+           icon.padding_right=4 \
+           label="" \
+           label.font="Hack Nerd Font:Bold:10.0" \
+           label.padding_left=0 \
+           label.padding_right=8 \
+           background.color=0x331e1f29 \
+           background.corner_radius=5 \
+           background.height=24 \
+           background.drawing=on \
+           script="$PLUGIN_DIR/claude.sh"
 
 ##### Trigger for app updates #####
 sketchybar --add item app_trigger right \
