@@ -96,6 +96,14 @@ setup_tool() {
   echo "Cached webhook for $tool"
 
   send_setup_notification "$tool" "$webhook"
+
+  # SketchyBar バッジ作成（リモート環境のみ）
+  if [[ "$(uname)" != "Darwin" ]] || [[ -n "${SSH_CONNECTION:-}" ]]; then
+    local project="${DEVCONTAINER_NAME:-$(basename "$(pwd)")}"
+    local status_dir="/tmp/claude_status"
+    mkdir -p "$status_dir"
+    echo "{\"project\":\"$project\",\"status\":\"complete\",\"session_id\":\"\",\"timestamp\":$(date +%s)}" > "$status_dir/${project}.json"
+  fi
 }
 
 # --refresh-cache オプション: 全ツールのキャッシュを更新（通知なし）
