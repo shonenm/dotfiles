@@ -16,9 +16,9 @@ if [ "$MODE" = "service" ]; then
         background.color=$SERVICE_MODE_COLOR \
         background.drawing=on
 
-    # Create keybind help on the left side
+    # Create keybind help on the right side
     sketchybar --remove keybind_help 2>/dev/null
-    sketchybar --add item keybind_help left \
+    sketchybar --add item keybind_help right \
                --set keybind_help \
                icon.drawing=off \
                label="esc:exit  a:reload-aerospace  r:reset  f:float  ⌫:close-others" \

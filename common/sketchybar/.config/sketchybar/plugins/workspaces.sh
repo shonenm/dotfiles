@@ -11,7 +11,7 @@ else
 fi
 
 # Get current non-empty workspaces
-CURRENT_WS=$(aerospace list-workspaces --monitor all --empty no 2>/dev/null | sort -r)
+CURRENT_WS=$(aerospace list-workspaces --monitor all --empty no 2>/dev/null | sort)
 FOCUSED_WS=$(aerospace list-workspaces --focused 2>/dev/null)
 
 # State file to track existing workspace items
@@ -34,8 +34,25 @@ if [ "$CURRENT_WS_LINE" != "$PREV_WS" ]; then
     for sid in $CURRENT_WS; do
         SPACE_ITEMS+=("space.$sid")
 
-        # バッジアイテム（常に表示、固定幅、ラベル中央揃え）
-        sketchybar --add item "space.${sid}_badge" right \
+        # ワークスペースアイテム（先に追加して左側に配置）
+        sketchybar --add item space.$sid left \
+            --subscribe space.$sid aerospace_workspace_change \
+            --set space.$sid \
+            icon.drawing=off \
+            label="$sid" \
+            label.font="Hack Nerd Font:Bold:12.0" \
+            label.color=0xffffffff \
+            label.padding_left=10 \
+            label.padding_right=10 \
+            background.color=0x00000000 \
+            background.corner_radius=5 \
+            background.height=24 \
+            background.drawing=off \
+            click_script="aerospace workspace $sid" \
+            script="$CONFIG_DIR/plugins/aerospace.sh $sid"
+
+        # バッジアイテム（後に追加してワークスペースの右側に配置）
+        sketchybar --add item "space.${sid}_badge" left \
             --set "space.${sid}_badge" \
             drawing=on \
             icon.drawing=off \
@@ -54,23 +71,6 @@ if [ "$CURRENT_WS_LINE" != "$PREV_WS" ]; then
             y_offset=6 \
             padding_left=-5 \
             padding_right=0
-
-        # ワークスペースアイテム
-        sketchybar --add item space.$sid right \
-            --subscribe space.$sid aerospace_workspace_change \
-            --set space.$sid \
-            icon.drawing=off \
-            label="$sid" \
-            label.font="Hack Nerd Font:Bold:12.0" \
-            label.color=0xffffffff \
-            label.padding_left=10 \
-            label.padding_right=10 \
-            background.color=0x00000000 \
-            background.corner_radius=5 \
-            background.height=24 \
-            background.drawing=off \
-            click_script="aerospace workspace $sid" \
-            script="$CONFIG_DIR/plugins/aerospace.sh $sid"
     done
 
     # Create bracket for unified background

@@ -45,7 +45,7 @@ if [ "$CURRENT_APPS" != "$PREV_APPS" ]; then
         APP_ITEMS+=("$item_name")
         __icon_map "$app"
 
-        sketchybar --add item "$item_name" right \
+        sketchybar --add item "$item_name" left \
                    --set "$item_name" \
                    icon="$icon_result" \
                    icon.font="sketchybar-app-font:Regular:14.0" \
@@ -73,7 +73,7 @@ if [ "$CURRENT_APPS" != "$PREV_APPS" ]; then
         # Add separator between workspaces and apps
         sketchybar --remove apps_separator 2>/dev/null
         last_space=$(sketchybar --query bar | grep -o '"space\.[^"]*"' | tail -1 | tr -d '"')
-        sketchybar --add item apps_separator right \
+        sketchybar --add item apps_separator left \
                    --set apps_separator \
                    icon.drawing=off \
                    label.drawing=off \
