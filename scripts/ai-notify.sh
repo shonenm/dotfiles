@@ -159,12 +159,6 @@ if ! command -v jq &> /dev/null; then
   exit 0
 fi
 
-# ローカル Mac への SSH ホスト名（~/.ssh/config で設定）
-# 例: Host mac-local
-#       HostName 192.168.x.x
-#       User username
-LOCAL_MAC_HOST="${CLAUDE_LOCAL_MAC_HOST:-}"
-
 # SketchyBar 用のローカル状態更新関数
 update_sketchybar_status() {
   local project="$1"
@@ -176,11 +170,13 @@ update_sketchybar_status() {
   if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
     # ローカル Mac - 直接更新
     "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$session_id" "$tty" 2>/dev/null || true
-  elif [[ -n "$LOCAL_MAC_HOST" ]]; then
-    # リモート環境 - SSH 経由で通知（バックグラウンド）
-    ssh -o ConnectTimeout=2 -o BatchMode=yes "$LOCAL_MAC_HOST" \
-      "\$HOME/dotfiles/scripts/claude-status.sh set '$project' '$status' '$session_id' '$tty'" \
-      &>/dev/null &
+  else
+    # リモート環境 - ファイルに書き込み（Macがinotifywaitで監視）
+    local status_dir="/tmp/claude_status"
+    mkdir -p "$status_dir"
+    local safe_project="${project//\//_}"
+    local status_file="$status_dir/${safe_project}.json"
+    echo "{\"project\":\"$project\",\"status\":\"$status\",\"session_id\":\"$session_id\",\"timestamp\":$(date +%s)}" > "$status_file"
   fi
 }
 

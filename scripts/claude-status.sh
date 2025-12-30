@@ -17,6 +17,11 @@ STALE_THRESHOLD=3600  # 1時間以上更新なしは削除
 find_workspace() {
   local project="$1"
 
+  # リモートプレフィックス (host:project) を除去
+  local search_project="${project#*:}"
+  # コロンがなければ元のまま
+  [[ "$search_project" == "$project" ]] || project="$search_project"
+
   # aerospace がなければスキップ
   command -v aerospace &>/dev/null || return
 
