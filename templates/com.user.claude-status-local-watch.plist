@@ -3,21 +3,20 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.user.privacy-monitor</string>
+    <string>com.user.claude-status-local-watch</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
-        <string>__HOME__/dotfiles/scripts/privacy-monitor.sh</string>
+        <string>__HOME__/dotfiles/scripts/claude-status-local-watch.sh</string>
+    </array>
+    <key>WatchPaths</key>
+    <array>
+        <string>/tmp/claude_status</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
-    <key>KeepAlive</key>
-    <true/>
     <key>StandardErrorPath</key>
-    <string>/tmp/privacy-monitor.err</string>
+    <string>/tmp/claude-status-local-watch.err</string>
     <key>StandardOutPath</key>
-    <string>/tmp/privacy-monitor.log</string>
-    <key>ThrottleInterval</key>
-    <integer>10</integer>
+    <string>/tmp/claude-status-local-watch.log</string>
 </dict>
 </plist>

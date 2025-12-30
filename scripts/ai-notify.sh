@@ -173,11 +173,12 @@ update_sketchybar_status() {
   local status="$2"
   local session_id="${3:-}"
   local tty="${4:-}"
+  local window_id="${5:-}"
 
   # ローカル環境かどうかを判定
   if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
-    # ローカル Mac - 直接更新
-    "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$session_id" "$tty" 2>/dev/null || true
+    # ローカル Mac - 直接更新（window-id指定）
+    "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$session_id" "$tty" "$window_id" 2>/dev/null || true
   else
     # リモート環境 - ファイルに書き込み（Macがinotifywaitで監視）
     local status_dir="/tmp/claude_status"
@@ -246,7 +247,8 @@ get_webhook() {
 
     # SketchyBar 状態更新
     if [[ -n "$SKETCHYBAR_STATUS" ]]; then
-      update_sketchybar_status "$PROJECT" "$SKETCHYBAR_STATUS" "$SESSION_ID" "$TTY"
+      # window_id は渡さない - claude-status.sh が find_window_by_project で正確に検索する
+      update_sketchybar_status "$PROJECT" "$SKETCHYBAR_STATUS" "$SESSION_ID" "$TTY" ""
     fi
   fi
 

@@ -1,13 +1,13 @@
 #!/bin/bash
 # Claude Code Status Plugin for SketchyBar
-# Updates workspace badges based on Claude session status
+# Updates workspace badges based on Claude session status (window-id based)
 
 STATUS_DIR="/tmp/claude_status"
 
 # バッジ色（service mode と同じオレンジで固定）
 BADGE_COLOR="0xffff6600"
 
-# VS Code / ターミナルにフォーカスした時、そのプロジェクトの通知を解除
+# VS Code / ターミナルにフォーカスした時、そのウィンドウの通知を解除
 handle_focus_change() {
   local focused
   focused=$(aerospace list-windows --focused --json 2>/dev/null)
@@ -15,36 +15,22 @@ handle_focus_change() {
   local app_name
   app_name=$(echo "$focused" | jq -r '.[0]["app-name"] // ""' 2>/dev/null)
 
-  local title
-  title=$(echo "$focused" | jq -r '.[0]["window-title"] // ""' 2>/dev/null)
+  local window_id
+  window_id=$(echo "$focused" | jq -r '.[0]["window-id"] // ""' 2>/dev/null)
 
-  local proj=""
-
+  # VS Code またはターミナルアプリの場合のみ処理
   case "$app_name" in
-    "Code")
-      # VS Code: コンテナ名またはプロジェクト名を抽出
-      local container_name
-      container_name=$(echo "$title" | sed -n 's/.*開発コンテナー: \(.*\) @.*/\1/p')
-      if [[ -n "$container_name" ]]; then
-        proj="$container_name"
-      else
-        proj=$(echo "$title" | sed -n 's/.*— \([^ []*\).*/\1/p')
-      fi
-      ;;
-    "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp")
-      # ターミナル: ウィンドウタイトルからディレクトリ名を抽出
-      # tmux のペインタイトル形式: "dirname" または "~/path/to/dirname"
-      proj=$(basename "$title" 2>/dev/null)
+    "Code"|"Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
       ;;
     *)
       return
       ;;
   esac
 
-  [[ -z "$proj" ]] && return
+  [[ -z "$window_id" ]] && return
 
-  # そのプロジェクトの状態ファイルがあれば削除（ローカル・リモート両方）
-  rm -f "$STATUS_DIR/${proj}.json" "$STATUS_DIR/remote:${proj}.json" 2>/dev/null
+  # そのウィンドウの状態ファイルがあれば削除
+  rm -f "$STATUS_DIR/window_${window_id}.json" 2>/dev/null
 }
 
 # 全ワークスペースのバッジを更新
@@ -58,7 +44,7 @@ update_workspace_badges() {
     # このワークスペースの通知数をカウント（bash 3.2互換）
     local total=0
     if [[ -d "$STATUS_DIR" ]]; then
-      for f in "$STATUS_DIR"/*.json; do
+      for f in "$STATUS_DIR"/window_*.json; do
         [[ -f "$f" ]] || continue
         local file_ws file_st
         file_ws=$(jq -r '.workspace // ""' "$f" 2>/dev/null)
