@@ -144,10 +144,6 @@ if command -v op &>/dev/null; then
     echo "Git config updated: $name <$email>"
   }
 
-  # GitHub CLI token from 1Password (auto-load)
-  if command -v gh &>/dev/null && [[ -z "${GH_TOKEN:-}" ]]; then
-    export GH_TOKEN="$(op read 'op://Personal/GitHub/token' 2>/dev/null)"
-  fi
 fi
 
 # --- History ---
