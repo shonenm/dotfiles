@@ -219,17 +219,8 @@ get_webhook() {
   CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
   [[ -z "$CWD" ]] && CWD=$(pwd)
 
-  # Dev Container の場合はコンテナ名を使用
-  PROJECT=""
-  # devcontainer.json から name を取得
-  for devcontainer_path in "$CWD/.devcontainer/devcontainer.json" "$CWD/.devcontainer.json" "/workspaces/.devcontainer/devcontainer.json"; do
-    if [[ -f "$devcontainer_path" ]]; then
-      PROJECT=$(jq -r '.name // empty' "$devcontainer_path" 2>/dev/null)
-      [[ -n "$PROJECT" ]] && break
-    fi
-  done
-  # コンテナ名が取得できなければディレクトリ名を使用
-  [[ -z "$PROJECT" ]] && PROJECT=$(basename "$CWD")
+  # プロジェクト名: DEVCONTAINER_NAME 環境変数 > ディレクトリ名
+  PROJECT="${DEVCONTAINER_NAME:-$(basename "$CWD")}"
 
   DEVICE=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
   SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)

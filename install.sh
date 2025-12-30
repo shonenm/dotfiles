@@ -268,6 +268,7 @@ generate_ai_cli_configs() {
   # Claude CLI
   if [[ -f "$templates_dir/claude-settings.json" ]]; then
     mkdir -p "$HOME/.claude"
+    rm -f "$HOME/.claude/settings.json" 2>/dev/null || true
     sed "s|__HOME__|$HOME|g" "$templates_dir/claude-settings.json" > "$HOME/.claude/settings.json"
     log_success "  Generated ~/.claude/settings.json"
   fi

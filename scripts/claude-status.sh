@@ -27,18 +27,28 @@ find_workspace() {
 
   local result
 
-  # 1. VS Code ウィンドウを検索（プロジェクト名またはコンテナ名でマッチング）
+  # 1. VS Code ウィンドウを検索（コンテナ名を優先、次にプロジェクト名）
   result=$(aerospace list-windows --all --json 2>/dev/null | \
     jq -r --arg proj "$project" '
       .[] |
       select(.["app-name"] == "Code") |
-      select(
-        (.["window-title"] | contains("— " + $proj + " [")) or
-        (.["window-title"] | contains("— " + $proj + " —")) or
-        (.["window-title"] | contains("開発コンテナー: " + $proj + " @"))
-      ) |
+      select(.["window-title"] | contains("開発コンテナー: " + $proj + " @")) |
       .["window-id"]
     ' 2>/dev/null | head -1)
+
+  # コンテナ名で見つからなければプロジェクト名で検索
+  if [[ -z "$result" ]]; then
+    result=$(aerospace list-windows --all --json 2>/dev/null | \
+      jq -r --arg proj "$project" '
+        .[] |
+        select(.["app-name"] == "Code") |
+        select(
+          (.["window-title"] | contains("— " + $proj + " [")) or
+          (.["window-title"] | contains("— " + $proj + " —"))
+        ) |
+        .["window-id"]
+      ' 2>/dev/null | head -1)
+  fi
 
   # 2. VS Code が見つからなければターミナルウィンドウを検索
   if [[ -z "$result" ]]; then
