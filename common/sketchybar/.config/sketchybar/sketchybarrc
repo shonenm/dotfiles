@@ -1,8 +1,11 @@
 PLUGIN_DIR="$CONFIG_DIR/plugins"
 source "$PLUGIN_DIR/accent_color.sh"
 
+# Clear stale state files on startup
+rm -f /tmp/sketchybar_workspaces_state /tmp/sketchybar_apps_state
+
 ##### Bar Appearance #####
-sketchybar --bar position=bottom height=28 color=0x00000000 topmost=on y_offset=10 margin=0 padding_right=10
+sketchybar --bar position=bottom height=28 color=0x00000000 topmost=on y_offset=0 margin=0 padding_right=10
 
 ##### Changing Defaults #####
 default=(

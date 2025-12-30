@@ -10,7 +10,7 @@ if [ "$CURRENT" = "off" ]; then
 else
     # Show bar, restore bottom padding
     sketchybar --bar hidden=off
-    sed -i '' 's/outer\.bottom = *[0-9]*/outer.bottom = 48/' "$CONFIG_FILE"
+    sed -i '' 's/outer\.bottom = *[0-9]*/outer.bottom = 32/' "$CONFIG_FILE"
 fi
 
 # Reload aerospace config
