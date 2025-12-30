@@ -1,7 +1,9 @@
-# Git user configuration
-# Name and email are loaded from 1Password via .zshrc
-[user]
-	# Configured dynamically by shell
+# Git configuration
+# User settings are stored in ~/.gitconfig.local (not tracked by dotfiles)
+
+[include]
+    path = ~/.gitconfig.local
+
 [core]
     pager = delta
 [interactive]

@@ -135,12 +135,16 @@ if command -v op &>/dev/null; then
   }
 
   # Git user config from 1Password (run manually: setup_git_from_op)
+  # Writes to ~/.gitconfig.local to avoid overwriting by dotfiles sync
   setup_git_from_op() {
     local name email
-    name=$(op read "op://Personal/Git Config/username") || { echo "Failed to read username"; return 1; }
+    name=$(op read "op://Personal/Git Config/name") || { echo "Failed to read name"; return 1; }
     email=$(op read "op://Personal/Git Config/email") || { echo "Failed to read email"; return 1; }
-    git config --global user.name "$name"
-    git config --global user.email "$email"
+    cat > ~/.gitconfig.local << EOF
+[user]
+    name = $name
+    email = $email
+EOF
     echo "Git config updated: $name <$email>"
   }
 
