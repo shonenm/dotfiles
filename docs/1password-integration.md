@@ -17,7 +17,7 @@ dotfilesのセットアップと日常利用で1Passwordをシークレット管
 | Codex Webhook | `op://Personal/Codex Webhook/password` |
 | Gemini Webhook | `op://Personal/Gemini Webhook/password` |
 | GitHub Token | `op://Personal/GitHub/token` |
-| Git Username | `op://Personal/Git Config/username` |
+| Git Name | `op://Personal/Git Config/name` |
 | Git Email | `op://Personal/Git Config/email` |
 
 ## セットアップ
@@ -112,7 +112,7 @@ gh pr create
 1Passwordからユーザー名/メールアドレスを取得してGit設定:
 
 ```bash
-# 手動実行
+# 手動実行（1回だけ実行すれば永続化）
 setup_git_from_op
 ```
 
@@ -120,6 +120,10 @@ setup_git_from_op
 ```
 Git config updated: Your Name <your@email.com>
 ```
+
+設定は`~/.gitconfig.local`に保存され、dotfiles更新で上書きされない。
+
+詳細: [Git設定管理](./git-config.md)
 
 ## Webhook連携
 
@@ -193,7 +197,7 @@ Field: password = https://hooks.slack.com/services/xxx/yyy/zzz
 Vault: Personal
 Item: Git Config
 Fields:
-  - username = Your Name
+  - name = Your Name  (※ usernameは予約語のためnameを使用)
   - email = your@email.com
 ```
 
