@@ -7,7 +7,7 @@ STATUS_DIR="/tmp/claude_status"
 # バッジ色（service mode と同じオレンジで固定）
 BADGE_COLOR="0xffff6600"
 
-# VS Code にフォーカスした時、そのプロジェクトの通知を解除
+# VS Code / ターミナルにフォーカスした時、そのプロジェクトの通知を解除
 handle_focus_change() {
   local focused
   focused=$(aerospace list-windows --focused --json 2>/dev/null)
@@ -15,23 +15,31 @@ handle_focus_change() {
   local app_name
   app_name=$(echo "$focused" | jq -r '.[0]["app-name"] // ""' 2>/dev/null)
 
-  # VS Code 以外は無視
-  [[ "$app_name" != "Code" ]] && return
-
   local title
   title=$(echo "$focused" | jq -r '.[0]["window-title"] // ""' 2>/dev/null)
 
-  # コンテナ名を抽出
-  local container_name
-  container_name=$(echo "$title" | sed -n 's/.*開発コンテナー: \(.*\) @.*/\1/p')
+  local proj=""
 
-  # コンテナ名があればそれを使用、なければプロジェクト名
-  local proj
-  if [[ -n "$container_name" ]]; then
-    proj="$container_name"
-  else
-    proj=$(echo "$title" | sed -n 's/.*— \([^ []*\).*/\1/p')
-  fi
+  case "$app_name" in
+    "Code")
+      # VS Code: コンテナ名またはプロジェクト名を抽出
+      local container_name
+      container_name=$(echo "$title" | sed -n 's/.*開発コンテナー: \(.*\) @.*/\1/p')
+      if [[ -n "$container_name" ]]; then
+        proj="$container_name"
+      else
+        proj=$(echo "$title" | sed -n 's/.*— \([^ []*\).*/\1/p')
+      fi
+      ;;
+    "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp")
+      # ターミナル: ウィンドウタイトルからディレクトリ名を抽出
+      # tmux のペインタイトル形式: "dirname" または "~/path/to/dirname"
+      proj=$(basename "$title" 2>/dev/null)
+      ;;
+    *)
+      return
+      ;;
+  esac
 
   [[ -z "$proj" ]] && return
 
