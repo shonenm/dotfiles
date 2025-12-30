@@ -13,15 +13,16 @@ set -euo pipefail
 STATUS_DIR="/tmp/claude_status"
 STALE_THRESHOLD=3600  # 1時間以上更新なしは削除
 
-# aerospace で VS Code ウィンドウからプロジェクト/コンテナ名のワークスペースを検索
+# aerospace でウィンドウからプロジェクトのワークスペースを検索
 find_workspace() {
   local project="$1"
 
   # aerospace がなければスキップ
   command -v aerospace &>/dev/null || return
 
-  # VS Code ウィンドウを検索（プロジェクト名またはコンテナ名でマッチング）
   local result
+
+  # 1. VS Code ウィンドウを検索（プロジェクト名またはコンテナ名でマッチング）
   result=$(aerospace list-windows --all --json 2>/dev/null | \
     jq -r --arg proj "$project" '
       .[] |
@@ -34,9 +35,22 @@ find_workspace() {
       .["window-id"]
     ' 2>/dev/null | head -1)
 
+  # 2. VS Code が見つからなければターミナルウィンドウを検索
+  if [[ -z "$result" ]]; then
+    result=$(aerospace list-windows --all --json 2>/dev/null | \
+      jq -r --arg proj "$project" '
+        .[] |
+        select(.["app-name"] | test("Ghostty|Terminal|iTerm|WezTerm|Alacritty|kitty"; "i")) |
+        select(.["window-title"] == $proj) |
+        .["window-id"]
+      ' 2>/dev/null | head -1)
+  fi
+
   if [[ -n "$result" ]]; then
-    # ウィンドウIDからワークスペースを取得
-    for ws in 1 2 3 4 5 6 7 8 9; do
+    # ウィンドウIDからワークスペースを取得（全ワークスペースを検索）
+    local all_workspaces
+    all_workspaces=$(aerospace list-workspaces --all 2>/dev/null)
+    for ws in $all_workspaces; do
       if aerospace list-windows --workspace "$ws" --json 2>/dev/null | \
          jq -e --arg wid "$result" '.[] | select(.["window-id"] == ($wid | tonumber))' &>/dev/null; then
         echo "$ws"

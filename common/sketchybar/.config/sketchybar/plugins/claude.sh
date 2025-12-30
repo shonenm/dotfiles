@@ -43,39 +43,25 @@ handle_focus_change() {
 
 # 全ワークスペースのバッジを更新
 update_workspace_badges() {
-  # ワークスペース別の通知を集計
-  declare -A ws_idle_count
-  declare -A ws_permission_count
-
-  if [[ -d "$STATUS_DIR" ]]; then
-    for f in "$STATUS_DIR"/*.json; do
-      [[ -f "$f" ]] || continue
-      local ws st
-      ws=$(jq -r '.workspace // ""' "$f" 2>/dev/null)
-      st=$(jq -r '.status // "none"' "$f" 2>/dev/null)
-
-      [[ -z "$ws" ]] && continue
-
-      case "$st" in
-        idle)
-          ws_idle_count[$ws]=$((${ws_idle_count[$ws]:-0} + 1))
-          ;;
-        permission)
-          ws_permission_count[$ws]=$((${ws_permission_count[$ws]:-0} + 1))
-          ;;
-      esac
-    done
-  fi
-
   # アクティブなワークスペースを取得
   local workspaces
   workspaces=$(aerospace list-workspaces --monitor all --empty no 2>/dev/null)
 
   # 各ワークスペースのバッジを更新
   for ws in $workspaces; do
-    local idle_count=${ws_idle_count[$ws]:-0}
-    local perm_count=${ws_permission_count[$ws]:-0}
-    local total=$((idle_count + perm_count))
+    # このワークスペースの通知数をカウント（bash 3.2互換）
+    local total=0
+    if [[ -d "$STATUS_DIR" ]]; then
+      for f in "$STATUS_DIR"/*.json; do
+        [[ -f "$f" ]] || continue
+        local file_ws file_st
+        file_ws=$(jq -r '.workspace // ""' "$f" 2>/dev/null)
+        file_st=$(jq -r '.status // "none"' "$f" 2>/dev/null)
+
+        [[ "$file_ws" != "$ws" ]] && continue
+        [[ "$file_st" == "idle" || "$file_st" == "permission" ]] && ((total++))
+      done
+    fi
 
     if [[ $total -eq 0 ]]; then
       # 通知なし: 空表示（固定幅スペースは維持）
