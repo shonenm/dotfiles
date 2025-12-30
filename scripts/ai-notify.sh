@@ -123,6 +123,7 @@ get_webhook() {
     case "$EVENT" in
       idle)       SKETCHYBAR_STATUS="idle" ;;
       permission) SKETCHYBAR_STATUS="permission" ;;
+      complete)   SKETCHYBAR_STATUS="complete" ;;
       stop|error) SKETCHYBAR_STATUS="none" ;;
       *)          SKETCHYBAR_STATUS="" ;;
     esac

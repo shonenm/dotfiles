@@ -67,7 +67,7 @@ update_workspace_badges() {
         file_st=$(jq -r '.status // "none"' "$f" 2>/dev/null)
 
         [[ "$file_ws" != "$ws" ]] && continue
-        [[ "$file_st" == "idle" || "$file_st" == "permission" ]] && ((total++))
+        [[ "$file_st" == "idle" || "$file_st" == "permission" || "$file_st" == "complete" ]] && ((total++))
       done
     fi
 

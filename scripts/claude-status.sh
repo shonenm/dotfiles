@@ -100,8 +100,8 @@ set_status() {
 
   mkdir -p "$STATUS_DIR"
 
-  # 通知対象のステータス（idle, permission）で、すでにそのプロジェクトにフォーカス中なら通知しない
-  if [[ "$status" == "idle" || "$status" == "permission" ]]; then
+  # 通知対象のステータス（idle, permission, complete）で、すでにそのプロジェクトにフォーカス中なら通知しない
+  if [[ "$status" == "idle" || "$status" == "permission" || "$status" == "complete" ]]; then
     local focused_project
     focused_project=$(get_focused_project 2>/dev/null || echo "")
     if [[ "$focused_project" == "$project" ]]; then
