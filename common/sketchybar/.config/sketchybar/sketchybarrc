@@ -25,6 +25,9 @@ sketchybar --add event aerospace_mode_change
 ##### Claude Code Events #####
 sketchybar --add event claude_status_change
 
+##### Privacy Events #####
+sketchybar --add event privacy_change
+
 ##### Mode Indicator (always visible) #####
 sketchybar --add item mode_indicator left \
            --subscribe mode_indicator aerospace_mode_change \
@@ -68,6 +71,37 @@ sketchybar --add item workspace_trigger right \
 
 ##### Initial workspace setup #####
 "$PLUGIN_DIR/workspaces.sh"
+
+##### Privacy Indicator (right side, hidden when inactive) #####
+sketchybar --add item privacy right \
+           --subscribe privacy privacy_change \
+           --set privacy \
+           icon.font="Hack Nerd Font:Bold:12.0" \
+           icon.color=0xffffffff \
+           icon.padding_left=8 \
+           icon.padding_right=8 \
+           background.corner_radius=5 \
+           background.height=24 \
+           icon.drawing=off \
+           background.drawing=off \
+           script="$PLUGIN_DIR/privacy.sh"
+
+##### Day Progress (right side) #####
+sketchybar --add item day_progress right \
+           --set day_progress \
+           icon.drawing=off \
+           label.font="Hack Nerd Font:Bold:10.0" \
+           label.color=0xffffffff \
+           label.padding_left=8 \
+           label.padding_right=8 \
+           background.color=0xff1e1f29 \
+           background.border_color=$ACCENT_COLOR \
+           background.border_width=2 \
+           background.corner_radius=5 \
+           background.height=24 \
+           background.drawing=on \
+           update_freq=60 \
+           script="$PLUGIN_DIR/day_progress.sh"
 
 ##### Layout Popup Anchor (invisible, center position) #####
 sketchybar --add item layout_anchor center \
