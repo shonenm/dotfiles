@@ -21,7 +21,7 @@ if [ "$MODE" = "service" ]; then
     sketchybar --add item keybind_help right \
                --set keybind_help \
                icon.drawing=off \
-               label="esc:exit  a:reload-aerospace  r:reset  f:float  ⌫:close-others" \
+               label="esc:exit  a:reload  r:reset  f:float  c:clear-badges  ⌫:close-others" \
                label.font="Hack Nerd Font:Bold:10.0" \
                label.color=0xffffffff \
                label.padding_left=10 \
