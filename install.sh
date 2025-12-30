@@ -248,6 +248,13 @@ link_dotfiles() {
     log_info "You can restore them manually if needed."
   fi
 
+  # Create empty .gitconfig.local if not exists (for machine-specific git user settings)
+  if [[ ! -f "$HOME/.gitconfig.local" ]]; then
+    touch "$HOME/.gitconfig.local"
+    log_info "Created ~/.gitconfig.local for machine-specific git settings"
+    log_info "Run 'setup_git_from_op' to configure git user from 1Password"
+  fi
+
   log_success "Dotfiles linked successfully"
 }
 
