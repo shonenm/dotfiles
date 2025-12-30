@@ -1,7 +1,9 @@
 #!/bin/bash
 # AI CLI Slack Notification Script + SketchyBar Integration
 # Usage: ai-notify.sh <tool> <event>
-#        ai-notify.sh --clear-cache
+#        ai-notify.sh --setup <tool>       # Cache webhook and send setup notification
+#        ai-notify.sh --refresh-cache      # Refresh all webhook caches (no notification)
+#        ai-notify.sh --clear-cache        # Clear all cached webhooks
 # tool: claude | codex | gemini
 # event: stop | complete | permission | idle | error
 
@@ -9,15 +11,139 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# キャッシュディレクトリ
-CACHE_DIR="${HOME}/.cache/ai-notify"
+# キャッシュディレクトリ (XDG_DATA_HOME準拠で永続化)
+CACHE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/ai-notify"
 
-# --clear-cache オプション
-if [[ "${1:-}" == "--clear-cache" ]]; then
-  rm -rf "$CACHE_DIR"
-  echo "Cache cleared: $CACHE_DIR"
-  exit 0
-fi
+# 1Password パス取得
+get_op_path() {
+  local tool="$1"
+  case "$tool" in
+    claude) echo "op://Personal/Claude Webhook/password" ;;
+    codex)  echo "op://Personal/Codex Webhook/password" ;;
+    gemini) echo "op://Personal/Gemini Webhook/password" ;;
+    *)      return 1 ;;
+  esac
+}
+
+# セットアップ通知送信
+send_setup_notification() {
+  local tool="$1"
+  local webhook="$2"
+
+  local device=$(hostname -s 2>/dev/null || hostname)
+  local os_info="$(uname -s) ($(uname -m))"
+  local user=$(whoami)
+  local ip=$(curl -s --max-time 2 ifconfig.me 2>/dev/null || echo "N/A")
+  local dotfiles_version=$(git -C "$HOME/dotfiles" rev-parse --short HEAD 2>/dev/null || echo "N/A")
+  local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+
+  # ツール名を大文字に変換 (bash 3.2互換)
+  local tool_upper=$(echo "$tool" | tr '[:lower:]' '[:upper:]')
+
+  curl -s -X POST "$webhook" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"text\": \"🚀 $tool_upper セットアップ完了 - $device\",
+      \"attachments\": [{
+        \"color\": \"#6f42c1\",
+        \"blocks\": [
+          {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \"🚀 $tool_upper セットアップ完了\", \"emoji\": true}},
+          {\"type\": \"section\", \"fields\": [
+            {\"type\": \"mrkdwn\", \"text\": \"*Device:*\n\`$device\`\"},
+            {\"type\": \"mrkdwn\", \"text\": \"*OS:*\n\`$os_info\`\"},
+            {\"type\": \"mrkdwn\", \"text\": \"*User:*\n\`$user\`\"},
+            {\"type\": \"mrkdwn\", \"text\": \"*IP:*\n\`$ip\`\"},
+            {\"type\": \"mrkdwn\", \"text\": \"*Dotfiles:*\n\`$dotfiles_version\`\"},
+            {\"type\": \"mrkdwn\", \"text\": \"*Time:*\n$timestamp\"}
+          ]}
+        ]
+      }]
+    }" >/dev/null
+
+  echo "Sent setup notification for $tool"
+}
+
+# --setup オプション: webhookをキャッシュしてセットアップ通知を送信
+setup_tool() {
+  local tool="$1"
+
+  if ! command -v op &> /dev/null; then
+    echo "Error: 1Password CLI not found" >&2
+    return 1
+  fi
+
+  # 1Passwordにサインイン済みか確認（未サインインならスキップ）
+  if ! op whoami &>/dev/null; then
+    echo "Skipped: 1Password not signed in (run 'eval \$(op signin)' first)" >&2
+    return 1
+  fi
+
+  local op_path
+  op_path=$(get_op_path "$tool") || {
+    echo "Error: Unknown tool: $tool" >&2
+    return 1
+  }
+
+  local webhook
+  webhook=$(op read "$op_path" 2>/dev/null) || {
+    echo "Error: Failed to get webhook for $tool from 1Password" >&2
+    return 1
+  }
+
+  mkdir -p "$CACHE_DIR"
+  echo "$webhook" > "${CACHE_DIR}/${tool}_webhook"
+  chmod 600 "${CACHE_DIR}/${tool}_webhook"
+  echo "Cached webhook for $tool"
+
+  send_setup_notification "$tool" "$webhook"
+}
+
+# --refresh-cache オプション: 全ツールのキャッシュを更新（通知なし）
+refresh_cache() {
+  if ! command -v op &> /dev/null; then
+    echo "Error: 1Password CLI not found" >&2
+    return 1
+  fi
+
+  # 1Passwordにサインイン済みか確認（未サインインならスキップ）
+  if ! op whoami &>/dev/null; then
+    echo "Skipped: 1Password not signed in (run 'eval \$(op signin)' first)" >&2
+    return 1
+  fi
+
+  mkdir -p "$CACHE_DIR"
+
+  for tool in claude codex gemini; do
+    local op_path
+    op_path=$(get_op_path "$tool") || continue
+
+    local webhook
+    if webhook=$(op read "$op_path" 2>/dev/null); then
+      echo "$webhook" > "${CACHE_DIR}/${tool}_webhook"
+      chmod 600 "${CACHE_DIR}/${tool}_webhook"
+      echo "Refreshed cache for $tool"
+    else
+      echo "Skipped $tool (not available in 1Password)"
+    fi
+  done
+}
+
+# オプション処理
+case "${1:-}" in
+  --setup)
+    setup_tool "${2:-claude}"
+    exit $?
+    ;;
+  --refresh-cache)
+    refresh_cache
+    exit $?
+    ;;
+  --clear-cache)
+    rm -rf "$CACHE_DIR"
+    echo "Cache cleared: $CACHE_DIR"
+    exit 0
+    ;;
+esac
 
 TOOL="${1:-claude}"
 EVENT="${2:-notification}"
@@ -76,12 +202,7 @@ get_webhook() {
 
   # 1Passwordから取得してキャッシュ
   local op_path
-  case "$tool" in
-    claude) op_path="op://Personal/Claude Webhook/password" ;;
-    codex)  op_path="op://Personal/Codex Webhook/password" ;;
-    gemini) op_path="op://Personal/Gemini Webhook/password" ;;
-    *)      return ;;
-  esac
+  op_path=$(get_op_path "$tool") || return
 
   local webhook
   webhook=$(op read "$op_path" 2>/dev/null) || return

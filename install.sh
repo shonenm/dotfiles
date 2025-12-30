@@ -257,7 +257,7 @@ generate_ai_cli_configs() {
   log_info "Generating AI CLI configs..."
 
   # Clear webhook cache to ensure fresh URLs from 1Password
-  local cache_dir="$HOME/.cache/ai-notify"
+  local cache_dir="${XDG_DATA_HOME:-$HOME/.local/share}/ai-notify"
   if [[ -d "$cache_dir" ]]; then
     rm -rf "$cache_dir"
     log_info "  Cleared webhook cache"
@@ -285,6 +285,16 @@ generate_ai_cli_configs() {
     sed "s|__HOME__|$HOME|g" "$templates_dir/gemini-settings.json" > "$HOME/.gemini/settings.json"
     log_success "  Generated ~/.gemini/settings.json"
   fi
+
+  # Cache webhooks and send setup notifications
+  log_info "  Caching webhooks..."
+  for tool in claude codex gemini; do
+    if "$DOTFILES_DIR/scripts/ai-notify.sh" --setup "$tool" 2>/dev/null; then
+      log_success "    ✓ $tool webhook cached and notified"
+    else
+      log_warn "    ✗ $tool webhook not available"
+    fi
+  done
 }
 
 # --- Main ---
