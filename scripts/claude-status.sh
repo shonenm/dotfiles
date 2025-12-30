@@ -60,6 +60,37 @@ find_workspace() {
   fi
 }
 
+# 現在フォーカス中のプロジェクトを取得
+get_focused_project() {
+  command -v aerospace &>/dev/null || return
+
+  local focused
+  focused=$(aerospace list-windows --focused --json 2>/dev/null)
+
+  local app_name
+  app_name=$(echo "$focused" | jq -r '.[0]["app-name"] // ""' 2>/dev/null)
+
+  local title
+  title=$(echo "$focused" | jq -r '.[0]["window-title"] // ""' 2>/dev/null)
+
+  case "$app_name" in
+    "Code")
+      # VS Code: コンテナ名またはプロジェクト名を抽出
+      local container_name
+      container_name=$(echo "$title" | sed -n 's/.*開発コンテナー: \(.*\) @.*/\1/p')
+      if [[ -n "$container_name" ]]; then
+        echo "$container_name"
+      else
+        echo "$title" | sed -n 's/.*— \([^ []*\).*/\1/p'
+      fi
+      ;;
+    "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
+      # ターミナル: ウィンドウタイトルからディレクトリ名を抽出
+      basename "$title" 2>/dev/null
+      ;;
+  esac
+}
+
 # 状態を設定
 set_status() {
   local project="$1"
@@ -68,6 +99,20 @@ set_status() {
   local tty="${4:-}"
 
   mkdir -p "$STATUS_DIR"
+
+  # 通知対象のステータス（idle, permission）で、すでにそのプロジェクトにフォーカス中なら通知しない
+  if [[ "$status" == "idle" || "$status" == "permission" ]]; then
+    local focused_project
+    focused_project=$(get_focused_project 2>/dev/null || echo "")
+    if [[ "$focused_project" == "$project" ]]; then
+      # フォーカス中なので通知不要、既存の通知があれば削除
+      rm -f "$STATUS_DIR/${project}.json"
+      if command -v sketchybar &>/dev/null; then
+        sketchybar --trigger claude_status_change &>/dev/null || true
+      fi
+      return
+    fi
+  fi
 
   # ワークスペースを検索
   local workspace
