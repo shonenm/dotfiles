@@ -43,10 +43,8 @@ handle_focus_change() {
 
   [[ -z "$proj" ]] && return
 
-  # そのプロジェクトの状態ファイルがあれば削除
-  if [[ -f "$STATUS_DIR/${proj}.json" ]]; then
-    rm -f "$STATUS_DIR/${proj}.json"
-  fi
+  # そのプロジェクトの状態ファイルがあれば削除（ローカル・リモート両方）
+  rm -f "$STATUS_DIR/${proj}.json" "$STATUS_DIR/remote:${proj}.json" 2>/dev/null
 }
 
 # 全ワークスペースのバッジを更新
