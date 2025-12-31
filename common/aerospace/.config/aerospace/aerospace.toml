@@ -265,7 +265,7 @@ run = 'move-node-to-workspace F'
 
 [[on-window-detected]]
 if.app-id = 'com.mitchellh.ghostty'
-run = 'move-node-to-workspace T'
+run = 'move-node-to-workspace G'
 
 [[on-window-detected]]
 if.app-id = 'com.cron.electron'
@@ -282,6 +282,6 @@ run = 'move-node-to-workspace C'
 8 = 'secondary'
 9 = 'secondary'
 B = 'main'
-T = 'main'
+G = 'main'
 C = 'main'
 F = 'main'
