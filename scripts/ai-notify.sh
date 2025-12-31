@@ -235,20 +235,45 @@ get_webhook() {
   SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
   TTY=$(tty 2>/dev/null || echo "")
 
+  # window_id取得（ローカルMacのみ、初回は取得して保存）
+  # キー: PROJECT_SESSION_ID で複数セッションを区別
+  WINDOW_ID=""
+  if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
+    WINDOW_ID_KEY="${PROJECT}_${SESSION_ID:-default}"
+    WINDOW_ID_FILE="/tmp/claude_window_${WINDOW_ID_KEY}"
+    if [[ -f "$WINDOW_ID_FILE" ]]; then
+      WINDOW_ID=$(cat "$WINDOW_ID_FILE")
+    else
+      # ターミナル/エディタのみキャッシュ（ブラウザ等は除外）
+      FOCUSED_JSON=$(aerospace list-windows --focused --json 2>/dev/null)
+      FOCUSED_APP=$(echo "$FOCUSED_JSON" | jq -r '.[0]["app-name"] // ""')
+      case "$FOCUSED_APP" in
+        Ghostty|Terminal|iTerm2|Alacritty|Warp|WezTerm|kitty|Code)
+          WINDOW_ID=$(echo "$FOCUSED_JSON" | jq -r '.[0]["window-id"] // ""')
+          [[ -n "$WINDOW_ID" ]] && echo "$WINDOW_ID" > "$WINDOW_ID_FILE"
+          ;;
+      esac
+    fi
+  fi
+
   # SketchyBar 用の状態を決定（Claude 専用）
   if [[ "$TOOL" == "claude" ]]; then
     case "$EVENT" in
       idle)       SKETCHYBAR_STATUS="idle" ;;
       permission) SKETCHYBAR_STATUS="permission" ;;
       complete)   SKETCHYBAR_STATUS="complete" ;;
-      stop|error) SKETCHYBAR_STATUS="none" ;;
+      stop|error)
+        SKETCHYBAR_STATUS="none"
+        # window_idファイルをクリーンアップ
+        rm -f "/tmp/claude_window_${PROJECT}_${SESSION_ID:-default}" 2>/dev/null
+        ;;
       *)          SKETCHYBAR_STATUS="" ;;
     esac
 
     # SketchyBar 状態更新
     if [[ -n "$SKETCHYBAR_STATUS" ]]; then
-      # container_name でVS Codeウィンドウを正確に検索
-      update_sketchybar_status "$PROJECT" "$SKETCHYBAR_STATUS" "$SESSION_ID" "$TTY" "" "$CONTAINER_NAME"
+      # window_id でワークスペースを正確に特定（tmux切替後も正しく動作）
+      update_sketchybar_status "$PROJECT" "$SKETCHYBAR_STATUS" "$SESSION_ID" "$TTY" "$WINDOW_ID" "$CONTAINER_NAME"
     fi
   fi
 
