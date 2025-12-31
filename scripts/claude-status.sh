@@ -155,10 +155,11 @@ set_status() {
   local workspace
   workspace=$(find_workspace "$window_id" 2>/dev/null || echo "")
 
-  # 常に window_${window_id}_${session_id}.json 形式（session_idが空ならdefault）
-  local file_session="${session_id:-default}"
+  # window_${window_id}_${timestamp}.json 形式でユニークに
+  local timestamp
+  timestamp=$(date +%s%N)
 
-  cat > "$STATUS_DIR/window_${window_id}_${file_session}.json" <<EOF
+  cat > "$STATUS_DIR/window_${window_id}_${timestamp}.json" <<EOF
 {
   "status": "$status",
   "project": "$project",
