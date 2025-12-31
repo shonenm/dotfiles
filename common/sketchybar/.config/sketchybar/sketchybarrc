@@ -69,6 +69,26 @@ sketchybar --add item workspace_trigger right \
 ##### Initial workspace setup #####
 "$PLUGIN_DIR/workspaces.sh"
 
+##### Pomodoro Timer (right side) #####
+sketchybar --add event pomodoro_update
+sketchybar --add item pomodoro right \
+           --subscribe pomodoro pomodoro_update \
+           --set pomodoro \
+           icon.drawing=off \
+           label.font="Hack Nerd Font:Bold:10.0" \
+           label.color=0xff6c757d \
+           label.padding_left=8 \
+           label.padding_right=8 \
+           background.color=0xff1e1f29 \
+           background.border_color=$ACCENT_COLOR \
+           background.border_width=2 \
+           background.corner_radius=5 \
+           background.height=24 \
+           background.drawing=on \
+           update_freq=1 \
+           script="$PLUGIN_DIR/pomodoro.sh" \
+           click_script="$HOME/dotfiles/scripts/pomodoro.sh toggle"
+
 ##### Day Progress (right side) #####
 sketchybar --add item day_progress right \
            --set day_progress \
