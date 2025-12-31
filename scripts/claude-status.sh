@@ -155,11 +155,10 @@ set_status() {
   local workspace
   workspace=$(find_workspace "$window_id" 2>/dev/null || echo "")
 
-  # session_idがあればファイル名に含める（同一ウィンドウ内の複数セッション対応）
-  local file_key="${window_id}"
-  [[ -n "$session_id" ]] && file_key="${window_id}_${session_id}"
+  # 常に window_${window_id}_${session_id}.json 形式（session_idが空ならdefault）
+  local file_session="${session_id:-default}"
 
-  cat > "$STATUS_DIR/window_${file_key}.json" <<EOF
+  cat > "$STATUS_DIR/window_${window_id}_${file_session}.json" <<EOF
 {
   "status": "$status",
   "project": "$project",
