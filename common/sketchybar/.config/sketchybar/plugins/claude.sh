@@ -29,8 +29,8 @@ handle_focus_change() {
 
   [[ -z "$window_id" ]] && return
 
-  # そのウィンドウの状態ファイルがあれば削除
-  rm -f "$STATUS_DIR/window_${window_id}.json" 2>/dev/null
+  # そのウィンドウの状態ファイルがあれば削除（session_id付きファイルも含む）
+  rm -f "$STATUS_DIR"/window_${window_id}_*.json 2>/dev/null
 }
 
 # 全ワークスペースのバッジを更新

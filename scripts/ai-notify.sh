@@ -158,10 +158,6 @@ EVENT="${2:-notification}"
 
 mkdir -p "$CACHE_DIR"
 
-# デバッグログ
-DEBUG_LOG="${CACHE_DIR}/debug.log"
-echo "$(date '+%Y-%m-%d %H:%M:%S') TOOL=$TOOL EVENT=$EVENT ARGS=$* \$0=$0 \$#=$# ALL_ARGS=[$@]" >> "$DEBUG_LOG"
-
 # 1. 依存チェック (jq がない場合は何もしない)
 if ! command -v jq &> /dev/null; then
   exit 0
@@ -174,18 +170,19 @@ update_sketchybar_status() {
   local session_id="${3:-}"
   local tty="${4:-}"
   local window_id="${5:-}"
+  local container_name="${6:-}"
 
   # ローカル環境かどうかを判定
   if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
-    # ローカル Mac - 直接更新（window-id指定）
-    "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$session_id" "$tty" "$window_id" 2>/dev/null || true
+    # ローカル Mac - 直接更新
+    "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$session_id" "$tty" "$window_id" "$container_name" 2>/dev/null || true
   else
     # リモート環境 - ファイルに書き込み（Macがinotifywaitで監視）
     local status_dir="/tmp/claude_status"
     mkdir -p "$status_dir"
     local safe_project="${project//\//_}"
     local status_file="$status_dir/${safe_project}.json"
-    echo "{\"project\":\"$project\",\"status\":\"$status\",\"session_id\":\"$session_id\",\"timestamp\":$(date +%s)}" > "$status_file"
+    echo "{\"project\":\"$project\",\"status\":\"$status\",\"session_id\":\"$session_id\",\"container_name\":\"$container_name\",\"timestamp\":$(date +%s)}" > "$status_file"
   fi
 }
 
@@ -228,8 +225,11 @@ get_webhook() {
   CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
   [[ -z "$CWD" ]] && CWD=$(pwd)
 
-  # プロジェクト名: DEVCONTAINER_NAME 環境変数 > ディレクトリ名
-  PROJECT="${DEVCONTAINER_NAME:-$(basename "$CWD")}"
+  # プロジェクト名（ディレクトリ名）
+  PROJECT=$(basename "$CWD")
+
+  # コンテナ名（DEVCONTAINER_NAME環境変数、コンテナ内でのみ設定される）
+  CONTAINER_NAME="${DEVCONTAINER_NAME:-}"
 
   DEVICE=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
   SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
@@ -247,8 +247,8 @@ get_webhook() {
 
     # SketchyBar 状態更新
     if [[ -n "$SKETCHYBAR_STATUS" ]]; then
-      # window_id は渡さない - claude-status.sh が find_window_by_project で正確に検索する
-      update_sketchybar_status "$PROJECT" "$SKETCHYBAR_STATUS" "$SESSION_ID" "$TTY" ""
+      # container_name でVS Codeウィンドウを正確に検索
+      update_sketchybar_status "$PROJECT" "$SKETCHYBAR_STATUS" "$SESSION_ID" "$TTY" "" "$CONTAINER_NAME"
     fi
   fi
 

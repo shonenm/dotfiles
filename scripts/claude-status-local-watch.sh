@@ -24,11 +24,12 @@ for file in "$STATUS_DIR"/*.json; do
   project=$(jq -r '.project // empty' "$file" 2>/dev/null)
   status=$(jq -r '.status // empty' "$file" 2>/dev/null)
   session_id=$(jq -r '.session_id // empty' "$file" 2>/dev/null)
+  container_name=$(jq -r '.container_name // empty' "$file" 2>/dev/null)
 
   [[ -z "$project" || -z "$status" ]] && continue
 
-  # Mac側でwindow検索して適切なファイルを作成
-  "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$session_id" "" 2>/dev/null || true
+  # Mac側でwindow検索して適切なファイルを作成（container_nameでVS Code検索）
+  "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$session_id" "" "" "$container_name" 2>/dev/null || true
 
   # 処理済みファイルを削除
   rm -f "$file"

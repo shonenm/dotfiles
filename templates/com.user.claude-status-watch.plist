@@ -9,6 +9,13 @@
         <string>__HOME__/dotfiles/scripts/claude-status-watch.sh</string>
         <string>__REMOTE_HOST__</string>
     </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>__HOME__</string>
+    </dict>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>

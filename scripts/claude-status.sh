@@ -1,7 +1,7 @@
 #!/bin/bash
 # Claude Code 状態管理スクリプト（複数セッション対応 + aerospace 連携）
 # Usage:
-#   claude-status.sh set <project> <status> [session_id] [tty] [window_id]
+#   claude-status.sh set <project> <status> [session_id] [tty] [window_id] [container_name]
 #   claude-status.sh get <window_id>
 #   claude-status.sh list
 #   claude-status.sh clear <window_id>
@@ -35,7 +35,23 @@ find_workspace() {
   done
 }
 
-# プロジェクト名からウィンドウIDを検索（Pattern 2-4用フォールバック）
+# コンテナ名からウィンドウIDを検索（Pattern 2, 4用: DEVCONTAINER_NAME）
+find_window_by_container() {
+  local container_name="$1"
+
+  command -v aerospace &>/dev/null || return
+  [[ -z "$container_name" ]] && return
+
+  # " @" suffix で完全一致（syntopic-dev と syntopic-dev-review を区別）
+  aerospace list-windows --all --json 2>/dev/null | \
+    jq -r --arg name "$container_name" '
+      .[] | select(.["app-name"] == "Code") |
+      select(.["window-title"] | contains("開発コンテナー: " + $name + " @")) |
+      .["window-id"]
+    ' 2>/dev/null | head -1
+}
+
+# プロジェクト名からウィンドウIDを検索（Pattern 3用、Pattern 1のフォールバック）
 find_window_by_project() {
   local project="$1"
 
@@ -46,27 +62,17 @@ find_window_by_project() {
 
   local result=""
 
-  # 1. VS Code: コンテナ名で検索
+  # 1. VS Code: ワークスペース名で検索
   result=$(aerospace list-windows --all --json 2>/dev/null | \
     jq -r --arg proj "$search_project" '
       .[] | select(.["app-name"] == "Code") |
-      select(.["window-title"] | contains("開発コンテナー: " + $proj + " @")) |
-      .["window-id"]
+      select(
+        (.["window-title"] | contains("— " + $proj + " [")) or
+        (.["window-title"] | contains("— " + $proj + " —"))
+      ) | .["window-id"]
     ' 2>/dev/null | head -1)
 
-  # 2. VS Code: プロジェクト名で検索
-  if [[ -z "$result" ]]; then
-    result=$(aerospace list-windows --all --json 2>/dev/null | \
-      jq -r --arg proj "$search_project" '
-        .[] | select(.["app-name"] == "Code") |
-        select(
-          (.["window-title"] | contains("— " + $proj + " [")) or
-          (.["window-title"] | contains("— " + $proj + " —"))
-        ) | .["window-id"]
-      ' 2>/dev/null | head -1)
-  fi
-
-  # 3. ターミナル: タイトルで検索
+  # 2. ターミナル: タイトル完全一致
   if [[ -z "$result" ]]; then
     result=$(aerospace list-windows --all --json 2>/dev/null | \
       jq -r --arg proj "$search_project" '
@@ -105,16 +111,23 @@ set_status() {
   local session_id="${3:-}"
   local tty="${4:-}"
   local window_id="${5:-}"
+  local container_name="${6:-}"
 
   mkdir -p "$STATUS_DIR"
 
-  # window_id が空なら取得を試みる
+  # window_id 取得優先順位:
+  # 1. container_name → VS Code "開発コンテナー: $NAME @" 検索 (Pattern 2, 4)
+  # 2. project名 → VS Code/Terminal 検索 (Pattern 3)
+  # 3. focused window (Pattern 1)
+
+  if [[ -z "$window_id" && -n "$container_name" ]]; then
+    window_id=$(find_window_by_container "$container_name" 2>/dev/null || echo "")
+  fi
+
   if [[ -z "$window_id" ]]; then
-    # まずプロジェクト名からウィンドウ検索（Pattern 2-4用、より正確）
     window_id=$(find_window_by_project "$project" 2>/dev/null || echo "")
   fi
 
-  # フォールバック: フォーカス中のウィンドウを使用（Pattern 1用）
   if [[ -z "$window_id" ]]; then
     window_id=$(get_focused_window_id 2>/dev/null || echo "")
   fi
@@ -130,7 +143,7 @@ set_status() {
     focused_window_id=$(get_focused_window_id 2>/dev/null || echo "")
     if [[ "$focused_window_id" == "$window_id" ]]; then
       # フォーカス中なので通知不要、既存の通知があれば削除
-      rm -f "$STATUS_DIR/window_${window_id}.json"
+      rm -f "$STATUS_DIR"/window_${window_id}_*.json
       if command -v sketchybar &>/dev/null; then
         sketchybar --trigger claude_status_change &>/dev/null || true
       fi
@@ -142,7 +155,11 @@ set_status() {
   local workspace
   workspace=$(find_workspace "$window_id" 2>/dev/null || echo "")
 
-  cat > "$STATUS_DIR/window_${window_id}.json" <<EOF
+  # session_idがあればファイル名に含める（同一ウィンドウ内の複数セッション対応）
+  local file_key="${window_id}"
+  [[ -n "$session_id" ]] && file_key="${window_id}_${session_id}"
+
+  cat > "$STATUS_DIR/window_${file_key}.json" <<EOF
 {
   "status": "$status",
   "project": "$project",
@@ -188,7 +205,8 @@ list_status() {
 # 状態をクリア
 clear_status() {
   local window_id="$1"
-  rm -f "$STATUS_DIR/window_${window_id}.json"
+  # session_id付きファイルも含めて削除
+  rm -f "$STATUS_DIR"/window_${window_id}_*.json
 
   # SketchyBar 通知
   if command -v sketchybar &>/dev/null; then
@@ -221,7 +239,7 @@ cleanup() {
 # メイン
 case "${1:-}" in
   set)
-    set_status "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}"
+    set_status "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}" "${7:-}"
     ;;
   get)
     get_status "${2:-}"
