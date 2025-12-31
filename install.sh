@@ -165,16 +165,18 @@ stow_package() {
 
   # Dry-run to detect conflicts (use -d flag instead of cd)
   local output
-  output=$(stow -d "$pkg_dir" -n -t "$HOME" "$pkg_name" 2>&1) || true
+  local exit_code=0
+  output=$(stow -d "$pkg_dir" -n -t "$HOME" "$pkg_name" 2>&1) || exit_code=$?
 
-  # Check for conflicts (existing files not owned by stow or regular files)
-  if echo "$output" | grep -q "existing target"; then
+  # Check for conflicts (existing files/directories not owned by stow)
+  if [[ $exit_code -ne 0 ]] || echo "$output" | grep -qE "(existing target|existing directory|not owned by stow)"; then
     # Extract conflicting files from error messages like:
     # "existing target is not owned by stow: .gitconfig"
     # "existing target is neither a link nor a directory: .gitconfig"
+    # "existing directory: .config/mise"
     local files
-    files=$(echo "$output" | grep "existing target" | \
-            grep -oE ': [^ ]+$' | sed 's/: //')
+    files=$(echo "$output" | grep -E "(existing target|existing directory|not owned by stow)" | \
+            grep -oE ': [^ ]+$' | sed 's/: //' | sort -u)
 
     # Backup each conflicting file
     for file in $files; do
@@ -186,12 +188,51 @@ stow_package() {
     done
   fi
 
-  # Run stow (may partially fail if some files couldn't be backed up)
-  if [[ "$has_unbacked_files" == "true" ]]; then
-    # Some files couldn't be removed, stow will fail for those - suppress errors
-    stow -d "$pkg_dir" -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:\|existing target" || true
+  # Run stow and report result
+  local stow_output
+  local stow_exit=0
+  stow_output=$(stow -d "$pkg_dir" -t "$HOME" -R "$pkg_name" 2>&1) || stow_exit=$?
+
+  if [[ $stow_exit -eq 0 ]]; then
+    return 0
   else
-    stow -d "$pkg_dir" -t "$HOME" -R "$pkg_name" 2>&1 | grep -v "^LINK:" || true
+    # Log warning but don't fail the whole script
+    if [[ "$has_unbacked_files" == "true" ]]; then
+      log_warn "  Partially linked $pkg_name (some files skipped)"
+    else
+      log_warn "  Failed to link $pkg_name"
+      # Show error details for debugging
+      echo "$stow_output" | grep -v "^LINK:" | head -3 >&2
+    fi
+    return 1
+  fi
+}
+
+# Verify critical symlinks were created
+verify_stow() {
+  local failed=()
+  local checks=(
+    ".config/tmux"
+    ".config/mise"
+    ".config/nvim"
+    ".config/starship.toml"
+  )
+
+  for path in "${checks[@]}"; do
+    # Check if path exists as symlink or directory (stow creates symlinks to dirs)
+    if [[ ! -L "$HOME/$path" && ! -e "$HOME/$path" ]]; then
+      failed+=("$path")
+    fi
+  done
+
+  if [[ ${#failed[@]} -gt 0 ]]; then
+    echo
+    log_warn "Some dotfiles may not be linked correctly:"
+    for f in "${failed[@]}"; do
+      log_warn "  - ~/$f"
+    done
+    log_info "Try running manually: stow -v -t ~ -d common <package>"
+    log_info "Or check for conflicts with: stow -n -v -t ~ -d common <package>"
   fi
 }
 
@@ -254,6 +295,9 @@ link_dotfiles() {
     log_info "Created ~/.gitconfig.local for machine-specific git settings"
     log_info "Run 'setup_git_from_op' to configure git user from 1Password"
   fi
+
+  # Verify critical symlinks were created
+  verify_stow
 
   log_success "Dotfiles linked successfully"
 }
