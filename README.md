@@ -11,14 +11,13 @@ dotfiles/
 │   ├── zsh/         # Zsh共通設定 (.zshrc.common)
 │   ├── starship/    # Starshipプロンプト
 │   ├── sheldon/     # Zshプラグインマネージャー
-│   ├── tmux/        # Tmux設定
+│   ├── tmux/        # Tmux設定 (TokyoNight + Powerline)
 │   ├── git/         # Git設定
 │   ├── lazygit/     # LazyGit設定
 │   ├── mise/        # mise (Node.js, Python等のバージョン管理)
 │   ├── ghostty/     # Ghosttyターミナル
-│   ├── claude/      # Claude Code設定
-│   ├── codex/       # OpenAI Codex設定
-│   ├── gemini/      # Gemini CLI設定
+│   ├── aerospace/   # AeroSpace (タイリングWM)
+│   ├── sketchybar/  # SketchyBar (ステータスバー)
 │   └── ...
 ├── mac/             # macOS専用設定
 │   ├── zsh/         # .zshrc (macOS用)
@@ -29,10 +28,21 @@ dotfiles/
 ├── linux/           # Linux専用設定
 │   ├── zsh/         # .zshrc (Linux用)
 │   └── ssh/         # SSH設定 (1Password Agent)
-├── scripts/         # セットアップスクリプト
+├── scripts/         # セットアップ・ユーティリティスクリプト
 │   ├── mac.sh       # macOSパッケージインストール
 │   ├── linux.sh     # Linuxパッケージインストール
-│   └── utils.sh     # ユーティリティ関数
+│   ├── claude-status.sh  # Claude Code通知連携
+│   ├── ai-notify.sh      # AI通知ヘルパー
+│   └── pomodoro.sh       # ポモドーロタイマー
+├── templates/       # AI CLI設定テンプレート
+│   ├── claude-settings.json
+│   ├── codex-config.toml
+│   └── gemini-settings.json
+├── docs/            # ドキュメント
+│   ├── sketchybar-aerospace.md
+│   ├── claude-notification.md
+│   ├── git-config.md
+│   └── 1password-integration.md
 └── install.sh       # メインインストーラー
 ```
 
@@ -91,12 +101,14 @@ exec zsh
 
 | カテゴリ | ツール |
 |----------|--------|
-| Shell | fish, starship, sheldon, atuin, zoxide |
+| Shell | zsh, starship, sheldon, atuin, zoxide |
 | Editor | neovim |
 | Git | lazygit, gh |
 | CLI | eza, bat, ripgrep, fd, fzf, jq, yazi |
 | Dev | mise, uv |
-| Apps | ghostty, raycast, karabiner-elements |
+| Terminal | ghostty, tmux |
+| Window | aerospace, sketchybar, borders |
+| Apps | raycast, karabiner-elements |
 
 ### Linux (apt/curl)
 
@@ -123,12 +135,36 @@ exec zsh
 - **LSP**: mason.nvim
 - 詳細は `common/nvim/.config/nvim/README.md` を参照
 
+### Tmux
+
+- **テーマ**: TokyoNight (透過 + Powerline風角丸デザイン)
+- **ステータスバー**: CPU/メモリ使用率、Gitブランチ、日時
+- **キーバインド** (prefix: `C-j`):
+  | キー | 機能 |
+  |------|------|
+  | `t` | ペインタイトル編集 |
+  | `T` | ウィンドウ名編集 |
+  | `C-h/C-l` | ウィンドウ間移動 |
+  | `h/j/k/l` | ペイン移動 |
+  | `H/J/K/L` | ペインリサイズ |
+  | `\|` / `-` | 縦/横分割 |
+  | `r` | 設定リロード |
+
+### AeroSpace + SketchyBar
+
+- **AeroSpace**: タイリングウィンドウマネージャー
+- **SketchyBar**: カスタマイズ可能なステータスバー
+  - ワークスペース表示
+  - アプリアイコン
+  - Day Progress (1日の進捗)
+  - Claude Code通知バッジ
+- 詳細は `docs/sketchybar-aerospace.md` を参照
+
 ### Git
 
-- ユーザー情報は1Passwordから取得（手動実行）
-  ```bash
-  setup_git_from_op
-  ```
+- ユーザー情報は `.gitconfig.local` で管理
+- 初回セットアップ時に1Passwordから取得
+- 詳細は `docs/git-config.md` を参照
 
 ### SSH
 
@@ -143,6 +179,7 @@ exec zsh
 
 - `~/.ssh/config.d/*` - SSH接続先設定
 - `~/.zshrc.local` - マシン固有のZsh設定（あれば読み込まれる）
+- `~/.gitconfig.local` - Git ユーザー情報（name, email）
 
 ### 新しい設定を追加
 
