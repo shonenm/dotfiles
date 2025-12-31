@@ -76,7 +76,7 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     inner.horizontal = 2
     inner.vertical =   2
     outer.left =       2
-    outer.bottom = 32
+    outer.bottom =     25
     outer.top =        2
     outer.right =      2
 
