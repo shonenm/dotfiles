@@ -221,6 +221,7 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#mode
     alt-shift-semicolon = 'mode service'
+    alt-shift-p = 'mode pomodoro'
 
 # 'service' binding mode declaration.
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -244,6 +245,19 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     alt-shift-j = ['join-with down', 'mode main']
     alt-shift-k = ['join-with up', 'mode main']
     alt-shift-l = ['join-with right', 'mode main']
+
+# 'pomodoro' binding mode declaration.
+# See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
+[mode.pomodoro.binding]
+    esc = 'mode main'
+    s = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh toggle'
+    r = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh reset'
+    1 = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 5'
+    2 = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 15'
+    3 = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 25'
+    4 = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 45'
+    5 = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 60'
+    alt-shift-slash = 'exec-and-forget ~/.config/sketchybar/plugins/show_layout.sh'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.finder'

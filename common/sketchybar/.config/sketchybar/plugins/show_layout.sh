@@ -9,6 +9,8 @@ source "$CONFIG_DIR/plugins/accent_color.sh"
 MODE=$(aerospace list-modes --current 2>/dev/null)
 if [ "$MODE" = "service" ]; then
     THEME_COLOR=$SERVICE_MODE_COLOR
+elif [ "$MODE" = "pomodoro" ]; then
+    THEME_COLOR=$POMODORO_MODE_COLOR
 else
     THEME_COLOR=$ACCENT_COLOR
 fi

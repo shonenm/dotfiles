@@ -30,3 +30,6 @@ ACCENT_COLOR=$(get_accent_color)
 
 # Service mode color (orange/red for warning)
 SERVICE_MODE_COLOR="0xffff6600"
+
+# Pomodoro mode color (green - same as running timer)
+POMODORO_MODE_COLOR="0xff28a745"
