@@ -38,7 +38,7 @@ if [ "$MODE" = "service" ]; then
 
     # Change all brackets to service mode color
     sketchybar --set apps_bracket background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
-    sketchybar --set workspaces background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
+    sketchybar --set '/workspaces.*/' background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
     sketchybar --set day_progress background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
     sketchybar --set pomodoro background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
 
@@ -102,7 +102,7 @@ elif [ "$MODE" = "pomodoro" ]; then
 
     # Change all brackets to pomodoro mode color
     sketchybar --set apps_bracket background.border_color=$POMODORO_MODE_COLOR 2>/dev/null
-    sketchybar --set workspaces background.border_color=$POMODORO_MODE_COLOR 2>/dev/null
+    sketchybar --set '/workspaces.*/' background.border_color=$POMODORO_MODE_COLOR 2>/dev/null
     sketchybar --set day_progress background.border_color=$POMODORO_MODE_COLOR 2>/dev/null
     sketchybar --set pomodoro background.border_color=$POMODORO_MODE_COLOR 2>/dev/null
 
@@ -156,7 +156,7 @@ else
 
     # Restore accent color for brackets
     sketchybar --set apps_bracket background.border_color=$ACCENT_COLOR 2>/dev/null
-    sketchybar --set workspaces background.border_color=$ACCENT_COLOR 2>/dev/null
+    sketchybar --set '/workspaces.*/' background.border_color=$ACCENT_COLOR 2>/dev/null
     sketchybar --set day_progress background.border_color=$ACCENT_COLOR 2>/dev/null
     sketchybar --set pomodoro background.border_color=$ACCENT_COLOR 2>/dev/null
 
