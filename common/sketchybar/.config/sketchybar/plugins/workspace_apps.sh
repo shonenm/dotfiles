@@ -52,6 +52,27 @@ if [ "$CURRENT_APPS" != "$PREV_APPS" ]; then
                    label.padding_left=2 \
                    label.padding_right=6 \
                    background.drawing=off
+
+        # アプリバッジアイテム（Claude通知用）
+        sketchybar --add item "${item_name}_badge" left \
+                   --set "${item_name}_badge" \
+                   drawing=on \
+                   icon.drawing=off \
+                   label="" \
+                   label.drawing=off \
+                   label.font="Hack Nerd Font:Bold:9.0" \
+                   label.color=0xffffffff \
+                   label.width=14 \
+                   label.align=center \
+                   label.y_offset=1 \
+                   background.color=0xffff6600 \
+                   background.corner_radius=7 \
+                   background.height=14 \
+                   background.drawing=off \
+                   width=14 \
+                   y_offset=6 \
+                   padding_left=-5 \
+                   padding_right=0
     done <<< "$APPS"
 
     # Create bracket for unified black background with mode-aware border

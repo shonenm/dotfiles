@@ -104,6 +104,18 @@ get_focused_window_id() {
   esac
 }
 
+# window_id から app_name を取得
+get_app_name_by_window_id() {
+  local window_id="$1"
+  command -v aerospace &>/dev/null || return
+  [[ -z "$window_id" ]] && return
+
+  aerospace list-windows --all --json 2>/dev/null | \
+    jq -r --arg wid "$window_id" '
+      .[] | select(.["window-id"] == ($wid | tonumber)) | .["app-name"]
+    ' 2>/dev/null | head -1
+}
+
 # 状態を設定
 set_status() {
   local project="$1"
@@ -168,6 +180,10 @@ set_status() {
   local workspace
   workspace=$(find_workspace "$window_id" 2>/dev/null || echo "")
 
+  # app_name を取得
+  local app_name
+  app_name=$(get_app_name_by_window_id "$window_id" 2>/dev/null || echo "")
+
   # window_${window_id}_${timestamp}.json 形式でユニークに
   local timestamp
   timestamp=$(date +%s%N)
@@ -178,6 +194,7 @@ set_status() {
   "project": "$project",
   "window_id": "$window_id",
   "workspace": "$workspace",
+  "app_name": "$app_name",
   "session_id": "$session_id",
   "tty": "$tty",
   "updated": $(date +%s)
