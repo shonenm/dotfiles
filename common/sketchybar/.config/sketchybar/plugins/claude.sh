@@ -2,10 +2,12 @@
 # Claude Code Status Plugin for SketchyBar
 # Updates workspace badges based on Claude session status (window-id based)
 
+source "$CONFIG_DIR/plugins/colors.sh"
+
 STATUS_DIR="/tmp/claude_status"
 
-# バッジ色（service mode と同じオレンジで固定）
-BADGE_COLOR="0xffff6600"
+# バッジ色（service mode と同じオレンジ）
+BADGE_COLOR="$SERVICE_MODE_COLOR"
 
 # VS Code / ターミナルにフォーカスした時、そのウィンドウの通知を解除
 handle_focus_change() {

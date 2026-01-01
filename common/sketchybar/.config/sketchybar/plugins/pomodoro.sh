@@ -2,6 +2,8 @@
 # Pomodoro Timer Plugin for SketchyBar
 # 進捗バー表示、状態に応じた色変更
 
+source "$CONFIG_DIR/plugins/colors.sh"
+
 STATE_DIR="/tmp/sketchybar_pomodoro"
 STATE_FILE="$STATE_DIR/state"
 END_FILE="$STATE_DIR/end_time"
@@ -66,4 +68,5 @@ esac
 
 sketchybar --set pomodoro \
   label="${bar} ${time_str}" \
-  label.color="$color"
+  label.color="$color" \
+  background.border_color="$(get_mode_color)"

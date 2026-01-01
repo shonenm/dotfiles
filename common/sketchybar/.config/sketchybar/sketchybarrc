@@ -1,8 +1,9 @@
 PLUGIN_DIR="$CONFIG_DIR/plugins"
-source "$PLUGIN_DIR/accent_color.sh"
+source "$PLUGIN_DIR/colors.sh"
 
 # Clear stale state files on startup
 rm -f /tmp/sketchybar_workspaces_state /tmp/sketchybar_apps_state
+echo "main" > /tmp/sketchybar_mode
 
 ##### Bar Appearance #####
 sketchybar --bar position=bottom height=28 color=0x00000000 topmost=on y_offset=0 margin=0 padding_right=10
@@ -28,6 +29,9 @@ sketchybar --add event claude_status_change
 ##### Sleep Timer Events #####
 sketchybar --add event sleep_timer_change
 
+##### Mode Color Change Event #####
+sketchybar --add event mode_color_changed
+
 ##### Mode Indicator (always visible) #####
 sketchybar --add item mode_indicator left \
            --subscribe mode_indicator aerospace_mode_change \
@@ -50,7 +54,7 @@ sketchybar --add item mode_indicator left \
 
 ##### Sleep Timer (right side) #####
 sketchybar --add item sleep_timer right \
-           --subscribe sleep_timer sleep_timer_change \
+           --subscribe sleep_timer sleep_timer_change mode_color_changed \
            --set sleep_timer \
            icon.drawing=off \
            label.font="Hack Nerd Font:Bold:10.0" \
@@ -75,14 +79,14 @@ sketchybar --add item claude_trigger right \
 
 ##### Trigger for app updates #####
 sketchybar --add item app_trigger right \
-           --subscribe app_trigger aerospace_workspace_change front_app_switched \
+           --subscribe app_trigger aerospace_workspace_change front_app_switched mode_color_changed \
            --set app_trigger \
            drawing=off \
            script="$PLUGIN_DIR/workspace_apps.sh"
 
 ##### Trigger for workspace updates #####
 sketchybar --add item workspace_trigger right \
-           --subscribe workspace_trigger aerospace_workspace_change \
+           --subscribe workspace_trigger aerospace_workspace_change mode_color_changed \
            --set workspace_trigger \
            drawing=off \
            script="$PLUGIN_DIR/workspaces.sh"
@@ -92,6 +96,7 @@ sketchybar --add item workspace_trigger right \
 
 ##### Day Progress (right side) #####
 sketchybar --add item day_progress right \
+           --subscribe day_progress mode_color_changed \
            --set day_progress \
            icon.drawing=off \
            label.font="Hack Nerd Font:Bold:10.0" \
@@ -110,7 +115,7 @@ sketchybar --add item day_progress right \
 ##### Pomodoro Timer (right side) #####
 sketchybar --add event pomodoro_update
 sketchybar --add item pomodoro right \
-           --subscribe pomodoro pomodoro_update \
+           --subscribe pomodoro pomodoro_update mode_color_changed \
            --set pomodoro \
            icon.drawing=off \
            label.font="Hack Nerd Font:Bold:10.0" \

@@ -1,14 +1,9 @@
 #!/bin/bash
 
-source "$CONFIG_DIR/plugins/accent_color.sh"
+source "$CONFIG_DIR/plugins/colors.sh"
 
-# Get current mode for highlight color
-MODE=$(aerospace list-modes --current 2>/dev/null)
-if [ "$MODE" = "service" ]; then
-    HIGHLIGHT_COLOR=$SERVICE_MODE_COLOR
-else
-    HIGHLIGHT_COLOR=$ACCENT_COLOR
-fi
+# Get current mode color
+HIGHLIGHT_COLOR=$(get_mode_color)
 
 # Get number of monitors
 MONITOR_COUNT=$(aerospace list-monitors 2>/dev/null | wc -l | tr -d ' ')
@@ -102,8 +97,11 @@ if [ "$ALL_WS" != "$PREV_WS" ]; then
     done
 fi
 
-# Update highlight for focused workspace (all monitors)
+# Update highlight for focused workspace and bracket colors (all monitors)
 for monitor in $(seq 1 $MONITOR_COUNT); do
+    # Update bracket border color
+    sketchybar --set "workspaces_$monitor" background.border_color=$HIGHLIGHT_COLOR 2>/dev/null
+
     MONITOR_WS=$(aerospace list-workspaces --monitor $monitor --empty no 2>/dev/null)
     for sid in $MONITOR_WS; do
         if [ "$sid" = "$FOCUSED_WS" ]; then

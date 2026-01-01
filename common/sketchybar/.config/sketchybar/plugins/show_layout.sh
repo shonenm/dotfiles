@@ -3,17 +3,10 @@
 # Ensure CONFIG_DIR is set (for when called directly, not via sketchybar)
 : "${CONFIG_DIR:=$HOME/.config/sketchybar}"
 
-source "$CONFIG_DIR/plugins/accent_color.sh"
+source "$CONFIG_DIR/plugins/colors.sh"
 
-# Get current mode and set theme color
-MODE=$(aerospace list-modes --current 2>/dev/null)
-if [ "$MODE" = "service" ]; then
-    THEME_COLOR=$SERVICE_MODE_COLOR
-elif [ "$MODE" = "pomodoro" ]; then
-    THEME_COLOR=$POMODORO_MODE_COLOR
-else
-    THEME_COLOR=$ACCENT_COLOR
-fi
+# Get current mode color
+THEME_COLOR=$(get_mode_color)
 
 # App icon mapping
 get_app_icon() {

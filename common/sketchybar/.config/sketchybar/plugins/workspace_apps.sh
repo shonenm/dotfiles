@@ -1,15 +1,10 @@
 #!/bin/bash
 
 source "$CONFIG_DIR/plugins/icon_map.sh"
-source "$CONFIG_DIR/plugins/accent_color.sh"
+source "$CONFIG_DIR/plugins/colors.sh"
 
-# Get current mode and set highlight color
-MODE=$(aerospace list-modes --current 2>/dev/null)
-if [ "$MODE" = "service" ]; then
-    HIGHLIGHT_COLOR=$SERVICE_MODE_COLOR
-else
-    HIGHLIGHT_COLOR=$ACCENT_COLOR
-fi
+# Get current mode color
+HIGHLIGHT_COLOR=$(get_mode_color)
 
 # Get focused workspace and focused app
 FOCUSED_WS=$(aerospace list-workspaces --focused)
@@ -84,6 +79,9 @@ if [ "$CURRENT_APPS" != "$PREV_APPS" ]; then
         fi
     fi
 fi
+
+# Update apps_bracket border color (for mode changes)
+sketchybar --set apps_bracket background.border_color=$HIGHLIGHT_COLOR 2>/dev/null
 
 # Update styles based on focus (without recreating)
 if [ -n "$APPS" ]; then
