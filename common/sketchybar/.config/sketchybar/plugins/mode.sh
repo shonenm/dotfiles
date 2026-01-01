@@ -41,6 +41,7 @@ if [ "$MODE" = "service" ]; then
     sketchybar --set '/workspaces.*/' background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
     sketchybar --set day_progress background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
     sketchybar --set pomodoro background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
+    sketchybar --set sleep_timer background.border_color=$SERVICE_MODE_COLOR 2>/dev/null
 
     # Change focused workspace highlight color
     FOCUSED_WS=$(aerospace list-workspaces --focused 2>/dev/null)
@@ -70,12 +71,12 @@ if [ "$MODE" = "service" ]; then
             INDEX=$((INDEX + 1))
         done
     fi
-elif [ "$MODE" = "pomodoro" ]; then
-    # Pomodoro mode: show with tomato color
+elif [ "$MODE" = "timer" ]; then
+    # Timer mode: show with timer color
     sketchybar --set mode_indicator \
         icon="󰔛" \
         icon.drawing=on \
-        label="POMO" \
+        label="TIMER" \
         label.drawing=on \
         background.color=$POMODORO_MODE_COLOR \
         background.drawing=on
@@ -85,7 +86,7 @@ elif [ "$MODE" = "pomodoro" ]; then
     sketchybar --add item keybind_help right \
                --set keybind_help \
                icon.drawing=off \
-               label="esc:exit  s:start/pause  r:reset  1:5m 2:15m 3:25m 4:45m 5:60m" \
+               label="1-5:sleep  w:work b:break l:long  s:start r:reset" \
                label.font="Hack Nerd Font:Bold:10.0" \
                label.color=0xffffffff \
                label.padding_left=10 \
@@ -97,14 +98,15 @@ elif [ "$MODE" = "pomodoro" ]; then
                background.border_width=2 \
                background.drawing=on
 
-    # Change JankyBorders color to pomodoro mode
+    # Change JankyBorders color to timer mode
     borders active_color=$POMODORO_MODE_COLOR 2>/dev/null
 
-    # Change all brackets to pomodoro mode color
+    # Change all brackets to timer mode color
     sketchybar --set apps_bracket background.border_color=$POMODORO_MODE_COLOR 2>/dev/null
     sketchybar --set '/workspaces.*/' background.border_color=$POMODORO_MODE_COLOR 2>/dev/null
     sketchybar --set day_progress background.border_color=$POMODORO_MODE_COLOR 2>/dev/null
     sketchybar --set pomodoro background.border_color=$POMODORO_MODE_COLOR 2>/dev/null
+    sketchybar --set sleep_timer background.border_color=$POMODORO_MODE_COLOR 2>/dev/null
 
     # Change focused workspace highlight color
     FOCUSED_WS=$(aerospace list-workspaces --focused 2>/dev/null)
@@ -159,6 +161,7 @@ else
     sketchybar --set '/workspaces.*/' background.border_color=$ACCENT_COLOR 2>/dev/null
     sketchybar --set day_progress background.border_color=$ACCENT_COLOR 2>/dev/null
     sketchybar --set pomodoro background.border_color=$ACCENT_COLOR 2>/dev/null
+    sketchybar --set sleep_timer background.border_color=$ACCENT_COLOR 2>/dev/null
 
     # Restore focused workspace highlight color
     FOCUSED_WS=$(aerospace list-workspaces --focused 2>/dev/null)

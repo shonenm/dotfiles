@@ -25,6 +25,9 @@ sketchybar --add event aerospace_mode_change
 ##### Claude Code Events #####
 sketchybar --add event claude_status_change
 
+##### Sleep Timer Events #####
+sketchybar --add event sleep_timer_change
+
 ##### Mode Indicator (always visible) #####
 sketchybar --add item mode_indicator left \
            --subscribe mode_indicator aerospace_mode_change \
@@ -44,6 +47,24 @@ sketchybar --add item mode_indicator left \
            background.height=24 \
            background.drawing=on \
            script="$PLUGIN_DIR/mode.sh"
+
+##### Sleep Timer (right side) #####
+sketchybar --add item sleep_timer right \
+           --subscribe sleep_timer sleep_timer_change \
+           --set sleep_timer \
+           icon.drawing=off \
+           label.font="Hack Nerd Font:Bold:10.0" \
+           label.color=0xffffffff \
+           label.padding_left=8 \
+           label.padding_right=8 \
+           background.color=0xff1e1f29 \
+           background.border_color=$ACCENT_COLOR \
+           background.border_width=2 \
+           background.corner_radius=5 \
+           background.height=24 \
+           background.drawing=on \
+           update_freq=60 \
+           script="$PLUGIN_DIR/sleep_timer.sh"
 
 ##### Claude Code Badge Trigger (updates workspace badges) #####
 sketchybar --add item claude_trigger right \

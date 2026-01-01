@@ -221,7 +221,7 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#mode
     alt-shift-semicolon = 'mode service'
-    alt-shift-p = 'mode pomodoro'
+    alt-shift-p = 'mode timer'
 
 # 'service' binding mode declaration.
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -246,17 +246,22 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     alt-shift-k = ['join-with up', 'mode main']
     alt-shift-l = ['join-with right', 'mode main']
 
-# 'pomodoro' binding mode declaration.
+# 'timer' binding mode declaration.
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
-[mode.pomodoro.binding]
+[mode.timer.binding]
     esc = 'mode main'
+    # Sleep timer (1-5: minutes)
+    1 = 'exec-and-forget ~/dotfiles/scripts/sleep-timer.sh set 1'
+    2 = 'exec-and-forget ~/dotfiles/scripts/sleep-timer.sh set 5'
+    3 = 'exec-and-forget ~/dotfiles/scripts/sleep-timer.sh set 15'
+    4 = 'exec-and-forget ~/dotfiles/scripts/sleep-timer.sh set 30'
+    5 = 'exec-and-forget ~/dotfiles/scripts/sleep-timer.sh set 60'
+    # Pomodoro (w: work, b: break, l: long break)
+    w = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 25'
+    b = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 5'
+    l = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 15'
     s = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh toggle'
     r = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh reset'
-    1 = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 5'
-    2 = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 15'
-    3 = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 25'
-    4 = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 45'
-    5 = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 60'
     alt-shift-slash = 'exec-and-forget ~/.config/sketchybar/plugins/show_layout.sh'
 
 [[on-window-detected]]
