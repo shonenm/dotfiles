@@ -5,12 +5,95 @@
 source "$CONFIG_DIR/plugins/colors.sh"
 
 STATUS_DIR="/tmp/claude_status"
+FOCUS_STATE_FILE="/tmp/sketchybar_window_focus"
 
-# バッジ色（service mode と同じオレンジ）
+# バッジ色
 BADGE_COLOR="$SERVICE_MODE_COLOR"
+BADGE_COLOR_DIM="$DIM_BADGE_COLOR"
 
-# VS Code / ターミナルにフォーカスした時、そのウィンドウの通知を解除
+# 6秒タイマーを開始（既存タイマーはキャンセル）
+start_clear_timer() {
+  local window_id="$1"
+
+  # 既存タイマーをキャンセル
+  if [[ -f "$FOCUS_STATE_FILE" ]]; then
+    local prev_pid
+    prev_pid=$(cut -d: -f3 "$FOCUS_STATE_FILE" 2>/dev/null)
+    [[ -n "$prev_pid" ]] && kill "$prev_pid" 2>/dev/null
+  fi
+
+  local now
+  now=$(date +%s)
+
+  # 6秒後に自動消去するバックグラウンドタイマーを開始
+  (
+    sleep 6
+    rm -f "$STATUS_DIR"/window_${window_id}_*.json 2>/dev/null
+    sketchybar --trigger claude_status_change 2>/dev/null
+  ) &
+  local timer_pid=$!
+
+  echo "${window_id}:${now}:${timer_pid}" > "$FOCUS_STATE_FILE"
+}
+
+# ウィンドウフォーカス変更時の3段階ロジック
 handle_focus_change() {
+  local focused
+  focused=$(aerospace list-windows --focused --json 2>/dev/null)
+
+  local app_name
+  app_name=$(echo "$focused" | jq -r '.[0]["app-name"] // ""' 2>/dev/null)
+
+  local window_id
+  window_id=$(echo "$focused" | jq -r '.[0]["window-id"] // ""' 2>/dev/null)
+
+  local now
+  now=$(date +%s)
+
+  # 前回のフォーカス状態を読み込み、タイマー処理
+  if [[ -f "$FOCUS_STATE_FILE" ]]; then
+    local prev_state prev_window_id prev_ts prev_pid
+    prev_state=$(cat "$FOCUS_STATE_FILE" 2>/dev/null)
+    prev_window_id=$(echo "$prev_state" | cut -d: -f1)
+    prev_ts=$(echo "$prev_state" | cut -d: -f2)
+    prev_pid=$(echo "$prev_state" | cut -d: -f3)
+
+    # 前回のタイマーをキャンセル
+    [[ -n "$prev_pid" ]] && kill "$prev_pid" 2>/dev/null
+
+    # 同じウィンドウなら何もしない（重複イベント対策）
+    [[ "$prev_window_id" == "$window_id" ]] && return
+
+    # 滞在時間を計算
+    local elapsed=$((now - prev_ts))
+
+    # ウィンドウが変わった場合の3段階ロジック
+    if [[ $elapsed -ge 3 ]]; then
+      # 3秒以上滞在 → 前ウィンドウの通知を消す
+      rm -f "$STATUS_DIR"/window_${prev_window_id}_*.json 2>/dev/null
+    fi
+    # 3秒未満 → 通知を残す（何もしない）
+  fi
+
+  # VS Code/ターミナル以外のアプリに切り替えた場合はタイマー不要
+  case "$app_name" in
+    "Code"|"Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
+      ;;
+    *)
+      # 非対象アプリ → フォーカス状態をクリアして終了
+      rm -f "$FOCUS_STATE_FILE" 2>/dev/null
+      return
+      ;;
+  esac
+
+  [[ -z "$window_id" ]] && return
+
+  # 新しいウィンドウの6秒タイマーを開始
+  start_clear_timer "$window_id"
+}
+
+# 通知が来た時、フォーカス中のウィンドウならタイマーを（再）開始
+handle_notification_arrived() {
   local focused
   focused=$(aerospace list-windows --focused --json 2>/dev/null)
 
@@ -31,8 +114,11 @@ handle_focus_change() {
 
   [[ -z "$window_id" ]] && return
 
-  # そのウィンドウの状態ファイルがあれば削除（session_id付きファイルも含む）
-  rm -f "$STATUS_DIR"/window_${window_id}_*.json 2>/dev/null
+  # フォーカス中のウィンドウに通知があるかチェック
+  if ls "$STATUS_DIR"/window_${window_id}_*.json &>/dev/null; then
+    # タイマーを（再）開始（新通知でリセット）
+    start_clear_timer "$window_id"
+  fi
 }
 
 # バッジを更新（ワークスペース + アプリ）
@@ -113,6 +199,16 @@ update_badges() {
   local focused_apps
   focused_apps=$(aerospace list-windows --workspace "$focused_ws" --format '%{app-name}' 2>/dev/null | sort -u)
 
+  # タイマーがアクティブかチェック（薄い色を使うかどうか）
+  local current_badge_color="$BADGE_COLOR"
+  if [[ -f "$FOCUS_STATE_FILE" ]]; then
+    local timer_pid
+    timer_pid=$(cut -d: -f3 "$FOCUS_STATE_FILE" 2>/dev/null)
+    if [[ -n "$timer_pid" ]] && kill -0 "$timer_pid" 2>/dev/null; then
+      current_badge_color="$BADGE_COLOR_DIM"
+    fi
+  fi
+
   for app in $focused_apps; do
     local app_total=0
     local remaining="$app_counts"
@@ -135,16 +231,17 @@ update_badges() {
         label.drawing=on \
         label.color=0xffffffff \
         background.drawing=on \
-        background.color="$BADGE_COLOR" 2>/dev/null
+        background.color="$current_badge_color" 2>/dev/null
     fi
   done
 }
 
 # メイン処理
 main() {
-  # フォーカス/ワークスペース変更時、通知解除を処理
   if [[ "$SENDER" == "front_app_switched" || "$SENDER" == "aerospace_workspace_change" ]]; then
     handle_focus_change
+  elif [[ "$SENDER" == "claude_status_change" ]]; then
+    handle_notification_arrived
   fi
 
   # バッジを更新

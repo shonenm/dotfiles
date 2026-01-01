@@ -10,6 +10,9 @@ CUSTOM_ACCENT_COLOR="0xff0055bb"
 # サービスモード（オレンジ/警告）
 SERVICE_MODE_COLOR="0xffff6600"
 
+# バッジ色（薄い版 - タイマー中）
+DIM_BADGE_COLOR="0x88ff6600"
+
 # タイマーモード（緑）
 TIMER_MODE_COLOR="0xff28a745"
 

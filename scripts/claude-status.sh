@@ -162,19 +162,8 @@ set_status() {
     fi
   done
 
-  # 通知対象のステータス（idle, permission, complete）で、すでにそのウィンドウにフォーカス中なら通知しない
-  if [[ "$status" == "idle" || "$status" == "permission" || "$status" == "complete" ]]; then
-    local focused_window_id
-    focused_window_id=$(get_focused_window_id 2>/dev/null || echo "")
-    if [[ "$focused_window_id" == "$window_id" ]]; then
-      # フォーカス中なので通知不要、既存の通知があれば削除
-      rm -f "$STATUS_DIR"/window_${window_id}_*.json
-      if command -v sketchybar &>/dev/null; then
-        sketchybar --trigger claude_status_change &>/dev/null || true
-      fi
-      return
-    fi
-  fi
+  # 注意: フォーカス中のウィンドウでも通知ファイルを作成する
+  # claude.sh の handle_notification_arrived() が6秒タイマーで消去を管理
 
   # ワークスペースを検索
   local workspace
