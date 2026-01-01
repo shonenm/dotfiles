@@ -159,7 +159,7 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     # alt-o = 'workspace O'
     # alt-p = 'workspace P'
     # alt-q = 'workspace Q'
-    # alt-r®®®©©© = 'workspace R'
+    # alt-r = 'workspace R'
     # alt-s = 'workspace S'
     alt-t = 'workspace T'
     # alt-u = 'workspace U'
@@ -168,9 +168,6 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     # alt-x = 'workspace X'
     # alt-y = 'workspace Y'
     # alt-z = 'workspace Z'
-
-    alt-shift-minus = 'resize smart -50'
-    alt-shift-equal = 'resize smart +50'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
     alt-shift-1 = 'move-node-to-workspace 1'

@@ -137,6 +137,19 @@ set_status() {
     return
   fi
 
+  # 重複通知チェック: 同じwindow_id + statusの通知が2秒以内にあればスキップ
+  local now_sec
+  now_sec=$(date +%s)
+  for existing_file in "$STATUS_DIR"/window_${window_id}_*.json; do
+    [[ -f "$existing_file" ]] || continue
+    local existing_status existing_updated
+    existing_status=$(jq -r '.status // ""' "$existing_file" 2>/dev/null || echo "")
+    existing_updated=$(jq -r '.updated // 0' "$existing_file" 2>/dev/null || echo "0")
+    if [[ "$existing_status" == "$status" ]] && (( now_sec - existing_updated < 2 )); then
+      return
+    fi
+  done
+
   # 通知対象のステータス（idle, permission, complete）で、すでにそのウィンドウにフォーカス中なら通知しない
   if [[ "$status" == "idle" || "$status" == "permission" || "$status" == "complete" ]]; then
     local focused_window_id
@@ -226,6 +239,16 @@ cleanup() {
     local updated
     updated=$(jq -r '.updated // 0' "$f" 2>/dev/null || echo "0")
     if (( now - updated > STALE_THRESHOLD )); then
+      rm -f "$f"
+    fi
+  done
+
+  # window_id キャッシュファイルもクリーンアップ（1時間以上前のもの）
+  for f in /tmp/claude_window_*; do
+    [[ -f "$f" ]] || continue
+    local file_mtime
+    file_mtime=$(stat -f %m "$f" 2>/dev/null || echo "0")
+    if (( now - file_mtime > STALE_THRESHOLD )); then
       rm -f "$f"
     fi
   done
