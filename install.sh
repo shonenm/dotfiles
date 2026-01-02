@@ -120,90 +120,23 @@ setup_environment() {
 }
 
 # --- 3. Link Dotfiles (Stow) ---
-BACKUP_DIR=""
 
-# Initialize backup directory (called once per install)
-init_backup_dir() {
-  BACKUP_DIR="$HOME/.dotfiles_backup/$(date +%Y%m%d_%H%M%S)"
-}
-
-# Backup a file preserving directory structure
-# Returns 0 on success, 1 if file couldn't be removed (e.g., bind mount)
-backup_file() {
-  local file="$1"
-  if [[ -z "$BACKUP_DIR" ]]; then
-    init_backup_dir
-  fi
-  local relative_path="${file#$HOME/}"
-  local backup_path="$BACKUP_DIR/$relative_path"
-  mkdir -p "$(dirname "$backup_path")"
-
-  # Try mv first
-  if mv "$file" "$backup_path" 2>/dev/null; then
-    log_warn "  Backed up: ~/$relative_path"
-    return 0
-  fi
-
-  # mv failed, try cp + rm (for some edge cases)
-  if cp -a "$file" "$backup_path" 2>/dev/null; then
-    if rm -f "$file" 2>/dev/null; then
-      log_warn "  Backed up: ~/$relative_path"
-      return 0
-    fi
-  fi
-
-  # Can't remove file (likely bind mount in Docker)
-  log_warn "  Skipped: ~/$relative_path (cannot remove, possibly bind mounted)"
-  return 1
-}
-
-# Stow a package with conflict handling
+# Stow a package with --adopt to handle existing files
 stow_package() {
   local pkg_dir="$1"
   local pkg_name="$2"
-  local has_unbacked_files=false
 
-  # Dry-run to detect conflicts (use -d flag instead of cd)
-  local output
-  local exit_code=0
-  output=$(stow -d "$pkg_dir" -n -t "$HOME" "$pkg_name" 2>&1) || exit_code=$?
-
-  # Check for conflicts (existing files/directories not owned by stow)
-  if [[ $exit_code -ne 0 ]] || echo "$output" | grep -qE "(existing target|existing directory|not owned by stow)"; then
-    # Extract conflicting files from error messages like:
-    # "existing target is not owned by stow: .gitconfig"
-    # "existing target is neither a link nor a directory: .gitconfig"
-    # "existing directory: .config/mise"
-    local files
-    files=$(echo "$output" | grep -E "(existing target|existing directory|not owned by stow)" | \
-            grep -oE ': [^ ]+$' | sed 's/: //' | sort -u)
-
-    # Backup each conflicting file
-    for file in $files; do
-      if [[ -n "$file" && -e "$HOME/$file" ]]; then
-        if ! backup_file "$HOME/$file"; then
-          has_unbacked_files=true
-        fi
-      fi
-    done
-  fi
-
-  # Run stow and report result
+  # --adopt: Move existing files into the package, then create symlinks
+  # This handles all conflicts automatically (empty files, bind mounts, etc.)
   local stow_output
   local stow_exit=0
-  stow_output=$(stow -d "$pkg_dir" -t "$HOME" -R "$pkg_name" 2>&1) || stow_exit=$?
+  stow_output=$(stow -d "$pkg_dir" -t "$HOME" --adopt -R "$pkg_name" 2>&1) || stow_exit=$?
 
   if [[ $stow_exit -eq 0 ]]; then
     return 0
   else
-    # Log warning but don't fail the whole script
-    if [[ "$has_unbacked_files" == "true" ]]; then
-      log_warn "  Partially linked $pkg_name (some files skipped)"
-    else
-      log_warn "  Failed to link $pkg_name"
-      # Show error details for debugging
-      echo "$stow_output" | grep -v "^LINK:" | head -3 >&2
-    fi
+    log_warn "  Failed to link $pkg_name"
+    echo "$stow_output" | head -3 >&2
     return 1
   fi
 }
@@ -249,17 +182,6 @@ link_dotfiles() {
   # Create .config if not exists
   mkdir -p "$HOME/.config"
 
-  # Clean up shell config files created by tool installers (atuin, rustup, uv, etc.)
-  # These will be replaced by dotfiles symlinks
-  local shell_configs=(".zshrc" ".zshenv" ".zprofile" ".bashrc" ".bash_profile" ".profile")
-  for config in "${shell_configs[@]}"; do
-    local config_path="$HOME/$config"
-    # Only backup if it's a regular file (not a symlink) and not empty
-    if [[ -f "$config_path" && ! -L "$config_path" ]]; then
-      backup_file "$config_path" || true
-    fi
-  done
-
   # Stow common packages
   if [[ -d "$DOTFILES_DIR/common" ]]; then
     log_info "Linking common dotfiles..."
@@ -281,13 +203,10 @@ link_dotfiles() {
     done
   fi
 
-  # Show backup location if any files were backed up
-  if [[ -n "$BACKUP_DIR" && -d "$BACKUP_DIR" ]]; then
-    echo
-    log_warn "Some existing files were backed up to:"
-    log_warn "  $BACKUP_DIR"
-    log_info "You can restore them manually if needed."
-  fi
+  # Restore dotfiles after adopt (adopted files may have overwritten our dotfiles)
+  log_info "Restoring dotfiles from git..."
+  git -C "$DOTFILES_DIR" checkout -- common/ 2>/dev/null || true
+  [[ -d "$DOTFILES_DIR/$os" ]] && git -C "$DOTFILES_DIR" checkout -- "$os/" 2>/dev/null || true
 
   # Create empty .gitconfig.local if not exists (for machine-specific git user settings)
   if [[ ! -f "$HOME/.gitconfig.local" ]]; then
