@@ -1,10 +1,11 @@
 #!/bin/bash
-# Claude Code 状態管理スクリプト（複数セッション対応 + aerospace 連携）
+# Claude Code 状態管理スクリプト（複数セッション対応 + aerospace/tmux 連携）
 # Usage:
-#   claude-status.sh set <project> <status> [session_id] [tty] [window_id] [container_name]
+#   claude-status.sh set <project> <status> [session_id] [tty] [window_id] [container_name] [tmux_session] [tmux_window_index]
 #   claude-status.sh get <window_id>
 #   claude-status.sh list
 #   claude-status.sh clear <window_id>
+#   claude-status.sh clear-tmux <tmux_session> <tmux_window_index>
 #   claude-status.sh cleanup
 #   claude-status.sh find-workspace <window_id>
 
@@ -124,6 +125,8 @@ set_status() {
   local tty="${4:-}"
   local window_id="${5:-}"
   local container_name="${6:-}"
+  local tmux_session="${7:-}"
+  local tmux_window_index="${8:-}"
 
   mkdir -p "$STATUS_DIR"
 
@@ -186,6 +189,8 @@ set_status() {
   "app_name": "$app_name",
   "session_id": "$session_id",
   "tty": "$tty",
+  "tmux_session": "$tmux_session",
+  "tmux_window_index": "$tmux_window_index",
   "updated": $(date +%s)
 }
 EOF
@@ -193,6 +198,11 @@ EOF
   # SketchyBar 通知
   if command -v sketchybar &>/dev/null; then
     sketchybar --trigger claude_status_change &>/dev/null || true
+  fi
+
+  # tmux通知（セッションがある場合のみ）
+  if [[ -n "$tmux_session" ]]; then
+    tmux refresh-client -S 2>/dev/null || true
   fi
 }
 
@@ -233,6 +243,34 @@ clear_status() {
   fi
 }
 
+# tmuxウィンドウの通知を消去
+clear_tmux_window() {
+  local tmux_session="$1"
+  local tmux_window_index="$2"
+
+  [[ -z "$tmux_session" || -z "$tmux_window_index" ]] && return
+  [[ ! -d "$STATUS_DIR" ]] && return
+
+  for f in "$STATUS_DIR"/window_*.json; do
+    [[ -f "$f" ]] || continue
+    local file_session file_window
+    file_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
+    file_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
+
+    if [[ "$file_session" == "$tmux_session" && "$file_window" == "$tmux_window_index" ]]; then
+      rm -f "$f"
+    fi
+  done
+
+  # SketchyBar 通知
+  if command -v sketchybar &>/dev/null; then
+    sketchybar --trigger claude_status_change &>/dev/null || true
+  fi
+
+  # tmuxを更新
+  tmux refresh-client -S 2>/dev/null || true
+}
+
 # 古いセッションをクリーンアップ
 cleanup() {
   [[ ! -d "$STATUS_DIR" ]] && return
@@ -268,7 +306,7 @@ cleanup() {
 # メイン
 case "${1:-}" in
   set)
-    set_status "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}" "${7:-}"
+    set_status "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}" "${7:-}" "${8:-}" "${9:-}"
     ;;
   get)
     get_status "${2:-}"
@@ -285,8 +323,11 @@ case "${1:-}" in
   find-workspace)
     find_workspace "${2:-}"
     ;;
+  clear-tmux)
+    clear_tmux_window "${2:-}" "${3:-}"
+    ;;
   *)
-    echo "Usage: claude-status.sh <set|get|list|clear|cleanup|find-workspace> [args]" >&2
+    echo "Usage: claude-status.sh <set|get|list|clear|clear-tmux|cleanup|find-workspace> [args]" >&2
     exit 1
     ;;
 esac

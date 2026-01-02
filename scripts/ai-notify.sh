@@ -171,18 +171,20 @@ update_sketchybar_status() {
   local tty="${4:-}"
   local window_id="${5:-}"
   local container_name="${6:-}"
+  local tmux_session="${7:-}"
+  local tmux_window_index="${8:-}"
 
   # ローカル環境かどうかを判定
   if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
     # ローカル Mac - 直接更新
-    "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$session_id" "$tty" "$window_id" "$container_name" 2>/dev/null || true
+    "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$session_id" "$tty" "$window_id" "$container_name" "$tmux_session" "$tmux_window_index" 2>/dev/null || true
   else
     # リモート環境 - ファイルに書き込み（Macがinotifywaitで監視）
     local status_dir="/tmp/claude_status"
     mkdir -p "$status_dir"
     local safe_project="${project//\//_}"
     local status_file="$status_dir/${safe_project}.json"
-    echo "{\"project\":\"$project\",\"status\":\"$status\",\"session_id\":\"$session_id\",\"container_name\":\"$container_name\",\"timestamp\":$(date +%s)}" > "$status_file"
+    echo "{\"project\":\"$project\",\"status\":\"$status\",\"session_id\":\"$session_id\",\"container_name\":\"$container_name\",\"tmux_session\":\"$tmux_session\",\"tmux_window_index\":\"$tmux_window_index\",\"timestamp\":$(date +%s)}" > "$status_file"
   fi
 }
 
@@ -256,6 +258,14 @@ get_webhook() {
     fi
   fi
 
+  # tmux情報の取得（tmux内の場合のみ）
+  TMUX_SESSION=""
+  TMUX_WINDOW_INDEX=""
+  if [[ -n "${TMUX:-}" ]]; then
+    TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+    TMUX_WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
+  fi
+
   # SketchyBar 用の状態を決定（Claude 専用）
   if [[ "$TOOL" == "claude" ]]; then
     case "$EVENT" in
@@ -273,7 +283,7 @@ get_webhook() {
     # SketchyBar 状態更新
     if [[ -n "$SKETCHYBAR_STATUS" ]]; then
       # window_id でワークスペースを正確に特定（tmux切替後も正しく動作）
-      update_sketchybar_status "$PROJECT" "$SKETCHYBAR_STATUS" "$SESSION_ID" "$TTY" "$WINDOW_ID" "$CONTAINER_NAME"
+      update_sketchybar_status "$PROJECT" "$SKETCHYBAR_STATUS" "$SESSION_ID" "$TTY" "$WINDOW_ID" "$CONTAINER_NAME" "$TMUX_SESSION" "$TMUX_WINDOW_INDEX"
     fi
   fi
 

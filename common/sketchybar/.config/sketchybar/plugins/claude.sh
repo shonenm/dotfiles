@@ -126,6 +126,10 @@ update_badges() {
   local focused_ws
   focused_ws=$(aerospace list-workspaces --focused 2>/dev/null)
 
+  # フォーカス中のアプリを取得
+  local focused_app
+  focused_app=$(aerospace list-windows --focused --json 2>/dev/null | jq -r '.[0]["app-name"] // ""' 2>/dev/null)
+
   # アクティブなワークスペースを取得
   local workspaces
   workspaces=$(aerospace list-workspaces --monitor all --empty no 2>/dev/null)
@@ -139,18 +143,25 @@ update_badges() {
   if [[ -d "$STATUS_DIR" ]]; then
     for f in "$STATUS_DIR"/window_*.json; do
       [[ -f "$f" ]] || continue
-      local file_ws file_st file_app
+      local file_ws file_st file_app file_tmux_session
       file_ws=$(jq -r '.workspace // ""' "$f" 2>/dev/null)
       file_st=$(jq -r '.status // "none"' "$f" 2>/dev/null)
       file_app=$(jq -r '.app_name // ""' "$f" 2>/dev/null)
+      file_tmux_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
 
       # 対象ステータスのみ
       [[ "$file_st" == "idle" || "$file_st" == "permission" || "$file_st" == "complete" ]] || continue
 
       if [[ "$file_ws" == "$focused_ws" ]]; then
         # フォーカス中のワークスペース → アプリバッジ用
+        # ただし、フォーカス中のアプリでtmux情報がある場合はtmux側に委譲
         if [[ -n "$file_app" ]]; then
-          app_counts="$app_counts|$file_app"
+          if [[ "$file_app" == "$focused_app" && -n "$file_tmux_session" ]]; then
+            # tmux側で表示するのでスキップ
+            :
+          else
+            app_counts="$app_counts|$file_app"
+          fi
         fi
       else
         # 他のワークスペース → ワークスペースバッジ用

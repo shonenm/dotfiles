@@ -39,11 +39,11 @@ setw -g window-status-activity-style "underscore,fg=#a9b1d6,bg=default"
 setw -g window-status-separator ""
 setw -g window-status-style "NONE,fg=#a9b1d6,bg=default"
 
-# Inactive window (Rounded style)
-setw -g window-status-format "#[fg=#3b4261,bg=default]#[fg=#a9b1d6,bg=#3b4261] #I #W #[fg=#3b4261,bg=default]"
+# Inactive window (Rounded style) + Claude badge
+setw -g window-status-format "#[fg=#3b4261,bg=default]#[fg=#a9b1d6,bg=#3b4261] #I #W #[fg=#3b4261,bg=default]#(~/dotfiles/scripts/tmux-claude-badge.sh window #{window_index})"
 
-# Active window (Rounded style with highlight)
-setw -g window-status-current-format "#[fg=#7aa2f7,bg=default]#[fg=#1a1b26,bg=#7aa2f7,bold] #I #W #[fg=#7aa2f7,bg=default]"
+# Active window (Rounded style with highlight) + Claude badge (dimmed)
+setw -g window-status-current-format "#[fg=#7aa2f7,bg=default]#[fg=#1a1b26,bg=#7aa2f7,bold] #I #W #[fg=#7aa2f7,bg=default]#(~/dotfiles/scripts/tmux-claude-badge.sh window #{window_index} focused)"
 
 # Prefix highlight plugin settings
 set -g @prefix_highlight_output_prefix "#[fg=#e0af68]#[bg=default]#[fg=#1a1b26]#[bg=#e0af68]"
