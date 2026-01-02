@@ -143,7 +143,9 @@ set_status() {
     window_id=$(find_window_by_project "$project" 2>/dev/null || echo "")
   fi
 
-  if [[ -z "$window_id" ]]; then
+  # リモート通知（host:project形式）の場合はフォーカスウィンドウにフォールバックしない
+  # 誤ったワークスペースに通知が表示されるのを防ぐ
+  if [[ -z "$window_id" && "$project" != *":"* ]]; then
     window_id=$(get_focused_window_id 2>/dev/null || echo "")
   fi
 
