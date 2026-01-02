@@ -25,3 +25,6 @@ vim.opt.sidescrolloff = 8
 
 -- Disable swap files
 vim.opt.swapfile = false
+
+-- Auto reload files changed outside of Neovim
+vim.opt.autoread = true
