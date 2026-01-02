@@ -58,11 +58,11 @@ handle_focus_change() {
     prev_ts=$(echo "$prev_state" | cut -d: -f2)
     prev_pid=$(echo "$prev_state" | cut -d: -f3)
 
-    # 前回のタイマーをキャンセル
-    [[ -n "$prev_pid" ]] && kill "$prev_pid" 2>/dev/null
-
     # 同じウィンドウなら何もしない（重複イベント対策）
     [[ "$prev_window_id" == "$window_id" ]] && return
+
+    # 前回のタイマーをキャンセル（ウィンドウが変わった場合のみ）
+    [[ -n "$prev_pid" ]] && kill "$prev_pid" 2>/dev/null
 
     # 滞在時間を計算
     local elapsed=$((now - prev_ts))
