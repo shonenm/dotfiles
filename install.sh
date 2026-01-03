@@ -132,13 +132,12 @@ stow_package() {
   local stow_exit=0
   stow_output=$(stow -d "$pkg_dir" -t "$HOME" --adopt -R "$pkg_name" 2>&1) || stow_exit=$?
 
-  if [[ $stow_exit -eq 0 ]]; then
-    return 0
-  else
+  if [[ $stow_exit -ne 0 ]]; then
     log_warn "  Failed to link $pkg_name"
     echo "$stow_output" | head -3 >&2
-    return 1
   fi
+  # Always return 0 to continue with other packages (set -e won't stop)
+  return 0
 }
 
 # Verify critical symlinks were created
