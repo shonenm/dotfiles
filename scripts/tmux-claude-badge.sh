@@ -8,6 +8,10 @@ BADGE_BG="#ff6600"
 BADGE_BG_DIM="#cc5500"  # 薄い版（フォーカス中）- tmuxはアルファ非対応のため暗めの色で代用
 BADGE_FG="#ffffff"
 
+# Powerline rounded characters (U+E0B6 / U+E0B4)
+LEFT_ROUND=$'\xee\x82\xb6'
+RIGHT_ROUND=$'\xee\x82\xb4'
+
 get_session_name() {
   tmux display-message -p '#S' 2>/dev/null || echo ""
 }
@@ -47,8 +51,8 @@ show_window_badge() {
     if [[ "$is_focused" == "focused" ]]; then
       bg_color="$BADGE_BG_DIM"
     fi
-    # SketchyBarと同じスタイル（オレンジ背景、白文字、角丸風）
-    echo "#[fg=$bg_color,bg=default]#[fg=$BADGE_FG,bg=$bg_color,bold] $count #[fg=$bg_color,bg=default]"
+    # 角丸スタイル（オレンジ背景、白文字）
+    echo "#[fg=$bg_color,bg=default]${LEFT_ROUND}#[fg=$BADGE_FG,bg=$bg_color,bold] $count #[fg=$bg_color,bg=default]${RIGHT_ROUND}"
   fi
 }
 
