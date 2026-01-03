@@ -243,9 +243,22 @@ get_webhook() {
   if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
     WINDOW_ID_KEY="${PROJECT}_${SESSION_ID:-default}"
     WINDOW_ID_FILE="/tmp/claude_window_${WINDOW_ID_KEY}"
+
+    # キャッシュされたwindow_idが有効か確認
+    CACHED_VALID=false
     if [[ -f "$WINDOW_ID_FILE" ]]; then
-      WINDOW_ID=$(cat "$WINDOW_ID_FILE")
-    else
+      CACHED_ID=$(cat "$WINDOW_ID_FILE")
+      # window_idがまだ存在するか確認
+      if aerospace list-windows --all --json 2>/dev/null | jq -e ".[] | select(.[\"window-id\"] == $CACHED_ID)" &>/dev/null; then
+        WINDOW_ID="$CACHED_ID"
+        CACHED_VALID=true
+      else
+        # 無効なキャッシュを削除
+        rm -f "$WINDOW_ID_FILE"
+      fi
+    fi
+
+    if [[ "$CACHED_VALID" == "false" ]]; then
       # ターミナル/エディタのみキャッシュ（ブラウザ等は除外）
       FOCUSED_JSON=$(aerospace list-windows --focused --json 2>/dev/null)
       FOCUSED_APP=$(echo "$FOCUSED_JSON" | jq -r '.[0]["app-name"] // ""')

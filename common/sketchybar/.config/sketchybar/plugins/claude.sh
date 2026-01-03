@@ -58,21 +58,21 @@ handle_focus_change() {
     prev_ts=$(echo "$prev_state" | cut -d: -f2)
     prev_pid=$(echo "$prev_state" | cut -d: -f3)
 
+    local elapsed=$((now - prev_ts))
+
     # 同じウィンドウなら何もしない（重複イベント対策）
-    [[ "$prev_window_id" == "$window_id" ]] && return
+    if [[ "$prev_window_id" == "$window_id" ]]; then
+      return
+    fi
 
     # 前回のタイマーをキャンセル（ウィンドウが変わった場合のみ）
     [[ -n "$prev_pid" ]] && kill "$prev_pid" 2>/dev/null
-
-    # 滞在時間を計算
-    local elapsed=$((now - prev_ts))
 
     # ウィンドウが変わった場合の3段階ロジック
     if [[ $elapsed -ge 3 ]]; then
       # 3秒以上滞在 → 前ウィンドウの通知を消す
       rm -f "$STATUS_DIR"/window_${prev_window_id}_*.json 2>/dev/null
     fi
-    # 3秒未満 → 通知を残す（何もしない）
   fi
 
   # VS Code/ターミナル以外のアプリに切り替えた場合はタイマー不要
