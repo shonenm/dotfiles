@@ -5,7 +5,7 @@
 
 STATUS_DIR="/tmp/claude_status"
 BADGE_BG="#ff6600"
-BADGE_BG_DIM="#88ff6600"  # 薄い版（フォーカス中）
+BADGE_BG_DIM="#cc5500"  # 薄い版（フォーカス中）- tmuxはアルファ非対応のため暗めの色で代用
 BADGE_FG="#ffffff"
 
 get_session_name() {
