@@ -294,6 +294,12 @@ main() {
   # 3. Link dotfiles (stow)
   link_dotfiles
 
+  # 3.5. Regenerate tmux theme on Linux (fixes powerline char encoding)
+  if [[ "$(detect_os)" == "linux" ]]; then
+    log_info "Regenerating tmux theme for Linux..."
+    "$DOTFILES_DIR/scripts/regenerate-tmux-theme.sh" "$HOME/.config/tmux/tokyonight.tmux"
+  fi
+
   # 4. Generate AI CLI configs (with absolute paths)
   generate_ai_cli_configs
 
