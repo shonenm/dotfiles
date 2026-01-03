@@ -116,8 +116,38 @@ handle_notification_arrived() {
 
   # フォーカス中のウィンドウに通知があるかチェック
   if ls "$STATUS_DIR"/window_${window_id}_*.json &>/dev/null; then
-    # タイマーを（再）開始（新通知でリセット）
-    start_clear_timer "$window_id"
+    local should_start_timer=true
+
+    # Terminal系アプリでローカルtmuxがある場合、tmux位置も確認
+    case "$app_name" in
+      "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
+        if [[ -n "${TMUX:-}" ]]; then
+          local current_session current_window
+          current_session=$(tmux display-message -p '#S' 2>/dev/null)
+          current_window=$(tmux display-message -p '#I' 2>/dev/null)
+
+          # この window_id の通知で tmux 情報を持つものがあるかチェック
+          for f in "$STATUS_DIR"/window_${window_id}_*.json; do
+            [[ -f "$f" ]] || continue
+            local notif_session notif_window
+            notif_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
+            notif_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
+
+            if [[ -n "$notif_session" && -n "$notif_window" ]]; then
+              # tmux情報がある通知 → 現在のtmux位置と一致するかチェック
+              if [[ "$notif_session" != "$current_session" || "$notif_window" != "$current_window" ]]; then
+                should_start_timer=false
+                break
+              fi
+            fi
+          done
+        fi
+        ;;
+    esac
+
+    if [[ "$should_start_timer" == "true" ]]; then
+      start_clear_timer "$window_id"
+    fi
   fi
 }
 

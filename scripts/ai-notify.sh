@@ -271,12 +271,26 @@ get_webhook() {
     fi
   fi
 
-  # tmux情報の取得（tmux内の場合のみ）
+  # tmux情報の取得（tmux内の場合のみ、キャッシュ対応）
+  # window_idと同様に初回の値をキャッシュし、セッション中は一貫したウィンドウに紐付ける
   TMUX_SESSION=""
   TMUX_WINDOW_INDEX=""
   if [[ -n "${TMUX:-}" ]]; then
-    TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
-    TMUX_WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
+    TMUX_INFO_KEY="${PROJECT}_${SESSION_ID:-default}"
+    TMUX_INFO_FILE="/tmp/claude_tmux_${TMUX_INFO_KEY}"
+
+    if [[ -f "$TMUX_INFO_FILE" ]]; then
+      # キャッシュから読み込み
+      TMUX_SESSION=$(jq -r '.session // ""' "$TMUX_INFO_FILE" 2>/dev/null)
+      TMUX_WINDOW_INDEX=$(jq -r '.window // ""' "$TMUX_INFO_FILE" 2>/dev/null)
+    else
+      # 初回: 現在の値を取得してキャッシュ
+      TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+      TMUX_WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
+      if [[ -n "$TMUX_SESSION" && -n "$TMUX_WINDOW_INDEX" ]]; then
+        echo "{\"session\":\"$TMUX_SESSION\",\"window\":\"$TMUX_WINDOW_INDEX\"}" > "$TMUX_INFO_FILE"
+      fi
+    fi
   fi
 
   # SketchyBar 用の状態を決定（Claude 専用）
@@ -287,8 +301,9 @@ get_webhook() {
       complete)   SKETCHYBAR_STATUS="complete" ;;
       stop|error)
         SKETCHYBAR_STATUS="none"
-        # window_idファイルをクリーンアップ
+        # キャッシュファイルをクリーンアップ
         rm -f "/tmp/claude_window_${PROJECT}_${SESSION_ID:-default}" 2>/dev/null
+        rm -f "/tmp/claude_tmux_${PROJECT}_${SESSION_ID:-default}" 2>/dev/null
         ;;
       *)          SKETCHYBAR_STATUS="" ;;
     esac
