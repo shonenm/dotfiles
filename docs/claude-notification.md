@@ -1,13 +1,14 @@
 # Claude Code 通知システム
 
-Claude Codeのイベント（完了、承認待ち、入力待ちなど）をSlack通知 + SketchyBarバッジで可視化するシステム。
+Claude Codeのイベント（完了、承認待ち、入力待ちなど）をSlack通知 + SketchyBar/tmuxバッジで可視化するシステム。
 
 ## 概要
 
 - **Slack通知**: Claude Codeの状態変化をSlack Webhookで通知
-- **SketchyBarバッジ**: ワークスペースにバッジを表示し、どのプロジェクトが待機中か一目で把握
+- **SketchyBarバッジ**: Aerospaceワークスペースにバッジを表示
+- **tmuxバッジ**: tmuxステータスバーにウィンドウ毎のバッジを表示
 - **4環境対応**: Local / Local Container / Cloud / Cloud Container すべてに対応
-- **エディタ非依存**: VS Code / Terminal どちらでも動作
+- **エディタ非依存**: VS Code / Terminal / Ghostty+tmux どれでも動作
 
 ## 対応環境
 
@@ -90,6 +91,44 @@ Mac (claude-status-watch.sh)
 SketchyBar バッジ更新
 ```
 
+## tmux 統合
+
+Ghostty + tmux 環境では、SketchyBar に加えて tmux ステータスバーにもバッジを表示。
+
+### 動作
+
+```
+Claude Code (hooks)
+    ↓ ai-notify.sh (tmux_session, tmux_window_index を記録)
+/tmp/claude_status/window_*.json
+    ↓ tmux refresh-client -S
+tmux ステータスバー更新
+    ↓ tmux-claude-badge.sh (window-status-format から呼び出し)
+オレンジバッジ表示（通知数付き）
+```
+
+### バッジ表示
+
+- **位置**: 各ウィンドウ名の右側
+- **色**: オレンジ背景 (`#ff6600`) + 白文字
+- **形状**: 角丸 (Powerline style)
+- **内容**: 通知数
+
+### 自動消去
+
+1. ウィンドウにフォーカスして **6秒滞在** → 通知消去
+2. ウィンドウを離れる（6秒未満）→ 通知を維持
+3. `clear-tmux` コマンドで手動消去も可能
+
+### 設定ファイル
+
+tmux.conf で以下を読み込み:
+
+```bash
+# ~/.config/tmux/tmux.conf
+source-file ~/.config/tmux/claude-hooks.tmux
+```
+
 ## コンポーネント
 
 ### scripts/ai-notify.sh
@@ -114,15 +153,16 @@ ai-notify.sh --clear-cache        # キャッシュ削除
 
 ### scripts/claude-status.sh
 
-プロジェクト状態の管理。Aerospaceと連携してワークスペースを特定。
+プロジェクト状態の管理。Aerospace/tmuxと連携してワークスペースを特定。
 
 ```bash
-claude-status.sh set <project> <status> [session_id] [tty]
-claude-status.sh get <project>
+claude-status.sh set <project> <status> [session_id] [tty] [window_id] [container_name] [tmux_session] [tmux_window_index]
+claude-status.sh get <window_id>
 claude-status.sh list
-claude-status.sh clear <project>
+claude-status.sh clear <window_id>
+claude-status.sh clear-tmux <tmux_session> <tmux_window_index>  # tmuxウィンドウの通知を消去
 claude-status.sh cleanup          # 1時間以上更新なしを削除
-claude-status.sh find-workspace <project>
+claude-status.sh find-workspace <window_id>
 ```
 
 **ワークスペース検索ロジック**:
@@ -152,6 +192,34 @@ SketchyBarプラグイン。ワークスペースバッジの表示/非表示を
 ### templates/com.user.claude-status-watch.plist
 
 リモート監視用のlaunchd設定テンプレート。
+
+### scripts/tmux-claude-badge.sh
+
+tmuxステータスバー用のバッジ表示スクリプト。`window-status-format` から呼び出される。
+
+```bash
+tmux-claude-badge.sh window <window_index> [focused]
+```
+
+- 指定ウィンドウの通知数をカウントしてバッジを出力
+- `focused` 指定時は薄い色で表示
+
+### scripts/tmux-claude-focus.sh
+
+tmuxウィンドウフォーカス時の通知消去処理。`session-window-changed` hookから呼び出される。
+
+- 6秒タイマーで自動消去
+- ウィンドウを離れた場合はタイマーキャンセル
+
+### common/tmux/.config/tmux/claude-hooks.tmux
+
+tmux hooks設定ファイル。
+
+```bash
+# ウィンドウ切り替え時にフォーカス処理を実行
+set-hook -g session-window-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude-focus.sh"'
+set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude-focus.sh"'
+```
 
 ## セットアップ
 
@@ -391,10 +459,14 @@ dotfiles/
 ├── scripts/
 │   ├── ai-notify.sh              # メイン通知スクリプト
 │   ├── claude-status.sh          # 状態管理
-│   └── claude-status-watch.sh    # リモート監視
+│   ├── claude-status-watch.sh    # リモート監視
+│   ├── tmux-claude-badge.sh      # tmuxバッジ表示
+│   └── tmux-claude-focus.sh      # tmuxフォーカス処理
 ├── common/sketchybar/.config/sketchybar/
 │   └── plugins/
 │       └── claude.sh             # SketchyBarプラグイン
+├── common/tmux/.config/tmux/
+│   └── claude-hooks.tmux         # tmux hooks設定
 └── templates/
     └── com.user.claude-status-watch.plist  # launchd テンプレート
 ```
