@@ -33,8 +33,8 @@ set -g status-right-style NONE
 set -g status-left "#[fg=#1a1b26,bg=#f7768e,bold]  #S #[fg=#f7768e,bg=default] "
 
 # Right: Custom mode indicator + Git branch, Date, Time, Hostname
-# Mode indicator: copy=red, prefix=yellow, normal=gray
-set -g status-right "#{?pane_in_mode,#[fg=#f7768e]#[fg=#1a1b26 bg=#f7768e bold] COPY #[fg=#f7768e bg=default],#{?client_prefix,#[fg=#e0af68]#[fg=#1a1b26 bg=#e0af68 bold] PREFIX #[fg=#e0af68 bg=default],#[fg=#3b4261]#[fg=#a9b1d6 bg=#3b4261] NORMAL #[fg=#3b4261 bg=default]}}\
+# Mode indicator: copy=red, prefix=yellow, normal=blue (#7aa2f7 = pane border)
+set -g status-right "#{?pane_in_mode,#[fg=#f7768e]#[fg=#1a1b26 bg=#f7768e bold] COPY #[fg=#f7768e bg=default],#{?client_prefix,#[fg=#e0af68]#[fg=#1a1b26 bg=#e0af68 bold] PREFIX #[fg=#e0af68 bg=default],#[fg=#7aa2f7]#[fg=#1a1b26 bg=#7aa2f7] NORMAL #[fg=#7aa2f7 bg=default]}}\
 #[fg=#9ece6a,bg=default]#[fg=#1a1b26,bg=#9ece6a]  #(cd #{pane_current_path}; git branch --show-current 2>/dev/null || echo '-') #[fg=#9ece6a,bg=default]\
 #[fg=#7aa2f7,bg=default]#[fg=#1a1b26,bg=#7aa2f7]  %m/%d %H:%M #[fg=#7aa2f7,bg=default]\
 #[fg=#7dcfff,bg=default]#[fg=#1a1b26,bg=#7dcfff,bold]  #h #[fg=#7dcfff,bg=default]"
