@@ -1,6 +1,9 @@
 # plugins.toml
 shell = "zsh"
 
+[plugins.zsh-abbr]
+github = "olets/zsh-abbr"
+
 [plugins.zsh-syntax-highlighting]
 github = "zsh-users/zsh-syntax-highlighting"
 
