@@ -11,6 +11,7 @@ dotfiles/
 │   ├── zsh/         # Zsh共通設定 (.zshrc.common)
 │   ├── starship/    # Starshipプロンプト
 │   ├── sheldon/     # Zshプラグインマネージャー
+│   ├── zsh-abbr/    # Zsh略語定義 (zsh-abbr)
 │   ├── tmux/        # Tmux設定 (TokyoNight + Powerline)
 │   ├── git/         # Git設定
 │   ├── lazygit/     # LazyGit設定
@@ -18,6 +19,7 @@ dotfiles/
 │   ├── ghostty/     # Ghosttyターミナル
 │   ├── aerospace/   # AeroSpace (タイリングWM)
 │   ├── sketchybar/  # SketchyBar (ステータスバー)
+│   ├── vscode/      # VS Code設定
 │   └── ...
 ├── mac/             # macOS専用設定
 │   ├── zsh/         # .zshrc (macOS用)
@@ -125,6 +127,7 @@ exec zsh
 ### Zsh
 
 - **プラグインマネージャー**: Sheldon
+- **略語展開**: zsh-abbr (エイリアスの代替、履歴に展開後コマンドが残る)
 - **プロンプト**: Starship (Draculaテーマ)
 - **履歴検索**: Atuin
 - **ディレクトリ移動**: Zoxide
@@ -139,7 +142,7 @@ exec zsh
 
 - **テーマ**: TokyoNight (透過 + Powerline風角丸デザイン)
 - **ステータスバー**: CPU/メモリ使用率、Gitブランチ、日時
-- **キーバインド** (prefix: `C-j`):
+- **キーバインド** (prefix: `C-Space`):
   | キー | 機能 |
   |------|------|
   | `t` | ペインタイトル編集 |
