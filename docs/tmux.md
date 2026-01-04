@@ -6,7 +6,7 @@ TokyoNight Night テーマを使用した tmux 設定。透過背景対応。
 
 ### Prefix
 
-`Ctrl+j`（デフォルトの `Ctrl+b` から変更）
+`Ctrl+Space`（デフォルトの `Ctrl+b` から変更）
 
 ### Pane / Window 操作
 
@@ -14,13 +14,12 @@ TokyoNight Night テーマを使用した tmux 設定。透過背景対応。
 |------|------|
 | `\|` | 水平分割 |
 | `-` | 垂直分割 |
-| `h/j/k/l` | Pane 移動 |
+| `C-h/j/k/l` | Pane 移動（prefix不要、vim-tmux-navigator） |
 | `H/J/K/L` | Pane リサイズ（リピート可） |
-| `Ctrl+h/l` | Window 切替 |
+| `n/p` | Window 切替（リピート可、1秒） |
 | `t` | Pane タイトル設定 |
 | `T` | Window リネーム |
 | `r` | 設定リロード |
-| `m` | MOVE モード |
 | `S` | SYNC モード切替 |
 
 ### Copy Mode (vi スタイル)
@@ -46,26 +45,17 @@ TokyoNight Night テーマを使用した tmux 設定。透過背景対応。
 | モード | 色 | 条件 |
 |--------|-----|------|
 | COPY | 赤 | Copy mode 中 |
-| MOVE | マゼンタ | MOVE mode 中 |
 | SYNC | ティール | Pane 同期中 |
 | PREFIX | 黄 | Prefix 入力後 |
 | NORMAL | 青 | 通常 |
 
 Pane 枠線もモードに応じて色が変化。
 
-## MOVE モード
+## vim-tmux-navigator
 
-`prefix + m` で MOVE モードに入る。prefix なしで連続移動可能。
+`C-h/j/k/l` で Neovim ⇔ tmux ペイン間をシームレスに移動。
 
-| キー | 動作 |
-|------|------|
-| `h/j/k/l` | Pane 移動 |
-| `Ctrl+h/l` | Window 切替 |
-| `Enter/Esc` | モード終了 |
-
-有効時:
-- ステータスバーに `MOVE` 表示（マゼンタ）
-- Pane 枠線がマゼンタに変化
+prefix 不要で直接移動できる。
 
 ## SYNC モード
 
@@ -105,6 +95,7 @@ scripts/
 
 ## プラグイン
 
+- **vim-tmux-navigator**: Neovim⇔tmux シームレス移動
 - **tmux-resurrect**: セッション保存・復元
 - **tmux-continuum**: 自動復元
 - **tmux-yank**: クリップボード連携
