@@ -13,6 +13,18 @@ command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 # --- zsh-abbr reload on source ---
 [ -f "$ABBR_USER_ABBREVIATIONS_FILE" ] && abbr import --quiet
 
+# --- zsh-abbr syntax highlighting integration ---
+# Show abbreviations in green instead of red
+if (( ${+ABBR_REGULAR_USER_ABBREVIATIONS} )); then
+  ZSH_HIGHLIGHT_HIGHLIGHTERS+=(regexp)
+  # Remove quotes from keys and join with |
+  local -a abbr_keys=()
+  for k in ${(k)ABBR_REGULAR_USER_ABBREVIATIONS}; do
+    abbr_keys+="${k//\"/}"
+  done
+  ZSH_HIGHLIGHT_REGEXP+=('^[[:blank:][:space:]]*('${(j:|:)abbr_keys}')$' fg=green)
+fi
+
 # --- VPN (vpnutil for Mac) ---
 alias vpn='vpnutil'
 alias vpns='check_vpn_status'
