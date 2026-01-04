@@ -16,8 +16,8 @@ set -g message-command-style "fg=#1a1b26,bg=#bb9af7,bold"
 
 # Pane border (dynamic color based on mode)
 set -g pane-border-style "fg=#3b4261"
-# copy mode: 赤, sync: ティール, 通常: 青
-set -g pane-active-border-style "#{?pane_in_mode,fg=#f7768e,#{?pane_synchronized,fg=#73daca,fg=#7aa2f7}}"
+# copy mode: 赤, move: マゼンタ, sync: ティール, 通常: 青
+set -g pane-active-border-style "#{?pane_in_mode,fg=#f7768e,#{?#{==:#{client_key_table},move},fg=#bb9af7,#{?pane_synchronized,fg=#73daca,fg=#7aa2f7}}}"
 
 # Status bar (transparent)
 set -g status "on"
@@ -35,8 +35,8 @@ set -g status-right-style NONE
 set -g status-left "#[fg=#1a1b26,bg=#f7768e,bold]  #S #[fg=#f7768e,bg=default] "
 
 # Right: Custom mode indicator + Git branch, Date, Time, Hostname
-# Mode indicator: copy=red, sync=teal, prefix=yellow, normal=blue
-set -g status-right "#{?pane_in_mode,#[fg=#f7768e]#[fg=#1a1b26 bg=#f7768e bold] COPY #[fg=#f7768e bg=default],#{?pane_synchronized,#[fg=#73daca]#[fg=#1a1b26 bg=#73daca bold] SYNC #[fg=#73daca bg=default],#{?client_prefix,#[fg=#e0af68]#[fg=#1a1b26 bg=#e0af68 bold] PREFIX #[fg=#e0af68 bg=default],#[fg=#7aa2f7]#[fg=#1a1b26 bg=#7aa2f7] NORMAL #[fg=#7aa2f7 bg=default]}}}\
+# Mode indicator: copy=red, move=magenta, sync=teal, prefix=yellow, normal=blue
+set -g status-right "#{?pane_in_mode,#[fg=#f7768e]#[fg=#1a1b26 bg=#f7768e bold] COPY #[fg=#f7768e bg=default],#{?#{==:#{client_key_table},move},#[fg=#bb9af7]#[fg=#1a1b26 bg=#bb9af7 bold] MOVE #[fg=#bb9af7 bg=default],#{?pane_synchronized,#[fg=#73daca]#[fg=#1a1b26 bg=#73daca bold] SYNC #[fg=#73daca bg=default],#{?client_prefix,#[fg=#e0af68]#[fg=#1a1b26 bg=#e0af68 bold] PREFIX #[fg=#e0af68 bg=default],#[fg=#7aa2f7]#[fg=#1a1b26 bg=#7aa2f7] NORMAL #[fg=#7aa2f7 bg=default]}}}}\
 #[fg=#9ece6a,bg=default]#[fg=#1a1b26,bg=#9ece6a]  #(cd #{pane_current_path}; git branch --show-current 2>/dev/null || echo '-') #[fg=#9ece6a,bg=default]\
 #[fg=#7aa2f7,bg=default]#[fg=#1a1b26,bg=#7aa2f7]  %m/%d %H:%M #[fg=#7aa2f7,bg=default]\
 #[fg=#7dcfff,bg=default]#[fg=#1a1b26,bg=#7dcfff,bold]  #h #[fg=#7dcfff,bg=default]"
