@@ -10,8 +10,8 @@
 command -v sheldon &>/dev/null && eval "$(sheldon source)"
 command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 
-# --- Aliases: open ---
-alias o='open'
+# --- zsh-abbr reload on source ---
+[ -f "$ABBR_USER_ABBREVIATIONS_FILE" ] && abbr import --quiet
 
 # --- VPN (vpnutil for Mac) ---
 alias vpn='vpnutil'

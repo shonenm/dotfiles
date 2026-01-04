@@ -1,0 +1,71 @@
+# zsh-abbr user abbreviations
+
+# Git
+abbr g="git"
+abbr ga="git add"
+abbr gd="git diff"
+abbr gs="git status"
+abbr gp="git push"
+abbr gb="git branch"
+abbr gsh="git stash"
+abbr gsp="git stash pop"
+abbr gco="git checkout"
+abbr gf="git fetch"
+abbr gc="git commit"
+abbr gpl="git pull"
+abbr grh="git reset --hard HEAD"
+abbr grs="git reset --soft HEAD^"
+abbr gpf="git push --force"
+
+# Navigation
+abbr ..="builtin cd .."
+abbr ..2="builtin cd ../.."
+abbr ..3="builtin cd ../../.."
+abbr ..4="builtin cd ../../../.."
+abbr ..5="builtin cd ../../../../.."
+abbr h="cd ~"
+
+# General
+abbr cl="clear"
+abbr mkd="mkdir"
+abbr c="code"
+abbr szshrc="source ~/.zshrc"
+abbr zshrc="code ~/.zshrc"
+
+# Vim/Neovim
+abbr v="nvim"
+abbr vimconf="code ~/.config/nvim/init.vim"
+
+# Tmux
+abbr tm="tmux"
+abbr tmconf="code ~/.config/tmux/tmux.conf"
+
+# Zellij
+abbr zj="zellij"
+
+# Lazy tools
+abbr lzg="lazygit"
+abbr lzd="lazydocker"
+
+# Custom scripts
+abbr psh="push.sh"
+abbr ws="ws.sh"
+abbr mkws="mkws.sh"
+abbr setde="setDE.sh"
+abbr addws="addws.sh"
+abbr tc="code.sh"
+abbr filepath="create_unsolved_path_files.sh"
+abbr sortjson="sort_json.sh"
+abbr collectFiles="collect_files.sh"
+
+# Directory shortcuts
+abbr R="ws.sh --Research"
+abbr n="ws.sh --netse"
+abbr K="cd ~/works/KetchApp; code ."
+
+# Claude Code
+abbr claude-ps="claude-cleanup.sh list"
+abbr claude-kill="claude-cleanup.sh kill-all"
+
+# Mac
+abbr o="open"

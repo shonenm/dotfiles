@@ -29,36 +29,8 @@ export DENO_INSTALL="$HOME/.deno"
 autoload -Uz compinit
 compinit
 
-# --- Aliases: Custom Scripts ---
-alias psh='push.sh'
-alias ws='ws.sh'
-alias mkws='mkws.sh'
-alias setde='setDE.sh'
-alias addws='addws.sh'
-alias tc='code.sh'
-alias filepath="create_unsolved_path_files.sh"
-alias sortjson="sort_json.sh"
-alias collectFiles="collect_files.sh"
-
-# --- Aliases: General ---
-alias zshrc="code ~/.zshrc"
-alias cl="clear"
-alias mkd="mkdir"
-alias c="code"
-alias szshrc="source ~/.zshrc"
-
-# --- Aliases: Vim ---
-alias v="nvim"
-alias vimconf="code ~/.config/nvim/init.vim"
-
-# --- Aliases: Tmux ---
-alias tm="tmux"
-alias tmconf="code ~/.config/tmux/tmux.conf"
-
-# --- Aliases: Zellij ---
-alias zj="zellij"
-
-# --- Aliases: ls (eza) ---
+# --- Conditional Aliases (runtime checks) ---
+# ls -> eza
 if command -v eza &>/dev/null; then
   alias ls="eza --icons --git"
   alias ll="eza --icons --git -l"
@@ -66,45 +38,7 @@ if command -v eza &>/dev/null; then
 fi
 alias l='ls -CF'
 
-# --- Aliases: cd shortcuts ---
-alias ..='builtin cd ..'
-alias ..2='builtin cd ../..'
-alias ..3='builtin cd ../../..'
-alias ..4='builtin cd ../../../..'
-alias ..5='builtin cd ../../../../..'
-
-# --- Aliases: Directory shortcuts ---
-alias R='ws.sh --Research'
-alias n='ws.sh --netse'
-alias K='cd ~/works/KetchApp; code .'
-alias h='cd ~'
-
-# --- Aliases: Git ---
-alias g='git'
-alias ga='git add'
-alias gd='git diff'
-alias gs='git status'
-alias gp='git push'
-alias gb='git branch'
-alias gsh='git stash'
-alias gsp='git stash pop'
-alias gco='git checkout'
-alias gf='git fetch'
-alias gc='git commit'
-alias gpl='git pull'
-alias grh='git reset --hard HEAD'
-alias grs='git reset --soft HEAD^'
-alias gpf='git push --force'
-
-# --- Aliases: Lazy tools ---
-alias lzg='lazygit'
-alias lzd='lazydocker'
-
-# --- Aliases: Claude Code ---
-alias claude-ps='claude-cleanup.sh list'
-alias claude-kill='claude-cleanup.sh kill-all'
-
-# --- Aliases: Modern replacements ---
+# Modern replacements
 command -v bat &>/dev/null && alias cat="bat"
 command -v rg &>/dev/null && alias grep="rg"
 
@@ -115,7 +49,6 @@ command -v rg &>/dev/null && alias grep="rg"
 command -v gh &>/dev/null && eval "$(gh completion -s zsh)"
 command -v starship &>/dev/null && eval "$(starship init zsh)"
 command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
-
 
 # --- Tmux auto-reload ---
 if command -v tmux >/dev/null 2>&1 && [ -n "$TMUX" ]; then
