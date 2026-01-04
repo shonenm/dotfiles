@@ -100,6 +100,10 @@ alias gpf='git push --force'
 alias lzg='lazygit'
 alias lzd='lazydocker'
 
+# --- Aliases: Claude Code ---
+alias claude-ps='claude-cleanup.sh list'
+alias claude-kill='claude-cleanup.sh kill-all'
+
 # --- Aliases: Modern replacements ---
 command -v bat &>/dev/null && alias cat="bat"
 command -v rg &>/dev/null && alias grep="rg"
@@ -112,10 +116,6 @@ command -v gh &>/dev/null && eval "$(gh completion -s zsh)"
 command -v starship &>/dev/null && eval "$(starship init zsh)"
 command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
 
-# --- NVM ---
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
 # --- Tmux auto-reload ---
 if command -v tmux >/dev/null 2>&1 && [ -n "$TMUX" ]; then
