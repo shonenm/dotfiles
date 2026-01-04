@@ -1,0 +1,405 @@
+// 既定値を上書きするには、このファイル内にキー バインドを挿入します
+[
+  // Ctrl+Shift+E E → Remote ウィンドウを閉じる
+  {
+    "key": "ctrl+shift+e e",
+    "command": "workbench.action.remote.close"
+  },
+
+  // Alt+J → エクスプローラーを開く
+  {
+    "key": "alt+j",
+    "command": "workbench.view.explorer",
+    "when": "viewContainer.workbench.view.explorer.enabled"
+  },
+
+  // Shift+Cmd+E の既定キーバインドを無効化
+  {
+    "key": "shift+cmd+e",
+    "command": "-workbench.view.explorer",
+    "when": "viewContainer.workbench.view.explorer.enabled"
+  },
+
+  // Alt+L → 拡張機能ビューを開く
+  {
+    "key": "alt+l",
+    "command": "workbench.view.extensions",
+    "when": "viewContainer.workbench.view.extensions.enabled"
+  },
+
+  // Shift+Cmd+X の既定キーバインドを無効化
+  {
+    "key": "shift+cmd+x",
+    "command": "-workbench.view.extensions",
+    "when": "viewContainer.workbench.view.extensions.enabled"
+  },
+
+  // Alt+K → Git ソース管理ビューを開く（GitLens使用時）
+  {
+    "key": "alt+k",
+    "command": "workbench.view.scm",
+    "when": "workbench.scm.active && !gitlens:disabled && config.gitlens.keymap == 'chorded'"
+  },
+
+  // Ctrl+Shift+G の既定 SCM キーバインドを無効化
+  {
+    "key": "ctrl+shift+g",
+    "command": "-workbench.view.scm",
+    "when": "workbench.scm.active && !gitlens:disabled && config.gitlens.keymap == 'chorded'"
+  },
+
+  // Ctrl+Shift+↓ → 下にカーソルを追加（マルチカーソル）
+  {
+    "key": "ctrl+shift+down",
+    "command": "editor.action.insertCursorBelow",
+    "when": "editorTextFocus"
+  },
+
+  // Alt+Cmd+↓ の既定カーソル追加を無効化
+  {
+    "key": "alt+cmd+down",
+    "command": "-editor.action.insertCursorBelow",
+    "when": "editorTextFocus"
+  },
+
+  // Ctrl+Shift+↑ → 上にカーソルを追加
+  {
+    "key": "ctrl+shift+up",
+    "command": "editor.action.insertCursorAbove",
+    "when": "editorTextFocus"
+  },
+
+  // Alt+Cmd+↑ の既定カーソル追加を無効化
+  {
+    "key": "alt+cmd+up",
+    "command": "-editor.action.insertCursorAbove",
+    "when": "editorTextFocus"
+  },
+
+  // Ctrl+Shift+= → 新しいターミナルを開く（カスタム）
+  {
+    "key": "ctrl+shift+[Equal]",
+    "command": "workbench.action.terminal.new",
+    "when": "terminalProcessSupported || terminalWebExtensionContributedProfile"
+  },
+
+  // Ctrl+Shift+` の既定ターミナル起動を無効化
+  {
+    "key": "ctrl+shift+`",
+    "command": "-workbench.action.terminal.new",
+    "when": "terminalProcessSupported || terminalWebExtensionContributedProfile"
+  },
+
+  // Ctrl+Shift+C C → Remote Container で再オープン
+  {
+    "key": "ctrl+shift+c c",
+    "command": "remote-containers.reopenInContainer"
+  },
+
+  // Cmd+E → サイドバーの表示/非表示切り替え
+  {
+    "key": "cmd+e",
+    "command": "workbench.action.toggleSidebarVisibility"
+  },
+
+  // Cmd+B の既定サイドバー切り替えを無効化
+  {
+    "key": "cmd+b",
+    "command": "-workbench.action.toggleSidebarVisibility"
+  },
+
+  // Alt+Cmd+↓ → 最下部までマルチカーソル追加
+  {
+    "key": "alt+cmd+down",
+    "command": "editor.action.addCursorsToBottom"
+  },
+
+  // Alt+Cmd+↑ → 最上部までマルチカーソル追加
+  {
+    "key": "alt+cmd+up",
+    "command": "editor.action.addCursorsToTop"
+  },
+
+  // QuickPickで Alt+Cmd+↓ の既定操作を無効化
+  {
+    "key": "alt+cmd+down",
+    "command": "-quickInput.nextSeparator",
+    "when": "inQuickInput && quickInputType == 'quickPick'"
+  },
+
+  // ターミナル内で Alt+Cmd+↓ の既定操作を無効化
+  {
+    "key": "alt+cmd+down",
+    "command": "-workbench.action.terminal.focusNextPane",
+    "when": "terminalFocus && terminalHasBeenCreated || terminalFocus && terminalProcessSupported"
+  },
+
+  // Shift+Cmd+E → エクスプローラーをフォーカス
+  {
+    "key": "shift+cmd+e",
+    "command": "workbench.files.action.focusFilesExplorer"
+  },
+  // Ctrl+L → 次のタブに移動（Neovim ノーマルモード）
+  {
+    "key": "ctrl+l",
+    "command": "workbench.action.nextEditor",
+    "when": "!terminalFocus && !sideBarFocus && neovim.mode != insert"
+  },
+
+  // Ctrl+H → 前のタブに移動
+  {
+    "key": "ctrl+h",
+    "command": "workbench.action.previousEditor",
+    "when": "!terminalFocus && !sideBarFocus && neovim.mode != insert"
+  },
+
+  // --- 以下は Neovim・LSP・エクスプローラー・ターミナル・カーソル 操作など ---
+  // g d → 定義ジャンプ
+  {
+    "key": "g d",
+    "command": "editor.action.revealDefinition",
+    "when": "neovim.mode == normal && editorHasDefinitionProvider && editorTextFocus"
+  },
+
+  // g b → 前のカーソル位置へ戻る
+  {
+    "key": "g b",
+    "command": "workbench.action.navigateBack",
+    "when": "neovim.mode == normal && editorTextFocus"
+  },
+
+  // Shift+K → ホバー（関数情報など）表示
+  {
+    "key": "shift+k",
+    "command": "editor.action.showHover",
+    "when": "neovim.mode == normal && editorTextFocus"
+  },
+
+  // Shift+R → ファイル名変更
+  {
+    "key": "shift+r",
+    "command": "renameFile",
+    "when": "explorerViewletVisible && filesExplorerFocus && !inputFocus"
+  },
+
+  // Shift+C → ファイルコピー
+  {
+    "key": "shift+c",
+    "command": "filesExplorer.copy",
+    "when": "explorerViewletVisible && filesExplorerFocus && !inputFocus"
+  },
+
+  // Shift+P → ファイル貼り付け
+  {
+    "key": "shift+p",
+    "command": "filesExplorer.paste",
+    "when": "explorerViewletVisible && filesExplorerFocus && !inputFocus"
+  },
+
+  // Shift+N → 新しいファイル作成
+  {
+    "key": "shift+n",
+    "command": "explorer.newFile",
+    "when": "explorerViewletVisible && filesExplorerFocus && !inputFocus"
+  },
+
+  // Shift+D → ファイル削除
+  {
+    "key": "shift+d",
+    "command": "deleteFile",
+    "when": "explorerViewletVisible && filesExplorerFocus && !inputFocus"
+  },
+
+  // Shift+K → 新しいフォルダ作成
+  {
+    "key": "shift+k",
+    "command": "explorer.newFolder",
+    "when": "explorerViewletVisible && filesExplorerFocus && !inputFocus"
+  },
+
+  // Shift+M → ファイルを切り取り（カット）
+  {
+    "key": "shift+m",
+    "command": "filesExplorer.cut",
+    "when": "explorerViewletVisible && filesExplorerFocus && !inputFocus"
+  },
+
+  // --- ターミナル操作 (Ctrl+T prefix) ---
+  // Ctrl+T Space → パネル切り替え
+  {
+    "key": "ctrl+t space",
+    "command": "workbench.action.togglePanel"
+  },
+
+  // Ctrl+T T → ターミナル表示
+  {
+    "key": "ctrl+t t",
+    "command": "workbench.action.terminal.focus"
+  },
+
+  // Ctrl+T D → デバッグコンソール表示
+  {
+    "key": "ctrl+t d",
+    "command": "workbench.debug.action.focusRepl"
+  },
+
+  // Ctrl+T O → 出力パネル表示
+  {
+    "key": "ctrl+t o",
+    "command": "workbench.panel.output.focus"
+  },
+
+  // Ctrl+T P → 問題（エラー等）パネル表示
+  {
+    "key": "ctrl+t p",
+    "command": "workbench.panel.markers.view.focus"
+  },
+
+  // Ctrl+T C → 新しいターミナルを開く
+  {
+    "key": "ctrl+t c",
+    "command": "workbench.action.terminal.new"
+  },
+
+  // Ctrl+T L → 次のターミナルにフォーカス
+  {
+    "key": "ctrl+t l",
+    "command": "workbench.action.terminal.focusNext",
+    "when": "terminalFocus"
+  },
+
+  // Ctrl+T H → 前のターミナルにフォーカス
+  {
+    "key": "ctrl+t h",
+    "command": "workbench.action.terminal.focusPrevious",
+    "when": "terminalFocus"
+  },
+
+  // Ctrl+T X → ターミナルを終了
+  {
+    "key": "ctrl+t x",
+    "command": "workbench.action.terminal.kill",
+    "when": "terminalFocus"
+  },
+
+  // Ctrl+T Shift+\ → ターミナルを分割
+  {
+    "key": "ctrl+t shift+\\",
+    "command": "workbench.action.terminal.split",
+    "when": "terminalFocus && terminalProcessSupported || terminalFocus && terminalWebExtensionContributedProfile"
+  },
+
+  // Ctrl+T Ctrl+T Space → Neovim 側の Ctrl+F を呼び出し
+  {
+    "key": "ctrl+t ctrl+t space",
+    "command": "vscode-neovim.ctrl-f",
+    "when": "editorTextFocus && neovim.ctrlKeysNormal.f && neovim.init && neovim.mode != 'insert' && editorLangId not in 'neovim.editorLangIdExclusions'"
+  },
+
+  // Ctrl+N → サジェスト補完を表示
+  {
+    "key": "ctrl+n",
+    "command": "-workbench.action.quickOpenSelectNext",
+    "when": "inQuickOpen"
+  },
+  {
+    "key": "shift+enter",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": {
+      "text": "\\\r\n"
+    },
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+shift+]",
+    "command": "workbench.action.terminal.focusNext",
+    "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
+  },
+  {
+    "key": "shift+cmd+]",
+    "command": "-workbench.action.terminal.focusNext",
+    "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
+  },
+  {
+    "key": "ctrl+shift+]",
+    "command": "workbench.action.debug.nextConsole",
+    "when": "inDebugRepl"
+  },
+  {
+    "key": "shift+cmd+]",
+    "command": "-workbench.action.debug.nextConsole",
+    "when": "inDebugRepl"
+  },
+  {
+    "key": "shift+cmd+]",
+    "command": "-workbench.action.nextEditor"
+  },
+  {
+    "key": "ctrl+shift+[",
+    "command": "workbench.action.terminal.focusPrevious",
+    "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
+  },
+  {
+    "key": "shift+cmd+[",
+    "command": "-workbench.action.terminal.focusPrevious",
+    "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
+  },
+  {
+    "key": "shift+cmd+[",
+    "command": "-workbench.action.previousEditor"
+  },
+  {
+    "key": "ctrl+shift+[",
+    "command": "workbench.action.debug.prevConsole",
+    "when": "inDebugRepl"
+  },
+  {
+    "key": "shift+cmd+[",
+    "command": "-workbench.action.debug.prevConsole",
+    "when": "inDebugRepl"
+  },
+  {
+    "key": "ctrl+shift+c ctrl+shift+o",
+    "command": "git.checkout"
+  },
+  {
+    "key": "cmd+r",
+    "command": "-workbench.action.reloadWindow",
+    "when": "isDevelopment"
+  },
+  {
+    "key": "cmd+r cmd+r",
+    "command": "workbench.action.reloadWindow"
+  },
+  {
+    "key": "ctrl+=",
+    "command": "workbench.action.terminal.toggleTerminal",
+    "when": "terminal.active"
+  },
+  {
+    "key": "ctrl+`",
+    "command": "-workbench.action.terminal.toggleTerminal",
+    "when": "terminal.active"
+  },
+
+  // Ctrl+Space → ターミナルに送信（tmux prefix として使用）
+  {
+    "key": "ctrl+space",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": { "text": "\u0000" },
+    "when": "terminalFocus"
+  },
+
+  // ターミナル内で Ctrl+Space の Trigger Suggest を無効化
+  {
+    "key": "ctrl+space",
+    "command": "-editor.action.triggerSuggest",
+    "when": "terminalFocus"
+  },
+
+  // ターミナル内蔵 Suggest も無効化
+  {
+    "key": "ctrl+space",
+    "command": "-workbench.action.terminal.triggerSuggest"
+  }
+]
