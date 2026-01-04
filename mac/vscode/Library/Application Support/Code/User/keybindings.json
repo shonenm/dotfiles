@@ -401,5 +401,21 @@
   {
     "key": "ctrl+space",
     "command": "-workbench.action.terminal.triggerSuggest"
+  },
+
+  // Command+Backspace → 行頭から削除（Ctrl+U）
+  {
+    "key": "cmd+backspace",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": { "text": "\u0015" },
+    "when": "terminalFocus"
+  },
+
+  // Ctrl+Backspace → 単語削除（Ctrl+W）
+  {
+    "key": "ctrl+backspace",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": { "text": "\u0017" },
+    "when": "terminalFocus"
   }
 ]
