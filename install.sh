@@ -294,7 +294,14 @@ main() {
   # 3. Link dotfiles (stow)
   link_dotfiles
 
-  # 3.5. Regenerate tmux theme on Linux (fixes powerline char encoding)
+  # 3.5. Install sheldon plugins
+  if command_exists sheldon; then
+    log_info "Installing sheldon plugins..."
+    sheldon lock --update
+    log_success "Sheldon plugins installed"
+  fi
+
+  # 3.6. Regenerate tmux theme on Linux (fixes powerline char encoding)
   if [[ "$(detect_os)" == "linux" ]]; then
     log_info "Regenerating tmux theme for Linux..."
     "$DOTFILES_DIR/scripts/regenerate-tmux-theme.sh" "$HOME/.config/tmux/tokyonight.tmux"
