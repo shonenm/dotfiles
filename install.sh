@@ -137,8 +137,12 @@ stow_package() {
       [[ -z "$file" ]] && continue
       local target="$HOME/$file"
       if [[ -e "$target" && ! -L "$target" ]]; then
-        mv "$target" "$target.dotfiles-bak"
-        log_info "    Backed up: $file → $file.dotfiles-bak"
+        if mv "$target" "$target.dotfiles-bak" 2>/dev/null; then
+          log_info "    Backed up: $file → $file.dotfiles-bak"
+        else
+          log_warn "    Cannot move $file (bind mount?), skipping $pkg_name"
+          return 0
+        fi
       fi
     done <<< "$conflicts"
   fi
