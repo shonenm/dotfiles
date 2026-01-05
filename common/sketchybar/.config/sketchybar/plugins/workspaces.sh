@@ -2,6 +2,24 @@
 
 source "$CONFIG_DIR/plugins/colors.sh"
 
+# AeroSpaceモニター番号 → sketchybarディスプレイ番号の変換
+# macOSの内蔵ディスプレイは通常display=1、外部はdisplay=2
+get_sketchybar_display() {
+    local aerospace_monitor=$1
+
+    # AeroSpaceのモニター名を取得
+    local monitor_name=$(aerospace list-monitors --json 2>/dev/null \
+        | jq -r ".[] | select(.\"monitor-id\" == $aerospace_monitor) | .\"monitor-name\"")
+
+    # Built-in Retina Display → sketchybar display=1
+    # 外部モニター → sketchybar display=2
+    if [[ "$monitor_name" == *"Built-in"* ]] || [[ "$monitor_name" == *"Retina"* ]]; then
+        echo "1"
+    else
+        echo "2"
+    fi
+}
+
 # Get current mode color
 HIGHLIGHT_COLOR=$(get_mode_color)
 
@@ -37,6 +55,9 @@ if [ "$ALL_WS" != "$PREV_WS" ]; then
         MONITOR_WS=$(aerospace list-workspaces --monitor $monitor --empty no 2>/dev/null | sort)
         [ -z "$MONITOR_WS" ] && continue
 
+        # AeroSpaceモニター番号をsketchybarディスプレイ番号に変換
+        SKETCHYBAR_DISPLAY=$(get_sketchybar_display $monitor)
+
         SPACE_ITEMS=()
         for sid in $MONITOR_WS; do
             SPACE_ITEMS+=("space.$sid")
@@ -45,7 +66,7 @@ if [ "$ALL_WS" != "$PREV_WS" ]; then
             sketchybar --add item space.$sid left \
                 --subscribe space.$sid aerospace_workspace_change \
                 --set space.$sid \
-                display=$monitor \
+                display=$SKETCHYBAR_DISPLAY \
                 icon.drawing=off \
                 label="$sid" \
                 label.font="Hack Nerd Font:Bold:12.0" \
@@ -62,7 +83,7 @@ if [ "$ALL_WS" != "$PREV_WS" ]; then
             # バッジアイテム（モニター指定付き）
             sketchybar --add item "space.${sid}_badge" left \
                 --set "space.${sid}_badge" \
-                display=$monitor \
+                display=$SKETCHYBAR_DISPLAY \
                 drawing=on \
                 icon.drawing=off \
                 label="" \
@@ -86,7 +107,7 @@ if [ "$ALL_WS" != "$PREV_WS" ]; then
         if [ ${#SPACE_ITEMS[@]} -gt 0 ]; then
             sketchybar --add bracket workspaces_$monitor "${SPACE_ITEMS[@]}" \
                        --set workspaces_$monitor \
-                       display=$monitor \
+                       display=$SKETCHYBAR_DISPLAY \
                        background.color=0xff1e1f29 \
                        background.corner_radius=5 \
                        background.height=24 \
