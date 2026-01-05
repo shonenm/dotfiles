@@ -43,7 +43,7 @@ remove_notifications_for_window() {
   done
 }
 
-# 6秒タイマーを開始（既存タイマーはキャンセル）
+# 5秒タイマーを開始（既存タイマーはキャンセル）
 start_clear_timer() {
   local window_id="$1"
 
@@ -62,9 +62,9 @@ start_clear_timer() {
   cur_session=$(tmux display-message -p '#S' 2>/dev/null || echo "")
   cur_window=$(tmux display-message -p '#I' 2>/dev/null || echo "")
 
-  # 6秒後に自動消去するバックグラウンドタイマーを開始
+  # 5秒後に自動消去するバックグラウンドタイマーを開始
   (
-    sleep 6
+    sleep 5
     # tmux情報を考慮して削除
     for f in "$STATUS_DIR"/window_${window_id}_*.json; do
       [[ -f "$f" ]] || continue
@@ -82,7 +82,7 @@ start_clear_timer() {
   ) &
   local timer_pid=$!
 
-  # tmux位置も保存（3秒ルールで使用）
+  # tmux位置も保存（2秒ルールで使用）
   echo "${window_id}:${now}:${timer_pid}:${cur_session}:${cur_window}" > "$FOCUS_STATE_FILE"
 }
 
@@ -120,9 +120,9 @@ handle_focus_change() {
     # 前回のタイマーをキャンセル（ウィンドウが変わった場合のみ）
     [[ -n "$prev_pid" ]] && kill "$prev_pid" 2>/dev/null
 
-    # ウィンドウが変わった場合の3段階ロジック
-    if [[ $elapsed -ge 3 ]]; then
-      # 3秒以上滞在 → 前ウィンドウの通知を消す（保存されたtmux位置を使用）
+    # ウィンドウが変わった場合の2秒ルール
+    if [[ $elapsed -ge 2 ]]; then
+      # 2秒以上滞在 → 前ウィンドウの通知を消す（保存されたtmux位置を使用）
       remove_notifications_for_window "$prev_window_id" "$prev_session" "$prev_tmux_window"
     fi
   fi
@@ -140,7 +140,7 @@ handle_focus_change() {
 
   [[ -z "$window_id" ]] && return
 
-  # 新しいウィンドウの6秒タイマーを開始
+  # 新しいウィンドウの5秒タイマーを開始
   start_clear_timer "$window_id"
 }
 

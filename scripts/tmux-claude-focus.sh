@@ -1,7 +1,7 @@
 #!/bin/bash
 # tmuxウィンドウフォーカス時の通知消去スクリプト
 # tmux hook (session-window-changed) から呼び出される
-# 6秒タイマーロジック（SketchyBarと同じ）
+# 5秒タイマーロジック（SketchyBarと同じ）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATUS_DIR="/tmp/claude_status"
@@ -20,7 +20,7 @@ clear_tmux_window() {
   "$SCRIPT_DIR/claude-status.sh" clear-tmux "$session" "$window_index" 2>/dev/null || true
 }
 
-# 6秒タイマーを開始（既存タイマーはキャンセル）
+# 5秒タイマーを開始（既存タイマーはキャンセル）
 start_clear_timer() {
   local session="$1"
   local window_index="$2"
@@ -35,9 +35,9 @@ start_clear_timer() {
   local now
   now=$(date +%s)
 
-  # 6秒後に自動消去するバックグラウンドタイマー
+  # 5秒後に自動消去するバックグラウンドタイマー
   (
-    sleep 6
+    sleep 5
     clear_tmux_window "$session" "$window_index"
   ) &
   local timer_pid=$!
@@ -89,14 +89,14 @@ if [[ -f "$FOCUS_STATE_FILE" ]]; then
   now=$(date +%s)
   elapsed=$((now - prev_ts))
 
-  if [[ $elapsed -ge 6 ]]; then
-    # 6秒以上滞在 → 前ウィンドウの通知を消す
+  if [[ $elapsed -ge 5 ]]; then
+    # 5秒以上滞在 → 前ウィンドウの通知を消す
     clear_tmux_window "$prev_session" "$prev_window"
   fi
-  # 6秒未満 → 通知を残す（何もしない）
+  # 5秒未満 → 通知を残す（何もしない）
 fi
 
-# 新しいウィンドウに通知があれば6秒タイマーを開始
+# 新しいウィンドウに通知があれば5秒タイマーを開始
 if has_notification "$SESSION" "$WINDOW_INDEX"; then
   start_clear_timer "$SESSION" "$WINDOW_INDEX"
 else
