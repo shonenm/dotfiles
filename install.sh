@@ -121,22 +121,32 @@ setup_environment() {
 
 # --- 3. Link Dotfiles (Stow) ---
 
-# Stow a package with --adopt to handle existing files
+# Stow a package with conflict detection and backup
 stow_package() {
   local pkg_dir="$1"
   local pkg_name="$2"
 
-  # --adopt: Move existing files into the package, then create symlinks
-  # This handles all conflicts automatically (empty files, bind mounts, etc.)
-  local stow_output
-  local stow_exit=0
-  stow_output=$(stow -d "$pkg_dir" -t "$HOME" --adopt -R "$pkg_name" 2>&1) || stow_exit=$?
+  # dry-runでコンフリクトを検出
+  local conflicts
+  conflicts=$(stow -n -d "$pkg_dir" -t "$HOME" "$pkg_name" 2>&1 | \
+    grep "existing target" | sed 's/.*existing target is neither a link nor a directory: //' || true)
 
-  if [[ $stow_exit -ne 0 ]]; then
-    log_warn "  Failed to link $pkg_name"
-    echo "$stow_output" | head -3 >&2
+  # コンフリクトファイルをバックアップ
+  if [[ -n "$conflicts" ]]; then
+    while IFS= read -r file; do
+      [[ -z "$file" ]] && continue
+      local target="$HOME/$file"
+      if [[ -e "$target" && ! -L "$target" ]]; then
+        mv "$target" "$target.dotfiles-bak"
+        log_info "    Backed up: $file → $file.dotfiles-bak"
+      fi
+    done <<< "$conflicts"
   fi
-  # Always return 0 to continue with other packages (set -e won't stop)
+
+  # stow実行（--adoptで残りの差分を吸収）
+  if ! stow -d "$pkg_dir" -t "$HOME" --adopt "$pkg_name" 2>/dev/null; then
+    log_warn "  Failed to link $pkg_name"
+  fi
   return 0
 }
 
