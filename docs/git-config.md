@@ -84,18 +84,75 @@ op read "op://Personal/Git Config/email"
 [include]
     path = ~/.gitconfig.local
 
+# === Core ===
 [core]
     pager = delta
 
 [interactive]
     diffFilter = delta --color-only
 
+# === Delta (diff viewer) ===
 [delta]
     navigate = true
     dark = true
 
+# === Init ===
+[init]
+    defaultBranch = main
+
+# === Diff ===
+[diff]
+    algorithm = histogram
+    colorMoved = plain
+    mnemonicPrefix = true
+    renames = true
+
+# === Merge ===
 [merge]
     conflictstyle = zdiff3
+
+# === Push ===
+[push]
+    default = simple
+    autoSetupRemote = true
+    followTags = true
+
+# === Fetch ===
+[fetch]
+    prune = true
+    pruneTags = true
+
+# === Pull ===
+[pull]
+    rebase = true
+
+# === Rebase ===
+[rebase]
+    autoSquash = true
+    autoStash = true
+    updateRefs = true
+
+# === Rerere (Reuse Recorded Resolution) ===
+[rerere]
+    enabled = true
+    autoupdate = true
+
+# === Branch/Tag display ===
+[column]
+    ui = auto
+
+[branch]
+    sort = -committerdate
+
+[tag]
+    sort = version:refname
+
+# === UX ===
+[help]
+    autocorrect = 10
+
+[commit]
+    verbose = true
 ```
 
 ### ~/.gitconfig.local (ローカル専用)
@@ -235,6 +292,133 @@ head -10 ~/.gitconfig
 # [include]がなければdotfilesを更新
 cd ~/dotfiles && git pull
 ```
+
+## 設定項目リファレンス
+
+### Delta（diff viewer）
+
+| 設定 | 値 | 説明 |
+|------|-----|------|
+| `core.pager` | delta | diffビューアーとしてdeltaを使用 |
+| `interactive.diffFilter` | delta --color-only | インタラクティブステージング時の色付きdiff |
+| `delta.navigate` | true | n/Nでdiffセクション間を移動 |
+| `delta.dark` | true | ダークテーマ |
+
+### Diff
+
+| 設定 | 値 | 説明 |
+|------|-----|------|
+| `diff.algorithm` | histogram | より賢いdiffアルゴリズム（デフォルトのmyersより改善） |
+| `diff.colorMoved` | plain | 移動されたコードブロックを色分け表示 |
+| `diff.mnemonicPrefix` | true | a/b表記をi/w/c（index/worktree/commit）に |
+| `diff.renames` | true | ファイル名変更を検出・表示 |
+
+### Merge
+
+| 設定 | 値 | 説明 |
+|------|-----|------|
+| `merge.conflictstyle` | zdiff3 | 競合時に元のコードも表示（3方向マージ） |
+
+### Push/Fetch/Pull
+
+| 設定 | 値 | 説明 |
+|------|-----|------|
+| `push.default` | simple | 現在のブランチを同名リモートブランチにpush |
+| `push.autoSetupRemote` | true | 初回push時に自動でupstream設定 |
+| `push.followTags` | true | ローカルタグを自動push |
+| `fetch.prune` | true | リモートで削除されたブランチをローカルからも削除 |
+| `fetch.pruneTags` | true | リモートで削除されたタグも削除 |
+| `pull.rebase` | true | pull時にmergeではなくrebase |
+
+### Rebase
+
+| 設定 | 値 | 説明 |
+|------|-----|------|
+| `rebase.autoSquash` | true | `fixup!`コミットを自動squash |
+| `rebase.autoStash` | true | rebase前に自動stash、後に自動unstash |
+| `rebase.updateRefs` | true | スタックしたブランチをrebase時に更新 |
+
+### Rerere（Reuse Recorded Resolution）
+
+| 設定 | 値 | 説明 |
+|------|-----|------|
+| `rerere.enabled` | true | 競合解決を記録・再利用 |
+| `rerere.autoupdate` | true | 記録した解決を自動適用 |
+
+### Branch/Tag表示
+
+| 設定 | 値 | 説明 |
+|------|-----|------|
+| `column.ui` | auto | ブランチ一覧をカラム表示 |
+| `branch.sort` | -committerdate | ブランチを最新コミット順にソート |
+| `tag.sort` | version:refname | タグをセマンティックバージョン順にソート |
+
+### UX改善
+
+| 設定 | 値 | 説明 |
+|------|-----|------|
+| `init.defaultBranch` | main | 新規リポジトリのデフォルトブランチ名 |
+| `help.autocorrect` | 10 | コマンドのtypo時、1秒後に自動実行 |
+| `commit.verbose` | true | コミットメッセージ編集時にdiff全体を表示 |
+
+## 動作確認コマンド
+
+### Rerere
+
+```bash
+# テスト用リポジトリで競合を作成・解決・リセット・再マージ
+# 2回目のマージで自動解決されれば有効
+ls .git/rr-cache/  # ディレクトリがあればOK
+```
+
+### Diff
+
+```bash
+git diff HEAD~1  # histogramアルゴリズムで表示
+git diff --color-moved  # 移動コードの色分け確認
+```
+
+### Push
+
+```bash
+git checkout -b test-branch
+git push  # -u なしでupstream設定される
+```
+
+### Rebase
+
+```bash
+# 未コミット変更がある状態でpull
+echo "test" >> file.txt
+git pull  # 自動stash/unstash
+```
+
+### Branch表示
+
+```bash
+git branch  # 最新コミット順・カラム表示
+git tag     # セマンティックバージョン順
+```
+
+### Autocorrect
+
+```bash
+git stauts  # → 1秒後に git status が実行
+```
+
+## グローバルignore
+
+`~/.config/git/ignore`（XDG準拠、Git自動認識）:
+
+```
+# macOS
+.DS_Store
+
+# Claude Code local settings
+**/.claude/settings.local.json
+```
+
+**注意**: `core.excludesfile`の設定は不要。Gitは`~/.config/git/ignore`を自動で読み込む。
 
 ## 関連ドキュメント
 
