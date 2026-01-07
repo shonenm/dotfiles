@@ -263,6 +263,17 @@ install_modern_tools() {
     curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
   fi
 
+  # dops (better docker ps)
+  if ! command_exists dops; then
+    log_info "Installing dops..."
+    local arch=$(uname -m)
+    local binary="dops_linux-amd64-static"
+    [[ "$arch" == "aarch64" ]] && binary="dops_linux-arm64"
+    curl -fsSL "https://github.com/Mikescher/better-docker-ps/releases/latest/download/${binary}" \
+      -o "$HOME/.local/bin/dops"
+    chmod +x "$HOME/.local/bin/dops"
+  fi
+
   # Tokei (code statistics)
   if ! command_exists tokei; then
     log_info "Installing Tokei..."

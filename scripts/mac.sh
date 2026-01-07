@@ -107,6 +107,25 @@ install_dotenvx() {
   brew install dotenvx/brew/dotenvx
 }
 
+install_dops() {
+  if command_exists dops; then
+    log_success "dops already installed"
+    return
+  fi
+
+  log_info "Installing dops (better docker ps)..."
+  mkdir -p "$HOME/.local/bin"
+
+  local arch=$(uname -m)
+  local binary="dops_macos-amd64"
+  [[ "$arch" == "arm64" ]] && binary="dops_macos-arm64"
+
+  curl -fsSL "https://github.com/Mikescher/better-docker-ps/releases/latest/download/${binary}" \
+    -o "$HOME/.local/bin/dops"
+  chmod +x "$HOME/.local/bin/dops"
+  log_success "dops installed to ~/.local/bin"
+}
+
 install_mise_tools() {
   if ! command_exists mise; then
     log_warn "mise not found, skipping mise tools"
@@ -145,6 +164,7 @@ install_brew_casks
 install_mise_tools
 install_npm_packages
 install_dotenvx
+install_dops
 link_ai_scripts
 set_default_shell
 
