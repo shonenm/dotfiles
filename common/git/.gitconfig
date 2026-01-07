@@ -4,14 +4,72 @@
 [include]
     path = ~/.gitconfig.local
 
+# === Core ===
 [core]
     pager = delta
+
 [interactive]
     diffFilter = delta --color-only
 
+# === Delta (diff viewer) ===
 [delta]
-    navigate = true  # use n and N to move between diff sections
-    dark = true      # or light = true, or omit for auto-detection
+    navigate = true
+    dark = true
 
+# === Init ===
+[init]
+    defaultBranch = main
+
+# === Diff ===
+[diff]
+    algorithm = histogram
+    colorMoved = plain
+    mnemonicPrefix = true
+    renames = true
+
+# === Merge ===
 [merge]
     conflictstyle = zdiff3
+
+# === Push ===
+[push]
+    default = simple
+    autoSetupRemote = true
+    followTags = true
+
+# === Fetch ===
+[fetch]
+    prune = true
+    pruneTags = true
+
+# === Pull ===
+[pull]
+    rebase = true
+
+# === Rebase ===
+[rebase]
+    autoSquash = true
+    autoStash = true
+    updateRefs = true
+
+# === Rerere (Reuse Recorded Resolution) ===
+[rerere]
+    enabled = true
+    autoupdate = true
+
+# === Branch/Tag display ===
+[column]
+    ui = auto
+
+[branch]
+    sort = -committerdate
+
+[tag]
+    sort = version:refname
+
+# === UX ===
+[help]
+    autocorrect = 10
+
+[commit]
+    verbose = true
