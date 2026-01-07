@@ -7,7 +7,14 @@ source "$CONFIG_DIR/plugins/colors.sh"
 get_sketchybar_display() {
     local aerospace_monitor=$1
 
-    # AeroSpaceのモニター名を取得
+    # シングルモニターの場合は常に1を返す
+    local monitor_count=$(aerospace list-monitors 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$monitor_count" -le 1 ]; then
+        echo "1"
+        return
+    fi
+
+    # 複数モニターの場合：AeroSpaceのモニター名を取得
     local monitor_name=$(aerospace list-monitors --json 2>/dev/null \
         | jq -r ".[] | select(.\"monitor-id\" == $aerospace_monitor) | .\"monitor-name\"")
 
@@ -39,12 +46,14 @@ FOCUSED_WS=$(aerospace list-workspaces --focused 2>/dev/null)
 
 # State file to track existing workspace items
 STATE_FILE="/tmp/sketchybar_workspaces_state"
-PREV_WS=""
-[ -f "$STATE_FILE" ] && PREV_WS=$(cat "$STATE_FILE")
+# Include monitor count in state to detect display changes
+CURRENT_STATE="$MONITOR_COUNT:$ALL_WS"
+PREV_STATE=""
+[ -f "$STATE_FILE" ] && PREV_STATE=$(cat "$STATE_FILE")
 
-# Only rebuild if workspace list changed
-if [ "$ALL_WS" != "$PREV_WS" ]; then
-    echo "$ALL_WS" > "$STATE_FILE"
+# Rebuild if workspace list or monitor count changed
+if [ "$CURRENT_STATE" != "$PREV_STATE" ]; then
+    echo "$CURRENT_STATE" > "$STATE_FILE"
 
     # Remove old workspace items and brackets
     sketchybar --remove '/space\..*/' 2>/dev/null

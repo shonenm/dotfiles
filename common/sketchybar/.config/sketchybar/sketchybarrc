@@ -86,7 +86,7 @@ sketchybar --add item app_trigger right \
 
 ##### Trigger for workspace updates #####
 sketchybar --add item workspace_trigger right \
-           --subscribe workspace_trigger aerospace_workspace_change mode_color_changed \
+           --subscribe workspace_trigger aerospace_workspace_change mode_color_changed display_change \
            --set workspace_trigger \
            drawing=off \
            script="$PLUGIN_DIR/workspaces.sh"
@@ -131,6 +131,25 @@ sketchybar --add item pomodoro right \
            update_freq=5 \
            script="$PLUGIN_DIR/pomodoro.sh" \
            click_script="$HOME/dotfiles/scripts/pomodoro.sh toggle"
+
+##### Todoist Tasks (right side) #####
+sketchybar --add item todoist right \
+           --subscribe todoist mode_color_changed \
+           --set todoist \
+           icon="󰄬" \
+           icon.font="Hack Nerd Font:Bold:12.0" \
+           icon.padding_left=8 \
+           icon.padding_right=4 \
+           label.font="Hack Nerd Font:Bold:10.0" \
+           label.padding_right=8 \
+           background.color=0xff1e1f29 \
+           background.border_color=$ACCENT_COLOR \
+           background.border_width=2 \
+           background.corner_radius=5 \
+           background.height=24 \
+           background.drawing=on \
+           update_freq=60 \
+           script="$PLUGIN_DIR/todoist.sh"
 
 ##### Layout Popup Anchor (invisible, center position) #####
 sketchybar --add item layout_anchor center \
