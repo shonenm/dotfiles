@@ -207,6 +207,9 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     # Toggle sketchybar visibility with dynamic padding
     alt-s = 'exec-and-forget ~/.config/sketchybar/plugins/toggle_bar.sh'
 
+    # Swap windows between monitors
+    alt-m = 'exec-and-forget ~/dotfiles/scripts/swap-monitors.sh'
+
     # Navigate between non-empty workspaces
     ctrl-alt-left = 'exec-and-forget bash -c "aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin prev --wrap-around"'
     ctrl-alt-right = 'exec-and-forget bash -c "aerospace list-workspaces --monitor all --empty no | aerospace workspace --stdin next --wrap-around"'
@@ -291,3 +294,4 @@ B = 'main'
 G = 'main'
 C = 'main'
 F = 'main'
+T = 'main'
