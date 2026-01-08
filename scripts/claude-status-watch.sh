@@ -12,10 +12,20 @@ REMOTE_HOST="${1:-}"
   exit 1
 }
 
+# 起動時: リモートの古いinotifywaitプロセスをクリーンアップ
+# SSH切断時にゾンビとして残るプロセスを防止
+ssh "$REMOTE_HOST" 'pkill -f "inotifywait.*claude_status" 2>/dev/null || true' 2>/dev/null || true
+
 # リモートでinotifywaitを実行し、変更時にJSONを出力
 # unbuffer: SSHの出力バッファリングを無効化
 UNBUFFER="/opt/homebrew/bin/unbuffer"
 [[ ! -x "$UNBUFFER" ]] && UNBUFFER="unbuffer"
+
+# 終了時にリモートプロセスをクリーンアップ
+cleanup() {
+  ssh "$REMOTE_HOST" 'pkill -f "inotifywait.*claude_status" 2>/dev/null || true' 2>/dev/null || true
+}
+trap cleanup EXIT INT TERM
 
 "$UNBUFFER" ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$REMOTE_HOST" '
   export LD_LIBRARY_PATH="$HOME/.local/lib:$LD_LIBRARY_PATH"

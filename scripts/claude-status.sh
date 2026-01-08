@@ -44,13 +44,13 @@ find_window_by_container() {
   [[ -z "$container_name" ]] && return
 
   # ウィンドウタイトルから正確にコンテナ名を抽出して完全一致比較
-  # 形式: "開発コンテナー: {container_name} @ ..."
+  # 形式: "... [開発コンテナー: {container_name} @ remote]"
   # capture で抽出し、厳密に比較することで syntopic-dev と syntopic-dev-review を区別
   aerospace list-windows --all --json 2>/dev/null | \
     jq -r --arg name "$container_name" '
       .[] | select(.["app-name"] == "Code") |
       select(
-        (.["window-title"] | capture("開発コンテナー: (?<c>.+?) @")) as $m |
+        (.["window-title"] | capture("\\[開発コンテナー: (?<c>[^@]+?) @")) as $m |
         $m.c == $name
       ) |
       .["window-id"]
