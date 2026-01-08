@@ -140,3 +140,6 @@ common/configstore/
 common/github-copilot/
 mac/raycast/.config/raycast/config.json
 mac/raycast/.config/raycast/extensions/
+
+# gh CLI (auth tokens are machine-specific)
+common/gh/.config/gh/hosts.yml
