@@ -32,13 +32,14 @@ remove_notifications_for_window() {
     notif_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
 
     if [[ -z "$notif_session" || -z "$notif_window" ]]; then
-      # tmux情報なし → 削除OK
+      # 通知にtmux情報なし → 削除OK
       rm -f "$f"
-    elif [[ -n "$target_session" && -n "$target_window" ]]; then
-      # tmux情報あり → 指定位置と一致する場合のみ削除
-      if [[ "$notif_session" == "$target_session" && "$notif_window" == "$target_window" ]]; then
-        rm -f "$f"
-      fi
+    elif [[ -z "$target_session" || -z "$target_window" ]]; then
+      # 現在tmux未検出（VS Codeなど）→ window_id一致で削除OK
+      rm -f "$f"
+    elif [[ "$notif_session" == "$target_session" && "$notif_window" == "$target_window" ]]; then
+      # tmux位置が一致 → 削除
+      rm -f "$f"
     fi
   done
 }
@@ -46,6 +47,7 @@ remove_notifications_for_window() {
 # 5秒タイマーを開始（既存タイマーはキャンセル）
 start_clear_timer() {
   local window_id="$1"
+  local app_name="${2:-}"
 
   # 既存タイマーをキャンセル
   if [[ -f "$FOCUS_STATE_FILE" ]]; then
@@ -58,9 +60,14 @@ start_clear_timer() {
   now=$(date +%s)
 
   # 現在のtmux位置を記録（タイマー実行時に使用）
-  local cur_session cur_window
-  cur_session=$(tmux display-message -p '#S' 2>/dev/null || echo "")
-  cur_window=$(tmux display-message -p '#I' 2>/dev/null || echo "")
+  # ターミナル系アプリの場合のみtmux情報を使用
+  local cur_session="" cur_window=""
+  case "$app_name" in
+    "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
+      cur_session=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+      cur_window=$(tmux display-message -p '#I' 2>/dev/null || echo "")
+      ;;
+  esac
 
   # 5秒後に自動消去するバックグラウンドタイマーを開始
   (
@@ -73,8 +80,13 @@ start_clear_timer() {
       notif_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
 
       if [[ -z "$notif_session" || -z "$notif_window" ]]; then
+        # 通知にtmux情報なし → 削除OK
+        rm -f "$f"
+      elif [[ -z "$cur_session" || -z "$cur_window" ]]; then
+        # 現在tmux未検出（VS Codeなど）→ window_id一致で削除OK
         rm -f "$f"
       elif [[ "$notif_session" == "$cur_session" && "$notif_window" == "$cur_window" ]]; then
+        # tmux位置が一致 → 削除
         rm -f "$f"
       fi
     done
@@ -141,7 +153,7 @@ handle_focus_change() {
   [[ -z "$window_id" ]] && return
 
   # 新しいウィンドウの5秒タイマーを開始
-  start_clear_timer "$window_id"
+  start_clear_timer "$window_id" "$app_name"
 }
 
 # 通知が来た時、フォーカス中のウィンドウならタイマーを（再）開始
@@ -199,7 +211,7 @@ handle_notification_arrived() {
     esac
 
     if [[ "$should_start_timer" == "true" ]]; then
-      start_clear_timer "$window_id"
+      start_clear_timer "$window_id" "$app_name"
     fi
   fi
 }
