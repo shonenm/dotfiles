@@ -235,24 +235,36 @@ update_badges() {
   # アプリごとの通知数（フォーカス中WSのみ）
   local app_counts=""
 
+  # ターミナルアプリの場合、現在のtmux位置を取得（ループ外で1回だけ）
+  local current_tmux_session="" current_tmux_window=""
+  case "$focused_app" in
+    "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
+      current_tmux_session=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+      current_tmux_window=$(tmux display-message -p '#I' 2>/dev/null || echo "")
+      ;;
+  esac
+
   if [[ -d "$STATUS_DIR" ]]; then
     for f in "$STATUS_DIR"/window_*.json; do
       [[ -f "$f" ]] || continue
-      local file_ws file_st file_app file_tmux_session
+      local file_ws file_st file_app file_tmux_session file_tmux_window
       file_ws=$(jq -r '.workspace // ""' "$f" 2>/dev/null)
       file_st=$(jq -r '.status // "none"' "$f" 2>/dev/null)
       file_app=$(jq -r '.app_name // ""' "$f" 2>/dev/null)
       file_tmux_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
+      file_tmux_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
 
       # 対象ステータスのみ
       [[ "$file_st" == "idle" || "$file_st" == "permission" || "$file_st" == "complete" ]] || continue
 
       if [[ "$file_ws" == "$focused_ws" ]]; then
         # フォーカス中のワークスペース → アプリバッジ用
-        # ただし、フォーカス中のアプリでtmux情報がある場合はtmux側に委譲
         if [[ -n "$file_app" ]]; then
-          if [[ "$file_app" == "$focused_app" && -n "$file_tmux_session" ]]; then
-            # tmux側で表示するのでスキップ
+          # tmux情報を持つ通知で、かつ現在のtmux位置と完全一致する場合のみスキップ
+          if [[ -n "$file_tmux_session" && -n "$file_tmux_window" && \
+                "$file_tmux_session" == "$current_tmux_session" && \
+                "$file_tmux_window" == "$current_tmux_window" ]]; then
+            # 現在見ているtmuxウィンドウの通知 → スキップ（直接見ている）
             :
           else
             app_counts="$app_counts|$file_app"
