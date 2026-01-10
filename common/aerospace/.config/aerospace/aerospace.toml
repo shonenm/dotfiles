@@ -280,6 +280,28 @@ run = 'move-node-to-workspace C'
 if.app-id = 'com.todoist.mac.Todoist'
 run = 'move-node-to-workspace T'
 
+# VS Code プロジェクトごとのワークスペース配置
+# 注意: より具体的なパターンを先に記述（syntopic-dev-review → syntopic-dev の順）
+[[on-window-detected]]
+if.app-id = 'com.microsoft.VSCode'
+if.window-title-regex-substring = 'syntopic-dev-review'
+run = 'move-node-to-workspace 2'
+
+[[on-window-detected]]
+if.app-id = 'com.microsoft.VSCode'
+if.window-title-regex-substring = 'syntopic-deploy'
+run = 'move-node-to-workspace 3'
+
+[[on-window-detected]]
+if.app-id = 'com.microsoft.VSCode'
+if.window-title-regex-substring = 'fluid-sbi'
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-id = 'com.microsoft.VSCode'
+if.window-title-regex-substring = 'syntopic-dev'
+run = 'move-node-to-workspace 1'
+
 [workspace-to-monitor-force-assignment]
 1 = 'secondary'
 2 = 'secondary'
