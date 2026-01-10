@@ -20,6 +20,19 @@
     "when": "viewContainer.workbench.view.explorer.enabled"
   },
 
+  // ターミナルにフォーカスがある時は、エディタに戻る
+  {
+    "key": "ctrl+;",
+    "command": "workbench.action.focusActiveEditorGroup",
+    "when": "terminalFocus"
+  },
+  // エディタにフォーカスがある時は、ターミナルへ行く
+  {
+    "key": "ctrl+;",
+    "command": "workbench.action.terminal.focus",
+    "when": "!terminalFocus"
+  },
+
   // Alt+L → 拡張機能ビューを開く
   {
     "key": "alt+l",
