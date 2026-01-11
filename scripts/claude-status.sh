@@ -74,7 +74,8 @@ find_window_by_project() {
       .[] | select(.["app-name"] == "Code") |
       select(
         (.["window-title"] | contains("— " + $proj + " [")) or
-        (.["window-title"] | contains("— " + $proj + " —"))
+        (.["window-title"] | contains("— " + $proj + " —")) or
+        (.["window-title"] == $proj)
       ) | .["window-id"]
     ' 2>/dev/null | head -1)
 
@@ -148,11 +149,9 @@ set_status() {
     window_id=$(find_window_by_project "$project" 2>/dev/null || echo "")
   fi
 
-  # リモート通知（host:project形式）の場合はフォーカスウィンドウにフォールバックしない
-  # 誤ったワークスペースに通知が表示されるのを防ぐ
-  if [[ -z "$window_id" && "$project" != *":"* ]]; then
-    window_id=$(get_focused_window_id 2>/dev/null || echo "")
-  fi
+  # 注意: ここでフォールバック（get_focused_window_id等）を追加しないこと
+  # 理由: フォーカス中のウィンドウにフォールバックすると、意図しないワークスペースに
+  #       通知バッジが作成される。ウィンドウが見つからない場合は通知を作成しない。
 
   # window_id がまだ空なら終了（識別できない）
   if [[ -z "$window_id" ]]; then
