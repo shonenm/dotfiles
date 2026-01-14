@@ -134,26 +134,25 @@ handle_focus_change() {
 
     # ウィンドウが変わった場合の2秒ルール
     if [[ $elapsed -ge 2 ]]; then
-      # 2秒以上滞在 → 前ウィンドウの通知を消す（保存されたtmux位置を使用）
-      remove_notifications_for_window "$prev_window_id" "$prev_session" "$prev_tmux_window"
+      # 2秒以上滞在 → 前ウィンドウの全通知を消す（tmux位置関係なく）
+      rm -f "$STATUS_DIR"/window_${prev_window_id}_*.json 2>/dev/null
+      sketchybar --trigger claude_status_change 2>/dev/null
     fi
   fi
 
-  # VS Code/ターミナル以外のアプリに切り替えた場合はタイマー不要
-  case "$app_name" in
-    "Code"|"Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
-      ;;
-    *)
-      # 非対象アプリ → フォーカス状態をクリアして終了
-      rm -f "$FOCUS_STATE_FILE" 2>/dev/null
-      return
-      ;;
-  esac
-
   [[ -z "$window_id" ]] && return
 
-  # 新しいウィンドウの5秒タイマーを開始
-  start_clear_timer "$window_id" "$app_name"
+  # VS Code/ターミナルの場合のみ5秒タイマーを開始
+  # 非対象アプリではタイマー不要だが、focus stateは保持（2秒ルール用）
+  case "$app_name" in
+    "Code"|"Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
+      start_clear_timer "$window_id" "$app_name"
+      ;;
+    *)
+      # 非対象アプリ: タイマーなしでfocus stateだけ更新（2秒ルール用）
+      echo "${window_id}:${now}:::" > "$FOCUS_STATE_FILE"
+      ;;
+  esac
 }
 
 # 通知が来た時、フォーカス中のウィンドウならタイマーを（再）開始

@@ -5,7 +5,13 @@
 
 source "$CONFIG_DIR/plugins/colors.sh"
 
-TOKEN=$(op read "op://Personal/Todoist API/credential" 2>/dev/null)
+# トークンをファイルから読み込み（op readはsketchybarから呼ぶと権限プロンプトが出るため）
+# トークンファイル: ~/.config/todoist/token
+TOKEN_FILE="$HOME/.config/todoist/token"
+if [[ -f "$TOKEN_FILE" ]]; then
+  TOKEN=$(cat "$TOKEN_FILE" 2>/dev/null | tr -d '[:space:]')
+fi
+
 if [[ -z "$TOKEN" ]]; then
   sketchybar --set $NAME label="?"
   exit 0
