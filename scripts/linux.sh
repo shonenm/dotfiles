@@ -125,6 +125,7 @@ install_system_packages() {
       eza
       rsync
       github-cli
+      luarocks
     )
     $SUDO apk add --no-cache "${PACKAGES[@]}"
 
@@ -143,6 +144,7 @@ install_system_packages() {
       fzf
       ripgrep
       rsync
+      luarocks
     )
     $SUDO apt install -y "${APT_PACKAGES[@]}"
 
