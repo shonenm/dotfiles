@@ -41,9 +41,13 @@ dotfiles/
 │   ├── codex-config.toml
 │   └── gemini-settings.json
 ├── docs/            # ドキュメント
+│   ├── neovim.md
+│   ├── tmux.md
 │   ├── sketchybar-aerospace.md
 │   ├── claude-notification.md
 │   ├── git-config.md
+│   ├── starship.md
+│   ├── install.md
 │   └── 1password-integration.md
 └── install.sh       # メインインストーラー
 ```
@@ -134,9 +138,10 @@ exec zsh
 
 ### Neovim
 
+- **ベース**: LazyVim
 - **プラグインマネージャー**: lazy.nvim
 - **LSP**: mason.nvim
-- 詳細は `common/nvim/.config/nvim/README.md` を参照
+- 詳細は `docs/neovim.md` を参照
 
 ### Tmux
 
