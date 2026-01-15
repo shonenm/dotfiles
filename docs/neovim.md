@@ -107,6 +107,12 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | markdown-preview.nvim | ブラウザプレビュー               |
 | render-markdown.nvim  | バッファ内 Markdown レンダリング |
 
+### メディア
+
+| プラグイン | 役割                                         |
+| ---------- | -------------------------------------------- |
+| image.nvim | ターミナル内画像表示（Kitty Graphics Protocol） |
+
 ## 無効化したプラグイン
 
 | プラグイン     | 理由                   |
