@@ -46,7 +46,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | yanky.nvim        | ヤンク履歴                      |
 | ts-comments.nvim  | コメントトグル                  |
 | inc-rename.nvim   | インラインリネーム              |
-| persistence.nvim  | セッション保存・復元            |
+| resession.nvim    | セッション管理（保存・復元・削除） |
 
 ### LSP・構文解析
 
@@ -115,13 +115,14 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 
 ## 無効化したプラグイン
 
-| プラグイン     | 理由                   |
-| -------------- | ---------------------- |
-| catppuccin     | tokyonight を使用      |
-| neotest        | 未使用                 |
-| neotest-golang | 未使用                 |
-| neotest-python | 未使用                 |
-| nvim-nio       | neotest 依存（未使用） |
+| プラグイン       | 理由                          |
+| ---------------- | ----------------------------- |
+| catppuccin       | tokyonight を使用             |
+| neotest          | 未使用                        |
+| neotest-golang   | 未使用                        |
+| neotest-python   | 未使用                        |
+| nvim-nio         | neotest 依存（未使用）        |
+| persistence.nvim | resession.nvim に置き換え     |
 
 ## カスタム設定ファイル
 
@@ -137,7 +138,9 @@ common/nvim/.config/nvim/lua/plugins/
 ├── diffview.lua       # Git diff 表示設定
 ├── git-conflict.lua   # コンフリクト解決設定
 ├── hlslens.lua        # 検索マッチ表示設定
+├── image.lua          # 画像表示設定
 ├── scrollbar.lua      # スクロールバー設定
+├── session.lua        # セッション管理設定
 └── tmux-navigator.lua # tmux 連携設定
 ```
 
