@@ -7,5 +7,11 @@ return {
     indent = {
       enabled = false,
     },
+    terminal = {
+      win = {
+        position = "float",
+        border = "rounded",
+      },
+    },
   },
 }
