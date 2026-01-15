@@ -28,6 +28,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | which-key.nvim  | キーバインドヘルプ表示                 |
 | snacks.nvim     | ユーティリティ集（ファイルピッカー等） |
 | hlchunk.nvim    | インデントガイド・チャンクハイライト   |
+| nvim-hlslens    | 検索マッチ数・位置表示                 |
 
 ### エディタ機能
 
@@ -124,6 +125,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── explorer.lua       # ファイルエクスプローラー・snacks設定
 ├── git.lua            # Git 関連設定
 ├── hlchunk.lua        # インデントガイド設定
+├── hlslens.lua        # 検索マッチ表示設定
 └── tmux-navigator.lua # tmux 連携設定
 ```
 
