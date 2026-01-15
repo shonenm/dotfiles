@@ -27,6 +27,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | mini.icons      | ファイルアイコン                       |
 | which-key.nvim  | キーバインドヘルプ表示                 |
 | snacks.nvim     | ユーティリティ集（ファイルピッカー等） |
+| hlchunk.nvim    | インデントガイド・チャンクハイライト   |
 
 ### エディタ機能
 
@@ -120,8 +121,9 @@ common/nvim/.config/nvim/lua/plugins/
 ├── colorscheme.lua    # カラースキーム設定
 ├── copilot.lua        # Copilot 設定
 ├── disabled.lua       # プラグイン無効化
-├── explorer.lua       # ファイルエクスプローラー設定
+├── explorer.lua       # ファイルエクスプローラー・snacks設定
 ├── git.lua            # Git 関連設定
+├── hlchunk.lua        # インデントガイド設定
 └── tmux-navigator.lua # tmux 連携設定
 ```
 

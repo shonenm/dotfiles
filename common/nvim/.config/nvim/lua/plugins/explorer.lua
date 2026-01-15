@@ -4,5 +4,8 @@ return {
     explorer = {
       hidden = true,
     },
+    indent = {
+      enabled = false,
+    },
   },
 }
