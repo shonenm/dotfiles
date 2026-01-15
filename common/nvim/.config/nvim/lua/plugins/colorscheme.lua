@@ -1,5 +1,5 @@
 return {
-  -- TokyoNight (default theme)
+  -- TokyoNight
   {
     "folke/tokyonight.nvim",
     lazy = false,
@@ -22,7 +22,20 @@ return {
     },
   },
 
-  -- Set colorscheme
+  -- VS Code Dark Modern
+  {
+    "Mofiqul/vscode.nvim",
+    lazy = false,
+    priority = 1000,
+    opts = {
+      style = "dark",
+      transparent = true,
+      italic_comments = true,
+    },
+  },
+
+  -- Set default colorscheme
+  -- Switch with <leader>uC
   {
     "LazyVim/LazyVim",
     opts = {
