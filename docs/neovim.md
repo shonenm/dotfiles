@@ -72,8 +72,9 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 
 | プラグイン    | 役割                    |
 | ------------- | ----------------------- |
-| gitsigns.nvim | Git 差分表示・hunk 操作 |
-| vim-fugitive  | Git コマンド統合        |
+| gitsigns.nvim  | Git 差分表示・hunk 操作       |
+| vim-fugitive   | Git コマンド統合              |
+| diffview.nvim  | サイドバイサイド diff・履歴   |
 
 ### 検索・診断
 
@@ -126,6 +127,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── explorer.lua       # ファイルエクスプローラー・snacks設定
 ├── git.lua            # Git 関連設定
 ├── hlchunk.lua        # インデントガイド設定
+├── diffview.lua       # Git diff 表示設定
 ├── hlslens.lua        # 検索マッチ表示設定
 ├── scrollbar.lua      # スクロールバー設定
 └── tmux-navigator.lua # tmux 連携設定
