@@ -14,9 +14,3 @@ vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
   end,
 })
 
--- Set scroll to 1/4 of window height (for C-u/C-d)
-vim.api.nvim_create_autocmd({ "VimEnter", "WinEnter", "VimResized" }, {
-  callback = function()
-    vim.wo.scroll = math.floor(vim.api.nvim_win_get_height(0) / 4)
-  end,
-})
