@@ -12,12 +12,15 @@ Claude Codeのイベント（完了、承認待ち、入力待ちなど）をSla
 
 ## 対応環境
 
-| 環境 | 説明 | 通知方式 |
-|------|------|----------|
-| **Local** | Mac上で直接実行 | 直接SketchyBar更新 |
-| **Local Container** | Mac上のDocker Container | bind mount経由 |
-| **Cloud** | リモートサーバー (SSH接続) | SSH + inotifywait |
-| **Cloud Container** | リモートのDev Container | SSH + inotifywait + bind mount |
+| 環境 | Editor | 方式 |
+|------|--------|------|
+| **Local** | Terminal / VS Code | 直接検出 |
+| **Local Container** | Terminal | `dexec` + bind mount |
+| **Local Container** | VS Code | `DEVCONTAINER_NAME` + bind mount |
+| **Remote** | Terminal | `rssh` + SSH + inotifywait |
+| **Remote** | VS Code | 直接検出 |
+| **Remote Container** | Terminal | `rssh` + `dexec` + bind mount |
+| **Remote Container** | VS Code | `DEVCONTAINER_NAME` + bind mount |
 
 ## 対応エディタ/ターミナル
 
@@ -131,6 +134,71 @@ source-file ~/.config/tmux/claude-hooks.tmux
 
 ## コンポーネント
 
+### CLAUDE_CONTEXT 環境変数
+
+コンテナ内での通知を正しく処理するための環境変数。`dexec` が自動設定する。
+
+```json
+{
+  "project": "my-project",
+  "device": "matsushima-mbp",
+  "window_id": "12345",
+  "tmux_session": "main",
+  "tmux_window": "0"
+}
+```
+
+| フィールド | 説明 |
+|-----------|------|
+| `project` | プロジェクト名（Slack通知に表示） |
+| `device` | デバイス名（Slack通知に表示） |
+| `window_id` | Aerospaceウィンドウ ID（SketchyBar用） |
+| `tmux_session` | tmuxセッション名 |
+| `tmux_window` | tmuxウィンドウインデックス |
+
+### dexec (shell function)
+
+Dockerコンテナに入る際に `CLAUDE_CONTEXT` を自動設定するヘルパー関数。
+
+```bash
+# 使い方
+dexec <container> [command...]
+
+# 例
+dexec my-container bash
+dexec my-container zsh
+CLAUDE_PROJECT=custom-name dexec my-container bash
+```
+
+**特徴**:
+- ローカルで使用時: 新規にコンテキストを生成
+- リモートで使用時: `rssh` から継承した `CLAUDE_CONTEXT` をそのまま継承
+
+**定義場所**: `~/.zshrc.common`
+
+### rssh (shell function)
+
+リモートSSH接続時に `CLAUDE_CONTEXT` を自動設定するヘルパー関数。sshd_config の変更は不要。
+
+```bash
+# 使い方
+rssh [ssh-options] <host> [command]
+
+# 例: インタラクティブ接続
+rssh remote-server
+rssh -p 2222 user@remote-server
+
+# 例: コマンド実行
+rssh remote-server "cd /app && ls"
+```
+
+**特徴**:
+- Mac側で `CLAUDE_CONTEXT` を生成し、SSHコマンド実行時に注入
+- `sshd_config` の変更不要（SendEnv/AcceptEnv を使わない）
+- リモートで `dexec` を使うと、コンテキストが自動継承される
+
+**定義場所**: `~/.zshrc.common`
+
 ### scripts/ai-notify.sh
 
 メイン通知スクリプト。Claude Code hooksから呼び出される。
@@ -147,6 +215,8 @@ ai-notify.sh --clear-cache        # キャッシュ削除
 ```
 
 **機能**:
+- `CLAUDE_CONTEXT` 環境変数からコンテキスト取得（コンテナ用）
+- フォールバック: ローカル検出（ローカルMac用）
 - 1PasswordからWebhook URLを取得・キャッシュ
 - Slack通知送信（イベントに応じてメンション有無を切替）
 - SketchyBar状態更新
@@ -273,7 +343,27 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
 
 ### 2. Local Container (Mac上のDocker)
 
-1. **bind mountを追加** (docker-compose.yml または docker run)
+#### 方法A: dexec を使う（推奨）
+
+`dexec` コマンドでコンテナに入ると、`CLAUDE_CONTEXT` 環境変数が自動設定される。
+
+```bash
+# 基本的な使い方
+dexec my-container bash
+
+# プロジェクト名を明示的に指定
+CLAUDE_PROJECT=my-project dexec my-container zsh
+```
+
+**前提条件**:
+- bind mountを追加:
+  ```bash
+  docker run -v /tmp/claude_status:/tmp/claude_status ...
+  ```
+
+#### 方法B: VS Code Dev Container を使う
+
+1. **bind mountを追加** (docker-compose.yml または devcontainer.json)
 
    ```yaml
    # docker-compose.yml
@@ -281,12 +371,7 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
      - /tmp/claude_status:/tmp/claude_status
    ```
 
-   ```bash
-   # docker run
-   docker run -v /tmp/claude_status:/tmp/claude_status ...
-   ```
-
-2. **DEVCONTAINER_NAME環境変数を設定** (推奨)
+2. **DEVCONTAINER_NAME環境変数を設定**
 
    ```yaml
    environment:
@@ -295,7 +380,21 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
 
 ---
 
-### 3. Cloud (リモートサーバー)
+### 3. Remote (リモートサーバー)
+
+#### Terminal から接続する場合
+
+`rssh` を使って接続すると、`CLAUDE_CONTEXT` が自動的に設定される。
+
+```bash
+# rssh でリモートに接続
+rssh remote-server
+
+# リモートでClaudeを使う
+claude
+```
+
+#### リモート側の準備
 
 1. **リモートにinotify-toolsをインストール**
 
@@ -327,9 +426,32 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
 
 ---
 
-### 4. Cloud Container (リモートのDev Container)
+### 4. Remote Container (リモートのDev Container)
 
-Cloud の設定に加えて:
+Remote の設定に加えて:
+
+#### Terminal から接続する場合
+
+`rssh` + `dexec` でコンテナに入ると、`CLAUDE_CONTEXT` が継承される。
+
+```bash
+# rssh でリモートに接続
+rssh remote-server
+
+# dexec でコンテナに入る (CLAUDE_CONTEXT が継承される)
+dexec my-container bash
+
+# コンテナ内でClaudeを使う
+claude
+```
+
+**前提条件**:
+- コンテナに bind mount を追加:
+  ```bash
+  docker run -v /tmp/claude_status:/tmp/claude_status ...
+  ```
+
+#### VS Code Dev Container から接続する場合
 
 1. **devcontainer.jsonにbind mountを追加**
 
@@ -457,16 +579,18 @@ Aerospaceの `alt+shift+;` でService Modeに入り:
 ```
 dotfiles/
 ├── scripts/
-│   ├── ai-notify.sh              # メイン通知スクリプト
-│   ├── claude-status.sh          # 状態管理
-│   ├── claude-status-watch.sh    # リモート監視
-│   ├── tmux-claude-badge.sh      # tmuxバッジ表示
-│   └── tmux-claude-focus.sh      # tmuxフォーカス処理
+│   ├── ai-notify.sh                # メイン通知スクリプト (CLAUDE_CONTEXT 対応)
+│   ├── claude-status.sh            # 状態管理
+│   ├── claude-status-watch.sh      # リモート監視 (SSH + inotifywait)
+│   ├── claude-status-local-watch.sh # ローカルコンテナ監視 (launchd WatchPaths)
+│   ├── tmux-claude-badge.sh        # tmuxバッジ表示
+│   └── tmux-claude-focus.sh        # tmuxフォーカス処理
+├── common/zsh/.zshrc.common        # _claude_context, dexec, rssh 関数定義
 ├── common/sketchybar/.config/sketchybar/
 │   └── plugins/
-│       └── claude.sh             # SketchyBarプラグイン
+│       └── claude.sh               # SketchyBarプラグイン
 ├── common/tmux/.config/tmux/
-│   └── claude-hooks.tmux         # tmux hooks設定
+│   └── claude-hooks.tmux           # tmux hooks設定
 └── templates/
     └── com.user.claude-status-watch.plist  # launchd テンプレート
 ```
