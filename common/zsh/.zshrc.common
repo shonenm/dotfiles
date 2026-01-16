@@ -101,3 +101,97 @@ function y() {
 
 # --- Local bin ---
 [[ -f "$HOME/.local/bin/env" ]] && . "$HOME/.local/bin/env"
+
+# --- Claude Context helpers ---
+# CLAUDE_CONTEXT: Claude通知システム用のコンテキスト情報を環境間で伝播
+
+# 内部関数: 現在の環境からコンテキストを生成
+_claude_context() {
+  local project="${CLAUDE_PROJECT:-$(basename "$PWD")}"
+  local device="$(hostname -s)"
+  local window_id="" tmux_session="" tmux_window=""
+
+  # Mac上でのみ window_id 取得 (aerospace)
+  if command -v aerospace &>/dev/null; then
+    window_id=$(aerospace list-windows --focused --json 2>/dev/null | jq -r '.[0]["window-id"] // ""')
+  fi
+
+  # tmux情報
+  if [[ -n "$TMUX" ]]; then
+    tmux_session=$(tmux display-message -p '#S' 2>/dev/null)
+    tmux_window=$(tmux display-message -p '#I' 2>/dev/null)
+  fi
+
+  echo "{\"project\":\"$project\",\"device\":\"$device\",\"window_id\":\"$window_id\",\"tmux_session\":\"$tmux_session\",\"tmux_window\":\"$tmux_window\"}"
+}
+
+# Dockerコンテナ進入 (CLAUDE_CONTEXT 自動設定/継承)
+# Usage: dexec <container> [command...]
+# Example: dexec my-container bash
+#          CLAUDE_PROJECT=myproject dexec container zsh
+dexec() {
+  local container="$1"
+  [[ -z "$container" ]] && { echo "Usage: dexec <container> [command...]" >&2; return 1; }
+  shift
+
+  # 既存の CLAUDE_CONTEXT があれば継承、なければ新規生成
+  local context="${CLAUDE_CONTEXT:-$(_claude_context)}"
+
+  docker exec -it -e CLAUDE_CONTEXT="$context" "$container" "${@:-bash}"
+}
+
+# リモートSSH接続 (CLAUDE_CONTEXT 自動設定)
+# Usage: rssh [ssh-options] <host> [command]
+# Example: rssh remote-server
+#          rssh -p 2222 user@remote-server
+#          rssh remote-server "cd /app && ls"
+rssh() {
+  local context="$(_claude_context)"
+  local args=()
+  local host=""
+  local cmd_start=-1
+
+  # 引数解析: オプション、ホスト、コマンドを分離
+  local i=1
+  for arg in "$@"; do
+    if [[ -z "$host" ]]; then
+      if [[ "$arg" == -* ]]; then
+        # オプション (-p, -i など)
+        args+=("$arg")
+        # 次の引数がオプションの値かチェック
+        if [[ "$arg" =~ ^-[pioJLRDWFl]$ ]]; then
+          # 値を持つオプション: 次の引数を待つ
+          :
+        fi
+      elif [[ "${args[-1]:-}" =~ ^-[pioJLRDWFl]$ ]]; then
+        # 前のオプションの値
+        args+=("$arg")
+      else
+        # ホスト名
+        host="$arg"
+        args+=("$arg")
+        cmd_start=$((i + 1))
+      fi
+    fi
+    ((i++))
+  done
+
+  if [[ -z "$host" ]]; then
+    echo "Usage: rssh [ssh-options] <host> [command]" >&2
+    return 1
+  fi
+
+  # コマンド部分を取得
+  local cmd=""
+  if [[ $cmd_start -le $# ]]; then
+    cmd="${@:$cmd_start}"
+  fi
+
+  if [[ -n "$cmd" ]]; then
+    # コマンド指定あり: 環境変数を注入して実行
+    ssh "${args[@]}" "export CLAUDE_CONTEXT='$context' && $cmd"
+  else
+    # インタラクティブ: リモートシェル起動時に設定
+    ssh -t "${args[@]}" "export CLAUDE_CONTEXT='$context' && exec \$SHELL -l"
+  fi
+}

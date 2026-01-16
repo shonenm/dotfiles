@@ -179,12 +179,13 @@ update_sketchybar_status() {
     # ローカル Mac - 直接更新
     "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$session_id" "$tty" "$window_id" "$container_name" "$tmux_session" "$tmux_window_index" 2>/dev/null || true
   else
-    # リモート環境 - ファイルに書き込み（Macがinotifywaitで監視）
+    # リモート環境 - ファイルに書き込み（Macが監視）
     local status_dir="/tmp/claude_status"
     mkdir -p "$status_dir"
     local safe_project="${project//\//_}"
     local status_file="$status_dir/${safe_project}.json"
-    echo "{\"project\":\"$project\",\"status\":\"$status\",\"session_id\":\"$session_id\",\"container_name\":\"$container_name\",\"tmux_session\":\"$tmux_session\",\"tmux_window_index\":\"$tmux_window_index\",\"timestamp\":$(date +%s)}" > "$status_file"
+    # window_id を含めることで、ホスト側でウィンドウ検索をスキップ可能
+    echo "{\"project\":\"$project\",\"status\":\"$status\",\"session_id\":\"$session_id\",\"window_id\":\"$window_id\",\"container_name\":\"$container_name\",\"tmux_session\":\"$tmux_session\",\"tmux_window_index\":\"$tmux_window_index\",\"timestamp\":$(date +%s)}" > "$status_file"
   fi
 }
 
@@ -223,72 +224,71 @@ get_webhook() {
     INPUT=$(timeout 1 cat 2>/dev/null || echo "{}")
   fi
 
-  # JSON から情報抽出
-  CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
-  [[ -z "$CWD" ]] && CWD=$(pwd)
-
-  # プロジェクト名（ディレクトリ名）
-  PROJECT=$(basename "$CWD")
-
-  # コンテナ名（DEVCONTAINER_NAME環境変数、コンテナ内でのみ設定される）
-  CONTAINER_NAME="${DEVCONTAINER_NAME:-}"
-
-  DEVICE=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
   SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
   TTY=$(tty 2>/dev/null || echo "")
 
-  # window_id取得（ローカルMacのみ、初回は取得して保存）
-  # キー: PROJECT_SESSION_ID で複数セッションを区別
-  WINDOW_ID=""
-  if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
-    WINDOW_ID_KEY="${PROJECT}_${SESSION_ID:-default}"
-    WINDOW_ID_FILE="/tmp/claude_window_${WINDOW_ID_KEY}"
+  # CLAUDE_CONTEXT 環境変数からコンテキスト取得（コンテナ用）
+  # 設定されていれば環境推測をスキップして明示的な値を使用
+  if [[ -n "${CLAUDE_CONTEXT:-}" ]]; then
+    PROJECT=$(echo "$CLAUDE_CONTEXT" | jq -r '.project // empty' 2>/dev/null)
+    DEVICE=$(echo "$CLAUDE_CONTEXT" | jq -r '.device // empty' 2>/dev/null)
+    WINDOW_ID=$(echo "$CLAUDE_CONTEXT" | jq -r '.window_id // empty' 2>/dev/null)
+    TMUX_SESSION=$(echo "$CLAUDE_CONTEXT" | jq -r '.tmux_session // empty' 2>/dev/null)
+    TMUX_WINDOW_INDEX=$(echo "$CLAUDE_CONTEXT" | jq -r '.tmux_window // empty' 2>/dev/null)
+    CONTAINER_NAME=""  # dexec経由なのでコンテナ名検索不要
+  else
+    # フォールバック: ローカル検出（従来ロジック）
+    CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
+    [[ -z "$CWD" ]] && CWD=$(pwd)
+    PROJECT=$(basename "$CWD")
+    CONTAINER_NAME="${DEVCONTAINER_NAME:-}"
+    DEVICE=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
 
-    # キャッシュされたwindow_idが有効か確認
-    CACHED_VALID=false
-    if [[ -f "$WINDOW_ID_FILE" ]]; then
-      CACHED_ID=$(cat "$WINDOW_ID_FILE")
-      # window_idがまだ存在するか確認
-      if aerospace list-windows --all --json 2>/dev/null | jq -e ".[] | select(.[\"window-id\"] == $CACHED_ID)" &>/dev/null; then
-        WINDOW_ID="$CACHED_ID"
-        CACHED_VALID=true
-      else
-        # 無効なキャッシュを削除
-        rm -f "$WINDOW_ID_FILE"
+    # window_id取得（ローカルMacのみ）
+    WINDOW_ID=""
+    if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
+      WINDOW_ID_KEY="${PROJECT}_${SESSION_ID:-default}"
+      WINDOW_ID_FILE="/tmp/claude_window_${WINDOW_ID_KEY}"
+
+      CACHED_VALID=false
+      if [[ -f "$WINDOW_ID_FILE" ]]; then
+        CACHED_ID=$(cat "$WINDOW_ID_FILE")
+        if aerospace list-windows --all --json 2>/dev/null | jq -e ".[] | select(.[\"window-id\"] == $CACHED_ID)" &>/dev/null; then
+          WINDOW_ID="$CACHED_ID"
+          CACHED_VALID=true
+        else
+          rm -f "$WINDOW_ID_FILE"
+        fi
+      fi
+
+      if [[ "$CACHED_VALID" == "false" ]]; then
+        FOCUSED_JSON=$(aerospace list-windows --focused --json 2>/dev/null)
+        FOCUSED_APP=$(echo "$FOCUSED_JSON" | jq -r '.[0]["app-name"] // ""')
+        case "$FOCUSED_APP" in
+          Ghostty|Terminal|iTerm2|Alacritty|Warp|WezTerm|kitty|Code)
+            WINDOW_ID=$(echo "$FOCUSED_JSON" | jq -r '.[0]["window-id"] // ""')
+            [[ -n "$WINDOW_ID" ]] && echo "$WINDOW_ID" > "$WINDOW_ID_FILE"
+            ;;
+        esac
       fi
     fi
 
-    if [[ "$CACHED_VALID" == "false" ]]; then
-      # ターミナル/エディタのみキャッシュ（ブラウザ等は除外）
-      FOCUSED_JSON=$(aerospace list-windows --focused --json 2>/dev/null)
-      FOCUSED_APP=$(echo "$FOCUSED_JSON" | jq -r '.[0]["app-name"] // ""')
-      case "$FOCUSED_APP" in
-        Ghostty|Terminal|iTerm2|Alacritty|Warp|WezTerm|kitty|Code)
-          WINDOW_ID=$(echo "$FOCUSED_JSON" | jq -r '.[0]["window-id"] // ""')
-          [[ -n "$WINDOW_ID" ]] && echo "$WINDOW_ID" > "$WINDOW_ID_FILE"
-          ;;
-      esac
-    fi
-  fi
+    # tmux情報の取得（tmux内の場合のみ）
+    TMUX_SESSION=""
+    TMUX_WINDOW_INDEX=""
+    if [[ -n "${TMUX:-}" ]]; then
+      TMUX_INFO_KEY="${PROJECT}_${SESSION_ID:-default}"
+      TMUX_INFO_FILE="/tmp/claude_tmux_${TMUX_INFO_KEY}"
 
-  # tmux情報の取得（tmux内の場合のみ、キャッシュ対応）
-  # window_idと同様に初回の値をキャッシュし、セッション中は一貫したウィンドウに紐付ける
-  TMUX_SESSION=""
-  TMUX_WINDOW_INDEX=""
-  if [[ -n "${TMUX:-}" ]]; then
-    TMUX_INFO_KEY="${PROJECT}_${SESSION_ID:-default}"
-    TMUX_INFO_FILE="/tmp/claude_tmux_${TMUX_INFO_KEY}"
-
-    if [[ -f "$TMUX_INFO_FILE" ]]; then
-      # キャッシュから読み込み
-      TMUX_SESSION=$(jq -r '.session // ""' "$TMUX_INFO_FILE" 2>/dev/null)
-      TMUX_WINDOW_INDEX=$(jq -r '.window // ""' "$TMUX_INFO_FILE" 2>/dev/null)
-    else
-      # 初回: 現在の値を取得してキャッシュ
-      TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
-      TMUX_WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
-      if [[ -n "$TMUX_SESSION" && -n "$TMUX_WINDOW_INDEX" ]]; then
-        echo "{\"session\":\"$TMUX_SESSION\",\"window\":\"$TMUX_WINDOW_INDEX\"}" > "$TMUX_INFO_FILE"
+      if [[ -f "$TMUX_INFO_FILE" ]]; then
+        TMUX_SESSION=$(jq -r '.session // ""' "$TMUX_INFO_FILE" 2>/dev/null)
+        TMUX_WINDOW_INDEX=$(jq -r '.window // ""' "$TMUX_INFO_FILE" 2>/dev/null)
+      else
+        TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+        TMUX_WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
+        if [[ -n "$TMUX_SESSION" && -n "$TMUX_WINDOW_INDEX" ]]; then
+          echo "{\"session\":\"$TMUX_SESSION\",\"window\":\"$TMUX_WINDOW_INDEX\"}" > "$TMUX_INFO_FILE"
+        fi
       fi
     fi
   fi
