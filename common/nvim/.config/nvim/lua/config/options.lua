@@ -22,6 +22,7 @@ vim.opt.termguicolors = true
 vim.opt.cursorline = true
 vim.opt.scrolloff = 8
 vim.opt.sidescrolloff = 8
+vim.opt.wrap = true
 
 -- Disable swap files
 vim.opt.swapfile = false
