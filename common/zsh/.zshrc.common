@@ -48,7 +48,7 @@ command -v rg &>/dev/null && alias grep="rg"
 # --- Modern Tools Init (cross-platform) ---
 command -v gh &>/dev/null && eval "$(gh completion -s zsh)"
 command -v starship &>/dev/null && eval "$(starship init zsh)"
-command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
+command -v zoxide &>/dev/null && eval "$(zoxide init zsh --cmd cd)"
 
 # --- Tmux auto-reload ---
 if command -v tmux >/dev/null 2>&1 && [ -n "$TMUX" ]; then
