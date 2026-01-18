@@ -14,7 +14,7 @@ selection-foreground = #c0caf5
 # --- Background Image ---
 background-image = ~/.config/ghostty/backgrounds/background.jpeg
 background-image-fit = cover
-background-image-opacity = 0.1
+background-image-opacity = 0.05
 background-opacity = 1.0
 
 # --- Window (macOS) ---
