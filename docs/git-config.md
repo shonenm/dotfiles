@@ -1,81 +1,81 @@
-# Git設定管理
+# Git Configuration Management
 
-dotfilesでのGit設定の管理・共有の仕組み。
+How Git configuration is managed and shared in dotfiles.
 
-## 概要
+## Overview
 
-Git設定を2つのファイルに分離して管理:
+Git configuration is split into two files:
 
-| ファイル | 管理 | 内容 |
-|----------|------|------|
-| `~/.gitconfig` | dotfiles (共有) | delta, merge設定など共通設定 |
-| `~/.gitconfig.local` | ローカル専用 | user.name, user.email など |
+| File | Management | Contents |
+|------|------------|----------|
+| `~/.gitconfig` | dotfiles (shared) | delta, merge settings, and other common settings |
+| `~/.gitconfig.local` | Local only | user.name, user.email, etc. |
 
-## アーキテクチャ
+## Architecture
 
 ```
 dotfiles/common/git/.gitconfig
-        ↓ stow (シンボリックリンク)
+        ↓ stow (symbolic link)
 ~/.gitconfig
-        ↓ [include] ディレクティブ
-~/.gitconfig.local (マシン固有、dotfiles管理外)
+        ↓ [include] directive
+~/.gitconfig.local (machine-specific, not managed by dotfiles)
 ```
 
-### なぜ分離するか
+### Why Separate?
 
-- **問題**: `git config --global`は`~/.gitconfig`に書き込む
-- **問題**: `~/.gitconfig`はdotfilesでシンボリックリンクされている
-- **結果**: `git pull`でdotfilesを更新すると、user設定が上書きされる
+- **Problem**: `git config --global` writes to `~/.gitconfig`
+- **Problem**: `~/.gitconfig` is symlinked by dotfiles
+- **Result**: Running `git pull` on dotfiles overwrites user settings
 
-**解決策**: `[include]`で別ファイルを読み込み、マシン固有設定を分離
+**Solution**: Use `[include]` to load a separate file, isolating machine-specific settings
 
-## セットアップ
+## Setup
 
-### 1. dotfilesインストール
+### 1. Install dotfiles
 
 ```bash
 ./install.sh
 ```
 
-実行されること:
-- `~/.gitconfig` → `dotfiles/common/git/.gitconfig` のシンボリックリンク作成
-- `~/.gitconfig.local` の空ファイル作成（存在しない場合）
+What happens:
+- Creates symbolic link `~/.gitconfig` → `dotfiles/common/git/.gitconfig`
+- Creates empty `~/.gitconfig.local` (if it doesn't exist)
 
-### 2. Git user設定
+### 2. Git User Configuration
 
-1Passwordから取得して設定:
+Retrieve from 1Password and configure:
 
 ```bash
 setup_git_from_op
 ```
 
-出力:
+Output:
 ```
 Git config updated: shonenm <your@email.com>
 ```
 
-### 1Passwordの設定
+### 1Password Setup
 
-以下のアイテムを作成:
+Create the following item:
 
-| 項目 | 値 |
-|------|-----|
+| Field | Value |
+|-------|-------|
 | Vault | `Personal` |
-| アイテム名 | `Git Config` |
-| フィールド `name` | あなたの名前 |
-| フィールド `email` | あなたのメールアドレス |
+| Item Name | `Git Config` |
+| Field `name` | Your name |
+| Field `email` | Your email address |
 
-**注意**: `username`ではなく`name`を使用（usernameは1Passwordの予約フィールド）
+**Note**: Use `name` instead of `username` (username is a reserved 1Password field)
 
-確認:
+Verify:
 ```bash
 op read "op://Personal/Git Config/name"
 op read "op://Personal/Git Config/email"
 ```
 
-## ファイル構成
+## File Structure
 
-### ~/.gitconfig (dotfiles管理)
+### ~/.gitconfig (managed by dotfiles)
 
 ```gitconfig
 # Git configuration
@@ -155,7 +155,7 @@ op read "op://Personal/Git Config/email"
     verbose = true
 ```
 
-### ~/.gitconfig.local (ローカル専用)
+### ~/.gitconfig.local (local only)
 
 ```gitconfig
 [user]
@@ -163,45 +163,45 @@ op read "op://Personal/Git Config/email"
     email = your@email.com
 ```
 
-## 動作フロー
+## Workflow
 
-### 新規マシンセットアップ
-
-```
-1. ./install.sh 実行
-   └─ ~/.gitconfig がシンボリックリンクされる
-   └─ ~/.gitconfig.local が空で作成される
-
-2. setup_git_from_op 実行
-   └─ 1Passwordからname/email取得
-   └─ ~/.gitconfig.local に書き込み
-
-3. 完了
-   └─ git config user.name → 設定済み
-   └─ git config user.email → 設定済み
-```
-
-### dotfiles更新時
+### New Machine Setup
 
 ```
-1. git pull (dotfilesリポジトリ)
-   └─ ~/.gitconfig (共通設定) が更新される
-   └─ ~/.gitconfig.local は影響なし ✓
+1. Run ./install.sh
+   └─ ~/.gitconfig is symlinked
+   └─ ~/.gitconfig.local is created empty
 
-2. user設定は保持される
+2. Run setup_git_from_op
+   └─ Retrieve name/email from 1Password
+   └─ Write to ~/.gitconfig.local
+
+3. Complete
+   └─ git config user.name → configured
+   └─ git config user.email → configured
 ```
 
-### 別マシンとの共有
+### When Updating dotfiles
 
 ```
-マシンA                          マシンB
+1. git pull (dotfiles repository)
+   └─ ~/.gitconfig (common settings) is updated
+   └─ ~/.gitconfig.local is not affected ✓
+
+2. User settings are preserved
+```
+
+### Sharing Between Machines
+
+```
+Machine A                        Machine B
 ~/.gitconfig.local               ~/.gitconfig.local
 [user]                           [user]
     name = shonenm                   name = shonenm
     email = personal@example.com     email = work@example.com
-        ↑ 個人用                         ↑ 仕事用
+        ↑ Personal                       ↑ Work
 
-~/.gitconfig (共通)              ~/.gitconfig (共通)
+~/.gitconfig (common)            ~/.gitconfig (common)
 [include]                        [include]
     path = ~/.gitconfig.local        path = ~/.gitconfig.local
 [core]                           [core]
@@ -209,30 +209,30 @@ op read "op://Personal/Git Config/email"
     ...                              ...
 ```
 
-同じdotfilesを使いながら、マシンごとに異なるuser設定が可能。
+Use the same dotfiles while having different user settings per machine.
 
-## コマンドリファレンス
+## Command Reference
 
-### 設定確認
+### Check Configuration
 
 ```bash
-# 現在のuser設定
+# Current user settings
 git config user.name
 git config user.email
 
-# 設定ファイルの場所を確認
+# Check configuration file locations
 git config --list --show-origin | grep user
 
-# .gitconfig.localの内容
+# View .gitconfig.local contents
 cat ~/.gitconfig.local
 ```
 
-### 手動設定
+### Manual Configuration
 
-1Passwordを使わない場合:
+If not using 1Password:
 
 ```bash
-# 直接編集
+# Direct edit
 cat > ~/.gitconfig.local << EOF
 [user]
     name = Your Name
@@ -240,175 +240,175 @@ cat > ~/.gitconfig.local << EOF
 EOF
 ```
 
-または:
+Or:
 
 ```bash
-# git configで設定（.gitconfigに書き込まれる）
+# Configure with git config (writes to .gitconfig)
 git config --global user.name "Your Name"
 git config --global user.email "your@email.com"
 ```
 
-**注意**: `git config --global`は`~/.gitconfig`に書き込むため、dotfiles更新で上書きされる可能性あり。`~/.gitconfig.local`への直接書き込みを推奨。
+**Note**: `git config --global` writes to `~/.gitconfig`, which may be overwritten by dotfiles updates. Direct writing to `~/.gitconfig.local` is recommended.
 
-### 設定のリセット
+### Reset Configuration
 
 ```bash
-# .gitconfig.localを削除して再設定
+# Delete .gitconfig.local and reconfigure
 rm ~/.gitconfig.local
 setup_git_from_op
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
-### user.name/emailが設定されていない
+### user.name/email Not Set
 
 ```bash
-# 確認
-git config user.name  # 出力なし = 未設定
+# Check
+git config user.name  # No output = not set
 
-# 解決
+# Fix
 setup_git_from_op
 ```
 
-### setup_git_from_opでエラー
+### Error with setup_git_from_op
 
 ```bash
-# "Failed to read name" の場合
-# → 1Passwordのフィールド名が正しいか確認
+# If "Failed to read name"
+# → Verify field name is correct in 1Password
 op item get "Git Config" --vault Personal
 
-# 1Passwordにサインインしていない
+# Not signed in to 1Password
 eval $(op signin)
 ```
 
-### dotfiles更新後にuser設定が消えた
+### User Settings Disappeared After dotfiles Update
 
-古い構成（[include]なし）の可能性:
+Possibly using old configuration (without [include]):
 
 ```bash
-# .gitconfigを確認
+# Check .gitconfig
 head -10 ~/.gitconfig
 
-# [include]がなければdotfilesを更新
+# If no [include], update dotfiles
 cd ~/dotfiles && git pull
 ```
 
-## 設定項目リファレンス
+## Configuration Reference
 
-### Delta（diff viewer）
+### Delta (diff viewer)
 
-| 設定 | 値 | 説明 |
-|------|-----|------|
-| `core.pager` | delta | diffビューアーとしてdeltaを使用 |
-| `interactive.diffFilter` | delta --color-only | インタラクティブステージング時の色付きdiff |
-| `delta.navigate` | true | n/Nでdiffセクション間を移動 |
-| `delta.dark` | true | ダークテーマ |
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `core.pager` | delta | Use delta as diff viewer |
+| `interactive.diffFilter` | delta --color-only | Colored diff for interactive staging |
+| `delta.navigate` | true | Navigate between diff sections with n/N |
+| `delta.dark` | true | Dark theme |
 
 ### Diff
 
-| 設定 | 値 | 説明 |
-|------|-----|------|
-| `diff.algorithm` | histogram | より賢いdiffアルゴリズム（デフォルトのmyersより改善） |
-| `diff.colorMoved` | plain | 移動されたコードブロックを色分け表示 |
-| `diff.mnemonicPrefix` | true | a/b表記をi/w/c（index/worktree/commit）に |
-| `diff.renames` | true | ファイル名変更を検出・表示 |
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `diff.algorithm` | histogram | Smarter diff algorithm (improved over default myers) |
+| `diff.colorMoved` | plain | Color-highlight moved code blocks |
+| `diff.mnemonicPrefix` | true | Use i/w/c (index/worktree/commit) instead of a/b |
+| `diff.renames` | true | Detect and display file renames |
 
 ### Merge
 
-| 設定 | 値 | 説明 |
-|------|-----|------|
-| `merge.conflictstyle` | zdiff3 | 競合時に元のコードも表示（3方向マージ） |
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `merge.conflictstyle` | zdiff3 | Show original code during conflicts (3-way merge) |
 
 ### Push/Fetch/Pull
 
-| 設定 | 値 | 説明 |
-|------|-----|------|
-| `push.default` | simple | 現在のブランチを同名リモートブランチにpush |
-| `push.autoSetupRemote` | true | 初回push時に自動でupstream設定 |
-| `push.followTags` | true | ローカルタグを自動push |
-| `fetch.prune` | true | リモートで削除されたブランチをローカルからも削除 |
-| `fetch.pruneTags` | true | リモートで削除されたタグも削除 |
-| `pull.rebase` | true | pull時にmergeではなくrebase |
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `push.default` | simple | Push current branch to same-named remote branch |
+| `push.autoSetupRemote` | true | Auto-setup upstream on first push |
+| `push.followTags` | true | Auto-push local tags |
+| `fetch.prune` | true | Delete local branches removed from remote |
+| `fetch.pruneTags` | true | Delete tags removed from remote |
+| `pull.rebase` | true | Rebase instead of merge on pull |
 
 ### Rebase
 
-| 設定 | 値 | 説明 |
-|------|-----|------|
-| `rebase.autoSquash` | true | `fixup!`コミットを自動squash |
-| `rebase.autoStash` | true | rebase前に自動stash、後に自動unstash |
-| `rebase.updateRefs` | true | スタックしたブランチをrebase時に更新 |
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `rebase.autoSquash` | true | Auto-squash `fixup!` commits |
+| `rebase.autoStash` | true | Auto-stash before rebase, auto-unstash after |
+| `rebase.updateRefs` | true | Update stacked branches during rebase |
 
-### Rerere（Reuse Recorded Resolution）
+### Rerere (Reuse Recorded Resolution)
 
-| 設定 | 値 | 説明 |
-|------|-----|------|
-| `rerere.enabled` | true | 競合解決を記録・再利用 |
-| `rerere.autoupdate` | true | 記録した解決を自動適用 |
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `rerere.enabled` | true | Record and reuse conflict resolutions |
+| `rerere.autoupdate` | true | Auto-apply recorded resolutions |
 
-### Branch/Tag表示
+### Branch/Tag Display
 
-| 設定 | 値 | 説明 |
-|------|-----|------|
-| `column.ui` | auto | ブランチ一覧をカラム表示 |
-| `branch.sort` | -committerdate | ブランチを最新コミット順にソート |
-| `tag.sort` | version:refname | タグをセマンティックバージョン順にソート |
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `column.ui` | auto | Column display for branch list |
+| `branch.sort` | -committerdate | Sort branches by most recent commit |
+| `tag.sort` | version:refname | Sort tags by semantic version |
 
-### UX改善
+### UX Improvements
 
-| 設定 | 値 | 説明 |
-|------|-----|------|
-| `init.defaultBranch` | main | 新規リポジトリのデフォルトブランチ名 |
-| `help.autocorrect` | 10 | コマンドのtypo時、1秒後に自動実行 |
-| `commit.verbose` | true | コミットメッセージ編集時にdiff全体を表示 |
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `init.defaultBranch` | main | Default branch name for new repositories |
+| `help.autocorrect` | 10 | Auto-execute after 1 second on command typo |
+| `commit.verbose` | true | Show full diff when editing commit message |
 
-## 動作確認コマンド
+## Verification Commands
 
 ### Rerere
 
 ```bash
-# テスト用リポジトリで競合を作成・解決・リセット・再マージ
-# 2回目のマージで自動解決されれば有効
-ls .git/rr-cache/  # ディレクトリがあればOK
+# Create conflict in test repo, resolve, reset, re-merge
+# Auto-resolution on second merge indicates it's working
+ls .git/rr-cache/  # Directory exists = OK
 ```
 
 ### Diff
 
 ```bash
-git diff HEAD~1  # histogramアルゴリズムで表示
-git diff --color-moved  # 移動コードの色分け確認
+git diff HEAD~1  # Display with histogram algorithm
+git diff --color-moved  # Check moved code coloring
 ```
 
 ### Push
 
 ```bash
 git checkout -b test-branch
-git push  # -u なしでupstream設定される
+git push  # Sets upstream without -u flag
 ```
 
 ### Rebase
 
 ```bash
-# 未コミット変更がある状態でpull
+# Pull with uncommitted changes
 echo "test" >> file.txt
-git pull  # 自動stash/unstash
+git pull  # Auto stash/unstash
 ```
 
-### Branch表示
+### Branch Display
 
 ```bash
-git branch  # 最新コミット順・カラム表示
-git tag     # セマンティックバージョン順
+git branch  # Most recent commit order, column display
+git tag     # Semantic version order
 ```
 
 ### Autocorrect
 
 ```bash
-git stauts  # → 1秒後に git status が実行
+git stauts  # → Executes git status after 1 second
 ```
 
-## グローバルignore
+## Global Ignore
 
-`~/.config/git/ignore`（XDG準拠、Git自動認識）:
+`~/.config/git/ignore` (XDG-compliant, Git auto-recognizes):
 
 ```
 # macOS
@@ -418,8 +418,8 @@ git stauts  # → 1秒後に git status が実行
 **/.claude/settings.local.json
 ```
 
-**注意**: `core.excludesfile`の設定は不要。Gitは`~/.config/git/ignore`を自動で読み込む。
+**Note**: No need to configure `core.excludesfile`. Git automatically reads `~/.config/git/ignore`.
 
-## 関連ドキュメント
+## Related Documentation
 
-- [1Password連携](./1password-integration.md) - 1Password CLIの詳細設定
+- [1Password Integration](./1password-integration.md) - Detailed 1Password CLI configuration

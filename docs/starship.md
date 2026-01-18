@@ -1,15 +1,15 @@
-# Starship プロンプト設定
+# Starship Prompt Configuration
 
-シェルプロンプトをカスタマイズするStarshipの設定。Draculaテーマベースのモダンなプロンプト。
+Starship configuration for customizing shell prompts. Modern prompt based on the Dracula theme.
 
-## 概要
+## Overview
 
-- **2行プロンプト**: 情報表示とコマンド入力を分離
-- **Draculaテーマ**: 統一されたカラーパレット
-- **Git連携**: ブランチ、ステータス、差分行数を表示
-- **コンテキスト情報**: OS、ディレクトリ、実行時間、時刻、ユーザー名
+- **Two-line Prompt**: Separates information display from command input
+- **Dracula Theme**: Unified color palette
+- **Git Integration**: Displays branch, status, and diff line counts
+- **Context Information**: OS, directory, execution time, time, username
 
-## UI構成
+## UI Layout
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -20,19 +20,19 @@
   OS   Directory   Branch  Status    Metrics        Duration Time  Username
 ```
 
-| 要素 | 説明 | 色 |
-|------|------|-----|
-| **OS** | OS アイコン（macOS: 󰊠） | 赤 |
-| **Directory** | 現在のディレクトリ（2階層まで） | ピンク |
-| **Git Branch** | 現在のブランチ名 | 緑 |
-| **Git Status** | ahead/behind/diverged状態 | 緑（背景） |
-| **Git Metrics** | 追加/削除行数 | シアン |
-| **Duration** | コマンド実行時間（500ms以上） | オレンジ |
-| **Time** | 現在時刻（HH:MM） | 紫 |
-| **Username** | ユーザー名 | 黄 |
-| **Character** | 入力プロンプト（❯❯） | 緑/赤 |
+| Element | Description | Color |
+|---------|-------------|-------|
+| **OS** | OS icon (macOS: 󰊠) | Red |
+| **Directory** | Current directory (up to 2 levels) | Pink |
+| **Git Branch** | Current branch name | Green |
+| **Git Status** | ahead/behind/diverged state | Green (background) |
+| **Git Metrics** | Added/deleted line counts | Cyan |
+| **Duration** | Command execution time (500ms+) | Orange |
+| **Time** | Current time (HH:MM) | Purple |
+| **Username** | Username | Yellow |
+| **Character** | Input prompt (❯❯) | Green/Red |
 
-## モジュール詳細
+## Module Details
 
 ### OS
 
@@ -42,7 +42,7 @@
 └──────────┘
 ```
 
-OSを識別してアイコン表示。対応OS:
+Displays OS identification icon. Supported OS:
 - macOS: 󰊠
 - Linux: 󰌽
 - Ubuntu: 󰕈
@@ -58,9 +58,9 @@ OSを識別してアイコン表示。対応OS:
 └────────────────────┘
 ```
 
-- ホームディレクトリは `~/` 表示
-- 2階層まで表示、それ以上は ` ` で省略
-- 読み取り専用ディレクトリは 󱞵 アイコン付き
+- Home directory shown as `~/`
+- Shows up to 2 levels, truncates with ` ` beyond that
+- Read-only directories show 󱞵 icon
 
 ### Git Branch
 
@@ -70,19 +70,19 @@ OSを識別してアイコン表示。対応OS:
 └─────────────────┘
 ```
 
-現在のGitブランチを表示。リポジトリ外では非表示。
+Displays current Git branch. Hidden outside repositories.
 
 ### Git Status
 
 ```
 ┌────────────────────┐
-│ ⇡1                │  ← リモートより1コミット先行
-│ ⇣2                │  ← リモートより2コミット遅れ
-│ ⇕⇡1⇣2             │  ← 分岐状態
+│ ⇡1                │  ← 1 commit ahead of remote
+│ ⇣2                │  ← 2 commits behind remote
+│ ⇕⇡1⇣2             │  ← Diverged state
 └────────────────────┘
 ```
 
-リモートとの差分状態を表示。
+Displays diff state from remote.
 
 ### Git Metrics
 
@@ -92,7 +92,7 @@ OSを識別してアイコン表示。対応OS:
 └──────────────────┘
 ```
 
-現在の変更の追加行数と削除行数を表示。
+Displays added and deleted line counts for current changes.
 
 ### Command Duration
 
@@ -102,7 +102,7 @@ OSを識別してアイコン表示。対応OS:
 └──────────────┘
 ```
 
-500ms以上かかったコマンドの実行時間を表示。
+Displays execution time for commands taking 500ms or more.
 
 ### Time
 
@@ -112,7 +112,7 @@ OSを識別してアイコン表示。対応OS:
 └────────────┘
 ```
 
-現在時刻を24時間形式で表示。
+Displays current time in 24-hour format.
 
 ### Username
 
@@ -122,151 +122,151 @@ OSを識別してアイコン表示。対応OS:
 └────────────┘
 ```
 
-現在のユーザー名を常時表示。
+Always displays current username.
 
 ### Character
 
 ```
 ┌────────────┐
-│ ❯❯        │  ← 成功時（緑）
-│ ❯❯        │  ← エラー時（赤）
+│ ❯❯        │  ← Success (green)
+│ ❯❯        │  ← Error (red)
 └────────────┘
 ```
 
-前のコマンドの終了コードに応じて色が変化。
+Color changes based on previous command's exit code.
 
-## カラーパレット（Dracula）
+## Color Palette (Dracula)
 
-| 名前 | 色 | HEX | 用途 |
-|------|-----|-----|------|
-| foreground | 白 | `#F8F8F2` | テキスト |
-| background | 暗灰 | `#282A36` | 背景 |
-| current_line | 灰 | `#44475A` | 区切り線、ボックス背景 |
-| primary | 黒 | `#1E1F29` | アイコン背景 |
-| red | 赤 | `#FF5555` | OS |
-| pink | ピンク | `#FF79C6` | ディレクトリ |
-| green | 緑 | `#50FA7B` | Git Branch、成功 |
-| cyan | シアン | `#8BE9FD` | Git Metrics |
-| orange | オレンジ | `#FFB86C` | Duration |
-| purple | 紫 | `#BD93F9` | Time |
-| yellow | 黄 | `#F1FA8C` | Username |
+| Name | Color | HEX | Usage |
+|------|-------|-----|-------|
+| foreground | White | `#F8F8F2` | Text |
+| background | Dark Gray | `#282A36` | Background |
+| current_line | Gray | `#44475A` | Separator lines, box backgrounds |
+| primary | Black | `#1E1F29` | Icon backgrounds |
+| red | Red | `#FF5555` | OS |
+| pink | Pink | `#FF79C6` | Directory |
+| green | Green | `#50FA7B` | Git Branch, success |
+| cyan | Cyan | `#8BE9FD` | Git Metrics |
+| orange | Orange | `#FFB86C` | Duration |
+| purple | Purple | `#BD93F9` | Time |
+| yellow | Yellow | `#F1FA8C` | Username |
 
-## 設定ファイル
+## Configuration File
 
 ```
 ~/.config/starship.toml  ← dotfiles/common/starship/.config/starship.toml
 ```
 
-### 構造
+### Structure
 
 ```toml
-# フォーマット定義
+# Format definition
 format = """
 $os\
 $directory\
 ..."""
 
-# パレット選択
+# Palette selection
 palette = 'dracula'
 
-# カラーパレット定義
+# Color palette definition
 [palettes.dracula]
 foreground = '#F8F8F2'
 ...
 
-# 各モジュール設定
+# Module settings
 [os]
 [directory]
 [git_branch]
 ...
 ```
 
-## セットアップ
+## Setup
 
-### インストール
+### Installation
 
 ```bash
-# Starshipインストール
+# Install Starship
 brew install starship
 
-# dotfilesインストール
+# Install dotfiles
 ./install.sh
 ```
 
-### シェル設定
+### Shell Configuration
 
-zshrc に以下が必要（dotfilesに含まれる）:
+The following is required in zshrc (included in dotfiles):
 
 ```bash
 eval "$(starship init zsh)"
 ```
 
-## カスタマイズ
+## Customization
 
-### ディレクトリ表示階層の変更
+### Change Directory Display Depth
 
 ```toml
 [directory]
-truncation_length = 3  # 3階層まで表示
+truncation_length = 3  # Show up to 3 levels
 ```
 
-### 時刻フォーマットの変更
+### Change Time Format
 
 ```toml
 [time]
-time_format = '%Y-%m-%d %H:%M:%S'  # 日付も表示
+time_format = '%Y-%m-%d %H:%M:%S'  # Also show date
 ```
 
-### モジュールの無効化
+### Disable Modules
 
 ```toml
 [git_metrics]
-disabled = true  # Git Metricsを非表示
+disabled = true  # Hide Git Metrics
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
-### アイコンが文字化けする
+### Icons Display as Garbled Text
 
-Nerd Font がインストールされていない:
+Nerd Font is not installed:
 
 ```bash
-# Nerd Fontのインストール
+# Install Nerd Font
 brew install --cask font-hack-nerd-font
 
-# ターミナルのフォント設定で Nerd Font を選択
+# Select Nerd Font in terminal font settings
 ```
 
-### プロンプトが表示されない
+### Prompt Not Displaying
 
 ```bash
-# Starshipの確認
+# Check Starship
 which starship
 
-# シェル設定の確認
+# Check shell configuration
 grep starship ~/.zshrc
 ```
 
-### Git情報が表示されない
+### Git Information Not Displaying
 
 ```bash
-# Gitリポジトリ内か確認
+# Verify you're inside a Git repository
 git status
 
-# Starshipの設定確認
+# Check Starship configuration
 starship explain
 ```
 
-### 色がおかしい
+### Colors Look Wrong
 
-ターミナルが True Color をサポートしているか確認:
+Verify terminal supports True Color:
 
 ```bash
-# True Colorテスト
+# True Color test
 printf "\x1b[38;2;255;100;0mTrue Color\x1b[0m\n"
 ```
 
-## 関連ドキュメント
+## Related Documentation
 
-- [Starship公式ドキュメント](https://starship.rs/)
+- [Starship Official Documentation](https://starship.rs/)
 - [Dracula Theme](https://draculatheme.com/)

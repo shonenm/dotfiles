@@ -1,62 +1,62 @@
-# SketchyBar + AeroSpace 連携
+# SketchyBar + AeroSpace Integration
 
-macOSのタイリングウィンドウマネージャー AeroSpace と ステータスバー SketchyBar を連携させ、ワークスペースとアプリを可視化するシステム。
+A system that integrates the macOS tiling window manager AeroSpace with the status bar SketchyBar to visualize workspaces and applications.
 
-## 概要
+## Overview
 
-- **ワークスペース表示**: 使用中のワークスペースのみ動的に表示
-- **アプリ表示**: フォーカス中のワークスペースのアプリをアイコンで表示
-- **モード表示**: AeroSpaceのバインディングモード（Main/Service/Pomodoro）を可視化
-- **ポモドーロタイマー**: キーボードのみで操作可能なタイマー機能
-- **レイアウトポップアップ**: 全ワークスペースの一覧をポップアップ表示
-- **通知バッジ**: Claude Code等の通知をワークスペースごとに表示
+- **Workspace Display**: Dynamically shows only active workspaces
+- **App Display**: Shows apps in the focused workspace as icons
+- **Mode Display**: Visualizes AeroSpace binding modes (Main/Service/Pomodoro)
+- **Pomodoro Timer**: Keyboard-only operable timer feature
+- **Layout Popup**: Popup display showing all workspaces
+- **Notification Badges**: Displays Claude Code notifications per workspace
 
-## UI構成
+## UI Layout
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │ [MODE] │ [1] [2●] [T] │ [App] [App] [App]                     │
 │  MAIN  │ Workspaces   │ Apps in workspace                     │
 └────────────────────────────────────────────────────────────────┘
-   左側
+   Left side
 ```
 
-| 要素 | 説明 |
-|------|------|
-| **Mode Indicator** | 現在のモード（MAIN/SERVICE/POMO）をアイコンと色で表示 |
-| **Workspaces** | 非空のワークスペースのみ表示、フォーカス中はハイライト、通知バッジ付き |
-| **Apps** | 現在のワークスペースのアプリをアイコン表示 |
+| Element | Description |
+|---------|-------------|
+| **Mode Indicator** | Shows current mode (MAIN/SERVICE/POMO) with icon and color |
+| **Workspaces** | Shows only non-empty workspaces, highlights focused one, includes notification badges |
+| **Apps** | Shows apps in current workspace as icons |
 
-## モード表示
+## Mode Display
 
-AeroSpaceには3つのバインディングモードがある：
+AeroSpace has 3 binding modes:
 
-### Main Mode（通常）
-
-```
-┌──────────────┐
-│ 󰍹  MAIN     │  ← アクセントカラー（青）
-└──────────────┘
-```
-
-- 通常の操作モード
-- ウィンドウ操作、ワークスペース移動が可能
-
-### Service Mode（設定）
+### Main Mode (Normal)
 
 ```
 ┌──────────────┐
-│ ⚙  SERVICE  │  ← 警告カラー（オレンジ）
+│ 󰍹  MAIN     │  ← Accent color (blue)
 └──────────────┘
 ```
 
-Service Modeに入ると、UI全体がオレンジ色に変化：
-- ワークスペースのボーダー
-- アプリのボーダー
-- フォーカス中のハイライト
-- ウィンドウボーダー（JankyBorders）
+- Normal operation mode
+- Window operations and workspace navigation available
 
-さらに、右側にキーバインドヘルプが表示される：
+### Service Mode (Settings)
+
+```
+┌──────────────┐
+│ ⚙  SERVICE  │  ← Warning color (orange)
+└──────────────┘
+```
+
+When entering Service Mode, the entire UI changes to orange:
+- Workspace borders
+- App borders
+- Focused highlight
+- Window borders (JankyBorders)
+
+Additionally, keybinding help is displayed on the right:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -64,18 +64,18 @@ Service Modeに入ると、UI全体がオレンジ色に変化：
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Pomodoro Mode（タイマー）
+### Pomodoro Mode (Timer)
 
 ```
 ┌──────────────┐
-│ 󰔛  POMO     │  ← ポモドーロカラー（緑）
+│ 󰔛  POMO     │  ← Pomodoro color (green)
 └──────────────┘
 ```
 
-Pomodoro Modeに入ると、UI全体が緑色に変化。
-ポモドーロタイマーをキーボードのみで操作可能。
+When entering Pomodoro Mode, the entire UI changes to green.
+Operate the Pomodoro timer using only the keyboard.
 
-右側にキーバインドヘルプが表示される：
+Keybinding help is displayed on the right:
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
@@ -83,226 +83,226 @@ Pomodoro Modeに入ると、UI全体が緑色に変化。
 └────────────────────────────────────────────────────────────────┘
 ```
 
-## ワークスペース表示
+## Workspace Display
 
 ```
 ┌─────────────────────────┐
 │ [1]  [2]  [T]  [C]     │
 │      ↑                  │
-│   フォーカス中          │
+│   Focused              │
 └─────────────────────────┘
 ```
 
-- **非空のワークスペースのみ**表示（空は非表示）
-- フォーカス中のワークスペースは**モードカラーでハイライト**
-- **クリックでワークスペース移動**
-- 通知がある場合は**バッジで件数表示**
+- Shows **only non-empty workspaces** (empty ones hidden)
+- Focused workspace is **highlighted with mode color**
+- **Click to switch workspaces**
+- **Badge shows notification count** when notifications exist
 
-### 通知バッジ
+### Notification Badges
 
 ```
 ┌───────────┐
-│ [1] ●2    │  ← ワークスペース1に2件の通知
+│ [1] ●2    │  ← 2 notifications on workspace 1
 └───────────┘
 ```
 
-Claude Codeからの通知（permission, idle, complete）がワークスペースごとにバッジ表示される。
+Notifications from Claude Code (permission, idle, complete) are displayed as badges per workspace.
 
-## アプリ表示
+## App Display
 
 ```
 ┌─────────────────────────────────┐
 │ [󰈹]  [󰨞]  [󰙯]  [  Ghostty  ] │
 │  ↑    ↑    ↑         ↑         │
-│ Firefox VS Code Discord  フォーカス中 │
+│ Firefox VS Code Discord  Focused │
 └─────────────────────────────────┘
 ```
 
-- 現在のワークスペースにある**全アプリをアイコン表示**
-- フォーカス中のアプリは**アイコン+ラベル+ハイライト**
-- 1000以上のアプリに対応したアイコンマッピング
+- Shows **all apps in current workspace as icons**
+- Focused app shows **icon + label + highlight**
+- Icon mapping supports over 1000 apps
 
-## レイアウトポップアップ
+## Layout Popup
 
-`alt+shift+/` で全ワークスペースの一覧をポップアップ表示：
+Press `alt+shift+/` to show a popup of all workspaces:
 
 ```
 ┌────────────────────────────────────┐
-│ 󰄯  1  │  Firefox  VS Code         │  ← フォーカス中
+│ 󰄯  1  │  Firefox  VS Code         │  ← Focused
 │ 󰄰  2  │  Slack  Discord           │
 │ 󰄰  T  │  Ghostty                  │
 │ 󰄰  C  │  Cron                     │
 └────────────────────────────────────┘
 ```
 
-- **全ワークスペースとアプリを一覧表示**
-- フォーカス中は 󰄯、それ以外は 󰄰
-- **クリックでワークスペース移動**
-- **トグル動作**（再度押すと閉じる）
+- **Shows all workspaces and their apps**
+- Focused shown as 󰄯, others as 󰄰
+- **Click to switch workspaces**
+- **Toggle behavior** (press again to close)
 
-## キーバインド
+## Key Bindings
 
 ### Main Mode
 
-| キー | 動作 |
-|------|------|
-| `alt+1-9` | ワークスペース1-9に移動 |
-| `alt+t/c/f/g/b/v` | ワークスペースT/C/F/G/B/Vに移動 |
-| `alt+h/j/k/l` | フォーカス移動（左/下/上/右） |
-| `alt+shift+h/j/k/l` | ウィンドウ移動 |
-| `alt+shift+1-9` | ウィンドウをワークスペースに移動 |
-| `alt+/` | レイアウト切替（tiles/accordion） |
-| `alt+shift+/` | レイアウトポップアップ表示 |
-| `alt+s` | SketchyBar表示/非表示 |
-| `alt+tab` | 前のワークスペースに戻る |
-| `alt+shift+;` | Service Modeに入る |
-| `alt+shift+p` | Pomodoro Modeに入る |
-| `ctrl+alt+←/→` | 非空ワークスペース間を移動 |
+| Key | Action |
+|-----|--------|
+| `alt+1-9` | Move to workspace 1-9 |
+| `alt+t/c/f/g/b/v` | Move to workspace T/C/F/G/B/V |
+| `alt+h/j/k/l` | Move focus (left/down/up/right) |
+| `alt+shift+h/j/k/l` | Move window |
+| `alt+shift+1-9` | Move window to workspace |
+| `alt+/` | Switch layout (tiles/accordion) |
+| `alt+shift+/` | Show layout popup |
+| `alt+s` | Toggle SketchyBar visibility |
+| `alt+tab` | Return to previous workspace |
+| `alt+shift+;` | Enter Service Mode |
+| `alt+shift+p` | Enter Pomodoro Mode |
+| `ctrl+alt+←/→` | Move between non-empty workspaces |
 
 ### Service Mode
 
-| キー | 動作 |
-|------|------|
-| `esc` | Main Modeに戻る（設定リロード） |
-| `a` | AeroSpace設定リロード |
-| `r` | レイアウトリセット |
-| `f` | フローティング/タイリング切替 |
-| `c` | 全通知バッジをクリア |
-| `backspace` | 他のウィンドウを全て閉じる |
+| Key | Action |
+|-----|--------|
+| `esc` | Return to Main Mode (reload config) |
+| `a` | Reload AeroSpace config |
+| `r` | Reset layout |
+| `f` | Toggle floating/tiling |
+| `c` | Clear all notification badges |
+| `backspace` | Close all other windows |
 
 ### Pomodoro Mode
 
-| キー | 動作 |
-|------|------|
-| `esc` | Main Modeに戻る |
-| `s` | タイマー開始/一時停止 |
-| `r` | タイマーリセット |
-| `1` | 5分に設定 |
-| `2` | 15分に設定 |
-| `3` | 25分に設定 |
-| `4` | 45分に設定 |
-| `5` | 60分に設定 |
-| `alt+shift+/` | レイアウトポップアップ表示 |
+| Key | Action |
+|-----|--------|
+| `esc` | Return to Main Mode |
+| `s` | Start/pause timer |
+| `r` | Reset timer |
+| `1` | Set to 5 minutes |
+| `2` | Set to 15 minutes |
+| `3` | Set to 25 minutes |
+| `4` | Set to 45 minutes |
+| `5` | Set to 60 minutes |
+| `alt+shift+/` | Show layout popup |
 
-## 設定ファイル
+## Configuration Files
 
 ### SketchyBar
 
 ```
 ~/.config/sketchybar/
-├── sketchybarrc          # メイン設定
+├── sketchybarrc          # Main configuration
 └── plugins/
-    ├── workspaces.sh     # ワークスペース表示
-    ├── workspace_apps.sh # アプリ表示
-    ├── mode.sh           # モード表示
-    ├── aerospace.sh      # ワークスペースフォーカス
-    ├── show_layout.sh    # レイアウトポップアップ
-    ├── claude.sh         # 通知バッジ
-    ├── accent_color.sh   # カラー定義
-    ├── icon_map.sh       # アプリアイコンマッピング
-    ├── toggle_bar.sh     # バー表示切替
-    └── pomodoro.sh       # ポモドーロタイマー表示
+    ├── workspaces.sh     # Workspace display
+    ├── workspace_apps.sh # App display
+    ├── mode.sh           # Mode display
+    ├── aerospace.sh      # Workspace focus
+    ├── show_layout.sh    # Layout popup
+    ├── claude.sh         # Notification badges
+    ├── accent_color.sh   # Color definitions
+    ├── icon_map.sh       # App icon mapping
+    ├── toggle_bar.sh     # Bar visibility toggle
+    └── pomodoro.sh       # Pomodoro timer display
 ```
 
 ### AeroSpace
 
 ```
 ~/.config/aerospace/
-└── aerospace.toml        # ウィンドウマネージャー設定
+└── aerospace.toml        # Window manager configuration
 ```
 
-## イベントフロー
+## Event Flow
 
-### ワークスペース変更時
+### On Workspace Change
 
 ```
-AeroSpace (ワークスペース移動)
+AeroSpace (workspace change)
     ↓ exec-on-workspace-change
 sketchybar --trigger aerospace_workspace_change
     ↓
-workspaces.sh  → ワークスペースリスト更新
-workspace_apps.sh → アプリリスト更新
-claude.sh → バッジ更新
+workspaces.sh  → Update workspace list
+workspace_apps.sh → Update app list
+claude.sh → Update badges
 ```
 
-### モード変更時
+### On Mode Change
 
 ```
 AeroSpace (alt+shift+;)
     ↓ on-mode-changed
 sketchybar --trigger aerospace_mode_change
     ↓
-mode.sh → モード表示更新
-        → 全UIカラー変更
-        → キーバインドヘルプ表示/非表示
-        → JankyBordersカラー変更
+mode.sh → Update mode display
+        → Change all UI colors
+        → Show/hide keybinding help
+        → Change JankyBorders color
 ```
 
-### フォーカス変更時
+### On Focus Change
 
 ```
-macOS (アプリフォーカス変更)
+macOS (app focus change)
     ↓ front_app_switched
-workspace_apps.sh → フォーカスアプリハイライト
-claude.sh → エディタ/ターミナルなら通知クリア
+workspace_apps.sh → Highlight focused app
+claude.sh → Clear notifications if editor/terminal
 ```
 
-## カラースキーム
+## Color Scheme
 
-| 用途 | 色 | 値 |
-|------|-----|-----|
-| アクセントカラー（Main Mode） | 青 | `0xff0055bb` |
-| サービスカラー（Service Mode） | オレンジ | `0xffff6600` |
-| ポモドーロカラー（Pomodoro Mode） | 緑 | `0xff28a745` |
-| 背景 | 透明/ダーク | `0x00000000` / `0xff1e1f29` |
-| テキスト | 白 | `0xffffffff` |
+| Usage | Color | Value |
+|-------|-------|-------|
+| Accent color (Main Mode) | Blue | `0xff0055bb` |
+| Service color (Service Mode) | Orange | `0xffff6600` |
+| Pomodoro color (Pomodoro Mode) | Green | `0xff28a745` |
+| Background | Transparent/Dark | `0x00000000` / `0xff1e1f29` |
+| Text | White | `0xffffffff` |
 
-## パフォーマンス最適化
+## Performance Optimization
 
-- **状態ファイルによる差分更新**
-  - `/tmp/sketchybar_workspaces_state` - ワークスペース状態
-  - `/tmp/sketchybar_apps_state` - アプリ状態
-  - 変更がない場合はUI再構築をスキップ
+- **State file-based differential updates**
+  - `/tmp/sketchybar_workspaces_state` - Workspace state
+  - `/tmp/sketchybar_apps_state` - App state
+  - Skip UI rebuild if no changes
 
-- **動的アイテム管理**
-  - 非空ワークスペースのみ表示
-  - ワークスペース変更時のみアプリリスト更新
+- **Dynamic item management**
+  - Show only non-empty workspaces
+  - Update app list only on workspace change
 
-## トラブルシューティング
+## Troubleshooting
 
-### SketchyBarが表示されない
+### SketchyBar Not Displaying
 
 ```bash
-# SketchyBarを再起動
+# Restart SketchyBar
 brew services restart sketchybar
 
-# 設定をリロード
+# Reload configuration
 sketchybar --reload
 ```
 
-### ワークスペースが更新されない
+### Workspaces Not Updating
 
 ```bash
-# AeroSpaceの状態確認
+# Check AeroSpace state
 aerospace list-workspaces --all
 
-# 手動トリガー
+# Manual trigger
 sketchybar --trigger aerospace_workspace_change
 ```
 
-### アイコンが表示されない
+### Icons Not Displaying
 
 ```bash
-# sketchybar-app-font がインストールされているか確認
+# Check if sketchybar-app-font is installed
 ls ~/Library/Fonts/ | grep -i sketchybar
 ```
 
-### モード変更が反映されない
+### Mode Changes Not Reflected
 
 ```bash
-# AeroSpace設定リロード
+# Reload AeroSpace config
 aerospace reload-config
 
-# 手動トリガー
+# Manual trigger
 sketchybar --trigger aerospace_mode_change
 ```

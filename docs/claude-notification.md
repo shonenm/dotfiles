@@ -1,45 +1,45 @@
-# Claude Code 通知システム
+# Claude Code Notification System
 
-Claude Codeのイベント（完了、承認待ち、入力待ちなど）をSlack通知 + SketchyBar/tmuxバッジで可視化するシステム。
+A system that visualizes Claude Code events (completion, approval pending, input waiting, etc.) through Slack notifications + SketchyBar/tmux badges.
 
-## 概要
+## Overview
 
-- **Slack通知**: Claude Codeの状態変化をSlack Webhookで通知
-- **SketchyBarバッジ**: Aerospaceワークスペースにバッジを表示
-- **tmuxバッジ**: tmuxステータスバーにウィンドウ毎のバッジを表示
-- **4環境対応**: Local / Local Container / Cloud / Cloud Container すべてに対応
-- **エディタ非依存**: VS Code / Terminal / Ghostty+tmux どれでも動作
+- **Slack Notifications**: Notify Claude Code state changes via Slack Webhook
+- **SketchyBar Badges**: Display badges on Aerospace workspaces
+- **tmux Badges**: Display per-window badges on tmux status bar
+- **4 Environment Support**: Works on Local / Local Container / Cloud / Cloud Container
+- **Editor Independent**: Works with VS Code / Terminal / Ghostty+tmux
 
-## 対応環境
+## Supported Environments
 
-| 環境 | Editor | 方式 |
-|------|--------|------|
-| **Local** | Terminal / VS Code | 直接検出 |
+| Environment | Editor | Method |
+|-------------|--------|--------|
+| **Local** | Terminal / VS Code | Direct detection |
 | **Local Container** | Terminal | `dexec` + bind mount |
 | **Local Container** | VS Code | `DEVCONTAINER_NAME` + bind mount |
 | **Remote** | Terminal | `rssh` + SSH + inotifywait |
-| **Remote** | VS Code | 直接検出 |
+| **Remote** | VS Code | Direct detection |
 | **Remote Container** | Terminal | `rssh` + `dexec` + bind mount |
 | **Remote Container** | VS Code | `DEVCONTAINER_NAME` + bind mount |
 
-## 対応エディタ/ターミナル
+## Supported Editors/Terminals
 
-ワークスペース検索は以下のアプリケーションに対応:
+Workspace search supports the following applications:
 
-| アプリ | ウィンドウタイトルから取得 |
-|--------|---------------------------|
-| **VS Code** | コンテナ名 (`開発コンテナー: xxx @`) またはプロジェクト名 (`— xxx [`) |
-| **Ghostty** | ディレクトリ名 |
-| **Terminal.app** | ディレクトリ名 |
-| **iTerm2** | ディレクトリ名 |
-| **Alacritty** | ディレクトリ名 |
-| **WezTerm** | ディレクトリ名 |
-| **kitty** | ディレクトリ名 |
-| **Warp** | ディレクトリ名 |
+| App | Retrieved from Window Title |
+|-----|---------------------------|
+| **VS Code** | Container name (`Dev Container: xxx @`) or project name (`— xxx [`) |
+| **Ghostty** | Directory name |
+| **Terminal.app** | Directory name |
+| **iTerm2** | Directory name |
+| **Alacritty** | Directory name |
+| **WezTerm** | Directory name |
+| **kitty** | Directory name |
+| **Warp** | Directory name |
 
-## アーキテクチャ
+## Architecture
 
-### 1. Local (Mac直接)
+### 1. Local (Mac directly)
 
 ```
 Claude Code (hooks)
@@ -47,96 +47,96 @@ Claude Code (hooks)
     ↓ claude-status.sh set <project> <status>
 /tmp/claude_status/*.json
     ↓ sketchybar --trigger claude_status_change
-SketchyBar バッジ更新
+SketchyBar badge update
 ```
 
-### 2. Local Container (Mac上のDocker)
+### 2. Local Container (Docker on Mac)
 
 ```
 Claude Code (hooks) @ Container
-    ↓ ai-notify.sh (ファイル書き込み)
+    ↓ ai-notify.sh (file write)
 /tmp/claude_status/*.json @ Container
     ↓ bind mount (docker run -v /tmp/claude_status:/tmp/claude_status)
 /tmp/claude_status/*.json @ Mac
-    ↓ sketchybar --trigger (ai-notify.sh が直接実行)
-SketchyBar バッジ更新
+    ↓ sketchybar --trigger (ai-notify.sh executes directly)
+SketchyBar badge update
 ```
 
-### 3. Cloud (リモートサーバー)
+### 3. Cloud (Remote Server)
 
 ```
 Claude Code (hooks) @ Remote
-    ↓ ai-notify.sh (ファイル書き込み)
+    ↓ ai-notify.sh (file write)
 /tmp/claude_status/*.json @ Remote
-    ↓ inotifywait (ファイル変更検知)
-    ↓ 永続SSH接続
+    ↓ inotifywait (file change detection)
+    ↓ Persistent SSH connection
 Mac (claude-status-watch.sh)
     ↓ claude-status.sh set
 /tmp/claude_status/*.json @ Mac
     ↓ sketchybar --trigger
-SketchyBar バッジ更新
+SketchyBar badge update
 ```
 
-### 4. Cloud Container (リモートのDev Container)
+### 4. Cloud Container (Remote Dev Container)
 
 ```
 Claude Code (hooks) @ Container
-    ↓ ai-notify.sh (ファイル書き込み)
+    ↓ ai-notify.sh (file write)
 /tmp/claude_status/*.json @ Container
-    ↓ bind mount (devcontainer.json で設定)
+    ↓ bind mount (configured in devcontainer.json)
 /tmp/claude_status/*.json @ Remote Host
-    ↓ inotifywait (ファイル変更検知)
-    ↓ 永続SSH接続
+    ↓ inotifywait (file change detection)
+    ↓ Persistent SSH connection
 Mac (claude-status-watch.sh)
     ↓ claude-status.sh set
 /tmp/claude_status/*.json @ Mac
     ↓ sketchybar --trigger
-SketchyBar バッジ更新
+SketchyBar badge update
 ```
 
-## tmux 統合
+## tmux Integration
 
-Ghostty + tmux 環境では、SketchyBar に加えて tmux ステータスバーにもバッジを表示。
+In Ghostty + tmux environments, badges are displayed on the tmux status bar in addition to SketchyBar.
 
-### 動作
+### Behavior
 
 ```
 Claude Code (hooks)
-    ↓ ai-notify.sh (tmux_session, tmux_window_index を記録)
+    ↓ ai-notify.sh (records tmux_session, tmux_window_index)
 /tmp/claude_status/window_*.json
     ↓ tmux refresh-client -S
-tmux ステータスバー更新
-    ↓ tmux-claude-badge.sh (window-status-format から呼び出し)
-オレンジバッジ表示（通知数付き）
+tmux status bar update
+    ↓ tmux-claude-badge.sh (called from window-status-format)
+Orange badge display (with notification count)
 ```
 
-### バッジ表示
+### Badge Display
 
-- **位置**: 各ウィンドウ名の右側
-- **色**: オレンジ背景 (`#ff6600`) + 白文字
-- **形状**: 角丸 (Powerline style)
-- **内容**: 通知数
+- **Position**: Right side of each window name
+- **Color**: Orange background (`#ff6600`) + white text
+- **Shape**: Rounded (Powerline style)
+- **Content**: Notification count
 
-### 自動消去
+### Auto-clear
 
-1. ウィンドウにフォーカスして **6秒滞在** → 通知消去
-2. ウィンドウを離れる（6秒未満）→ 通知を維持
-3. `clear-tmux` コマンドで手動消去も可能
+1. Focus on window and **stay for 6 seconds** → Clear notification
+2. Leave window (under 6 seconds) → Keep notification
+3. Manual clear with `clear-tmux` command also available
 
-### 設定ファイル
+### Configuration Files
 
-tmux.conf で以下を読み込み:
+Load the following in tmux.conf:
 
 ```bash
 # ~/.config/tmux/tmux.conf
 source-file ~/.config/tmux/claude-hooks.tmux
 ```
 
-## コンポーネント
+## Components
 
-### CLAUDE_CONTEXT 環境変数
+### CLAUDE_CONTEXT Environment Variable
 
-コンテナ内での通知を正しく処理するための環境変数。`dexec` が自動設定する。
+Environment variable for properly handling notifications inside containers. Automatically set by `dexec`.
 
 ```json
 {
@@ -148,165 +148,165 @@ source-file ~/.config/tmux/claude-hooks.tmux
 }
 ```
 
-| フィールド | 説明 |
-|-----------|------|
-| `project` | プロジェクト名（Slack通知に表示） |
-| `device` | デバイス名（Slack通知に表示） |
-| `window_id` | Aerospaceウィンドウ ID（SketchyBar用） |
-| `tmux_session` | tmuxセッション名 |
-| `tmux_window` | tmuxウィンドウインデックス |
+| Field | Description |
+|-------|-------------|
+| `project` | Project name (shown in Slack notification) |
+| `device` | Device name (shown in Slack notification) |
+| `window_id` | Aerospace window ID (for SketchyBar) |
+| `tmux_session` | tmux session name |
+| `tmux_window` | tmux window index |
 
 ### dexec (shell function)
 
-Dockerコンテナに入る際に `CLAUDE_CONTEXT` を自動設定するヘルパー関数。
+Helper function that automatically sets `CLAUDE_CONTEXT` when entering Docker containers.
 
 ```bash
-# 使い方
+# Usage
 dexec <container> [command...]
 
-# 例
+# Examples
 dexec my-container bash
 dexec my-container zsh
 CLAUDE_PROJECT=custom-name dexec my-container bash
 ```
 
-**特徴**:
-- ローカルで使用時: 新規にコンテキストを生成
-- リモートで使用時: `rssh` から継承した `CLAUDE_CONTEXT` をそのまま継承
+**Features**:
+- When used locally: Generates new context
+- When used remotely: Inherits `CLAUDE_CONTEXT` from `rssh`
 
-**定義場所**: `~/.zshrc.common`
+**Definition location**: `~/.zshrc.common`
 
 ### rssh (shell function)
 
-リモートSSH接続時に `CLAUDE_CONTEXT` を自動設定するヘルパー関数。sshd_config の変更は不要。
+Helper function that automatically sets `CLAUDE_CONTEXT` for remote SSH connections. No sshd_config changes required.
 
 ```bash
-# 使い方
+# Usage
 rssh [ssh-options] <host> [command]
 
-# 例: インタラクティブ接続
+# Examples: Interactive connection
 rssh remote-server
 rssh -p 2222 user@remote-server
 
-# 例: コマンド実行
+# Examples: Command execution
 rssh remote-server "cd /app && ls"
 ```
 
-**特徴**:
-- Mac側で `CLAUDE_CONTEXT` を生成し、SSHコマンド実行時に注入
-- `sshd_config` の変更不要（SendEnv/AcceptEnv を使わない）
-- リモートで `dexec` を使うと、コンテキストが自動継承される
+**Features**:
+- Generates `CLAUDE_CONTEXT` on Mac side and injects during SSH command execution
+- No `sshd_config` changes required (doesn't use SendEnv/AcceptEnv)
+- Using `dexec` on remote automatically inherits the context
 
-**定義場所**: `~/.zshrc.common`
+**Definition location**: `~/.zshrc.common`
 
 ### scripts/ai-notify.sh
 
-メイン通知スクリプト。Claude Code hooksから呼び出される。
+Main notification script. Called from Claude Code hooks.
 
 ```bash
-# 使い方
+# Usage
 ai-notify.sh <tool> <event>
-ai-notify.sh --setup <tool>       # Webhook キャッシュ + セットアップ通知
-ai-notify.sh --refresh-cache      # 全ツールのWebhookキャッシュ更新
-ai-notify.sh --clear-cache        # キャッシュ削除
+ai-notify.sh --setup <tool>       # Webhook cache + setup notification
+ai-notify.sh --refresh-cache      # Update all tool webhook caches
+ai-notify.sh --clear-cache        # Clear cache
 
 # tool: claude | codex | gemini
 # event: stop | complete | permission | idle | error
 ```
 
-**機能**:
-- `CLAUDE_CONTEXT` 環境変数からコンテキスト取得（コンテナ用）
-- フォールバック: ローカル検出（ローカルMac用）
-- 1PasswordからWebhook URLを取得・キャッシュ
-- Slack通知送信（イベントに応じてメンション有無を切替）
-- SketchyBar状態更新
+**Features**:
+- Retrieves context from `CLAUDE_CONTEXT` environment variable (for containers)
+- Fallback: Local detection (for local Mac)
+- Retrieves and caches Webhook URLs from 1Password
+- Sends Slack notifications (toggles mention based on event)
+- Updates SketchyBar state
 
 ### scripts/claude-status.sh
 
-プロジェクト状態の管理。Aerospace/tmuxと連携してワークスペースを特定。
+Project state management. Works with Aerospace/tmux to identify workspaces.
 
 ```bash
 claude-status.sh set <project> <status> [session_id] [tty] [window_id] [container_name] [tmux_session] [tmux_window_index]
 claude-status.sh get <window_id>
 claude-status.sh list
 claude-status.sh clear <window_id>
-claude-status.sh clear-tmux <tmux_session> <tmux_window_index>  # tmuxウィンドウの通知を消去
-claude-status.sh cleanup          # 1時間以上更新なしを削除
+claude-status.sh clear-tmux <tmux_session> <tmux_window_index>  # Clear tmux window notification
+claude-status.sh cleanup          # Delete items not updated for 1+ hours
 claude-status.sh find-workspace <window_id>
 ```
 
-**ワークスペース検索ロジック**:
-1. VS Codeウィンドウタイトルからコンテナ名/プロジェクト名を検索
-2. ターミナルウィンドウタイトルから検索
-3. ウィンドウIDからAerospaceワークスペースを特定
+**Workspace search logic**:
+1. Search VS Code window title for container name/project name
+2. Search terminal window title
+3. Identify Aerospace workspace from window ID
 
 ### scripts/claude-status-watch.sh
 
-リモートホストの `/tmp/claude_status/` を監視し、変更をMacに転送。
+Monitors `/tmp/claude_status/` on remote host and transfers changes to Mac.
 
 ```bash
 claude-status-watch.sh <remote-host>
 ```
 
-launchdで常駐させ、SSH接続を永続化。
+Runs as a launchd daemon with persistent SSH connection.
 
 ### common/sketchybar/.config/sketchybar/plugins/claude.sh
 
-SketchyBarプラグイン。ワークスペースバッジの表示/非表示を制御。
+SketchyBar plugin. Controls workspace badge visibility.
 
-**トリガー**:
-- `claude_status_change`: 状態ファイル変更時
-- `front_app_switched`: フォーカス変更時（通知解除）
-- `aerospace_workspace_change`: ワークスペース変更時
+**Triggers**:
+- `claude_status_change`: On state file change
+- `front_app_switched`: On focus change (clears notification)
+- `aerospace_workspace_change`: On workspace change
 
 ### templates/com.user.claude-status-watch.plist
 
-リモート監視用のlaunchd設定テンプレート。
+launchd configuration template for remote monitoring.
 
 ### scripts/tmux-claude-badge.sh
 
-tmuxステータスバー用のバッジ表示スクリプト。`window-status-format` から呼び出される。
+Badge display script for tmux status bar. Called from `window-status-format`.
 
 ```bash
 tmux-claude-badge.sh window <window_index> [focused]
 ```
 
-- 指定ウィンドウの通知数をカウントしてバッジを出力
-- `focused` 指定時は薄い色で表示
+- Counts notifications for specified window and outputs badge
+- When `focused` specified, displays in lighter color
 
 ### scripts/tmux-claude-focus.sh
 
-tmuxウィンドウフォーカス時の通知消去処理。`session-window-changed` hookから呼び出される。
+Notification clearing process when focusing tmux window. Called from `session-window-changed` hook.
 
-- 6秒タイマーで自動消去
-- ウィンドウを離れた場合はタイマーキャンセル
+- Auto-clear with 6 second timer
+- Timer cancels if window is left
 
 ### common/tmux/.config/tmux/claude-hooks.tmux
 
-tmux hooks設定ファイル。
+tmux hooks configuration file.
 
 ```bash
-# ウィンドウ切り替え時にフォーカス処理を実行
+# Execute focus processing on window switch
 set-hook -g session-window-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude-focus.sh"'
 set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude-focus.sh"'
 ```
 
-## セットアップ
+## Setup
 
-### 前提条件 (Mac)
+### Prerequisites (Mac)
 
 - 1Password CLI (`op`)
 - jq
 - SketchyBar
 - Aerospace
 
-### 共通設定
+### Common Configuration
 
-1. **1PasswordにWebhook URLを登録**
+1. **Register Webhook URL in 1Password**
 
-   - `op://Personal/Claude Webhook/password` にSlack Webhook URLを保存
+   - Save Slack Webhook URL to `op://Personal/Claude Webhook/password`
 
-2. **Claude Code hooksを設定** (`~/.claude/settings.json`)
+2. **Configure Claude Code hooks** (`~/.claude/settings.json`)
 
    ```json
    {
@@ -327,7 +327,7 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
    }
    ```
 
-3. **初回セットアップ（Webhookキャッシュ）**
+3. **Initial Setup (Webhook Cache)**
 
    ```bash
    ai-notify.sh --setup claude
@@ -335,35 +335,35 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
 
 ---
 
-### 1. Local (Mac直接)
+### 1. Local (Mac directly)
 
-追加設定不要。上記の共通設定のみでOK。
+No additional configuration needed. Only the common configuration above is required.
 
 ---
 
-### 2. Local Container (Mac上のDocker)
+### 2. Local Container (Docker on Mac)
 
-#### 方法A: dexec を使う（推奨）
+#### Method A: Using dexec (Recommended)
 
-`dexec` コマンドでコンテナに入ると、`CLAUDE_CONTEXT` 環境変数が自動設定される。
+Enter the container with `dexec` command, and `CLAUDE_CONTEXT` environment variable is automatically set.
 
 ```bash
-# 基本的な使い方
+# Basic usage
 dexec my-container bash
 
-# プロジェクト名を明示的に指定
+# Explicitly specify project name
 CLAUDE_PROJECT=my-project dexec my-container zsh
 ```
 
-**前提条件**:
-- bind mountを追加:
+**Prerequisites**:
+- Add bind mount:
   ```bash
   docker run -v /tmp/claude_status:/tmp/claude_status ...
   ```
 
-#### 方法B: VS Code Dev Container を使う
+#### Method B: Using VS Code Dev Container
 
-1. **bind mountを追加** (docker-compose.yml または devcontainer.json)
+1. **Add bind mount** (docker-compose.yml or devcontainer.json)
 
    ```yaml
    # docker-compose.yml
@@ -371,7 +371,7 @@ CLAUDE_PROJECT=my-project dexec my-container zsh
      - /tmp/claude_status:/tmp/claude_status
    ```
 
-2. **DEVCONTAINER_NAME環境変数を設定**
+2. **Set DEVCONTAINER_NAME environment variable**
 
    ```yaml
    environment:
@@ -380,29 +380,29 @@ CLAUDE_PROJECT=my-project dexec my-container zsh
 
 ---
 
-### 3. Remote (リモートサーバー)
+### 3. Remote (Remote Server)
 
-#### Terminal から接続する場合
+#### Connecting from Terminal
 
-`rssh` を使って接続すると、`CLAUDE_CONTEXT` が自動的に設定される。
+Connect with `rssh`, and `CLAUDE_CONTEXT` is automatically set.
 
 ```bash
-# rssh でリモートに接続
+# Connect to remote with rssh
 rssh remote-server
 
-# リモートでClaudeを使う
+# Use Claude on remote
 claude
 ```
 
-#### リモート側の準備
+#### Remote Side Preparation
 
-1. **リモートにinotify-toolsをインストール**
+1. **Install inotify-tools on remote**
 
    ```bash
-   # apt が使える場合
+   # If apt is available
    sudo apt install inotify-tools
 
-   # sudo不可の場合はソースビルド
+   # If no sudo, build from source
    cd /tmp
    curl -LO https://github.com/inotify-tools/inotify-tools/archive/refs/tags/4.23.9.0.tar.gz
    tar xzf 4.23.9.0.tar.gz
@@ -410,50 +410,50 @@ claude
    ./autogen.sh && ./configure --prefix=$HOME/.local && make && make install
    ```
 
-2. **Macでlaunchd設定**
+2. **Configure launchd on Mac**
 
    ```bash
-   # テンプレートをコピーしてホスト名を編集
+   # Copy template and edit hostname
    cp ~/dotfiles/templates/com.user.claude-status-watch.plist \
       ~/Library/LaunchAgents/
 
-   # <remote-host> を実際のSSH config ホスト名に変更
+   # Change <remote-host> to actual SSH config hostname
    vim ~/Library/LaunchAgents/com.user.claude-status-watch.plist
 
-   # 起動
+   # Start
    launchctl load ~/Library/LaunchAgents/com.user.claude-status-watch.plist
    ```
 
 ---
 
-### 4. Remote Container (リモートのDev Container)
+### 4. Remote Container (Remote Dev Container)
 
-Remote の設定に加えて:
+In addition to Remote configuration:
 
-#### Terminal から接続する場合
+#### Connecting from Terminal
 
-`rssh` + `dexec` でコンテナに入ると、`CLAUDE_CONTEXT` が継承される。
+Enter container with `rssh` + `dexec`, and `CLAUDE_CONTEXT` is inherited.
 
 ```bash
-# rssh でリモートに接続
+# Connect to remote with rssh
 rssh remote-server
 
-# dexec でコンテナに入る (CLAUDE_CONTEXT が継承される)
+# Enter container with dexec (CLAUDE_CONTEXT is inherited)
 dexec my-container bash
 
-# コンテナ内でClaudeを使う
+# Use Claude inside container
 claude
 ```
 
-**前提条件**:
-- コンテナに bind mount を追加:
+**Prerequisites**:
+- Add bind mount to container:
   ```bash
   docker run -v /tmp/claude_status:/tmp/claude_status ...
   ```
 
-#### VS Code Dev Container から接続する場合
+#### Connecting from VS Code Dev Container
 
-1. **devcontainer.jsonにbind mountを追加**
+1. **Add bind mount in devcontainer.json**
 
    ```json
    {
@@ -463,7 +463,7 @@ claude
    }
    ```
 
-2. **DEVCONTAINER_NAME環境変数を設定**
+2. **Set DEVCONTAINER_NAME environment variable**
 
    ```json
    {
@@ -473,130 +473,130 @@ claude
    }
    ```
 
-   これにより、VS Codeのウィンドウタイトル `開発コンテナー: my-project @...` と一致し、正しいワークスペースにバッジが表示される。
+   This matches the VS Code window title `Dev Container: my-project @...` and displays badges on the correct workspace.
 
-## 使い方
+## Usage
 
-### イベント種別
+### Event Types
 
-| イベント | Slack通知 | メンション | バッジ色 |
-|----------|-----------|------------|----------|
-| permission | あり | @here | 黄色 |
-| idle | あり | @here | 青 |
-| error | あり | @here | 赤 |
-| complete | あり | なし | 緑 |
-| stop | なし | - | - |
+| Event | Slack Notification | Mention | Badge Color |
+|-------|-------------------|---------|-------------|
+| permission | Yes | @here | Yellow |
+| idle | Yes | @here | Blue |
+| error | Yes | @here | Red |
+| complete | Yes | None | Green |
+| stop | No | - | - |
 
-### 手動コマンド
+### Manual Commands
 
 ```bash
-# 状態確認
+# Check status
 claude-status.sh list
 
-# 特定プロジェクトの状態
+# Status of specific project
 claude-status.sh get my-project
 
-# 手動で状態設定（テスト用）
+# Manually set status (for testing)
 claude-status.sh set my-project complete
 
-# 古い状態をクリーンアップ
+# Cleanup old status
 claude-status.sh cleanup
 ```
 
-### Service Mode コマンド
+### Service Mode Commands
 
-Aerospaceの `alt+shift+;` でService Modeに入り:
+Enter Service Mode with Aerospace `alt+shift+;`:
 
-| キー | 動作 |
-|------|------|
-| c | 全バッジをクリア |
+| Key | Action |
+|-----|--------|
+| c | Clear all badges |
 
-## トラブルシューティング
+## Troubleshooting
 
-### バッジが表示されない
+### Badge Not Displaying
 
-1. 状態ファイルを確認:
+1. Check status file:
    ```bash
    ls -la /tmp/claude_status/
    cat /tmp/claude_status/*.json
    ```
 
-2. ワークスペース検索をテスト:
+2. Test workspace search:
    ```bash
    claude-status.sh find-workspace my-project
    ```
 
-3. SketchyBarを手動トリガー:
+3. Manually trigger SketchyBar:
    ```bash
    sketchybar --trigger claude_status_change
    ```
 
-### リモート通知が届かない
+### Remote Notifications Not Arriving
 
-1. SSH接続を確認:
+1. Check SSH connection:
    ```bash
    ssh remote-host 'echo ok'
    ```
 
-2. inotifywaitを確認:
+2. Check inotifywait:
    ```bash
    ssh remote-host 'which inotifywait || ls ~/.local/bin/inotifywait'
    ```
 
-3. launchdログを確認:
+3. Check launchd logs:
    ```bash
    cat /tmp/claude-status-watch.err
    ```
 
-4. bind mountを確認:
+4. Check bind mount:
    ```bash
-   # Container内から
+   # From inside Container
    ls -la /tmp/claude_status/
 
-   # Remote host から
+   # From Remote host
    ls -la /tmp/claude_status/
    ```
 
-### Webhookが取得できない
+### Cannot Retrieve Webhook
 
-1. 1Passwordにサインイン:
+1. Sign in to 1Password:
    ```bash
    eval $(op signin)
    ```
 
-2. キャッシュを更新:
+2. Update cache:
    ```bash
    ai-notify.sh --refresh-cache
    ```
 
-3. キャッシュを確認:
+3. Check cache:
    ```bash
    ls -la ~/.local/share/ai-notify/
    ```
 
-## ファイル構成
+## File Structure
 
 ```
 dotfiles/
 ├── scripts/
-│   ├── ai-notify.sh                # メイン通知スクリプト (CLAUDE_CONTEXT 対応)
-│   ├── claude-status.sh            # 状態管理
-│   ├── claude-status-watch.sh      # リモート監視 (SSH + inotifywait)
-│   ├── claude-status-local-watch.sh # ローカルコンテナ監視 (launchd WatchPaths)
-│   ├── tmux-claude-badge.sh        # tmuxバッジ表示
-│   └── tmux-claude-focus.sh        # tmuxフォーカス処理
-├── common/zsh/.zshrc.common        # _claude_context, dexec, rssh 関数定義
+│   ├── ai-notify.sh                # Main notification script (CLAUDE_CONTEXT support)
+│   ├── claude-status.sh            # State management
+│   ├── claude-status-watch.sh      # Remote monitoring (SSH + inotifywait)
+│   ├── claude-status-local-watch.sh # Local container monitoring (launchd WatchPaths)
+│   ├── tmux-claude-badge.sh        # tmux badge display
+│   └── tmux-claude-focus.sh        # tmux focus processing
+├── common/zsh/.zshrc.common        # _claude_context, dexec, rssh function definitions
 ├── common/sketchybar/.config/sketchybar/
 │   └── plugins/
-│       └── claude.sh               # SketchyBarプラグイン
+│       └── claude.sh               # SketchyBar plugin
 ├── common/tmux/.config/tmux/
-│   └── claude-hooks.tmux           # tmux hooks設定
+│   └── claude-hooks.tmux           # tmux hooks configuration
 └── templates/
-    └── com.user.claude-status-watch.plist  # launchd テンプレート
+    └── com.user.claude-status-watch.plist  # launchd template
 ```
 
-## 関連設定
+## Related Configuration
 
-- `~/.claude/settings.json` - Claude Code hooks設定
-- `~/.local/share/ai-notify/` - Webhookキャッシュ
-- `/tmp/claude_status/` - 状態ファイル
+- `~/.claude/settings.json` - Claude Code hooks configuration
+- `~/.local/share/ai-notify/` - Webhook cache
+- `/tmp/claude_status/` - State files
