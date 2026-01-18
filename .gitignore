@@ -143,3 +143,7 @@ mac/raycast/.config/raycast/extensions/
 
 # gh CLI (auth tokens are machine-specific)
 common/gh/.config/gh/hosts.yml
+
+# Machine-specific configs (contains local paths)
+common/uv/.config/uv/uv-receipt.json
+common/org.qgroundcontrol/
