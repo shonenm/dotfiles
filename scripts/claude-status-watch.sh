@@ -41,14 +41,15 @@ trap cleanup EXIT INT TERM
 
   project=$(echo "$line" | jq -r '.project // empty' 2>/dev/null)
   status=$(echo "$line" | jq -r '.status // empty' 2>/dev/null)
-  session_id=$(echo "$line" | jq -r '.session_id // empty' 2>/dev/null)
-  container_name=$(echo "$line" | jq -r '.container_name // empty' 2>/dev/null)
+  workspace=$(echo "$line" | jq -r '.workspace // empty' 2>/dev/null)
+  tmux_session=$(echo "$line" | jq -r '.tmux_session // empty' 2>/dev/null)
+  tmux_window=$(echo "$line" | jq -r '.tmux_window_index // empty' 2>/dev/null)
 
   [[ -z "$project" || -z "$status" ]] && continue
 
   # ホスト名をプロジェクト名に追加して区別
   remote_project="${REMOTE_HOST}:${project}"
 
-  # ローカルのclaude-status.shを呼び出し（container_nameでVS Code検索）
-  "$SCRIPT_DIR/claude-status.sh" set "$remote_project" "$status" "$session_id" "" "" "$container_name" 2>/dev/null || true
+  # ローカルのclaude-status.shを呼び出し（新シグネチャ）
+  "$SCRIPT_DIR/claude-status.sh" set "$remote_project" "$status" "$workspace" "$tmux_session" "$tmux_window" 2>/dev/null || true
 done
