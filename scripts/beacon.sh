@@ -1,6 +1,6 @@
 #!/bin/bash
-# Register current environment to aerospace workspace for Claude notification
-# Usage: register-workspace.sh <workspace_number>
+# Claude Beacon - Register current environment to aerospace workspace
+# Usage: beacon.sh <workspace_number>
 
 set -euo pipefail
 
@@ -8,7 +8,7 @@ WORKSPACE="${1:-}"
 MAP_FILE="/tmp/claude_workspace_map.json"
 
 if [[ -z "$WORKSPACE" ]]; then
-  echo "Usage: register-workspace.sh <workspace_number>" >&2
+  echo "Usage: beacon.sh <workspace_number>" >&2
   exit 1
 fi
 

@@ -238,7 +238,7 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
     #s = ['layout sticky tiling', 'mode main']
 
-    # Clear all Claude notification badges
+    # Clear all Claude Beacon badges
     c = ['exec-and-forget rm -f /tmp/claude_status/*.json && sketchybar --trigger claude_status_change', 'mode main']
 
     alt-shift-h = ['join-with left', 'mode main']

@@ -1,4 +1,4 @@
-# Claude Code Notification System
+# Claude Beacon
 
 A system that visualizes Claude Code events (completion, approval pending, input waiting, etc.) through Slack notifications + SketchyBar/tmux badges.
 
@@ -299,7 +299,7 @@ claude-status.sh cleanup          # Delete items not updated for 1+ hours
 Manually registers the current environment (tmux window / VS Code) to an Aerospace workspace.
 
 ```bash
-register-workspace.sh <workspace_number>
+beacon.sh <workspace_number>
 ```
 
 Saves mapping to `/tmp/claude_workspace_map.json`. This mapping is used by `ai-notify.sh` to determine which workspace to notify.
@@ -678,7 +678,7 @@ dotfiles/
 │   ├── claude-status.sh            # State management (workspace-based)
 │   ├── claude-status-watch.sh      # Remote monitoring (SSH + inotifywait)
 │   ├── claude-status-local-watch.sh # Local container monitoring (launchd WatchPaths)
-│   ├── register-workspace.sh       # Manual workspace registration
+│   ├── beacon.sh                   # Manual workspace registration
 │   ├── tmux-claude-badge.sh        # tmux badge display
 │   └── tmux-claude-focus.sh        # tmux focus processing
 ├── common/zsh/.zshrc.common        # _claude_context, dexec, rssh function definitions
@@ -693,7 +693,7 @@ dotfiles/
 │   │       └── SKILL.md            # /beacon skill template
 │   └── com.user.claude-status-watch.plist  # launchd template
 └── docs/
-    └── claude-notification.md      # This documentation
+    └── claude-beacon.md            # This documentation
 ```
 
 ## Related Configuration

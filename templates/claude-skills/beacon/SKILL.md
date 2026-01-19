@@ -13,7 +13,7 @@ user-invocable: true
 ユーザーが `/beacon <workspace番号>` と入力したら、以下のスクリプトを実行してください：
 
 ```bash
-__HOME__/dotfiles/scripts/register-workspace.sh <workspace番号>
+__HOME__/dotfiles/scripts/beacon.sh <workspace番号>
 ```
 
 ## 例
@@ -22,7 +22,7 @@ __HOME__/dotfiles/scripts/register-workspace.sh <workspace番号>
 
 実行するコマンド:
 ```bash
-__HOME__/dotfiles/scripts/register-workspace.sh 3
+__HOME__/dotfiles/scripts/beacon.sh 3
 ```
 
 ## 注意事項

@@ -44,7 +44,7 @@ dotfiles/
 │   ├── neovim.md
 │   ├── tmux.md
 │   ├── sketchybar-aerospace.md
-│   ├── claude-notification.md
+│   ├── claude-beacon.md
 │   ├── git-config.md
 │   ├── starship.md
 │   ├── install.md
