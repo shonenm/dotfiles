@@ -10,36 +10,41 @@ A system that visualizes Claude Code events (completion, approval pending, input
 - **4 Environment Support**: Works on Local / Local Container / Cloud / Cloud Container
 - **Editor Independent**: Works with VS Code / Terminal / Ghostty+tmux
 
-## Supported Environments
+## Workspace-Based Architecture
 
-| Environment | Editor | Method |
-|-------------|--------|--------|
-| **Local** | Terminal / VS Code | Direct detection |
-| **Local Container** | Terminal | `dexec` + bind mount |
-| **Local Container** | VS Code | `DEVCONTAINER_NAME` + bind mount |
-| **Remote** | Terminal | `rssh` + SSH + inotifywait |
-| **Remote** | VS Code | Direct detection |
-| **Remote Container** | Terminal | `rssh` + `dexec` + bind mount |
-| **Remote Container** | VS Code | `DEVCONTAINER_NAME` + bind mount |
+This system uses **workspace-based** notification management. Rather than trying to auto-detect which aerospace window you're running in (which is unreliable, especially with tmux's client/server model), you manually register your environment to a workspace using the `/register-workspace` command.
 
-## Supported Editors/Terminals
+### Why Manual Registration?
 
-Workspace search supports the following applications:
+CLI applications fundamentally cannot reliably determine which aerospace workspace they're running in because:
+- tmux uses a client/server model where multiple terminals can attach to the same session
+- Window IDs from aerospace are not directly accessible from within tmux/terminals
+- VS Code integrated terminals have their own process model
 
-| App | Retrieved from Window Title |
-|-----|---------------------------|
-| **VS Code** | Container name (`Dev Container: xxx @`) or project name (`— xxx [`) |
-| **Ghostty** | Directory name |
-| **Terminal.app** | Directory name |
-| **iTerm2** | Directory name |
-| **Alacritty** | Directory name |
-| **WezTerm** | Directory name |
-| **kitty** | Directory name |
-| **Warp** | Directory name |
+### File Structure
+
+```
+# Status files
+/tmp/claude_status/workspace_${workspace}_${timestamp}.json
+
+# Workspace mapping
+/tmp/claude_workspace_map.json
+```
+
+### Data Structure
+
+```json
+{
+  "status": "idle|permission|complete",
+  "project": "project_name",
+  "workspace": "3",
+  "tmux_session": "MAIN",
+  "tmux_window_index": "1",
+  "updated": 1234567890
+}
+```
 
 ## Manual Workspace Registration
-
-Since it's impossible to 100% accurately determine which Aerospace workspace a CLI application is running in (especially with tmux's client/server model), you can manually register the mapping.
 
 ### The `/register-workspace` Command
 
@@ -59,7 +64,6 @@ This saves a mapping in `/tmp/claude_workspace_map.json`:
 {
   "tmux_MAIN_1": {
     "workspace": "3",
-    "window_id": "48208",
     "registered_at": "1768789301"
   }
 }
@@ -68,14 +72,26 @@ This saves a mapping in `/tmp/claude_workspace_map.json`:
 ### How It Works
 
 1. **Environment Key**: Generated from tmux session/window (`tmux_SESSION_WINDOW`) or VS Code PID (`vscode_PID`)
-2. **Window ID**: Retrieved from the specified workspace using `aerospace list-windows`
-3. **Priority**: Manual mapping takes precedence over automatic detection
+2. **Priority**: Manual mapping is required for notifications to work correctly
+3. **Persistence**: Mapping persists until system restart (stored in /tmp)
 
 ### When to Use
 
-- When running Claude in multiple tmux windows simultaneously
-- When automatic workspace detection produces incorrect results
-- When you want explicit control over notification placement
+- When starting Claude in a new tmux window
+- When running Claude in VS Code integrated terminal
+- Anytime you want notifications to appear on the correct workspace
+
+## Supported Environments
+
+| Environment | Editor | Method |
+|-------------|--------|--------|
+| **Local** | Terminal / VS Code | Direct detection + manual registration |
+| **Local Container** | Terminal | `dexec` + bind mount |
+| **Local Container** | VS Code | `DEVCONTAINER_NAME` + bind mount |
+| **Remote** | Terminal | `rssh` + SSH + inotifywait |
+| **Remote** | VS Code | Direct detection |
+| **Remote Container** | Terminal | `rssh` + `dexec` + bind mount |
+| **Remote Container** | VS Code | `DEVCONTAINER_NAME` + bind mount |
 
 ## Architecture
 
@@ -83,10 +99,10 @@ This saves a mapping in `/tmp/claude_workspace_map.json`:
 
 ```
 Claude Code (hooks)
-    ↓ ai-notify.sh <tool> <event>
-    ↓ claude-status.sh set <project> <status>
-/tmp/claude_status/*.json
-    ↓ sketchybar --trigger claude_status_change
+    | ai-notify.sh <tool> <event>
+    | claude-status.sh set <project> <status> <workspace>
+/tmp/claude_status/workspace_*.json
+    | sketchybar --trigger claude_status_change
 SketchyBar badge update
 ```
 
@@ -94,11 +110,11 @@ SketchyBar badge update
 
 ```
 Claude Code (hooks) @ Container
-    ↓ ai-notify.sh (file write)
+    | ai-notify.sh (file write)
 /tmp/claude_status/*.json @ Container
-    ↓ bind mount (docker run -v /tmp/claude_status:/tmp/claude_status)
+    | bind mount (docker run -v /tmp/claude_status:/tmp/claude_status)
 /tmp/claude_status/*.json @ Mac
-    ↓ sketchybar --trigger (ai-notify.sh executes directly)
+    | sketchybar --trigger (ai-notify.sh executes directly)
 SketchyBar badge update
 ```
 
@@ -106,14 +122,14 @@ SketchyBar badge update
 
 ```
 Claude Code (hooks) @ Remote
-    ↓ ai-notify.sh (file write)
+    | ai-notify.sh (file write)
 /tmp/claude_status/*.json @ Remote
-    ↓ inotifywait (file change detection)
-    ↓ Persistent SSH connection
+    | inotifywait (file change detection)
+    | Persistent SSH connection
 Mac (claude-status-watch.sh)
-    ↓ claude-status.sh set
-/tmp/claude_status/*.json @ Mac
-    ↓ sketchybar --trigger
+    | claude-status.sh set
+/tmp/claude_status/workspace_*.json @ Mac
+    | sketchybar --trigger
 SketchyBar badge update
 ```
 
@@ -121,16 +137,16 @@ SketchyBar badge update
 
 ```
 Claude Code (hooks) @ Container
-    ↓ ai-notify.sh (file write)
+    | ai-notify.sh (file write)
 /tmp/claude_status/*.json @ Container
-    ↓ bind mount (configured in devcontainer.json)
+    | bind mount (configured in devcontainer.json)
 /tmp/claude_status/*.json @ Remote Host
-    ↓ inotifywait (file change detection)
-    ↓ Persistent SSH connection
+    | inotifywait (file change detection)
+    | Persistent SSH connection
 Mac (claude-status-watch.sh)
-    ↓ claude-status.sh set
-/tmp/claude_status/*.json @ Mac
-    ↓ sketchybar --trigger
+    | claude-status.sh set
+/tmp/claude_status/workspace_*.json @ Mac
+    | sketchybar --trigger
 SketchyBar badge update
 ```
 
@@ -142,11 +158,11 @@ In Ghostty + tmux environments, badges are displayed on the tmux status bar in a
 
 ```
 Claude Code (hooks)
-    ↓ ai-notify.sh (records tmux_session, tmux_window_index)
-/tmp/claude_status/window_*.json
-    ↓ tmux refresh-client -S
+    | ai-notify.sh (records tmux_session, tmux_window_index)
+/tmp/claude_status/workspace_*.json
+    | tmux refresh-client -S
 tmux status bar update
-    ↓ tmux-claude-badge.sh (called from window-status-format)
+    | tmux-claude-badge.sh (called from window-status-format)
 Orange badge display (with notification count)
 ```
 
@@ -159,8 +175,8 @@ Orange badge display (with notification count)
 
 ### Auto-clear
 
-1. Focus on window and **stay for 6 seconds** → Clear notification
-2. Leave window (under 6 seconds) → Keep notification
+1. Focus on window and **stay for 5 seconds** -> Clear notification
+2. Leave window (under 5 seconds) -> Keep notification
 3. Manual clear with `clear-tmux` command also available
 
 ### Configuration Files
@@ -182,7 +198,7 @@ Environment variable for properly handling notifications inside containers. Auto
 {
   "project": "my-project",
   "device": "matsushima-mbp",
-  "window_id": "12345",
+  "workspace": "3",
   "tmux_session": "main",
   "tmux_window": "0"
 }
@@ -192,7 +208,7 @@ Environment variable for properly handling notifications inside containers. Auto
 |-------|-------------|
 | `project` | Project name (shown in Slack notification) |
 | `device` | Device name (shown in Slack notification) |
-| `window_id` | Aerospace window ID (for SketchyBar) |
+| `workspace` | Aerospace workspace number (for SketchyBar) |
 | `tmux_session` | tmux session name |
 | `tmux_window` | tmux window index |
 
@@ -256,7 +272,7 @@ ai-notify.sh --clear-cache        # Clear cache
 
 **Features**:
 - Retrieves context from `CLAUDE_CONTEXT` environment variable (for containers)
-- Fallback: Local detection (for local Mac)
+- Fallback: Local detection with manual workspace mapping
 - Retrieves and caches Webhook URLs from 1Password
 - Sends Slack notifications (toggles mention based on event)
 - Updates SketchyBar state
@@ -266,19 +282,13 @@ ai-notify.sh --clear-cache        # Clear cache
 Project state management. Works with Aerospace/tmux to identify workspaces.
 
 ```bash
-claude-status.sh set <project> <status> [session_id] [tty] [window_id] [container_name] [tmux_session] [tmux_window_index]
-claude-status.sh get <window_id>
+claude-status.sh set <project> <status> <workspace> [tmux_session] [tmux_window_index]
+claude-status.sh get <workspace>
 claude-status.sh list
-claude-status.sh clear <window_id>
+claude-status.sh clear <workspace>
 claude-status.sh clear-tmux <tmux_session> <tmux_window_index>  # Clear tmux window notification
 claude-status.sh cleanup          # Delete items not updated for 1+ hours
-claude-status.sh find-workspace <window_id>
 ```
-
-**Workspace search logic**:
-1. Search VS Code window title for container name/project name
-2. Search terminal window title
-3. Identify Aerospace workspace from window ID
 
 ### scripts/register-workspace.sh
 
@@ -288,7 +298,7 @@ Manually registers the current environment (tmux window / VS Code) to an Aerospa
 register-workspace.sh <workspace_number>
 ```
 
-Saves mapping to `/tmp/claude_workspace_map.json`. This mapping takes priority over automatic detection in `ai-notify.sh`.
+Saves mapping to `/tmp/claude_workspace_map.json`. This mapping is used by `ai-notify.sh` to determine which workspace to notify.
 
 ### scripts/claude-status-watch.sh
 
@@ -328,7 +338,7 @@ tmux-claude-badge.sh window <window_index> [focused]
 
 Notification clearing process when focusing tmux window. Called from `session-window-changed` hook.
 
-- Auto-clear with 6 second timer
+- Auto-clear with 5 second timer
 - Timer cancels if window is left
 
 ### common/tmux/.config/tmux/claude-hooks.tmux
@@ -383,11 +393,19 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
    ai-notify.sh --setup claude
    ```
 
+4. **Register Your Workspace**
+
+   In Claude Code, run:
+   ```
+   /register-workspace <workspace_number>
+   ```
+
 ---
 
 ### 1. Local (Mac directly)
 
 No additional configuration needed. Only the common configuration above is required.
+Remember to use `/register-workspace` to map your environment to the correct workspace.
 
 ---
 
@@ -543,11 +561,11 @@ claude
 # Check status
 claude-status.sh list
 
-# Status of specific project
-claude-status.sh get my-project
+# Status of specific workspace
+claude-status.sh get 3
 
 # Manually set status (for testing)
-claude-status.sh set my-project complete
+claude-status.sh set my-project complete 3
 
 # Cleanup old status
 claude-status.sh cleanup
@@ -583,20 +601,25 @@ Enter Service Mode with Aerospace `alt+shift+;`:
 
 ### Badge Not Displaying
 
-1. Check status file:
+1. Check if workspace is registered:
    ```bash
-   ls -la /tmp/claude_status/
-   cat /tmp/claude_status/*.json
+   cat /tmp/claude_workspace_map.json | jq .
    ```
 
-2. Test workspace search:
+2. Check status files:
    ```bash
-   claude-status.sh find-workspace my-project
+   ls -la /tmp/claude_status/
+   cat /tmp/claude_status/workspace_*.json
    ```
 
 3. Manually trigger SketchyBar:
    ```bash
    sketchybar --trigger claude_status_change
+   ```
+
+4. Register workspace manually:
+   ```
+   /register-workspace <workspace_number>
    ```
 
 ### Remote Notifications Not Arriving
@@ -648,23 +671,31 @@ Enter Service Mode with Aerospace `alt+shift+;`:
 dotfiles/
 ├── scripts/
 │   ├── ai-notify.sh                # Main notification script (CLAUDE_CONTEXT support)
-│   ├── claude-status.sh            # State management
+│   ├── claude-status.sh            # State management (workspace-based)
 │   ├── claude-status-watch.sh      # Remote monitoring (SSH + inotifywait)
 │   ├── claude-status-local-watch.sh # Local container monitoring (launchd WatchPaths)
+│   ├── register-workspace.sh       # Manual workspace registration
 │   ├── tmux-claude-badge.sh        # tmux badge display
 │   └── tmux-claude-focus.sh        # tmux focus processing
 ├── common/zsh/.zshrc.common        # _claude_context, dexec, rssh function definitions
 ├── common/sketchybar/.config/sketchybar/
 │   └── plugins/
-│       └── claude.sh               # SketchyBar plugin
+│       └── claude.sh               # SketchyBar plugin (workspace-based)
 ├── common/tmux/.config/tmux/
 │   └── claude-hooks.tmux           # tmux hooks configuration
-└── templates/
-    └── com.user.claude-status-watch.plist  # launchd template
+├── templates/
+│   ├── claude-skills/
+│   │   └── register-workspace/
+│   │       └── SKILL.md            # /register-workspace skill template
+│   └── com.user.claude-status-watch.plist  # launchd template
+└── docs/
+    └── claude-notification.md      # This documentation
 ```
 
 ## Related Configuration
 
 - `~/.claude/settings.json` - Claude Code hooks configuration
+- `~/.claude/skills/register-workspace/` - Generated skill for workspace registration
 - `~/.local/share/ai-notify/` - Webhook cache
 - `/tmp/claude_status/` - State files
+- `/tmp/claude_workspace_map.json` - Workspace mappings

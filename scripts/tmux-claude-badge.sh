@@ -29,7 +29,7 @@ show_window_badge() {
 
   local count=0
 
-  for f in "$STATUS_DIR"/window_*.json; do
+  for f in "$STATUS_DIR"/workspace_*.json; do
     [[ -f "$f" ]] || continue
     local file_session file_window file_status
     file_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)

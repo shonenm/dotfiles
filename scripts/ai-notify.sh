@@ -96,14 +96,6 @@ setup_tool() {
   echo "Cached webhook for $tool"
 
   send_setup_notification "$tool" "$webhook"
-
-  # SketchyBar バッジ作成（リモート環境のみ）
-  if [[ "$(uname)" != "Darwin" ]] || [[ -n "${SSH_CONNECTION:-}" ]]; then
-    local project="${DEVCONTAINER_NAME:-$(basename "$(pwd)")}"
-    local status_dir="/tmp/claude_status"
-    mkdir -p "$status_dir"
-    echo "{\"project\":\"$project\",\"status\":\"complete\",\"session_id\":\"\",\"timestamp\":$(date +%s)}" > "$status_dir/${project}.json"
-  fi
 }
 
 # --refresh-cache オプション: 全ツールのキャッシュを更新（通知なし）
@@ -167,25 +159,21 @@ fi
 update_sketchybar_status() {
   local project="$1"
   local status="$2"
-  local session_id="${3:-}"
-  local tty="${4:-}"
-  local window_id="${5:-}"
-  local container_name="${6:-}"
-  local tmux_session="${7:-}"
-  local tmux_window_index="${8:-}"
+  local workspace="${3:-}"
+  local tmux_session="${4:-}"
+  local tmux_window_index="${5:-}"
 
   # ローカル環境かどうかを判定
   if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
     # ローカル Mac - 直接更新
-    "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$session_id" "$tty" "$window_id" "$container_name" "$tmux_session" "$tmux_window_index" 2>/dev/null || true
+    "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$workspace" "$tmux_session" "$tmux_window_index" 2>/dev/null || true
   else
     # リモート環境 - ファイルに書き込み（Macが監視）
     local status_dir="/tmp/claude_status"
     mkdir -p "$status_dir"
     local safe_project="${project//\//_}"
     local status_file="$status_dir/${safe_project}.json"
-    # window_id を含めることで、ホスト側でウィンドウ検索をスキップ可能
-    echo "{\"project\":\"$project\",\"status\":\"$status\",\"session_id\":\"$session_id\",\"window_id\":\"$window_id\",\"container_name\":\"$container_name\",\"tmux_session\":\"$tmux_session\",\"tmux_window_index\":\"$tmux_window_index\",\"timestamp\":$(date +%s)}" > "$status_file"
+    echo "{\"project\":\"$project\",\"status\":\"$status\",\"workspace\":\"$workspace\",\"tmux_session\":\"$tmux_session\",\"tmux_window_index\":\"$tmux_window_index\",\"timestamp\":$(date +%s)}" > "$status_file"
   fi
 }
 
@@ -225,29 +213,26 @@ get_webhook() {
   fi
 
   SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
-  TTY=$(tty 2>/dev/null || echo "")
 
   # CLAUDE_CONTEXT 環境変数からコンテキスト取得（コンテナ用）
   # 設定されていれば環境推測をスキップして明示的な値を使用
   if [[ -n "${CLAUDE_CONTEXT:-}" ]]; then
     PROJECT=$(echo "$CLAUDE_CONTEXT" | jq -r '.project // empty' 2>/dev/null)
     DEVICE=$(echo "$CLAUDE_CONTEXT" | jq -r '.device // empty' 2>/dev/null)
-    WINDOW_ID=$(echo "$CLAUDE_CONTEXT" | jq -r '.window_id // empty' 2>/dev/null)
+    WORKSPACE=$(echo "$CLAUDE_CONTEXT" | jq -r '.workspace // empty' 2>/dev/null)
     TMUX_SESSION=$(echo "$CLAUDE_CONTEXT" | jq -r '.tmux_session // empty' 2>/dev/null)
     TMUX_WINDOW_INDEX=$(echo "$CLAUDE_CONTEXT" | jq -r '.tmux_window // empty' 2>/dev/null)
-    CONTAINER_NAME=""  # dexec経由なのでコンテナ名検索不要
   else
-    # フォールバック: ローカル検出（従来ロジック）
+    # フォールバック: ローカル検出
     CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
     [[ -z "$CWD" ]] && CWD=$(pwd)
     PROJECT=$(basename "$CWD")
-    CONTAINER_NAME="${DEVCONTAINER_NAME:-}"
     DEVICE=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
 
-    # window_id取得（ローカルMacのみ）
-    WINDOW_ID=""
+    # workspace取得（ローカルMacのみ）
+    WORKSPACE=""
     if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
-      # 1. 手動マッピングを最優先で確認
+      # 手動マッピングからworkspaceを取得
       WORKSPACE_MAP_FILE="/tmp/claude_workspace_map.json"
       if [[ -f "$WORKSPACE_MAP_FILE" ]]; then
         # 環境キーを生成
@@ -260,41 +245,7 @@ get_webhook() {
         fi
 
         if [[ -n "$MAP_ENV_KEY" ]]; then
-          MAPPED_WINDOW_ID=$(jq -r --arg key "$MAP_ENV_KEY" '.[$key].window_id // empty' "$WORKSPACE_MAP_FILE" 2>/dev/null)
-          if [[ -n "$MAPPED_WINDOW_ID" ]]; then
-            # マッピングされたwindow_idが有効か確認
-            if aerospace list-windows --all --json 2>/dev/null | jq -e ".[] | select(.[\"window-id\"] == $MAPPED_WINDOW_ID)" &>/dev/null; then
-              WINDOW_ID="$MAPPED_WINDOW_ID"
-            fi
-          fi
-        fi
-      fi
-
-      # 2. マッピングがなければ既存のキャッシュロジック
-      if [[ -z "$WINDOW_ID" ]]; then
-        WINDOW_ID_KEY="${PROJECT}_${SESSION_ID:-default}"
-        WINDOW_ID_FILE="/tmp/claude_window_${WINDOW_ID_KEY}"
-
-        CACHED_VALID=false
-        if [[ -f "$WINDOW_ID_FILE" ]]; then
-          CACHED_ID=$(cat "$WINDOW_ID_FILE")
-          if aerospace list-windows --all --json 2>/dev/null | jq -e ".[] | select(.[\"window-id\"] == $CACHED_ID)" &>/dev/null; then
-            WINDOW_ID="$CACHED_ID"
-            CACHED_VALID=true
-          else
-            rm -f "$WINDOW_ID_FILE"
-          fi
-        fi
-
-        if [[ "$CACHED_VALID" == "false" ]]; then
-          FOCUSED_JSON=$(aerospace list-windows --focused --json 2>/dev/null)
-          FOCUSED_APP=$(echo "$FOCUSED_JSON" | jq -r '.[0]["app-name"] // ""')
-          case "$FOCUSED_APP" in
-            Ghostty|Terminal|iTerm2|Alacritty|Warp|WezTerm|kitty|Code)
-              WINDOW_ID=$(echo "$FOCUSED_JSON" | jq -r '.[0]["window-id"] // ""')
-              [[ -n "$WINDOW_ID" ]] && echo "$WINDOW_ID" > "$WINDOW_ID_FILE"
-              ;;
-          esac
+          WORKSPACE=$(jq -r --arg key "$MAP_ENV_KEY" '.[$key].workspace // empty' "$WORKSPACE_MAP_FILE" 2>/dev/null)
         fi
       fi
     fi
@@ -303,19 +254,8 @@ get_webhook() {
     TMUX_SESSION=""
     TMUX_WINDOW_INDEX=""
     if [[ -n "${TMUX:-}" ]]; then
-      TMUX_INFO_KEY="${PROJECT}_${SESSION_ID:-default}"
-      TMUX_INFO_FILE="/tmp/claude_tmux_${TMUX_INFO_KEY}"
-
-      if [[ -f "$TMUX_INFO_FILE" ]]; then
-        TMUX_SESSION=$(jq -r '.session // ""' "$TMUX_INFO_FILE" 2>/dev/null)
-        TMUX_WINDOW_INDEX=$(jq -r '.window // ""' "$TMUX_INFO_FILE" 2>/dev/null)
-      else
-        TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
-        TMUX_WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
-        if [[ -n "$TMUX_SESSION" && -n "$TMUX_WINDOW_INDEX" ]]; then
-          echo "{\"session\":\"$TMUX_SESSION\",\"window\":\"$TMUX_WINDOW_INDEX\"}" > "$TMUX_INFO_FILE"
-        fi
-      fi
+      TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+      TMUX_WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
     fi
   fi
 
@@ -325,19 +265,13 @@ get_webhook() {
       idle)       SKETCHYBAR_STATUS="idle" ;;
       permission) SKETCHYBAR_STATUS="permission" ;;
       complete)   SKETCHYBAR_STATUS="complete" ;;
-      stop|error)
-        SKETCHYBAR_STATUS="none"
-        # キャッシュファイルをクリーンアップ
-        rm -f "/tmp/claude_window_${PROJECT}_${SESSION_ID:-default}" 2>/dev/null
-        rm -f "/tmp/claude_tmux_${PROJECT}_${SESSION_ID:-default}" 2>/dev/null
-        ;;
+      stop|error) SKETCHYBAR_STATUS="none" ;;
       *)          SKETCHYBAR_STATUS="" ;;
     esac
 
     # SketchyBar 状態更新
-    if [[ -n "$SKETCHYBAR_STATUS" ]]; then
-      # window_id でワークスペースを正確に特定（tmux切替後も正しく動作）
-      update_sketchybar_status "$PROJECT" "$SKETCHYBAR_STATUS" "$SESSION_ID" "$TTY" "$WINDOW_ID" "$CONTAINER_NAME" "$TMUX_SESSION" "$TMUX_WINDOW_INDEX"
+    if [[ -n "$SKETCHYBAR_STATUS" && -n "$WORKSPACE" ]]; then
+      update_sketchybar_status "$PROJECT" "$SKETCHYBAR_STATUS" "$WORKSPACE" "$TMUX_SESSION" "$TMUX_WINDOW_INDEX"
     fi
   fi
 

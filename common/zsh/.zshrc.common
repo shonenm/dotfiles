@@ -113,12 +113,7 @@ function y() {
 _claude_context() {
   local project="${CLAUDE_PROJECT:-$(basename "$PWD")}"
   local device="$(hostname -s)"
-  local window_id="" tmux_session="" tmux_window=""
-
-  # Mac上でのみ window_id 取得 (aerospace)
-  if command -v aerospace &>/dev/null; then
-    window_id=$(aerospace list-windows --focused --json 2>/dev/null | jq -r '.[0]["window-id"] // ""')
-  fi
+  local workspace="" tmux_session="" tmux_window=""
 
   # tmux情報
   if [[ -n "$TMUX" ]]; then
@@ -126,7 +121,21 @@ _claude_context() {
     tmux_window=$(tmux display-message -p '#I' 2>/dev/null)
   fi
 
-  echo "{\"project\":\"$project\",\"device\":\"$device\",\"window_id\":\"$window_id\",\"tmux_session\":\"$tmux_session\",\"tmux_window\":\"$tmux_window\"}"
+  # 手動マッピングからworkspaceを取得
+  local map_file="/tmp/claude_workspace_map.json"
+  if [[ -f "$map_file" ]]; then
+    local env_key=""
+    if [[ -n "$TMUX" ]]; then
+      env_key="tmux_${tmux_session}_${tmux_window}"
+    elif [[ -n "$VSCODE_PID" ]]; then
+      env_key="vscode_${VSCODE_PID}"
+    fi
+    if [[ -n "$env_key" ]]; then
+      workspace=$(jq -r --arg key "$env_key" '.[$key].workspace // ""' "$map_file" 2>/dev/null)
+    fi
+  fi
+
+  echo "{\"project\":\"$project\",\"device\":\"$device\",\"workspace\":\"$workspace\",\"tmux_session\":\"$tmux_session\",\"tmux_window\":\"$tmux_window\"}"
 }
 
 # Dockerコンテナ進入 (CLAUDE_CONTEXT 自動設定/継承)

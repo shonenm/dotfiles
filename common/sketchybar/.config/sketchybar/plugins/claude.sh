@@ -1,55 +1,47 @@
 #!/bin/bash
 # Claude Code Status Plugin for SketchyBar
-# Updates workspace/app badges based on Claude session status (window-id based)
+# Updates workspace badges based on Claude session status (workspace-based)
 
 source "$CONFIG_DIR/plugins/colors.sh"
 
 STATUS_DIR="/tmp/claude_status"
-FOCUS_STATE_FILE="/tmp/sketchybar_window_focus"
+FOCUS_STATE_FILE="/tmp/sketchybar_workspace_focus"
 
-# バッジ色
+# Badge colors
 BADGE_COLOR="$SERVICE_MODE_COLOR"
 BADGE_COLOR_DIM="$DIM_BADGE_COLOR"
 
-# tmux情報を考慮して通知を削除するヘルパー関数
-# 引数: window_id [tmux_session] [tmux_window]
-# session/windowが指定されればそれを使用、なければ現在位置を取得
-remove_notifications_for_window() {
-  local target_window_id="$1"
+# Remove notifications for a workspace (considering tmux position)
+remove_notifications_for_workspace() {
+  local target_workspace="$1"
   local target_session="${2:-}"
   local target_window="${3:-}"
 
-  # 引数がなければ現在のtmux位置を取得
-  if [[ -z "$target_session" || -z "$target_window" ]]; then
-    target_session=$(tmux display-message -p '#S' 2>/dev/null || echo "")
-    target_window=$(tmux display-message -p '#I' 2>/dev/null || echo "")
-  fi
-
-  for f in "$STATUS_DIR"/window_${target_window_id}_*.json; do
+  for f in "$STATUS_DIR"/workspace_${target_workspace}_*.json; do
     [[ -f "$f" ]] || continue
     local notif_session notif_window
     notif_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
     notif_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
 
     if [[ -z "$notif_session" || -z "$notif_window" ]]; then
-      # 通知にtmux情報なし → 削除OK
+      # No tmux info in notification -> OK to delete
       rm -f "$f"
     elif [[ -z "$target_session" || -z "$target_window" ]]; then
-      # 現在tmux未検出（VS Codeなど）→ window_id一致で削除OK
+      # Current tmux not detected (VS Code etc) -> OK to delete
       rm -f "$f"
     elif [[ "$notif_session" == "$target_session" && "$notif_window" == "$target_window" ]]; then
-      # tmux位置が一致 → 削除
+      # tmux position matches -> delete
       rm -f "$f"
     fi
   done
 }
 
-# 5秒タイマーを開始（既存タイマーはキャンセル）
+# Start 5-second timer (cancel existing timer)
 start_clear_timer() {
-  local window_id="$1"
+  local workspace="$1"
   local app_name="${2:-}"
 
-  # 既存タイマーをキャンセル
+  # Cancel existing timer
   if [[ -f "$FOCUS_STATE_FILE" ]]; then
     local prev_pid
     prev_pid=$(cut -d: -f3 "$FOCUS_STATE_FILE" 2>/dev/null)
@@ -59,8 +51,8 @@ start_clear_timer() {
   local now
   now=$(date +%s)
 
-  # 現在のtmux位置を記録（タイマー実行時に使用）
-  # ターミナル系アプリの場合のみtmux情報を使用
+  # Record current tmux position (for timer execution)
+  # Only use tmux info for terminal apps
   local cur_session="" cur_window=""
   case "$app_name" in
     "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
@@ -69,24 +61,21 @@ start_clear_timer() {
       ;;
   esac
 
-  # 5秒後に自動消去するバックグラウンドタイマーを開始
+  # Start background timer for auto-clear after 5 seconds
   (
     sleep 5
-    # tmux情報を考慮して削除
-    for f in "$STATUS_DIR"/window_${window_id}_*.json; do
+    # Delete considering tmux info
+    for f in "$STATUS_DIR"/workspace_${workspace}_*.json; do
       [[ -f "$f" ]] || continue
       local notif_session notif_window
       notif_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
       notif_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
 
       if [[ -z "$notif_session" || -z "$notif_window" ]]; then
-        # 通知にtmux情報なし → 削除OK
         rm -f "$f"
       elif [[ -z "$cur_session" || -z "$cur_window" ]]; then
-        # 現在tmux未検出（VS Codeなど）→ window_id一致で削除OK
         rm -f "$f"
       elif [[ "$notif_session" == "$cur_session" && "$notif_window" == "$cur_window" ]]; then
-        # tmux位置が一致 → 削除
         rm -f "$f"
       fi
     done
@@ -94,29 +83,29 @@ start_clear_timer() {
   ) &
   local timer_pid=$!
 
-  # tmux位置も保存（2秒ルールで使用）
-  echo "${window_id}:${now}:${timer_pid}:${cur_session}:${cur_window}" > "$FOCUS_STATE_FILE"
+  # Save workspace focus state
+  echo "${workspace}:${now}:${timer_pid}:${cur_session}:${cur_window}" > "$FOCUS_STATE_FILE"
 }
 
-# ウィンドウフォーカス変更時の3段階ロジック
+# 3-stage logic for window focus change
 handle_focus_change() {
+  local focused_ws
+  focused_ws=$(aerospace list-workspaces --focused 2>/dev/null)
+
   local focused
   focused=$(aerospace list-windows --focused --json 2>/dev/null)
 
   local app_name
   app_name=$(echo "$focused" | jq -r '.[0]["app-name"] // ""' 2>/dev/null)
 
-  local window_id
-  window_id=$(echo "$focused" | jq -r '.[0]["window-id"] // ""' 2>/dev/null)
-
   local now
   now=$(date +%s)
 
-  # 前回のフォーカス状態を読み込み、タイマー処理
+  # Load previous focus state and handle timer
   if [[ -f "$FOCUS_STATE_FILE" ]]; then
-    local prev_state prev_window_id prev_ts prev_pid prev_session prev_tmux_window
+    local prev_state prev_workspace prev_ts prev_pid prev_session prev_tmux_window
     prev_state=$(cat "$FOCUS_STATE_FILE" 2>/dev/null)
-    prev_window_id=$(echo "$prev_state" | cut -d: -f1)
+    prev_workspace=$(echo "$prev_state" | cut -d: -f1)
     prev_ts=$(echo "$prev_state" | cut -d: -f2)
     prev_pid=$(echo "$prev_state" | cut -d: -f3)
     prev_session=$(echo "$prev_state" | cut -d: -f4)
@@ -124,49 +113,48 @@ handle_focus_change() {
 
     local elapsed=$((now - prev_ts))
 
-    # 同じウィンドウなら何もしない（重複イベント対策）
-    if [[ "$prev_window_id" == "$window_id" ]]; then
+    # Same workspace -> do nothing (duplicate event handling)
+    if [[ "$prev_workspace" == "$focused_ws" ]]; then
       return
     fi
 
-    # 前回のタイマーをキャンセル（ウィンドウが変わった場合のみ）
+    # Cancel previous timer (only when workspace changed)
     [[ -n "$prev_pid" ]] && kill "$prev_pid" 2>/dev/null
 
-    # ウィンドウが変わった場合の2秒ルール
+    # 2-second rule when workspace changed
     if [[ $elapsed -ge 2 ]]; then
-      # 2秒以上滞在 → 前ウィンドウの全通知を消す（tmux位置関係なく）
-      rm -f "$STATUS_DIR"/window_${prev_window_id}_*.json 2>/dev/null
+      # Stayed 2+ seconds -> clear all notifications for prev workspace
+      rm -f "$STATUS_DIR"/workspace_${prev_workspace}_*.json 2>/dev/null
       sketchybar --trigger claude_status_change 2>/dev/null
     fi
   fi
 
-  [[ -z "$window_id" ]] && return
+  [[ -z "$focused_ws" ]] && return
 
-  # VS Code/ターミナルの場合のみ5秒タイマーを開始
-  # 非対象アプリではタイマー不要だが、focus stateは保持（2秒ルール用）
+  # Start 5-second timer only for VS Code/terminals
   case "$app_name" in
     "Code"|"Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
-      start_clear_timer "$window_id" "$app_name"
+      start_clear_timer "$focused_ws" "$app_name"
       ;;
     *)
-      # 非対象アプリ: タイマーなしでfocus stateだけ更新（2秒ルール用）
-      echo "${window_id}:${now}:::" > "$FOCUS_STATE_FILE"
+      # Non-target app: just update focus state (for 2-second rule)
+      echo "${focused_ws}:${now}:::" > "$FOCUS_STATE_FILE"
       ;;
   esac
 }
 
-# 通知が来た時、フォーカス中のウィンドウならタイマーを（再）開始
+# When notification arrives, (re)start timer if focused workspace has notifications
 handle_notification_arrived() {
+  local focused_ws
+  focused_ws=$(aerospace list-workspaces --focused 2>/dev/null)
+
   local focused
   focused=$(aerospace list-windows --focused --json 2>/dev/null)
 
   local app_name
   app_name=$(echo "$focused" | jq -r '.[0]["app-name"] // ""' 2>/dev/null)
 
-  local window_id
-  window_id=$(echo "$focused" | jq -r '.[0]["window-id"] // ""' 2>/dev/null)
-
-  # VS Code またはターミナルアプリの場合のみ処理
+  # Only process for VS Code or terminal apps
   case "$app_name" in
     "Code"|"Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
       ;;
@@ -175,30 +163,27 @@ handle_notification_arrived() {
       ;;
   esac
 
-  [[ -z "$window_id" ]] && return
+  [[ -z "$focused_ws" ]] && return
 
-  # フォーカス中のウィンドウに通知があるかチェック
-  if ls "$STATUS_DIR"/window_${window_id}_*.json &>/dev/null; then
+  # Check if focused workspace has notifications
+  if ls "$STATUS_DIR"/workspace_${focused_ws}_*.json &>/dev/null; then
     local should_start_timer=true
 
-    # Terminal系アプリでtmuxが動作している場合、tmux位置も確認
+    # For terminal apps with tmux, also check tmux position
     case "$app_name" in
       "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
-        # tmuxサーバーが動作しているかチェック（$TMUX変数に依存しない）
         local current_session current_window
         current_session=$(tmux display-message -p '#S' 2>/dev/null)
         current_window=$(tmux display-message -p '#I' 2>/dev/null)
         if [[ -n "$current_session" && -n "$current_window" ]]; then
-
-          # この window_id の通知で tmux 情報を持つものがあるかチェック
-          for f in "$STATUS_DIR"/window_${window_id}_*.json; do
+          # Check notifications with tmux info
+          for f in "$STATUS_DIR"/workspace_${focused_ws}_*.json; do
             [[ -f "$f" ]] || continue
             local notif_session notif_window
             notif_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
             notif_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
 
             if [[ -n "$notif_session" && -n "$notif_window" ]]; then
-              # tmux情報がある通知 → 現在のtmux位置と一致するかチェック
               if [[ "$notif_session" != "$current_session" || "$notif_window" != "$current_window" ]]; then
                 should_start_timer=false
                 break
@@ -210,31 +195,29 @@ handle_notification_arrived() {
     esac
 
     if [[ "$should_start_timer" == "true" ]]; then
-      start_clear_timer "$window_id" "$app_name"
+      start_clear_timer "$focused_ws" "$app_name"
     fi
   fi
 }
 
-# バッジを更新（ワークスペース + アプリ）
+# Update badges (workspace + app)
 update_badges() {
   local focused_ws
   focused_ws=$(aerospace list-workspaces --focused 2>/dev/null)
 
-  # フォーカス中のアプリを取得
+  # Get focused app
   local focused_app
   focused_app=$(aerospace list-windows --focused --json 2>/dev/null | jq -r '.[0]["app-name"] // ""' 2>/dev/null)
 
-  # アクティブなワークスペースを取得
+  # Get active workspaces
   local workspaces
   workspaces=$(aerospace list-workspaces --monitor all --empty no 2>/dev/null)
 
-  # 通知を収集（bash 3.2互換のため連想配列は使わない）
-  # ワークスペースごとの通知数
+  # Collect notifications (bash 3.2 compatible - no associative arrays)
   local ws_counts=""
-  # アプリごとの通知数（フォーカス中WSのみ）
   local app_counts=""
 
-  # ターミナルアプリの場合、現在のtmux位置を取得（ループ外で1回だけ）
+  # Get current tmux position for terminal apps (once outside loop)
   local current_tmux_session="" current_tmux_window=""
   case "$focused_app" in
     "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
@@ -244,42 +227,37 @@ update_badges() {
   esac
 
   if [[ -d "$STATUS_DIR" ]]; then
-    for f in "$STATUS_DIR"/window_*.json; do
+    for f in "$STATUS_DIR"/workspace_*.json; do
       [[ -f "$f" ]] || continue
-      local file_ws file_st file_app file_tmux_session file_tmux_window
+      local file_ws file_st file_tmux_session file_tmux_window
       file_ws=$(jq -r '.workspace // ""' "$f" 2>/dev/null)
       file_st=$(jq -r '.status // "none"' "$f" 2>/dev/null)
-      file_app=$(jq -r '.app_name // ""' "$f" 2>/dev/null)
       file_tmux_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
       file_tmux_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
 
-      # 対象ステータスのみ
+      # Only target statuses
       [[ "$file_st" == "idle" || "$file_st" == "permission" || "$file_st" == "complete" ]] || continue
 
       if [[ "$file_ws" == "$focused_ws" ]]; then
-        # フォーカス中のワークスペース → アプリバッジ用
-        if [[ -n "$file_app" ]]; then
-          # tmux情報を持つ通知で、かつ現在のtmux位置と完全一致する場合のみスキップ
-          if [[ -n "$file_tmux_session" && -n "$file_tmux_window" && \
-                "$file_tmux_session" == "$current_tmux_session" && \
-                "$file_tmux_window" == "$current_tmux_window" ]]; then
-            # 現在見ているtmuxウィンドウの通知 → スキップ（直接見ている）
-            :
-          else
-            app_counts="$app_counts|$file_app"
-          fi
+        # Focused workspace -> for app badges
+        # Skip if tmux position matches current (directly viewing)
+        if [[ -n "$file_tmux_session" && -n "$file_tmux_window" && \
+              "$file_tmux_session" == "$current_tmux_session" && \
+              "$file_tmux_window" == "$current_tmux_window" ]]; then
+          :
+        else
+          app_counts="$app_counts|$file_ws"
         fi
       else
-        # 他のワークスペース → ワークスペースバッジ用
+        # Other workspaces -> for workspace badges
         ws_counts="$ws_counts|$file_ws"
       fi
     done
   fi
 
-  # ワークスペースバッジを更新
+  # Update workspace badges
   for ws in $workspaces; do
     local total=0
-    # ws_counts から該当ワークスペースをカウント
     local remaining="$ws_counts"
     while [[ "$remaining" == *"|$ws"* ]]; do
       ((total++))
@@ -304,7 +282,7 @@ update_badges() {
     fi
   done
 
-  # フォーカス中WSの通知がある場合はそのWSのバッジをクリア
+  # Clear focused workspace badge if it has app notifications
   if [[ -n "$app_counts" ]]; then
     sketchybar --set "space.${focused_ws}_badge" \
       label="" \
@@ -312,11 +290,11 @@ update_badges() {
       background.drawing=off 2>/dev/null
   fi
 
-  # アプリバッジを更新（フォーカス中ワークスペースのアプリ）
+  # Update app badges (apps in focused workspace)
   local focused_apps
   focused_apps=$(aerospace list-windows --workspace "$focused_ws" --format '%{app-name}' 2>/dev/null | sort -u)
 
-  # タイマーがアクティブかチェック（薄い色を使うかどうか）
+  # Check if timer is active (for dim color)
   local current_badge_color="$BADGE_COLOR"
   if [[ -f "$FOCUS_STATE_FILE" ]]; then
     local timer_pid
@@ -329,12 +307,12 @@ update_badges() {
   for app in $focused_apps; do
     local app_total=0
     local remaining="$app_counts"
-    while [[ "$remaining" == *"|$app"* ]]; do
+    while [[ "$remaining" == *"|$focused_ws"* ]]; do
       ((app_total++))
-      remaining="${remaining/|$app/}"
+      remaining="${remaining/|$focused_ws/}"
     done
 
-    # アイテム名（スペースとドットをアンダースコアに）
+    # Item name (replace space and dot with underscore)
     local item_name="app.$(echo "$app" | tr ' .' '_')_badge"
 
     if [[ $app_total -eq 0 ]]; then
@@ -353,7 +331,7 @@ update_badges() {
   done
 }
 
-# メイン処理
+# Main
 main() {
   if [[ "$SENDER" == "front_app_switched" || "$SENDER" == "aerospace_workspace_change" ]]; then
     handle_focus_change
@@ -361,7 +339,7 @@ main() {
     handle_notification_arrived
   fi
 
-  # バッジを更新
+  # Update badges
   update_badges
 }
 
