@@ -123,8 +123,9 @@ SketchyBar badge update
 ```
 Claude Code (hooks) @ Remote
     | ai-notify.sh (file write)
-/tmp/claude_status/*.json @ Remote
+/tmp/claude_status/workspace_*.json @ Remote
     | inotifywait (file change detection)
+    | Read content + delete file
     | Persistent SSH connection
 Mac (claude-status-watch.sh)
     | claude-status.sh set
@@ -133,15 +134,18 @@ Mac (claude-status-watch.sh)
 SketchyBar badge update
 ```
 
+Note: Remote files are deleted after transfer to prevent stale notifications from piling up.
+
 ### 4. Cloud Container (Remote Dev Container)
 
 ```
 Claude Code (hooks) @ Container
     | ai-notify.sh (file write)
-/tmp/claude_status/*.json @ Container
+/tmp/claude_status/workspace_*.json @ Container
     | bind mount (configured in devcontainer.json)
-/tmp/claude_status/*.json @ Remote Host
+/tmp/claude_status/workspace_*.json @ Remote Host
     | inotifywait (file change detection)
+    | Read content + delete file
     | Persistent SSH connection
 Mac (claude-status-watch.sh)
     | claude-status.sh set
