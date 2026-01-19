@@ -12,7 +12,7 @@ A system that visualizes Claude Code events (completion, approval pending, input
 
 ## Workspace-Based Architecture
 
-This system uses **workspace-based** notification management. Rather than trying to auto-detect which aerospace window you're running in (which is unreliable, especially with tmux's client/server model), you manually register your environment to a workspace using the `/register-workspace` command.
+This system uses **workspace-based** notification management. Rather than trying to auto-detect which aerospace window you're running in (which is unreliable, especially with tmux's client/server model), you manually register your environment to a workspace using the `/beacon` command.
 
 ### Why Manual Registration?
 
@@ -46,17 +46,17 @@ CLI applications fundamentally cannot reliably determine which aerospace workspa
 
 ## Manual Workspace Registration
 
-### The `/register-workspace` Command
+### The `/beacon` Command
 
 Use this command in Claude Code to register the current environment to a specific workspace:
 
 ```
-/register-workspace <workspace_number>
+/beacon <workspace_number>
 ```
 
 Example:
 ```
-/register-workspace 3
+/beacon 3
 ```
 
 This saves a mapping in `/tmp/claude_workspace_map.json`:
@@ -294,7 +294,7 @@ claude-status.sh clear-tmux <tmux_session> <tmux_window_index>  # Clear tmux win
 claude-status.sh cleanup          # Delete items not updated for 1+ hours
 ```
 
-### scripts/register-workspace.sh
+### scripts/beacon.sh
 
 Manually registers the current environment (tmux window / VS Code) to an Aerospace workspace.
 
@@ -401,7 +401,7 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
 
    In Claude Code, run:
    ```
-   /register-workspace <workspace_number>
+   /beacon <workspace_number>
    ```
 
 ---
@@ -409,7 +409,7 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
 ### 1. Local (Mac directly)
 
 No additional configuration needed. Only the common configuration above is required.
-Remember to use `/register-workspace` to map your environment to the correct workspace.
+Remember to use `/beacon` to map your environment to the correct workspace.
 
 ---
 
@@ -577,17 +577,17 @@ claude-status.sh cleanup
 
 ### Workspace Registration (Claude Code)
 
-In Claude Code, use the `/register-workspace` command to manually map the current environment to a workspace:
+In Claude Code, use the `/beacon` command to manually map the current environment to a workspace:
 
 ```
-/register-workspace 3
+/beacon 3
 ```
 
 Or run the script directly:
 
 ```bash
 # Register current tmux window to workspace 3
-~/dotfiles/scripts/register-workspace.sh 3
+~/dotfiles/scripts/beacon.sh 3
 
 # Check current mappings
 cat /tmp/claude_workspace_map.json | jq .
@@ -623,7 +623,7 @@ Enter Service Mode with Aerospace `alt+shift+;`:
 
 4. Register workspace manually:
    ```
-   /register-workspace <workspace_number>
+   /beacon <workspace_number>
    ```
 
 ### Remote Notifications Not Arriving
@@ -689,8 +689,8 @@ dotfiles/
 │   └── claude-hooks.tmux           # tmux hooks configuration
 ├── templates/
 │   ├── claude-skills/
-│   │   └── register-workspace/
-│   │       └── SKILL.md            # /register-workspace skill template
+│   │   └── beacon/
+│   │       └── SKILL.md            # /beacon skill template
 │   └── com.user.claude-status-watch.plist  # launchd template
 └── docs/
     └── claude-notification.md      # This documentation
@@ -699,7 +699,7 @@ dotfiles/
 ## Related Configuration
 
 - `~/.claude/settings.json` - Claude Code hooks configuration
-- `~/.claude/skills/register-workspace/` - Generated skill for workspace registration
+- `~/.claude/skills/beacon/` - Generated skill for workspace registration
 - `~/.local/share/ai-notify/` - Webhook cache
 - `/tmp/claude_status/` - State files
 - `/tmp/claude_workspace_map.json` - Workspace mappings
