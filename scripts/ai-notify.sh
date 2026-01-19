@@ -171,8 +171,16 @@ update_sketchybar_status() {
     # リモート環境 - ファイルに書き込み（Macが監視）
     local status_dir="/tmp/claude_status"
     mkdir -p "$status_dir"
-    local safe_project="${project//\//_}"
-    local status_file="$status_dir/${safe_project}.json"
+    local status_file
+    if [[ -n "$workspace" ]]; then
+      # workspace があれば新形式
+      local timestamp=$(date +%s%N)
+      status_file="$status_dir/workspace_${workspace}_${timestamp}.json"
+    else
+      # workspace がなければプロジェクト名ベース（フォールバック）
+      local safe_project="${project//\//_}"
+      status_file="$status_dir/${safe_project}.json"
+    fi
     echo "{\"project\":\"$project\",\"status\":\"$status\",\"workspace\":\"$workspace\",\"tmux_session\":\"$tmux_session\",\"tmux_window_index\":\"$tmux_window_index\",\"timestamp\":$(date +%s)}" > "$status_file"
   fi
 }
@@ -229,24 +237,21 @@ get_webhook() {
     PROJECT=$(basename "$CWD")
     DEVICE=$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "unknown")
 
-    # workspace取得（ローカルMacのみ）
+    # workspace取得（全環境共通）
     WORKSPACE=""
-    if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
-      # 手動マッピングからworkspaceを取得
-      WORKSPACE_MAP_FILE="/tmp/claude_workspace_map.json"
-      if [[ -f "$WORKSPACE_MAP_FILE" ]]; then
-        # 環境キーを生成
-        if [[ -n "${TMUX:-}" ]]; then
-          MAP_ENV_KEY="tmux_$(tmux display-message -p '#S_#I' 2>/dev/null)"
-        elif [[ -n "${VSCODE_PID:-}" ]]; then
-          MAP_ENV_KEY="vscode_${VSCODE_PID}"
-        else
-          MAP_ENV_KEY=""
-        fi
+    WORKSPACE_MAP_FILE="/tmp/claude_workspace_map.json"
+    if [[ -f "$WORKSPACE_MAP_FILE" ]]; then
+      # 環境キーを生成
+      if [[ -n "${TMUX:-}" ]]; then
+        MAP_ENV_KEY="tmux_$(tmux display-message -p '#S_#I' 2>/dev/null)"
+      elif [[ -n "${VSCODE_PID:-}" ]]; then
+        MAP_ENV_KEY="vscode_${VSCODE_PID}"
+      else
+        MAP_ENV_KEY=""
+      fi
 
-        if [[ -n "$MAP_ENV_KEY" ]]; then
-          WORKSPACE=$(jq -r --arg key "$MAP_ENV_KEY" '.[$key].workspace // empty' "$WORKSPACE_MAP_FILE" 2>/dev/null)
-        fi
+      if [[ -n "$MAP_ENV_KEY" ]]; then
+        WORKSPACE=$(jq -r --arg key "$MAP_ENV_KEY" '.[$key].workspace // empty' "$WORKSPACE_MAP_FILE" 2>/dev/null)
       fi
     fi
 
