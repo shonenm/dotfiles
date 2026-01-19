@@ -34,7 +34,17 @@ trap cleanup EXIT INT TERM
 
   mkdir -p /tmp/claude_status
   stdbuf -oL "$INOTIFYWAIT" -m -e modify,create --format "%f" /tmp/claude_status/ 2>/dev/null | while read file; do
-    case "$file" in *.json) cat "/tmp/claude_status/$file" 2>/dev/null ;; esac
+    case "$file" in
+      workspace_*.json)
+        # workspace形式: 読み取り後に削除（Macに転送済み）
+        cat "/tmp/claude_status/$file" 2>/dev/null
+        rm -f "/tmp/claude_status/$file" 2>/dev/null
+        ;;
+      *.json)
+        # 旧形式: 読み取りのみ（互換性維持）
+        cat "/tmp/claude_status/$file" 2>/dev/null
+        ;;
+    esac
   done
 ' 2>/dev/null | while IFS= read -r line; do
   [[ -z "$line" ]] && continue
