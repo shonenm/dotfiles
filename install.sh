@@ -256,6 +256,22 @@ generate_ai_cli_configs() {
     log_success "  Generated ~/.claude/settings.json"
   fi
 
+  # Claude Code skills
+  if [[ -d "$templates_dir/claude-skills" ]]; then
+    mkdir -p "$HOME/.claude/skills"
+    for skill_dir in "$templates_dir/claude-skills"/*/; do
+      [[ -d "$skill_dir" ]] || continue
+      local skill_name
+      skill_name=$(basename "$skill_dir")
+      mkdir -p "$HOME/.claude/skills/$skill_name"
+      for file in "$skill_dir"*; do
+        [[ -f "$file" ]] || continue
+        sed "s|__HOME__|$HOME|g" "$file" > "$HOME/.claude/skills/$skill_name/$(basename "$file")"
+      done
+      log_success "  Generated skill: $skill_name"
+    done
+  fi
+
   # Codex CLI
   if [[ -f "$templates_dir/codex-config.toml" ]]; then
     mkdir -p "$HOME/.codex"

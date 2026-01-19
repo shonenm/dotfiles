@@ -37,6 +37,46 @@ Workspace search supports the following applications:
 | **kitty** | Directory name |
 | **Warp** | Directory name |
 
+## Manual Workspace Registration
+
+Since it's impossible to 100% accurately determine which Aerospace workspace a CLI application is running in (especially with tmux's client/server model), you can manually register the mapping.
+
+### The `/register-workspace` Command
+
+Use this command in Claude Code to register the current environment to a specific workspace:
+
+```
+/register-workspace <workspace_number>
+```
+
+Example:
+```
+/register-workspace 3
+```
+
+This saves a mapping in `/tmp/claude_workspace_map.json`:
+```json
+{
+  "tmux_MAIN_1": {
+    "workspace": "3",
+    "window_id": "48208",
+    "registered_at": "1768789301"
+  }
+}
+```
+
+### How It Works
+
+1. **Environment Key**: Generated from tmux session/window (`tmux_SESSION_WINDOW`) or VS Code PID (`vscode_PID`)
+2. **Window ID**: Retrieved from the specified workspace using `aerospace list-windows`
+3. **Priority**: Manual mapping takes precedence over automatic detection
+
+### When to Use
+
+- When running Claude in multiple tmux windows simultaneously
+- When automatic workspace detection produces incorrect results
+- When you want explicit control over notification placement
+
 ## Architecture
 
 ### 1. Local (Mac directly)
@@ -239,6 +279,16 @@ claude-status.sh find-workspace <window_id>
 1. Search VS Code window title for container name/project name
 2. Search terminal window title
 3. Identify Aerospace workspace from window ID
+
+### scripts/register-workspace.sh
+
+Manually registers the current environment (tmux window / VS Code) to an Aerospace workspace.
+
+```bash
+register-workspace.sh <workspace_number>
+```
+
+Saves mapping to `/tmp/claude_workspace_map.json`. This mapping takes priority over automatic detection in `ai-notify.sh`.
 
 ### scripts/claude-status-watch.sh
 
@@ -501,6 +551,24 @@ claude-status.sh set my-project complete
 
 # Cleanup old status
 claude-status.sh cleanup
+```
+
+### Workspace Registration (Claude Code)
+
+In Claude Code, use the `/register-workspace` command to manually map the current environment to a workspace:
+
+```
+/register-workspace 3
+```
+
+Or run the script directly:
+
+```bash
+# Register current tmux window to workspace 3
+~/dotfiles/scripts/register-workspace.sh 3
+
+# Check current mappings
+cat /tmp/claude_workspace_map.json | jq .
 ```
 
 ### Service Mode Commands

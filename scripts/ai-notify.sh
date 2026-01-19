@@ -247,29 +247,55 @@ get_webhook() {
     # window_id取得（ローカルMacのみ）
     WINDOW_ID=""
     if [[ "$(uname)" == "Darwin" ]] && [[ -z "${SSH_CONNECTION:-}" ]]; then
-      WINDOW_ID_KEY="${PROJECT}_${SESSION_ID:-default}"
-      WINDOW_ID_FILE="/tmp/claude_window_${WINDOW_ID_KEY}"
-
-      CACHED_VALID=false
-      if [[ -f "$WINDOW_ID_FILE" ]]; then
-        CACHED_ID=$(cat "$WINDOW_ID_FILE")
-        if aerospace list-windows --all --json 2>/dev/null | jq -e ".[] | select(.[\"window-id\"] == $CACHED_ID)" &>/dev/null; then
-          WINDOW_ID="$CACHED_ID"
-          CACHED_VALID=true
+      # 1. 手動マッピングを最優先で確認
+      WORKSPACE_MAP_FILE="/tmp/claude_workspace_map.json"
+      if [[ -f "$WORKSPACE_MAP_FILE" ]]; then
+        # 環境キーを生成
+        if [[ -n "${TMUX:-}" ]]; then
+          MAP_ENV_KEY="tmux_$(tmux display-message -p '#S_#I' 2>/dev/null)"
+        elif [[ -n "${VSCODE_PID:-}" ]]; then
+          MAP_ENV_KEY="vscode_${VSCODE_PID}"
         else
-          rm -f "$WINDOW_ID_FILE"
+          MAP_ENV_KEY=""
+        fi
+
+        if [[ -n "$MAP_ENV_KEY" ]]; then
+          MAPPED_WINDOW_ID=$(jq -r --arg key "$MAP_ENV_KEY" '.[$key].window_id // empty' "$WORKSPACE_MAP_FILE" 2>/dev/null)
+          if [[ -n "$MAPPED_WINDOW_ID" ]]; then
+            # マッピングされたwindow_idが有効か確認
+            if aerospace list-windows --all --json 2>/dev/null | jq -e ".[] | select(.[\"window-id\"] == $MAPPED_WINDOW_ID)" &>/dev/null; then
+              WINDOW_ID="$MAPPED_WINDOW_ID"
+            fi
+          fi
         fi
       fi
 
-      if [[ "$CACHED_VALID" == "false" ]]; then
-        FOCUSED_JSON=$(aerospace list-windows --focused --json 2>/dev/null)
-        FOCUSED_APP=$(echo "$FOCUSED_JSON" | jq -r '.[0]["app-name"] // ""')
-        case "$FOCUSED_APP" in
-          Ghostty|Terminal|iTerm2|Alacritty|Warp|WezTerm|kitty|Code)
-            WINDOW_ID=$(echo "$FOCUSED_JSON" | jq -r '.[0]["window-id"] // ""')
-            [[ -n "$WINDOW_ID" ]] && echo "$WINDOW_ID" > "$WINDOW_ID_FILE"
-            ;;
-        esac
+      # 2. マッピングがなければ既存のキャッシュロジック
+      if [[ -z "$WINDOW_ID" ]]; then
+        WINDOW_ID_KEY="${PROJECT}_${SESSION_ID:-default}"
+        WINDOW_ID_FILE="/tmp/claude_window_${WINDOW_ID_KEY}"
+
+        CACHED_VALID=false
+        if [[ -f "$WINDOW_ID_FILE" ]]; then
+          CACHED_ID=$(cat "$WINDOW_ID_FILE")
+          if aerospace list-windows --all --json 2>/dev/null | jq -e ".[] | select(.[\"window-id\"] == $CACHED_ID)" &>/dev/null; then
+            WINDOW_ID="$CACHED_ID"
+            CACHED_VALID=true
+          else
+            rm -f "$WINDOW_ID_FILE"
+          fi
+        fi
+
+        if [[ "$CACHED_VALID" == "false" ]]; then
+          FOCUSED_JSON=$(aerospace list-windows --focused --json 2>/dev/null)
+          FOCUSED_APP=$(echo "$FOCUSED_JSON" | jq -r '.[0]["app-name"] // ""')
+          case "$FOCUSED_APP" in
+            Ghostty|Terminal|iTerm2|Alacritty|Warp|WezTerm|kitty|Code)
+              WINDOW_ID=$(echo "$FOCUSED_JSON" | jq -r '.[0]["window-id"] // ""')
+              [[ -n "$WINDOW_ID" ]] && echo "$WINDOW_ID" > "$WINDOW_ID_FILE"
+              ;;
+          esac
+        fi
       fi
     fi
 
