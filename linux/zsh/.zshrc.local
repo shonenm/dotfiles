@@ -1,5 +1,11 @@
 # Linux-specific zsh configuration
 
+# --- TERM fallback for SSH connections ---
+# When connecting via SSH with unsupported TERM (e.g., xterm-ghostty)
+if [[ -n "$SSH_CONNECTION" ]] && ! infocmp "$TERM" &>/dev/null; then
+  export TERM=xterm-256color
+fi
+
 # --- Linux Tools Init ---
 command -v sheldon &>/dev/null && eval "$(sheldon source)"
 command -v atuin &>/dev/null && eval "$(atuin init zsh)"
