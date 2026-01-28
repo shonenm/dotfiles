@@ -252,8 +252,18 @@ install_modern_tools() {
   # Lazygit
   if ! command_exists lazygit; then
     log_info "Installing Lazygit..."
+    local lazygit_arch
+    case "$(uname -m)" in
+      x86_64)  lazygit_arch="x86_64" ;;
+      aarch64) lazygit_arch="arm64" ;;
+      *)
+        log_error "Unsupported architecture for Lazygit: $(uname -m)"
+        log_error "Supported: x86_64, aarch64"
+        exit 1
+        ;;
+    esac
     LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_${lazygit_arch}.tar.gz"
     tar xf lazygit.tar.gz lazygit
     $SUDO install lazygit /usr/local/bin
     rm -f lazygit lazygit.tar.gz
@@ -297,11 +307,21 @@ install_modern_tools() {
     # Neovim (Binary)
     if ! command_exists nvim; then
       log_info "Installing Neovim..."
-      curl -fLO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
-      $SUDO rm -rf /opt/nvim-linux-x86_64
-      $SUDO tar -C /opt -xzf nvim-linux-x86_64.tar.gz
-      $SUDO ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
-      rm nvim-linux-x86_64.tar.gz
+      local nvim_arch
+      case "$(uname -m)" in
+        x86_64)  nvim_arch="x86_64" ;;
+        aarch64) nvim_arch="arm64" ;;
+        *)
+          log_error "Unsupported architecture for Neovim: $(uname -m)"
+          log_error "Supported: x86_64, aarch64"
+          exit 1
+          ;;
+      esac
+      curl -fLO "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${nvim_arch}.tar.gz"
+      $SUDO rm -rf "/opt/nvim-linux-${nvim_arch}"
+      $SUDO tar -C /opt -xzf "nvim-linux-${nvim_arch}.tar.gz"
+      $SUDO ln -sf "/opt/nvim-linux-${nvim_arch}/bin/nvim" /usr/local/bin/nvim
+      rm "nvim-linux-${nvim_arch}.tar.gz"
     fi
 
     # Eza (modern ls)
