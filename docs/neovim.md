@@ -138,6 +138,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── git.lua            # Git 関連設定
 ├── hlchunk.lua        # インデントガイド設定
 ├── diffview.lua       # Git diff 表示設定
+├── gitsigns.lua       # Git差分表示・blame設定
 ├── git-conflict.lua   # コンフリクト解決設定
 ├── hlslens.lua        # 検索マッチ表示設定
 ├── image.lua          # 画像表示設定
@@ -158,6 +159,15 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | `<leader>fg` | Grep 検索                |
 | `<leader>e`  | ファイルエクスプローラー |
 | `<leader>gg` | LazyGit                  |
+| `<leader>gs` | Git Status (fugitive)    |
+| `<leader>gb` | Git Blame (fugitive)     |
+| `<leader>gf` | ファイル履歴 (diffview)  |
+| `<leader>gF` | ブランチ履歴 (diffview)  |
+| `<leader>gd` | Diffview Open            |
+| `<leader>ghs`| hunk ステージ (gitsigns) |
+| `<leader>ghr`| hunk リセット (gitsigns) |
+| `<leader>ghb`| 行 blame (gitsigns)      |
+| `<leader>ghp`| hunk プレビュー (gitsigns)|
 | `gd`         | 定義へジャンプ           |
 | `gr`         | 参照一覧                 |
 | `K`          | ホバードキュメント       |
