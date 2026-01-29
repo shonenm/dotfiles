@@ -111,7 +111,7 @@ exec zsh
 | Shell | zsh, starship, sheldon, atuin, zoxide |
 | Editor | neovim |
 | Git | lazygit, gh |
-| CLI | eza, bat, ripgrep, fd, fzf, jq, yazi |
+| CLI | eza, bat, ripgrep, fd, fzf, jq, yazi, tealdeer, procs, sd, dust, bottom, rip2 |
 | Dev | mise, uv |
 | Terminal | ghostty, tmux |
 | Window | aerospace, sketchybar, borders |
@@ -123,7 +123,7 @@ exec zsh
 |----------|--------|
 | System | build-essential, zsh, tmux, jq, stow, rsync |
 | Editor | neovim |
-| CLI | ripgrep, fzf, eza, bat |
+| CLI | ripgrep, fzf, eza, bat, tealdeer, procs, sd, dust, bottom, rip2 |
 | Dev | mise, starship, sheldon, zoxide, atuin, uv, dotenvx |
 | Font | UDEV Gothic Nerd Font |
 
