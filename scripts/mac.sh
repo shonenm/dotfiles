@@ -31,6 +31,12 @@ BREW_PACKAGES=(
   jq
   yazi
   tokei
+  tealdeer
+  procs
+  sd
+  dust
+  bottom
+  rip2
 )
 
 BREW_CASKS=(

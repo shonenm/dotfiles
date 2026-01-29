@@ -126,6 +126,9 @@ install_system_packages() {
       rsync
       github-cli
       luarocks
+      tealdeer
+      dust
+      bottom
     )
     $SUDO apk add --no-cache "${PACKAGES[@]}"
 
@@ -290,6 +293,42 @@ install_modern_tools() {
   if ! command_exists tokei; then
     log_info "Installing Tokei..."
     cargo install tokei
+  fi
+
+  # Tealdeer (modern man pages)
+  if ! command_exists tldr; then
+    log_info "Installing Tealdeer..."
+    cargo install tealdeer
+  fi
+
+  # Procs (modern ps)
+  if ! command_exists procs; then
+    log_info "Installing Procs..."
+    cargo install procs
+  fi
+
+  # Sd (modern sed)
+  if ! command_exists sd; then
+    log_info "Installing Sd..."
+    cargo install sd
+  fi
+
+  # Dust (modern du)
+  if ! command_exists dust; then
+    log_info "Installing Dust..."
+    cargo install du-dust
+  fi
+
+  # Bottom (modern top)
+  if ! command_exists btm; then
+    log_info "Installing Bottom..."
+    cargo install bottom
+  fi
+
+  # Rip2 (safe rm replacement)
+  if ! command_exists rip; then
+    log_info "Installing Rip2..."
+    cargo install rm-improved
   fi
 
   # Ubuntuの場合のみ、aptで入らないツールを補完 (Alpineはapkで全部入るため不要)
