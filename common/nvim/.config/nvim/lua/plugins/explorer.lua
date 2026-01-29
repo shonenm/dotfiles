@@ -28,6 +28,18 @@ return {
   },
   config = function(_, opts)
     require("snacks").setup(opts)
+
+    -- Workaround: snacks.nvim explorer/diagnostics.lua does not call
+    -- nvim_buf_is_valid before nvim_buf_get_name (upstream bug).
+    -- The same pattern in picker/source/diagnostics.lua:12 is correct.
+    -- ref: telescope.nvim#910, neovim/neovim#21454
+    local snacks_diag = require("snacks.explorer.diagnostics")
+    local _orig_update = snacks_diag.update
+    function snacks_diag.update(cwd)
+      local ok, result = pcall(_orig_update, cwd)
+      return ok and result or false
+    end
+
     local function set_explorer_hl()
       -- hidden ファイル（dotfiles）は通常表示
       vim.api.nvim_set_hl(0, "SnacksPickerPathHidden", { link = "Normal" })

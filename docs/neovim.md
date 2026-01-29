@@ -87,11 +87,13 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 
 ### 言語固有
 
-| プラグイン         | 役割                    |
-| ------------------ | ----------------------- |
-| rustaceanvim       | Rust 開発支援           |
-| crates.nvim        | Cargo.toml クレート情報 |
-| venv-selector.nvim | Python 仮想環境選択     |
+| プラグイン                 | 役割                    |
+| -------------------------- | ----------------------- |
+| rustaceanvim               | Rust 開発支援           |
+| crates.nvim                | Cargo.toml クレート情報 |
+| venv-selector.nvim         | Python 仮想環境選択     |
+| clangd_extensions.nvim     | C/C++ 開発支援 (clangd) |
+| omnisharp-extended-lsp.nvim| C# 開発支援 (OmniSharp) |
 
 ### ターミナル・外部連携
 

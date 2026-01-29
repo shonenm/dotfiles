@@ -48,7 +48,8 @@ dotfiles/
 │   ├── git-config.md
 │   ├── starship.md
 │   ├── install.md
-│   └── 1password-integration.md
+│   ├── 1password-integration.md
+│   └── patches/        # ローカルパッチ管理
 └── install.sh       # メインインストーラー
 ```
 
