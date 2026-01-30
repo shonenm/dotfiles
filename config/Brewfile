@@ -3,13 +3,15 @@
 
 # --- Taps ---
 tap "dotenvx/brew"
+tap "FelixKratz/formulae"
 
 # --- Shell & Terminal ---
-brew "fish"
+brew "tmux"
 brew "starship"
 brew "sheldon"
 brew "atuin"
 brew "zoxide"
+brew "stow"
 
 # --- Development ---
 brew "neovim"
@@ -37,6 +39,11 @@ brew "sd"
 brew "dust"
 brew "bottom"
 brew "rip2"
+brew "fastfetch"
+
+# --- macOS UI ---
+brew "sketchybar"
+brew "borders"
 
 # --- Casks ---
 cask "ghostty"
