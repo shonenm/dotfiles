@@ -23,3 +23,14 @@ detect_os() {
     *)      echo "unknown" ;;
   esac
 }
+
+# Read a newline-delimited package list file, stripping comments and blank lines
+# Usage: readarray -t MY_ARRAY < <(read_package_list "$file")
+read_package_list() {
+  local file="$1"
+  if [[ ! -f "$file" ]]; then
+    log_error "Package list not found: $file"
+    return 1
+  fi
+  grep -v '^\s*#' "$file" | grep -v '^\s*$'
+}

@@ -3,87 +3,19 @@
 # macOS Setup Script (Homebrew packages)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES_DIR="$(dirname "$SCRIPT_DIR")"
+CONFIG_DIR="$DOTFILES_DIR/config"
 source "$SCRIPT_DIR/utils.sh"
 
-BREW_PACKAGES=(
-  # Shell & Terminal
-  fish
-  starship
-  sheldon
-  atuin
-  zoxide
-
-  # Development
-  neovim
-  lazygit
-  lazydocker
-  git-delta
-  gh
-  mise
-  uv
-  rust
-
-  # Modern CLI tools
-  eza
-  bat
-  ripgrep
-  fd
-  fzf
-  jq
-  yazi
-  tokei
-  tealdeer
-  procs
-  sd
-  dust
-  bottom
-  rip2
-)
-
-BREW_CASKS=(
-  # Terminal
-  ghostty
-
-  # Productivity
-  raycast
-  karabiner-elements
-  aerospace
-
-  # Fonts
-  font-sketchybar-app-font
-)
-
-NPM_PACKAGES=(
-  # AI CLI tools
-  "@anthropic-ai/claude-code"
-  "@openai/codex"
-  "@google/gemini-cli"
-)
-
-install_brew_packages() {
-  log_info "Installing Homebrew packages..."
-
-  for pkg in "${BREW_PACKAGES[@]}"; do
-    if ! brew list "$pkg" &>/dev/null; then
-      log_info "Installing $pkg..."
-      brew install "$pkg"
-    else
-      log_success "$pkg already installed"
-    fi
-  done
-}
-
-install_brew_casks() {
-  log_info "Installing Homebrew casks..."
-
-  for cask in "${BREW_CASKS[@]}"; do
-    if ! brew list --cask "$cask" &>/dev/null; then
-      log_info "Installing $cask..."
-      brew install --cask "$cask"
-    else
-      log_success "$cask already installed"
-    fi
-  done
+install_brew_bundle() {
+  local brewfile="$CONFIG_DIR/Brewfile"
+  if [[ ! -f "$brewfile" ]]; then
+    log_error "Brewfile not found: $brewfile"
+    return 1
+  fi
+  log_info "Installing Homebrew packages from Brewfile..."
+  brew bundle --file="$brewfile" --no-lock
+  log_success "Brewfile packages installed"
 }
 
 install_npm_packages() {
@@ -92,26 +24,21 @@ install_npm_packages() {
     return
   fi
 
-  log_info "Installing npm packages..."
+  local npm_file="$CONFIG_DIR/packages.npm.txt"
+  if [[ ! -f "$npm_file" ]]; then
+    log_warn "NPM package list not found: $npm_file"
+    return
+  fi
 
-  for pkg in "${NPM_PACKAGES[@]}"; do
+  log_info "Installing npm packages..."
+  while IFS= read -r pkg; do
     if ! npm list -g "$pkg" &>/dev/null; then
       log_info "Installing $pkg..."
       npm install -g "$pkg"
     else
       log_success "$pkg already installed"
     fi
-  done
-}
-
-install_dotenvx() {
-  if command_exists dotenvx; then
-    log_success "dotenvx already installed"
-    return
-  fi
-
-  log_info "Installing dotenvx..."
-  brew install dotenvx/brew/dotenvx
+  done < <(read_package_list "$npm_file")
 }
 
 install_dops() {
@@ -141,7 +68,7 @@ install_mise_tools() {
 
   log_info "Installing tools via mise..."
   eval "$(mise activate bash)"
-  mise install node python pnpm -y 2>/dev/null || true
+  mise install -y 2>/dev/null || true
 }
 
 set_default_shell() {
@@ -165,12 +92,10 @@ link_ai_scripts() {
   fi
 }
 
-# Run if sourced
-install_brew_packages
-install_brew_casks
+# --- Main Execution ---
+install_brew_bundle
 install_mise_tools
 install_npm_packages
-install_dotenvx
 install_dops
 link_ai_scripts
 set_default_shell

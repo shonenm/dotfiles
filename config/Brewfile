@@ -1,0 +1,46 @@
+# macOS packages managed by Homebrew
+# Usage: brew bundle --file=config/Brewfile --no-lock
+
+# --- Taps ---
+tap "dotenvx/brew"
+
+# --- Shell & Terminal ---
+brew "fish"
+brew "starship"
+brew "sheldon"
+brew "atuin"
+brew "zoxide"
+
+# --- Development ---
+brew "neovim"
+brew "lazygit"
+brew "lazydocker"
+brew "git-delta"
+brew "gh"
+brew "mise"
+brew "uv"
+brew "rust"
+brew "dotenvx/brew/dotenvx"
+
+# --- Modern CLI tools ---
+brew "eza"
+brew "bat"
+brew "ripgrep"
+brew "fd"
+brew "fzf"
+brew "jq"
+brew "yazi"
+brew "tokei"
+brew "tealdeer"
+brew "procs"
+brew "sd"
+brew "dust"
+brew "bottom"
+brew "rip2"
+
+# --- Casks ---
+cask "ghostty"
+cask "raycast"
+cask "karabiner-elements"
+cask "aerospace"
+cask "font-sketchybar-app-font"

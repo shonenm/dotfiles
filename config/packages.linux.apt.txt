@@ -1,0 +1,11 @@
+# Debian/Ubuntu system packages (installed via apt)
+build-essential
+zsh
+tmux
+jq
+stow
+unzip
+fzf
+ripgrep
+rsync
+luarocks

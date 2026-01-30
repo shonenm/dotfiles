@@ -1,0 +1,18 @@
+# Alpine Linux system packages (installed via apk)
+build-base
+zsh
+tmux
+jq
+stow
+neovim
+ripgrep
+fd
+bat
+fzf
+eza
+rsync
+github-cli
+luarocks
+tealdeer
+dust
+bottom

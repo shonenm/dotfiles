@@ -1,0 +1,6 @@
+# NPM packages to install globally (shared across all platforms)
+
+# AI CLI tools
+@anthropic-ai/claude-code
+@openai/codex
+@google/gemini-cli
