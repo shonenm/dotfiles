@@ -19,9 +19,21 @@ return {
         skipFiles = { "<node_internals>/**" },
       }
 
+      -- Playwright debug configuration
+      local playwright_debug = {
+        type = "pwa-node",
+        request = "launch",
+        name = "Debug Playwright Tests",
+        runtimeExecutable = "npx",
+        runtimeArgs = { "playwright", "test", "${file}", "--headed", "--debug" },
+        cwd = "${workspaceFolder}/test-e2e",
+        console = "integratedTerminal",
+      }
+
       for _, language in ipairs({ "typescript", "javascript", "typescriptreact", "javascriptreact" }) do
         dap.configurations[language] = dap.configurations[language] or {}
         table.insert(dap.configurations[language], docker_attach)
+        table.insert(dap.configurations[language], playwright_debug)
       end
     end,
   },
