@@ -7,8 +7,15 @@ return {
     },
     picker = {
       sources = {
+        smart = {
+          matcher = { frecency = true, sort_empty = true },
+        },
         files = {
           hidden = true,
+          matcher = { frecency = true },
+        },
+        recent = {
+          matcher = { frecency = true },
         },
         explorer = {
           hidden = true,
