@@ -33,6 +33,13 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.formatting.biome" },
     -- Debug
     { import = "lazyvim.plugins.extras.dap.core" },
+    -- AI
+    { import = "lazyvim.plugins.extras.ai.copilot-chat" },
+    -- Editor enhancements
+    { import = "lazyvim.plugins.extras.editor.harpoon2" },
+    { import = "lazyvim.plugins.extras.editor.folds" },
+    -- Util
+    { import = "lazyvim.plugins.extras.util.octo" },
     -- import/override with your plugins
     { import = "plugins" },
   },

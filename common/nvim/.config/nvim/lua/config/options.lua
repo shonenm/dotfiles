@@ -39,3 +39,9 @@ vim.opt.undoreload = 10000
 
 -- Auto reload files changed outside of Neovim
 vim.opt.autoread = true
+
+-- Folding (nvim-ufo)
+vim.opt.foldcolumn = "1"
+vim.opt.foldlevel = 99
+vim.opt.foldlevelstart = 99
+vim.opt.foldenable = true
