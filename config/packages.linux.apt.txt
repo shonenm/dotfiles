@@ -7,5 +7,6 @@ stow
 unzip
 fzf
 ripgrep
+fd-find
 rsync
 luarocks

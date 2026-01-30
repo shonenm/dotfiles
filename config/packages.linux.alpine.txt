@@ -13,6 +13,8 @@ eza
 rsync
 github-cli
 luarocks
+unzip
+fastfetch
 tealdeer
 dust
 bottom

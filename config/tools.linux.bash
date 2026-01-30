@@ -70,6 +70,13 @@ TOOL_lazydocker_curl_cmd='curl https://raw.githubusercontent.com/jesseduffield/l
 # GitHub release installs (tarball)
 # ════════════════════════════════════════
 
+TOOL_fastfetch_check_cmd="fastfetch"
+TOOL_fastfetch_method="github_release"
+TOOL_fastfetch_github_repo="fastfetch-cli/fastfetch"
+TOOL_fastfetch_archive_pattern='fastfetch-linux-${ARCH}.tar.gz'
+TOOL_fastfetch_binary_path='fastfetch-linux-${ARCH}/usr/bin/fastfetch'
+TOOL_fastfetch_arch_map='x86_64:amd64 aarch64:aarch64'
+
 TOOL_delta_check_cmd="delta"
 TOOL_delta_method="github_release"
 TOOL_delta_github_repo="dandavison/delta"
@@ -141,6 +148,11 @@ TOOL_rip2_method="cargo"
 TOOL_rip2_cargo_crate="rm-improved"
 TOOL_rip2_depends_on="rust"
 
+TOOL_yazi_check_cmd="yazi"
+TOOL_yazi_method="cargo"
+TOOL_yazi_cargo_crate="yazi-fm"
+TOOL_yazi_depends_on="rust"
+
 # ════════════════════════════════════════
 # APT repo installs (Debian/Ubuntu only)
 # ════════════════════════════════════════
@@ -169,9 +181,9 @@ LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
   starship mise sheldon zoxide atuin dotenvx uv rust lazydocker
   # GitHub releases (no deps)
-  delta lazygit dops
+  fastfetch delta lazygit dops
   # APT-only (skipped on Alpine)
   gh neovim eza bat
   # Cargo tools (depend on rust)
-  tokei tealdeer procs sd dust bottom rip2
+  tokei tealdeer procs sd dust bottom rip2 yazi
 )
