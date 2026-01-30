@@ -53,9 +53,6 @@ command -v dust &>/dev/null && alias du="dust"
 command -v btm &>/dev/null && alias top="btm"
 command -v rip &>/dev/null && alias rm="rip"
 
-# --- Haskell (ghcup) ---
-[[ -f "$HOME/.ghcup/env" ]] && . "$HOME/.ghcup/env"
-
 # --- Modern Tools Init (cross-platform) ---
 command -v gh &>/dev/null && eval "$(gh completion -s zsh)"
 command -v starship &>/dev/null && eval "$(starship init zsh)"
