@@ -185,6 +185,7 @@ install_nerd_font() {
 }
 
 install_modern_tools() {
+  local _new=() _existing=()
   mkdir -p ~/.local/bin
   export PATH="$HOME/.local/bin:$PATH"
 
@@ -195,12 +196,20 @@ install_modern_tools() {
   if ! command_exists starship; then
     log_info "Installing Starship..."
     curl -sS https://starship.rs/install.sh | sh -s -- -y
+    _new+=("starship")
+  else
+    log_success "Starship already installed"
+    _existing+=("starship")
   fi
 
   # Mise (Package Manager)
   if ! command_exists mise; then
     log_info "Installing mise..."
     curl https://mise.run | sh
+    _new+=("mise")
+  else
+    log_success "Mise already installed"
+    _existing+=("mise")
   fi
 
   # Activate mise and install runtimes (Node.js, Python, pnpm)
@@ -216,12 +225,20 @@ install_modern_tools() {
     log_info "Installing Sheldon..."
     curl --proto '=https' -fLsS https://rossmacarthur.github.io/install/crate.sh \
       | bash -s -- --repo rossmacarthur/sheldon --to ~/.local/bin
+    _new+=("sheldon")
+  else
+    log_success "Sheldon already installed"
+    _existing+=("sheldon")
   fi
 
   # Zoxide (smarter cd)
   if ! command_exists zoxide; then
     log_info "Installing Zoxide..."
     curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+    _new+=("zoxide")
+  else
+    log_success "Zoxide already installed"
+    _existing+=("zoxide")
   fi
 
   # Atuin (shell history)
@@ -229,12 +246,20 @@ install_modern_tools() {
     log_info "Installing Atuin..."
     # --yes: skip confirmation, shell config is managed by dotfiles
     curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh -s -- --yes
+    _new+=("atuin")
+  else
+    log_success "Atuin already installed"
+    _existing+=("atuin")
   fi
 
   # dotenvx (encrypted .env management)
   if ! command_exists dotenvx; then
     log_info "Installing dotenvx..."
     curl -sfS https://dotenvx.sh | sh
+    _new+=("dotenvx")
+  else
+    log_success "dotenvx already installed"
+    _existing+=("dotenvx")
   fi
 
   # uv (Python package installer)
@@ -242,6 +267,10 @@ install_modern_tools() {
     log_info "Installing uv..."
     # UV_NO_MODIFY_PATH: shell config is managed by dotfiles
     curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh
+    _new+=("uv")
+  else
+    log_success "uv already installed"
+    _existing+=("uv")
   fi
 
   # Rust (via rustup)
@@ -250,6 +279,33 @@ install_modern_tools() {
     # --no-modify-path: shell config is managed by dotfiles
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
     [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+    _new+=("rust")
+  else
+    log_success "Rust already installed"
+    _existing+=("rust")
+  fi
+
+  # Delta (git diff pager)
+  if ! command_exists delta; then
+    log_info "Installing Delta..."
+    local delta_arch
+    case "$(uname -m)" in
+      x86_64)  delta_arch="x86_64" ;;
+      aarch64) delta_arch="aarch64" ;;
+      *)
+        log_error "Unsupported architecture for Delta: $(uname -m)"
+        return
+        ;;
+    esac
+    DELTA_VERSION=$(curl -s "https://api.github.com/repos/dandavison/delta/releases/latest" | grep -Po '"tag_name": "\K[^"]*')
+    curl -Lo delta.tar.gz "https://github.com/dandavison/delta/releases/download/${DELTA_VERSION}/delta-${DELTA_VERSION}-${delta_arch}-unknown-linux-gnu.tar.gz"
+    tar xf delta.tar.gz
+    $SUDO install "delta-${DELTA_VERSION}-${delta_arch}-unknown-linux-gnu/delta" /usr/local/bin
+    rm -rf delta.tar.gz "delta-${DELTA_VERSION}-${delta_arch}-unknown-linux-gnu"
+    _new+=("delta")
+  else
+    log_success "Delta already installed"
+    _existing+=("delta")
   fi
 
   # Lazygit
@@ -270,12 +326,20 @@ install_modern_tools() {
     tar xf lazygit.tar.gz lazygit
     $SUDO install lazygit /usr/local/bin
     rm -f lazygit lazygit.tar.gz
+    _new+=("lazygit")
+  else
+    log_success "Lazygit already installed"
+    _existing+=("lazygit")
   fi
 
   # Lazydocker
   if ! command_exists lazydocker; then
     log_info "Installing Lazydocker..."
     curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash
+    _new+=("lazydocker")
+  else
+    log_success "Lazydocker already installed"
+    _existing+=("lazydocker")
   fi
 
   # dops (better docker ps)
@@ -287,48 +351,80 @@ install_modern_tools() {
     curl -fsSL "https://github.com/Mikescher/better-docker-ps/releases/latest/download/${binary}" \
       -o "$HOME/.local/bin/dops"
     chmod +x "$HOME/.local/bin/dops"
+    _new+=("dops")
+  else
+    log_success "dops already installed"
+    _existing+=("dops")
   fi
 
   # Tokei (code statistics)
   if ! command_exists tokei; then
     log_info "Installing Tokei..."
     cargo install tokei
+    _new+=("tokei")
+  else
+    log_success "Tokei already installed"
+    _existing+=("tokei")
   fi
 
   # Tealdeer (modern man pages)
   if ! command_exists tldr; then
     log_info "Installing Tealdeer..."
     cargo install tealdeer
+    _new+=("tealdeer")
+  else
+    log_success "Tealdeer already installed"
+    _existing+=("tealdeer")
   fi
 
   # Procs (modern ps)
   if ! command_exists procs; then
     log_info "Installing Procs..."
     cargo install procs
+    _new+=("procs")
+  else
+    log_success "Procs already installed"
+    _existing+=("procs")
   fi
 
   # Sd (modern sed)
   if ! command_exists sd; then
     log_info "Installing Sd..."
     cargo install sd
+    _new+=("sd")
+  else
+    log_success "Sd already installed"
+    _existing+=("sd")
   fi
 
   # Dust (modern du)
   if ! command_exists dust; then
     log_info "Installing Dust..."
     cargo install du-dust
+    _new+=("dust")
+  else
+    log_success "Dust already installed"
+    _existing+=("dust")
   fi
 
   # Bottom (modern top)
   if ! command_exists btm; then
     log_info "Installing Bottom..."
     cargo install bottom
+    _new+=("bottom")
+  else
+    log_success "Bottom already installed"
+    _existing+=("bottom")
   fi
 
   # Rip2 (safe rm replacement)
   if ! command_exists rip; then
     log_info "Installing Rip2..."
     cargo install rm-improved
+    _new+=("rip2")
+  else
+    log_success "Rip2 already installed"
+    _existing+=("rip2")
   fi
 
   # Ubuntuの場合のみ、aptで入らないツールを補完 (Alpineはapkで全部入るため不要)
@@ -341,6 +437,10 @@ install_modern_tools() {
       echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | $SUDO tee /etc/apt/sources.list.d/github-cli.list > /dev/null
       $SUDO apt update
       $SUDO apt install -y gh
+      _new+=("gh")
+    else
+      log_success "GitHub CLI already installed"
+      _existing+=("gh")
     fi
 
     # Neovim (Binary)
@@ -361,6 +461,10 @@ install_modern_tools() {
       $SUDO tar -C /opt -xzf "nvim-linux-${nvim_arch}.tar.gz"
       $SUDO ln -sf "/opt/nvim-linux-${nvim_arch}/bin/nvim" /usr/local/bin/nvim
       rm "nvim-linux-${nvim_arch}.tar.gz"
+      _new+=("neovim")
+    else
+      log_success "Neovim already installed"
+      _existing+=("neovim")
     fi
 
     # Eza (modern ls)
@@ -372,16 +476,34 @@ install_modern_tools() {
       $SUDO chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list
       $SUDO apt update
       $SUDO apt install -y eza
+      _new+=("eza")
+    else
+      log_success "Eza already installed"
+      _existing+=("eza")
     fi
 
     # Bat (aptではbatcat)
     if ! command_exists bat && ! command_exists batcat; then
       log_info "Installing Bat..."
       $SUDO apt install -y bat
+      _new+=("bat")
+    else
+      log_success "Bat already installed"
+      _existing+=("bat")
     fi
     if command_exists batcat && ! command_exists bat; then
       $SUDO ln -sf "$(which batcat)" /usr/local/bin/bat
     fi
+  fi
+
+  # Summary
+  echo
+  log_info "── Tool Summary ──"
+  if [[ ${#_new[@]} -gt 0 ]]; then
+    log_success "  New: ${_new[*]}"
+  fi
+  if [[ ${#_existing[@]} -gt 0 ]]; then
+    log_info "  Existing: ${_existing[*]}"
   fi
 }
 
