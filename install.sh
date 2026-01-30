@@ -182,6 +182,37 @@ verify_stow() {
   fi
 }
 
+# Fixup bind-mounted config files that stow couldn't replace
+fixup_bind_mounts() {
+  # .gitconfig: inject [include] to pull in dotfiles gitconfig
+  local dotfiles_gitconfig="$DOTFILES_DIR/common/git/.gitconfig"
+  if [[ -f "$HOME/.gitconfig" && ! -L "$HOME/.gitconfig" && -f "$dotfiles_gitconfig" ]]; then
+    if ! grep -qF "path = $dotfiles_gitconfig" "$HOME/.gitconfig" 2>/dev/null; then
+      printf '\n[include]\n    path = %s\n' "$dotfiles_gitconfig" >> "$HOME/.gitconfig"
+      log_info "  Injected [include] into bind-mounted .gitconfig"
+    else
+      log_success "  .gitconfig already includes dotfiles config"
+    fi
+  fi
+
+  # .ssh/config: prepend Include to pull in dotfiles ssh config
+  local os=$(detect_os)
+  local dotfiles_ssh="$DOTFILES_DIR/$os/ssh/.ssh/config"
+  if [[ -f "$HOME/.ssh/config" && ! -L "$HOME/.ssh/config" && -f "$dotfiles_ssh" ]]; then
+    if ! grep -qF "Include $dotfiles_ssh" "$HOME/.ssh/config" 2>/dev/null; then
+      local tmp
+      tmp=$(mktemp)
+      printf 'Include %s\n\n' "$dotfiles_ssh" > "$tmp"
+      cat "$HOME/.ssh/config" >> "$tmp"
+      cp "$tmp" "$HOME/.ssh/config"
+      rm "$tmp"
+      log_info "  Injected Include into bind-mounted .ssh/config"
+    else
+      log_success "  .ssh/config already includes dotfiles config"
+    fi
+  fi
+}
+
 link_dotfiles() {
   log_info "Linking dotfiles..."
 
@@ -215,6 +246,9 @@ link_dotfiles() {
       stow_package "$DOTFILES_DIR/$os" "$pkg_name"
     done
   fi
+
+  # Fixup bind-mounted config files (Docker/devcontainer)
+  fixup_bind_mounts
 
   # Restore dotfiles after adopt (adopted files may have overwritten our dotfiles)
   log_info "Restoring dotfiles from git..."
