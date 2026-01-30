@@ -42,11 +42,13 @@ dotfiles/
 │   └── gemini-settings.json
 ├── docs/            # ドキュメント
 │   ├── neovim.md
+│   ├── neovim-troubleshooting.md
 │   ├── tmux.md
 │   ├── sketchybar-aerospace.md
 │   ├── claude-beacon.md
 │   ├── git-config.md
 │   ├── starship.md
+│   ├── modern-cli-tools.md
 │   ├── install.md
 │   ├── 1password-integration.md
 │   └── patches/        # ローカルパッチ管理
