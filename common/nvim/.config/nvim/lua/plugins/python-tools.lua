@@ -1,4 +1,4 @@
--- Python: Ruff formatter + Mypy type checker
+-- Python: Ruff formatter + Mypy type checker + basedpyright extraPaths
 return {
   -- Ruff as Python formatter via conform.nvim
   {
@@ -17,5 +17,26 @@ return {
       opts.linters_by_ft.python = opts.linters_by_ft.python or {}
       table.insert(opts.linters_by_ft.python, "mypy")
     end,
+  },
+  -- basedpyright: extra analysis paths for monorepo agent directories
+  {
+    "neovim/nvim-lspconfig",
+    opts = {
+      servers = {
+        basedpyright = {
+          settings = {
+            basedpyright = {
+              analysis = {
+                extraPaths = {
+                  "agents/core",
+                  "agents/topics",
+                  "agents/topics-experimental",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   },
 }

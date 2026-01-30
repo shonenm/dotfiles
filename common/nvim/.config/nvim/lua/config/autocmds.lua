@@ -14,3 +14,18 @@ vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
   end,
 })
 
+-- Auto organize imports on save for TypeScript/JavaScript
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = { "*.ts", "*.tsx", "*.js", "*.jsx" },
+  callback = function(args)
+    local clients = vim.lsp.get_clients({ bufnr = args.buf, name = "vtsls" })
+    if #clients == 0 then
+      return
+    end
+    vim.lsp.buf.code_action({
+      apply = true,
+      context = { only = { "source.organizeImports" }, diagnostics = {} },
+    })
+  end,
+})
+
