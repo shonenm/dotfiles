@@ -1,0 +1,57 @@
+# Neovim トラブルシューティング
+
+## SIGKILL (exit 137) でクラッシュ
+
+**日付**: 2026-01-30
+**環境**: macOS (Apple Silicon), nvim 0.11.5, LazyVim
+
+### 症状
+
+- nvim が起動直後に閉じる、またはファイルを開くと SIGKILL (exit 137) で死ぬ
+- `:` を押しても反応しない（noice.nvim cmdline フリーズ）
+- `nvim --clean` では正常動作
+
+### 原因
+
+3つの問題が同時発生していた:
+
+1. **omnisharp (LazyVim extra)** が起動時に SIGKILL を引き起こしていた
+2. **treesitter パーサー破損** — `vim.so`, `markdown.so`, `rust.so` 等のコンパイル済みパーサーが壊れ、該当ファイルタイプを開くとネイティブコードがクラッシュ
+3. **treesitter クエリ不整合** — `nvim-treesitter` の `vim` 言語クエリが `"tab"` ノードタイプを参照しているが、パーサーが対応していなかった。これにより `noice.nvim` の cmdline ハイライトが壊れ、全インタラクティブ操作が不能に
+
+### 修正手順
+
+```bash
+# 1. omnisharp を無効化 (lazy.lua で該当行をコメントアウト)
+# { import = "lazyvim.plugins.extras.lang.omnisharp" },
+
+# 2. treesitter パーサーを全削除・再コンパイル
+rm -rf ~/.local/share/nvim/site/parser/
+nvim --headless -c "TSUpdate" -c "sleep 60" -c "qa!"
+
+# 3. vim パーサーを個別に再インストール (noice.nvim cmdline 修正)
+nvim --headless -c "TSInstall! vim" -c "sleep 30" -c "qa!"
+
+# 4. (必要に応じて) luac キャッシュクリア
+rm -rf ~/.cache/nvim/luac
+```
+
+### 診断方法メモ
+
+```bash
+# ファイルタイプ別にクラッシュを確認
+nvim --headless -c "edit /tmp/test.md" -c "sleep 3" -c "qa!"
+echo $?  # 137 ならクラッシュ
+
+# treesitter パーサーが原因か確認 (パーサー削除で開けるなら確定)
+rm -rf ~/.local/share/nvim/site/parser/
+nvim --headless -c "edit /tmp/test.md" -c "sleep 3" -c "qa!"
+
+# noice.nvim のエラーログ確認
+cat ~/.local/state/nvim/noice.log
+```
+
+### 関連変更
+
+- `lazy.lua`: omnisharp コメントアウト
+- mason の omnisharp パッケージも削除済み (`~/.local/share/nvim/mason/packages/omnisharp`)
