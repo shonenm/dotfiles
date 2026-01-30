@@ -14,49 +14,54 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 
 ### UI
 
-| プラグイン      | 役割                                   |
-| --------------- | -------------------------------------- |
-| tokyonight.nvim | カラースキーム（デフォルト）           |
-| vscode.nvim     | VS Code Dark Modern テーマ             |
-| alpha-nvim      | スタートスクリーン                     |
-| ascii.nvim      | ASCII アート（alpha用）                |
-| bufferline.nvim | タブ/バッファライン                    |
-| lualine.nvim    | ステータスライン                       |
-| noice.nvim      | コマンドライン・通知UI改善             |
-| nui.nvim        | UI コンポーネントライブラリ            |
-| mini.icons      | ファイルアイコン                       |
-| which-key.nvim  | キーバインドヘルプ表示                 |
-| snacks.nvim     | ユーティリティ集（ファイルピッカー等） |
-| hlchunk.nvim    | インデントガイド・チャンクハイライト   |
-| nvim-hlslens    | 検索マッチ数・位置表示                 |
-| nvim-scrollbar  | スクロールバー・診断/Git マーカー      |
+| プラグイン               | 役割                                   |
+| ------------------------ | -------------------------------------- |
+| tokyonight.nvim          | カラースキーム（デフォルト）           |
+| vscode.nvim              | VS Code Dark Modern テーマ             |
+| alpha-nvim               | スタートスクリーン                     |
+| ascii.nvim               | ASCII アート（alpha用）                |
+| bufferline.nvim          | タブ/バッファライン                    |
+| lualine.nvim             | ステータスライン                       |
+| noice.nvim               | コマンドライン・通知UI改善             |
+| nui.nvim                 | UI コンポーネントライブラリ            |
+| mini.icons               | ファイルアイコン                       |
+| which-key.nvim           | キーバインドヘルプ表示                 |
+| snacks.nvim              | ユーティリティ集（ファイルピッカー等） |
+| hlchunk.nvim             | インデントガイド・チャンクハイライト   |
+| nvim-hlslens             | 検索マッチ数・位置表示                 |
+| nvim-scrollbar           | スクロールバー・診断/Git マーカー      |
+| treesitter-context       | 関数/クラスコンテキスト表示            |
+| rainbow-delimiters.nvim  | ブラケットペアカラー化                 |
 
 ### エディタ機能
 
-| プラグイン        | 役割                            |
-| ----------------- | ------------------------------- |
-| blink.cmp         | 補完エンジン                    |
-| friendly-snippets | スニペット集                    |
-| flash.nvim        | 高速カーソル移動                |
-| mini.ai           | テキストオブジェクト拡張        |
-| mini.pairs        | 括弧自動補完                    |
-| mini.surround     | 囲み文字操作                    |
-| dial.nvim         | インクリメント/デクリメント拡張 |
-| yanky.nvim        | ヤンク履歴                      |
-| ts-comments.nvim  | コメントトグル                  |
-| inc-rename.nvim   | インラインリネーム              |
-| vim-visual-multi  | マルチカーソル編集              |
-| harpoon2          | 高速ファイルナビゲーション      |
-| nvim-ufo          | モダンコードフォールディング    |
-| resession.nvim    | セッション管理（保存・復元・削除） |
+| プラグイン        | 役割                              |
+| ----------------- | --------------------------------- |
+| blink.cmp         | 補完エンジン                      |
+| friendly-snippets | スニペット集                      |
+| flash.nvim        | 高速カーソル移動                  |
+| mini.ai           | テキストオブジェクト拡張          |
+| mini.pairs        | 括弧自動補完                      |
+| mini.surround     | 囲み文字操作                      |
+| dial.nvim         | インクリメント/デクリメント拡張   |
+| yanky.nvim        | ヤンク履歴                        |
+| ts-comments.nvim  | コメントトグル                    |
+| inc-rename.nvim   | インラインリネーム                |
+| vim-visual-multi  | マルチカーソル編集                |
+| harpoon2          | 高速ファイルナビゲーション        |
+| nvim-ufo          | モダンコードフォールディング      |
+| resession.nvim    | セッション管理（保存・復元・削除）|
+| neogen            | JSDoc/docstring 自動生成          |
+| refactoring.nvim  | Extract function/variable 等      |
+| outline.nvim      | シンボルアウトライン              |
 
 ### AI
 
-| プラグイン        | 役割                                  |
-| ----------------- | ------------------------------------- |
-| copilot.lua       | GitHub Copilot（インライン補完）      |
-| CopilotChat.nvim  | Copilot Chat（対話型コードレビュー等）|
-| avante.nvim       | Claude AI 統合（対話型コーディング）  |
+| プラグイン       | 役割                                  |
+| ---------------- | ------------------------------------- |
+| copilot.lua      | GitHub Copilot（インライン補完）      |
+| CopilotChat.nvim | Copilot Chat（対話型コードレビュー等）|
+| avante.nvim      | Claude AI 統合（対話型コーディング）  |
 
 ### LSP・構文解析
 
@@ -76,22 +81,23 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | プラグイン   | 役割                                    |
 | ------------ | --------------------------------------- |
 | conform.nvim | フォーマッター（Biome, Prettier, Ruff） |
-| nvim-lint    | リンター（CSpell, Mypy）               |
+| nvim-lint    | リンター（CSpell, Mypy, ESLint）       |
 
 ### Git
 
-| プラグイン    | 役割                    |
-| ------------- | ----------------------- |
-| gitsigns.nvim    | Git 差分表示・hunk 操作       |
-| vim-fugitive     | Git コマンド統合              |
-| diffview.nvim    | サイドバイサイド diff・履歴   |
-| git-conflict.nvim| コンフリクト解決支援          |
+| プラグイン        | 役割                                        |
+| ----------------- | ------------------------------------------- |
+| gitsigns.nvim     | Git 差分表示・hunk 操作・インライン blame   |
+| vim-fugitive      | Git コマンド統合                            |
+| diffview.nvim     | サイドバイサイド diff・履歴                 |
+| git-conflict.nvim | コンフリクト解決支援                        |
+| telescope-repo    | リポジトリ/サブモジュール切替               |
 
 ### GitHub
 
-| プラグイン | 役割                                |
-| ---------- | ----------------------------------- |
-| octo.nvim  | GitHub PR/Issue 管理（レビュー等）  |
+| プラグイン | 役割                               |
+| ---------- | ---------------------------------- |
+| octo.nvim  | GitHub PR/Issue 管理（レビュー等） |
 
 ### 検索・診断
 
@@ -109,14 +115,15 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | crates.nvim            | Cargo.toml クレート情報 |
 | venv-selector.nvim     | Python 仮想環境選択     |
 | clangd_extensions.nvim | C/C++ 開発支援 (clangd) |
+| package-info.nvim      | package.json バージョン表示 (pnpm 対応) |
 
 ### ターミナル・外部連携
 
-| プラグイン         | 役割                                       |
-| ------------------ | ------------------------------------------ |
-| toggleterm.nvim    | フローティングターミナル                   |
-| vim-tmux-navigator | Neovim ⇔ tmux シームレス移動               |
-| remote-nvim.nvim   | リモート/コンテナ開発（Dev Containers 相当）|
+| プラグイン         | 役割                                        |
+| ------------------ | ------------------------------------------- |
+| toggleterm.nvim    | フローティングターミナル (lazygit/lazydocker)|
+| vim-tmux-navigator | Neovim ⇔ tmux シームレス移動                |
+| remote-nvim.nvim   | リモート/コンテナ開発（Dev Containers 相当） |
 
 ### Markdown
 
@@ -127,44 +134,119 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 
 ### メディア
 
-| プラグイン | 役割                                         |
-| ---------- | -------------------------------------------- |
+| プラグイン | 役割                                            |
+| ---------- | ----------------------------------------------- |
 | image.nvim | ターミナル内画像表示（Kitty Graphics Protocol） |
 
 ### テスト
 
-| プラグイン          | 役割                             |
-| ------------------- | -------------------------------- |
-| neotest             | テストランナー UI                |
-| neotest-jest        | Jest アダプター (BFF)            |
-| neotest-vitest      | Vitest アダプター (Web)          |
-| neotest-python      | pytest アダプター (Agents)       |
-| neotest-playwright  | Playwright アダプター (E2E)      |
+| プラグイン         | 役割                        |
+| ------------------ | --------------------------- |
+| neotest            | テストランナー UI           |
+| neotest-jest       | Jest アダプター (BFF)       |
+| neotest-vitest     | Vitest アダプター (Web)     |
+| neotest-python     | pytest アダプター (Agents)  |
+| neotest-playwright | Playwright アダプター (E2E) |
 
 ### デバッグ
 
-| プラグイン            | 役割                           |
-| --------------------- | ------------------------------ |
-| nvim-dap              | Debug Adapter Protocol 実装    |
-| nvim-dap-ui           | DAP UI フロントエンド          |
+| プラグイン            | 役割                             |
+| --------------------- | -------------------------------- |
+| nvim-dap              | Debug Adapter Protocol 実装      |
+| nvim-dap-ui           | DAP UI フロントエンド            |
 | nvim-dap-virtual-text | デバッグ変数のバーチャルテキスト |
-| nvim-dap-go           | Go デバッガー (delve)          |
-| nvim-dap-python       | Python デバッガー (debugpy)    |
+| nvim-dap-go           | Go デバッガー (delve)            |
+| nvim-dap-python       | Python デバッガー (debugpy)      |
 
 ### タスクランナー・HTTP
 
-| プラグイン   | 役割                                          |
-| ------------ | --------------------------------------------- |
-| overseer.nvim| タスクランナー (.vscode/tasks.json, Make 対応) |
-| kulala.nvim  | HTTP クライアント (.http ファイル)              |
+| プラグイン    | 役割                                          |
+| ------------- | --------------------------------------------- |
+| overseer.nvim | タスクランナー (.vscode/tasks.json, Make 対応) |
+| kulala.nvim   | HTTP クライアント (.http ファイル)             |
 
 ### データベース
 
-| プラグイン            | 役割                  |
-| --------------------- | --------------------- |
+| プラグイン            | 役割                   |
+| --------------------- | ---------------------- |
 | vim-dadbod            | データベースクライアント |
-| vim-dadbod-ui         | データベース UI       |
-| vim-dadbod-completion | データベース補完      |
+| vim-dadbod-ui         | データベース UI        |
+| vim-dadbod-completion | データベース補完       |
+
+## LazyVim Extras
+
+`lua/config/lazy.lua` で有効化している LazyVim extras:
+
+### 言語サポート
+
+| Extra                | 対象                           |
+| -------------------- | ------------------------------ |
+| `lang.typescript`    | TypeScript/JavaScript LSP      |
+| `lang.json`          | JSON LSP + SchemaStore         |
+| `lang.tailwind`      | Tailwind CSS 補完・カラー表示  |
+| `lang.python`        | Python LSP (basedpyright)      |
+| `lang.rust`          | Rust (rustaceanvim)            |
+| `lang.go`            | Go (gopls)                     |
+| `lang.sql`           | SQL (vim-dadbod)               |
+| `lang.toml`          | TOML                           |
+| `lang.yaml`          | YAML                           |
+| `lang.clangd`        | C/C++ (clangd)                 |
+| `lang.docker`        | Dockerfile/docker-compose LSP  |
+| `lang.git`           | git filetype treesitter        |
+| `lang.markdown`      | Markdown 強化                  |
+
+### フォーマッター・リンター
+
+| Extra                  | 対象                    |
+| ---------------------- | ----------------------- |
+| `formatting.biome`     | Biome (JS/TS)           |
+| `formatting.prettier`  | Prettier (fallback)     |
+| `linting.eslint`       | ESLint                  |
+
+### コーディング
+
+| Extra                  | 対象                    |
+| ---------------------- | ----------------------- |
+| `coding.mini-surround` | 囲み文字操作            |
+| `coding.yanky`         | ヤンク履歴              |
+| `coding.neogen`        | JSDoc/docstring 生成    |
+
+### エディタ
+
+| Extra                  | 対象                    |
+| ---------------------- | ----------------------- |
+| `editor.harpoon2`      | ファイルナビゲーション  |
+| `editor.folds`         | コードフォールディング  |
+| `editor.dial`          | インクリメント拡張      |
+| `editor.inc-rename`    | インラインリネーム      |
+| `editor.outline`       | シンボルアウトライン    |
+| `editor.refactoring`   | リファクタリング操作    |
+
+### UI
+
+| Extra                    | 対象                    |
+| ------------------------ | ----------------------- |
+| `ui.treesitter-context`  | 関数/クラスコンテキスト |
+
+### テスト・デバッグ
+
+| Extra       | 対象              |
+| ----------- | ----------------- |
+| `test.core` | neotest コア      |
+| `dap.core`  | nvim-dap コア     |
+
+### AI
+
+| Extra             | 対象              |
+| ----------------- | ----------------- |
+| `ai.copilot-chat` | Copilot Chat      |
+
+### ユーティリティ
+
+| Extra      | 対象                  |
+| ---------- | --------------------- |
+| `util.octo`| GitHub PR/Issue 管理  |
+| `util.dot` | dotfiles サポート     |
 
 ## 無効化したプラグイン
 
@@ -178,32 +260,36 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 
 ```
 common/nvim/.config/nvim/lua/plugins/
-├── alpha.lua          # スタートスクリーン設定
-├── avante.lua         # Claude AI 統合 (avante.nvim)
-├── colorscheme.lua    # カラースキーム設定
-├── copilot.lua        # Copilot 設定
-├── dap.lua            # DAP カスタム設定 (Docker attach)
-├── diffview.lua       # Git diff 表示設定
-├── disabled.lua       # プラグイン無効化
-├── dotenv.lua         # .env ファイルサポート
-├── explorer.lua       # ファイルエクスプローラー・snacks設定
-├── git.lua            # Git 関連設定 (fugitive, lazygit)
-├── git-conflict.lua   # コンフリクト解決設定
-├── gitsigns.lua       # Git 行blame設定
-├── graphql.lua        # GraphQL LSP + treesitter
-├── hlchunk.lua        # インデントガイド設定
-├── hlslens.lua        # 検索マッチ表示設定
-├── image.lua          # 画像表示設定
-├── kulala.lua         # HTTP クライアント設定
-├── lint.lua           # CSpell リンター設定
-├── multicursor.lua    # マルチカーソル (vim-visual-multi)
-├── neotest.lua        # テストランナー設定 (4アダプター)
-├── overseer.lua       # タスクランナー設定
-├── python-tools.lua   # Python ツール (Ruff formatter + Mypy)
-├── remote.lua         # リモート/コンテナ開発 (remote-nvim)
-├── scrollbar.lua      # スクロールバー設定
-├── session.lua        # セッション管理設定
-└── tmux-navigator.lua # tmux 連携設定
+├── alpha.lua              # スタートスクリーン設定
+├── avante.lua             # Claude AI 統合 (avante.nvim)
+├── colorscheme.lua        # カラースキーム設定
+├── copilot.lua            # Copilot 設定
+├── dap.lua                # DAP カスタム設定 (Docker attach, Playwright debug)
+├── diffview.lua           # Git diff 表示設定
+├── disabled.lua           # プラグイン無効化
+├── dotenv.lua             # .env ファイルサポート
+├── explorer.lua           # ファイルエクスプローラー・snacks設定 (frecency)
+├── git.lua                # Git 関連設定 (fugitive, lazygit, lazydocker)
+├── git-conflict.lua       # コンフリクト解決設定
+├── git-worktree.lua       # telescope-repo (サブモジュール/リポジトリ切替)
+├── gitsigns.lua           # Git 行blame設定 (GitLens相当)
+├── graphql.lua            # GraphQL LSP + treesitter
+├── hlchunk.lua            # インデントガイド設定
+├── hlslens.lua            # 検索マッチ表示設定
+├── image.lua              # 画像表示設定
+├── kulala.lua             # HTTP クライアント設定
+├── lint.lua               # CSpell リンター設定
+├── multicursor.lua        # マルチカーソル (vim-visual-multi)
+├── neotest.lua            # テストランナー設定 (4アダプター, monorepo対応)
+├── overseer.lua           # タスクランナー設定 (タスク出力表示強化)
+├── package-info.lua       # package.json バージョン表示 (pnpm)
+├── python-tools.lua       # Python ツール (Ruff + Mypy + basedpyright extraPaths)
+├── rainbow-delimiters.lua # ブラケットペアカラー化
+├── remote.lua             # リモート/コンテナ開発 (remote-nvim)
+├── scrollbar.lua          # スクロールバー設定
+├── session.lua            # セッション管理設定
+├── tmux-navigator.lua     # tmux 連携設定
+└── typescript-enhanced.lua # vtsls import設定 (non-relative, auto-update)
 ```
 
 ## キーバインド
@@ -212,60 +298,98 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 
 ### 基本操作
 
-| キー         | 動作                     |
-| ------------ | ------------------------ |
-| `<leader>ff` | ファイル検索             |
-| `<leader>fg` | Grep 検索                |
-| `<leader>e`  | ファイルエクスプローラー |
-| `<leader>gg` | LazyGit                  |
-| `gd`         | 定義へジャンプ           |
-| `gr`         | 参照一覧                 |
-| `K`          | ホバードキュメント       |
-| `<leader>cr` | リネーム                 |
-| `<leader>ca` | コードアクション         |
+| キー             | 動作                     |
+| ---------------- | ------------------------ |
+| `<leader>ff`     | ファイル検索             |
+| `<leader>fg`     | Grep 検索                |
+| `<leader><space>`| Smart Find Files (frecency) |
+| `<leader>fr`     | 最近開いたファイル       |
+| `<leader>e`      | ファイルエクスプローラー |
+| `<leader>gg`     | LazyGit                  |
+| `gd`             | 定義へジャンプ           |
+| `gr`             | 参照一覧                 |
+| `K`              | ホバードキュメント       |
+| `<leader>cr`     | リネーム                 |
+| `<leader>ca`     | コードアクション         |
+| `<leader>cs`     | シンボルアウトライン     |
 
 ### マルチカーソル
 
-| キー           | 動作                     |
-| -------------- | ------------------------ |
-| `Ctrl+n`       | 次の一致にカーソル追加   |
-| `Ctrl+Shift+Down` | 下にカーソル追加     |
-| `Ctrl+Shift+Up`   | 上にカーソル追加     |
-| `Ctrl+Shift+l` | 全一致を選択             |
-| `Ctrl+x`       | 現在の一致をスキップ     |
+| キー               | 動作                   |
+| ------------------ | ---------------------- |
+| `Ctrl+n`           | 次の一致にカーソル追加 |
+| `Ctrl+Shift+Down`  | 下にカーソル追加       |
+| `Ctrl+Shift+Up`    | 上にカーソル追加       |
+| `Ctrl+Shift+l`     | 全一致を選択           |
+| `Ctrl+x`           | 現在の一致をスキップ   |
 
 ### AI
 
-| キー           | 動作                     |
-| -------------- | ------------------------ |
-| `<leader>aa`   | Avante: AI に質問        |
-| `<leader>ae`   | Avante: コード編集       |
-| `<leader>ar`   | Avante: リフレッシュ     |
+| キー         | 動作                 |
+| ------------ | -------------------- |
+| `<leader>aa` | Avante: AI に質問    |
+| `<leader>ae` | Avante: コード編集   |
+| `<leader>ar` | Avante: リフレッシュ |
 
 ### Git / GitHub
 
-| キー           | 動作                     |
-| -------------- | ------------------------ |
-| `<leader>gs`   | Git status               |
-| `<leader>gb`   | Git blame                |
-| `<leader>gd`   | Diffview 開く            |
-| `<leader>gf`   | ファイル履歴             |
+| キー         | 動作                             |
+| ------------ | -------------------------------- |
+| `<leader>gs` | Git status                       |
+| `<leader>gb` | Git blame                        |
+| `<leader>gd` | Diffview 開く                    |
+| `<leader>gf` | ファイル履歴                     |
+| `<leader>gR` | リポジトリ/サブモジュール切替    |
 
 ### タスク・テスト・デバッグ
 
-| キー           | 動作                     |
-| -------------- | ------------------------ |
-| `<leader>or`   | タスク実行 (Overseer)    |
-| `<leader>ot`   | タスクリスト表示         |
-| `<leader>hr`   | HTTP リクエスト実行      |
+| キー         | 動作                     |
+| ------------ | ------------------------ |
+| `<leader>or` | タスク実行 (Overseer)    |
+| `<leader>ot` | タスクリスト表示         |
+| `<leader>ob` | タスクビルド             |
+| `<leader>oa` | タスククイックアクション |
+| `<leader>ol` | 直前タスク出力表示       |
+| `<leader>hr` | HTTP リクエスト実行      |
+
+### Docker
+
+| キー         | 動作                     |
+| ------------ | ------------------------ |
+| `<leader>od` | Lazydocker               |
+
+### パッケージ管理 (package.json)
+
+| キー         | 動作                     |
+| ------------ | ------------------------ |
+| `<leader>np` | バージョン表示トグル     |
+| `<leader>nu` | パッケージ更新           |
+| `<leader>nd` | パッケージ削除           |
+| `<leader>ni` | パッケージ追加           |
+| `<leader>nc` | バージョン変更           |
 
 ### リモート開発
 
-| キー           | 動作                     |
-| -------------- | ------------------------ |
-| `<leader>Rs`   | Remote: 接続開始         |
-| `<leader>Ri`   | Remote: 情報表示         |
-| `<leader>Rx`   | Remote: 接続停止         |
-| `<leader>Rl`   | Remote: ログ表示         |
+| キー         | 動作             |
+| ------------ | ---------------- |
+| `<leader>Rs` | Remote: 接続開始 |
+| `<leader>Ri` | Remote: 情報表示 |
+| `<leader>Rx` | Remote: 接続停止 |
+| `<leader>Rl` | Remote: ログ表示 |
 
 詳細: <https://www.lazyvim.org/keymaps>
+
+## DAP デバッグ構成
+
+| 名前                             | 対象                                |
+| -------------------------------- | ----------------------------------- |
+| Attach to Docker (port 9229)     | BFF コンテナへの Node.js アタッチ   |
+| Debug Playwright Tests           | Playwright E2E テスト (headed mode) |
+| Python debugpy                   | Python デバッグ (pytest 対応)       |
+| Go delve                         | Go デバッグ                         |
+
+## 自動化
+
+- TypeScript/JavaScript 保存時に import 自動整理 (`source.organizeImports`)
+- 外部ファイル変更の自動リロード (`checktime`)
+- snacks.nvim picker で frecency（頻度+新しさ）ベースのファイルソート
