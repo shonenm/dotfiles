@@ -479,6 +479,19 @@ print_install_summary() {
     echo
   fi
 
+  # 4. Other tools (not managed by package lists)
+  local other_items=()
+  command_exists dops && other_items+=("dops")
+  command_exists op && other_items+=("op")
+  if [[ "$os" == "linux" ]] && command_exists fc-list; then
+    fc-list 2>/dev/null | grep -qi "UDEVGothic" && other_items+=("Nerd Font")
+  fi
+  if [[ ${#other_items[@]} -gt 0 ]]; then
+    local other_str
+    other_str=$(IFS=', '; echo "${other_items[*]}")
+    printf "  %-14s %s\n" "Other" "$other_str"
+  fi
+
   echo "────────────────────────────────────────────────────────"
 }
 
