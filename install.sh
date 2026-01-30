@@ -378,19 +378,107 @@ main() {
   log_success "=== Installation Complete! ==="
   log_info "Please restart your shell or run: source ~/.zshrc"
 
-  # Show mise-managed tools info
+  # Unified summary (all config-driven)
+  print_install_summary
+}
+
+# --- Installation Summary (reads from config files) ---
+print_install_summary() {
+  local os=$(detect_os)
+  local CONFIG_DIR="$DOTFILES_DIR/config"
+
   echo
   echo "────────────────────────────────────────────────────────"
-  echo "  mise-managed tools"
+  echo "  Installation Summary"
   echo "────────────────────────────────────────────────────────"
-  echo "  node   (lts)    - Node.js / npm"
-  echo "  python (latest) - Python"
-  echo ""
-  echo "  Commands:"
-  echo "    mise install        # Install all tools"
-  echo "    mise list           # Show installed versions"
-  echo "    mise use node@20    # Switch version (project)"
-  echo "    mise use -g node@22 # Switch version (global)"
+
+  # 1. System packages / Homebrew
+  if [[ "$os" == "mac" ]]; then
+    local brewfile="$CONFIG_DIR/Brewfile"
+    if [[ -f "$brewfile" ]]; then
+      local brew_count cask_count
+      brew_count=$(grep -c '^brew ' "$brewfile" 2>/dev/null || echo 0)
+      cask_count=$(grep -c '^cask ' "$brewfile" 2>/dev/null || echo 0)
+      printf "  %-14s %d formulae, %d casks\n" "Homebrew" "$brew_count" "$cask_count"
+    fi
+  elif [[ "$os" == "linux" ]]; then
+    # System packages
+    if command_exists apt; then
+      local pkg_file="$CONFIG_DIR/packages.linux.apt.txt"
+    else
+      local pkg_file="$CONFIG_DIR/packages.linux.alpine.txt"
+    fi
+    if [[ -f "$pkg_file" ]]; then
+      local pkg_count
+      pkg_count=$(grep -cv '^\s*#\|^\s*$' "$pkg_file" 2>/dev/null || echo 0)
+      printf "  %-14s %d packages\n" "System" "$pkg_count"
+    fi
+
+    # Linux tools
+    local tools_file="$CONFIG_DIR/tools.linux.bash"
+    if [[ -f "$tools_file" ]]; then
+      source "$tools_file"
+      local tools_ok=0 tools_total=0 tools_missing=()
+      for tool in "${LINUX_TOOL_ORDER[@]}"; do
+        local var="TOOL_${tool}_check_cmd"
+        local check_cmd="${!var}"
+        local var2="TOOL_${tool}_alt_check_cmd"
+        local alt="${!var2}"
+        ((tools_total++))
+        if command_exists "$check_cmd" || { [[ -n "$alt" ]] && command_exists "$alt"; }; then
+          ((tools_ok++))
+        else
+          tools_missing+=("$tool")
+        fi
+      done
+      printf "  %-14s %d / %d installed" "Tools" "$tools_ok" "$tools_total"
+      if [[ ${#tools_missing[@]} -gt 0 ]]; then
+        printf " (missing: %s)" "${tools_missing[*]}"
+      fi
+      echo
+    fi
+  fi
+
+  # 2. NPM packages
+  local npm_file="$CONFIG_DIR/packages.npm.txt"
+  if [[ -f "$npm_file" ]]; then
+    local npm_ok=0 npm_total=0 npm_missing=()
+    while IFS= read -r pkg; do
+      ((npm_total++))
+      if command_exists npm && npm list -g "$pkg" &>/dev/null; then
+        ((npm_ok++))
+      else
+        npm_missing+=("$pkg")
+      fi
+    done < <(grep -v '^\s*#' "$npm_file" | grep -v '^\s*$')
+    printf "  %-14s %d / %d installed" "NPM" "$npm_ok" "$npm_total"
+    if [[ ${#npm_missing[@]} -gt 0 ]]; then
+      printf " (missing: %s)" "${npm_missing[*]}"
+    fi
+    echo
+  fi
+
+  # 3. mise runtimes
+  local mise_config="$DOTFILES_DIR/common/mise/.config/mise/config.toml"
+  if [[ -f "$mise_config" ]]; then
+    local mise_items=()
+    while IFS='=' read -r tool version; do
+      tool=$(echo "$tool" | xargs)
+      version=$(echo "$version" | xargs | tr -d '"')
+      [[ -z "$tool" || "$tool" == "["* ]] && continue
+      mise_items+=("$tool:$version")
+    done < "$mise_config"
+    printf "  %-14s " "mise"
+    local first=true
+    for item in "${mise_items[@]}"; do
+      local t="${item%%:*}" v="${item##*:}"
+      $first || printf ", "
+      printf "%s (%s)" "$t" "$v"
+      first=false
+    done
+    echo
+  fi
+
   echo "────────────────────────────────────────────────────────"
 }
 
