@@ -42,6 +42,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 })
 
 -- Auto organize imports on save for TypeScript/JavaScript
+-- Uses filter+apply to execute synchronously before conform.nvim formatting
 vim.api.nvim_create_autocmd("BufWritePre", {
   pattern = { "*.ts", "*.tsx", "*.js", "*.jsx" },
   callback = function(args)
@@ -49,10 +50,17 @@ vim.api.nvim_create_autocmd("BufWritePre", {
     if #clients == 0 then
       return
     end
-    vim.lsp.buf.code_action({
-      apply = true,
-      context = { only = { "source.organizeImports" }, diagnostics = {} },
-    })
+    local params = vim.lsp.util.make_range_params()
+    params.context = { only = { "source.organizeImports" }, diagnostics = {} }
+    local result = clients[1]:request_sync("textDocument/codeAction", params, 3000, args.buf)
+    if result and result.result and result.result[1] then
+      local action = result.result[1]
+      if action.edit then
+        vim.lsp.util.apply_workspace_edit(action.edit, clients[1].offset_encoding)
+      elseif action.command then
+        clients[1]:exec_cmd(action.command)
+      end
+    end
   end,
 })
 

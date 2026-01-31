@@ -52,6 +52,9 @@ return {
           },
         },
       },
+      consumers = {
+        overseer = require("neotest.consumers.overseer"),
+      },
       output = { open_on_run = true },
       output_panel = { open = "botright split | resize 15" },
     },
