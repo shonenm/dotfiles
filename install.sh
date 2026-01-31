@@ -438,9 +438,9 @@ print_install_summary() {
         local check_cmd="${!var}"
         local var2="TOOL_${tool}_alt_check_cmd"
         local alt="${!var2:-}"
-        ((tools_total++))
+        ((++tools_total))
         if command_exists "$check_cmd" || { [[ -n "$alt" ]] && command_exists "$alt"; }; then
-          ((tools_ok++))
+          ((++tools_ok))
         else
           tools_missing+=("$tool")
         fi
@@ -458,9 +458,9 @@ print_install_summary() {
   if [[ -f "$npm_file" ]]; then
     local npm_ok=0 npm_total=0 npm_missing=()
     while IFS= read -r pkg; do
-      ((npm_total++))
+      ((++npm_total))
       if command_exists npm && npm list -g "$pkg" &>/dev/null; then
-        ((npm_ok++))
+        ((++npm_ok))
       else
         npm_missing+=("$pkg")
       fi
