@@ -66,6 +66,12 @@ TOOL_lazydocker_check_cmd="lazydocker"
 TOOL_lazydocker_method="curl_pipe"
 TOOL_lazydocker_curl_cmd='curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash'
 
+TOOL_direnv_check_cmd="direnv"
+TOOL_direnv_method="github_release_binary"
+TOOL_direnv_github_repo="direnv/direnv"
+TOOL_direnv_binary_map='x86_64:direnv.linux-amd64 aarch64:direnv.linux-arm64'
+TOOL_direnv_install_dir="$HOME/.local/bin"
+
 # ════════════════════════════════════════
 # GitHub release installs (tarball)
 # ════════════════════════════════════════
@@ -155,12 +161,99 @@ TOOL_rip2_method="cargo"
 TOOL_rip2_cargo_crate="rm-improved"
 TOOL_rip2_depends_on="rust"
 
+TOOL_quay_check_cmd="quay"
+TOOL_quay_method="cargo"
+TOOL_quay_cargo_crate="quay-tui"
+TOOL_quay_depends_on="rust"
+
+TOOL_gitabsorb_check_cmd="git-absorb"
+TOOL_gitabsorb_method="cargo"
+TOOL_gitabsorb_cargo_crate="git-absorb"
+TOOL_gitabsorb_depends_on="rust"
+
 TOOL_yazi_check_cmd="yazi"
 TOOL_yazi_method="github_release"
 TOOL_yazi_github_repo="sxyazi/yazi"
 TOOL_yazi_archive_pattern='yazi-${ARCH}-unknown-linux-gnu.zip'
 TOOL_yazi_binary_path='yazi-${ARCH}-unknown-linux-gnu/yazi'
 TOOL_yazi_arch_map='x86_64:x86_64 aarch64:aarch64'
+
+TOOL_just_check_cmd="just"
+TOOL_just_method="github_release"
+TOOL_just_github_repo="casey/just"
+TOOL_just_archive_pattern='just-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
+TOOL_just_binary_path='just'
+TOOL_just_arch_map='x86_64:x86_64 aarch64:aarch64'
+
+TOOL_watchexec_check_cmd="watchexec"
+TOOL_watchexec_method="github_release"
+TOOL_watchexec_github_repo="watchexec/watchexec"
+TOOL_watchexec_archive_pattern='watchexec-${VERSION_NOTAG}-${ARCH}-unknown-linux-musl.tar.xz'
+TOOL_watchexec_binary_path='watchexec-${VERSION_NOTAG}-${ARCH}-unknown-linux-musl/watchexec'
+TOOL_watchexec_arch_map='x86_64:x86_64 aarch64:aarch64'
+
+TOOL_hyperfine_check_cmd="hyperfine"
+TOOL_hyperfine_method="github_release"
+TOOL_hyperfine_github_repo="sharkdp/hyperfine"
+TOOL_hyperfine_archive_pattern='hyperfine-${VERSION}-${ARCH}-unknown-linux-gnu.tar.gz'
+TOOL_hyperfine_binary_path='hyperfine-${VERSION}-${ARCH}-unknown-linux-gnu/hyperfine'
+TOOL_hyperfine_arch_map='x86_64:x86_64 aarch64:aarch64'
+
+TOOL_gitleaks_check_cmd="gitleaks"
+TOOL_gitleaks_method="github_release"
+TOOL_gitleaks_github_repo="gitleaks/gitleaks"
+TOOL_gitleaks_archive_pattern='gitleaks_${VERSION_NOTAG}_linux_${ARCH}.tar.gz'
+TOOL_gitleaks_binary_path='gitleaks'
+TOOL_gitleaks_arch_map='x86_64:x64 aarch64:arm64'
+
+TOOL_xh_check_cmd="xh"
+TOOL_xh_method="github_release"
+TOOL_xh_github_repo="ducaale/xh"
+TOOL_xh_archive_pattern='xh-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
+TOOL_xh_binary_path='xh-${VERSION}-${ARCH}-unknown-linux-musl/xh'
+TOOL_xh_arch_map='x86_64:x86_64 aarch64:aarch64'
+
+TOOL_ouch_check_cmd="ouch"
+TOOL_ouch_method="github_release"
+TOOL_ouch_github_repo="ouch-org/ouch"
+TOOL_ouch_archive_pattern='ouch-${ARCH}-unknown-linux-musl.tar.gz'
+TOOL_ouch_binary_path='ouch-${ARCH}-unknown-linux-musl/ouch'
+TOOL_ouch_arch_map='x86_64:x86_64 aarch64:aarch64'
+
+TOOL_glow_check_cmd="glow"
+TOOL_glow_method="github_release"
+TOOL_glow_github_repo="charmbracelet/glow"
+TOOL_glow_archive_pattern='glow_${VERSION_NOTAG}_Linux_${ARCH}.tar.gz'
+TOOL_glow_binary_path='glow'
+TOOL_glow_arch_map='x86_64:x86_64 aarch64:arm64'
+
+TOOL_viddy_check_cmd="viddy"
+TOOL_viddy_method="github_release"
+TOOL_viddy_github_repo="sachaos/viddy"
+TOOL_viddy_archive_pattern='viddy-${VERSION}-linux-${ARCH}.tar.gz'
+TOOL_viddy_binary_path='viddy'
+TOOL_viddy_arch_map='x86_64:x86_64 aarch64:arm64'
+
+TOOL_doggo_check_cmd="doggo"
+TOOL_doggo_method="github_release"
+TOOL_doggo_github_repo="mr-karan/doggo"
+TOOL_doggo_archive_pattern='doggo_${VERSION_NOTAG}_Linux_${ARCH}.tar.gz'
+TOOL_doggo_binary_path='doggo'
+TOOL_doggo_arch_map='x86_64:x86_64 aarch64:arm64'
+
+TOOL_topgrade_check_cmd="topgrade"
+TOOL_topgrade_method="github_release"
+TOOL_topgrade_github_repo="topgrade-rs/topgrade"
+TOOL_topgrade_archive_pattern='topgrade-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
+TOOL_topgrade_binary_path='topgrade'
+TOOL_topgrade_arch_map='x86_64:x86_64 aarch64:aarch64'
+
+TOOL_grex_check_cmd="grex"
+TOOL_grex_method="github_release"
+TOOL_grex_github_repo="pemistahl/grex"
+TOOL_grex_archive_pattern='grex-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
+TOOL_grex_binary_path='grex'
+TOOL_grex_arch_map='x86_64:x86_64 aarch64:aarch64'
 
 # ════════════════════════════════════════
 # APT repo installs (Debian/Ubuntu only)
@@ -188,11 +281,12 @@ TOOL_bat_install_fn="install_bat_apt"
 
 LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
-  starship mise sheldon zoxide atuin dotenvx uv rust lazydocker
+  starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
   fastfetch delta lazygit ghq dops yazi
+  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex
   # APT-only (skipped on Alpine)
   gh neovim eza bat
   # Cargo tools (depend on rust)
-  tokei tealdeer procs sd dust bottom rip2
+  tokei tealdeer procs sd dust bottom rip2 quay gitabsorb
 )

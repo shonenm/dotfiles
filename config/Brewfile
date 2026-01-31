@@ -25,6 +25,15 @@ brew "uv"
 brew "rust"
 brew "dotenvx/brew/dotenvx"
 
+# --- Development Workflow ---
+brew "direnv"
+brew "just"
+brew "watchexec"
+brew "hyperfine"
+
+# --- Security ---
+brew "gitleaks"
+
 # --- Modern CLI tools ---
 brew "eza"
 brew "bat"
@@ -41,6 +50,14 @@ brew "dust"
 brew "bottom"
 brew "rip2"
 brew "fastfetch"
+brew "xh"
+brew "git-absorb"
+brew "ouch"
+brew "glow"
+brew "viddy"
+brew "doggo"
+brew "topgrade"
+brew "grex"
 
 # --- System Monitoring ---
 brew "macmon"      # Apple Silicon GPU/CPU monitoring (tmux status bar)

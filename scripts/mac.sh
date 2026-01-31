@@ -14,7 +14,7 @@ install_brew_bundle() {
     return 1
   fi
   log_info "Installing Homebrew packages from Brewfile..."
-  brew bundle --file="$brewfile" --no-lock
+  brew bundle --file="$brewfile"
   log_success "Brewfile packages installed"
 }
 
@@ -58,6 +58,22 @@ install_dops() {
     -o "$HOME/.local/bin/dops"
   chmod +x "$HOME/.local/bin/dops"
   log_success "dops installed to ~/.local/bin"
+}
+
+install_quay() {
+  if command_exists quay; then
+    log_success "quay already installed"
+    return
+  fi
+
+  if ! command_exists cargo; then
+    log_warn "cargo not found, skipping quay"
+    return
+  fi
+
+  log_info "Installing quay (TUI port manager)..."
+  cargo install quay-tui
+  log_success "quay installed"
 }
 
 install_gh_extensions() {
@@ -112,6 +128,7 @@ install_brew_bundle
 install_mise_tools
 install_npm_packages
 install_dops
+install_quay
 install_gh_extensions
 link_ai_scripts
 set_default_shell
