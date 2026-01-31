@@ -34,6 +34,26 @@ return {
     },
   },
 
+  -- Catppuccin
+  {
+    "catppuccin/nvim",
+    name = "catppuccin",
+    lazy = false,
+    priority = 1000,
+    opts = {
+      flavour = "mocha",
+      transparent_background = true,
+      integrations = {
+        mini = { enabled = true },
+        blink_cmp = true,
+        gitsigns = true,
+        treesitter = true,
+        snacks = true,
+        which_key = true,
+      },
+    },
+  },
+
   -- Set default colorscheme
   -- Switch with <leader>uC
   {

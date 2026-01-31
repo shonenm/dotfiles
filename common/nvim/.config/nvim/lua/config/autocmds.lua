@@ -14,6 +14,33 @@ vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
   end,
 })
 
+-- Theme-aware icon highlight groups
+-- catppuccin: integrations.mini handles it automatically
+-- vscode/tokyonight: apply Material Design icon colors
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("theme_icon_colors", { clear = true }),
+  callback = function(args)
+    if args.match == "catppuccin" or args.match:match("^catppuccin%-") then
+      return
+    end
+
+    local material_hl = {
+      MiniIconsAzure = { fg = "#42a5f5" },
+      MiniIconsBlue = { fg = "#519aba" },
+      MiniIconsCyan = { fg = "#7fdbca" },
+      MiniIconsGreen = { fg = "#8dc149" },
+      MiniIconsGrey = { fg = "#4d5a5e" },
+      MiniIconsOrange = { fg = "#e37933" },
+      MiniIconsPurple = { fg = "#a074c4" },
+      MiniIconsRed = { fg = "#cc3e44" },
+      MiniIconsYellow = { fg = "#cbcb41" },
+    }
+    for group, val in pairs(material_hl) do
+      vim.api.nvim_set_hl(0, group, val)
+    end
+  end,
+})
+
 -- Auto organize imports on save for TypeScript/JavaScript
 vim.api.nvim_create_autocmd("BufWritePre", {
   pattern = { "*.ts", "*.tsx", "*.js", "*.jsx" },
