@@ -77,6 +77,11 @@
 [commit]
     verbose = true
 
+# === Aliases ===
+[alias]
+    secrets = !gitleaks detect --verbose
+    absorb = !git-absorb --and-rebase
+
 # === ghq (Repository Management) ===
 [ghq]
     root = ~/ghq
