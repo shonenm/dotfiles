@@ -49,7 +49,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | inc-rename.nvim   | インラインリネーム                |
 | vim-visual-multi  | マルチカーソル編集                |
 | harpoon2          | 高速ファイルナビゲーション        |
-| nvim-ufo          | モダンコードフォールディング      |
+| LazyVim core fold | LSP ベースコードフォールディング  |
 | resession.nvim    | セッション管理（保存・復元・削除）|
 | neogen            | JSDoc/docstring 自動生成          |
 | refactoring.nvim  | Extract function/variable 等      |
@@ -89,7 +89,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | ----------------- | ------------------------------------------- |
 | gitsigns.nvim     | Git 差分表示・hunk 操作・インライン blame   |
 | vim-fugitive      | Git コマンド統合                            |
-| diffview.nvim     | サイドバイサイド diff・履歴                 |
+| codediff.nvim     | サイドバイサイド diff・履歴・stage・commit  |
 | git-conflict.nvim | コンフリクト解決支援                        |
 | telescope-repo    | リポジトリ/サブモジュール切替               |
 
@@ -217,7 +217,6 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | Extra                  | 対象                    |
 | ---------------------- | ----------------------- |
 | `editor.harpoon2`      | ファイルナビゲーション  |
-| `editor.folds`         | コードフォールディング  |
 | `editor.dial`          | インクリメント拡張      |
 | `editor.inc-rename`    | インラインリネーム      |
 | `editor.outline`       | シンボルアウトライン    |
@@ -266,7 +265,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── colorscheme.lua        # カラースキーム設定
 ├── copilot.lua            # Copilot 設定
 ├── dap.lua                # DAP カスタム設定 (Docker attach, Playwright debug)
-├── diffview.lua           # Git diff 表示設定
+├── codediff.lua           # Git diff 表示設定
 ├── disabled.lua           # プラグイン無効化
 ├── dotenv.lua             # .env ファイルサポート
 ├── explorer.lua           # ファイルエクスプローラー・snacks設定 (frecency)
@@ -339,9 +338,22 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | ------------ | -------------------------------- |
 | `<leader>gs` | Git status                       |
 | `<leader>gb` | Git blame                        |
-| `<leader>gd` | Diffview 開く                    |
+| `<leader>gd` | CodeDiff 開く                    |
 | `<leader>gf` | ファイル履歴                     |
+| `<leader>gF` | コミット履歴                     |
 | `<leader>gR` | リポジトリ/サブモジュール切替    |
+
+### CodeDiff 内操作
+
+| キー | 動作                          |
+| ---- | ----------------------------- |
+| `-`  | ファイル stage/unstage トグル |
+| `S`  | 全ファイル stage              |
+| `U`  | 全ファイル unstage            |
+| `X`  | 変更を破棄 (restore)         |
+| `cc` | Git commit (fugitive)         |
+| `ca` | Git commit --amend            |
+| `R`  | エクスプローラー更新          |
 
 ### タスク・テスト・デバッグ
 
