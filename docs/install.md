@@ -27,8 +27,8 @@ OS に応じたセットアップスクリプトを実行:
 
 | OS | スクリプト | 内容 |
 |----|-----------|------|
-| Mac | `scripts/mac.sh` | Homebrew パッケージ、gh 拡張機能、Aerospace、SketchyBar 等 |
-| Linux | `scripts/linux.sh` | apt パッケージ、開発ツール等 |
+| Mac | `scripts/mac.sh` | Homebrew パッケージ (Brewfile)、cargo ツール (quay)、gh 拡張機能、Aerospace、SketchyBar 等 |
+| Linux | `scripts/linux.sh` | apt/apk パッケージ、GitHub release バイナリ、cargo ツール等（`config/tools.linux.bash` で定義） |
 
 ### 4. Dotfiles リンク (stow)
 
@@ -36,6 +36,7 @@ OS に応じたセットアップスクリプトを実行:
 
 ```
 common/
+├── bat/      → ~/.config/bat/
 ├── gh-dash/  → ~/.config/gh-dash/
 ├── git/      → ~/.gitconfig
 ├── mise/     → ~/.config/mise/
@@ -71,3 +72,20 @@ Claude / Codex / Gemini の設定ファイルを生成:
 source ~/.zshrc   # シェル設定を反映
 mise install      # mise 管理ツールをインストール
 ```
+
+## mise タスク
+
+インストール後に利用可能な mise タスク:
+
+```bash
+mise run update    # brew upgrade + sheldon update + tldr update
+mise run doctor    # 必要ツールの存在確認 + stow リンク健全性チェック
+mise run lint      # shellcheck で scripts/*.sh を静的解析
+```
+
+## CI
+
+`.github/workflows/ci.yml` で以下を自動実行:
+
+- **ShellCheck**: `scripts/` 配下の全 `.sh` ファイルを静的解析
+- **Stow Dry Run**: `common/` の全パッケージで stow コンフリクト検出

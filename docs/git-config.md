@@ -154,6 +154,11 @@ op read "op://Personal/Git Config/email"
 [commit]
     verbose = true
 
+# === Aliases ===
+[alias]
+    secrets = !gitleaks detect --verbose
+    absorb = !git-absorb --and-rebase
+
 # === ghq (Repository Management) ===
 [ghq]
     root = ~/ghq
@@ -408,6 +413,31 @@ git tag     # Semantic version order
 
 ```bash
 git stauts  # → Executes git status after 1 second
+```
+
+## Git Aliases
+
+| Alias | Command | Description |
+|-------|---------|-------------|
+| `git secrets` | `gitleaks detect --verbose` | リポジトリ全体の秘密情報スキャン |
+| `git absorb` | `git-absorb --and-rebase` | 変更を自動で正しいコミットにfixup + rebase |
+
+### git secrets
+
+[gitleaks](https://github.com/gitleaks/gitleaks) でリポジトリ履歴全体をスキャン。AWS鍵、GitHub PAT、Slack webhook等を検出。
+
+```bash
+git secrets                          # 全履歴スキャン
+gitleaks protect --staged --verbose  # ステージ済みのみ (pre-commit用)
+```
+
+### git absorb
+
+[git-absorb](https://github.com/tummychow/git-absorb) でステージ済みの変更を自動的に適切なコミットに fixup。`rebase.autoSquash = true` と組み合わせて使用。
+
+```bash
+git add -p       # 修正をステージ
+git absorb       # 自動fixup + rebase
 ```
 
 ## ghq (Repository Management)

@@ -72,6 +72,11 @@ sheldon でプラグインを直接読み込み。
 
 ```toml
 # common/sheldon/.config/sheldon/plugins.toml
+[plugins.zsh-completions]
+github = "zsh-users/zsh-completions"
+dir = "src"
+apply = ["fpath"]
+
 [plugins.zsh-abbr]
 github = "olets/zsh-abbr"
 
@@ -81,6 +86,8 @@ github = "zsh-users/zsh-syntax-highlighting"
 [plugins.zsh-autosuggestions]
 github = "zsh-users/zsh-autosuggestions"
 ```
+
+zsh-completions は `apply = ["fpath"]` で fpath に追加するのみ（source 不要）。compinit 経由で読み込まれるため、起動時間への影響はほぼゼロ。
 
 > **Note**: 以前は `zsh-defer` (romkatv 製) で遅延読み込みしていたが、macOS zsh 5.9 で `zle -F` コールバックが発火しない問題が発生し、プラグインがロードされなくなったため直接読み込みに変更。起動時間への影響は軽微（~35ms 増）。
 
@@ -120,16 +127,25 @@ pane 起動時は `.zshenv` → `.zshrc` のみが実行され、`.zprofile` を
 
 | ファイル | 変更内容 |
 |----------|----------|
-| `common/zsh/.zshrc.common` | tmux reload 削除、compinit キャッシュ化、gh completion 静的化 |
-| `common/sheldon/.config/sheldon/plugins.toml` | プラグイン管理（zsh-defer 廃止、直接読み込み） |
+| `common/zsh/.zshrc.common` | tmux reload 削除、compinit キャッシュ化、gh completion 静的化、fzf設定、direnv hook、モダンツール alias |
+| `common/sheldon/.config/sheldon/plugins.toml` | プラグイン管理（zsh-defer 廃止、直接読み込み、zsh-completions 追加） |
 | `mac/zsh/.zshrc.local` | brew shellenv 重複削除、Node fallback 削除 |
 | `common/zsh/.zprofile` | .zshrc 二重ロード行を削除 |
 | `common/tmux/.config/tmux/tmux.conf` | `default-command "${SHELL}"` 追加 |
 
+## 追加ツールの起動コスト
+
+| ツール | 起動コスト | 備考 |
+|--------|-----------|------|
+| direnv hook | ~5ms | `eval "$(direnv hook zsh)"` |
+| fzf 環境変数 | ~0ms | export のみ（eval なし） |
+| zsh-completions | ~0ms | fpath 追加のみ（source 不要） |
+
 ## 計測方法
 
 ```bash
-# 起動時間
+# 起動時間（hyperfine でベンチマーク）
+hyperfine "zsh -i -c exit"   # 統計的に正確な計測
 time zsh -i -c exit          # non-login shell (tmux pane)
 time zsh -l -i -c exit       # login shell
 

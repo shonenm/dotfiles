@@ -12,6 +12,7 @@ dotfiles/
 │   ├── starship/    # Starshipプロンプト
 │   ├── sheldon/     # Zshプラグインマネージャー
 │   ├── zsh-abbr/    # Zsh略語定義 (zsh-abbr)
+│   ├── bat/         # bat設定 (テーマ・構文マッピング)
 │   ├── tmux/        # Tmux設定 (TokyoNight + Powerline)
 │   ├── git/         # Git設定
 │   ├── lazygit/     # LazyGit設定
@@ -109,16 +110,16 @@ exec zsh
 
 ### macOS (Homebrew)
 
-| カテゴリ | ツール                                                                        |
-| -------- | ----------------------------------------------------------------------------- |
-| Shell    | zsh, starship, sheldon, atuin, zoxide                                         |
-| Editor   | neovim                                                                        |
-| Git      | lazygit, gh, gh-dash, ghq                                                     |
-| CLI      | eza, bat, ripgrep, fd, fzf, jq, yazi, tealdeer, procs, sd, dust, bottom, rip2 |
-| Dev      | mise, uv                                                                      |
-| Terminal | ghostty, tmux                                                                 |
-| Window   | aerospace, sketchybar, borders                                                |
-| Apps     | raycast, karabiner-elements                                                   |
+| カテゴリ | ツール                                                                                    |
+| -------- | ----------------------------------------------------------------------------------------- |
+| Shell    | zsh, starship, sheldon, atuin, zoxide                                                     |
+| Editor   | neovim                                                                                    |
+| Git      | lazygit, gh, gh-dash, ghq, git-absorb, gitleaks                                           |
+| CLI      | eza, bat, ripgrep, fd, fzf, jq, yazi, tealdeer, procs, sd, dust, bottom, rip2, xh, ouch, glow, viddy, doggo, grex, quay |
+| Dev      | mise, uv, direnv, just, watchexec, hyperfine, topgrade                                    |
+| Terminal | ghostty, tmux                                                                             |
+| Window   | aerospace, sketchybar, borders                                                            |
+| Apps     | raycast, karabiner-elements                                                               |
 
 ### Linux (apt/curl)
 
@@ -126,7 +127,7 @@ exec zsh
 | -------- | --------------------------------------------------------------- |
 | System   | build-essential, zsh, tmux, jq, stow, rsync                     |
 | Editor   | neovim                                                          |
-| CLI      | ripgrep, fzf, eza, bat, tealdeer, procs, sd, dust, bottom, rip2 |
+| CLI      | ripgrep, fzf, eza, bat, tealdeer, procs, sd, dust, bottom, rip2, quay |
 | Git      | lazygit, ghq                                                    |
 | Dev      | mise, starship, sheldon, zoxide, atuin, uv, dotenvx             |
 | Font     | UDEV Gothic Nerd Font                                           |
@@ -135,11 +136,13 @@ exec zsh
 
 ### Zsh
 
-- **プラグインマネージャー**: Sheldon
+- **プラグインマネージャー**: Sheldon (zsh-completions, zsh-abbr, zsh-syntax-highlighting, zsh-autosuggestions)
 - **略語展開**: zsh-abbr (エイリアスの代替、履歴に展開後コマンドが残る)
 - **プロンプト**: Starship (Draculaテーマ)
-- **履歴検索**: Atuin
+- **履歴検索**: Atuin (fuzzy検索、workspace対応、secrets_filter)
 - **ディレクトリ移動**: Zoxide
+- **環境変数自動ロード**: direnv (`.envrc` によるプロジェクト別環境変数)
+- **fzfテーマ**: TokyoNight カラー統一
 
 ### Neovim
 
@@ -162,6 +165,8 @@ exec zsh
   | `h/j/k/l` | ペイン移動 |
   | `H/J/K/L` | ペインリサイズ |
   | `\|` / `-` | 縦/横分割 |
+  | `j` | Scratchpad (永続セッション、トグル) |
+  | `Space` | tmux-thumbs (ヒントベーステキスト選択) |
   | `r` | 設定リロード |
 
 ### AeroSpace + SketchyBar

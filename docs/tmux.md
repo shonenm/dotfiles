@@ -46,15 +46,15 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 |------|------|--------|
 | `g` | lazygit（カレントパスで起動） | 80% × 80% |
 | `G` | gh-dash（GitHub Dashboard） | 85% × 85% |
-| `j` | Scratchpad シェル（カレントパスで起動） | 80% × 80% |
+| `j` | Scratchpad シェル（永続 `scratch` セッション、トグル） | 80% × 80% |
 | `f` | セッション切り替え（fzf + プレビュー） | 60% × 60% |
 | `F` | ghq プロジェクト切り替え（fzf） | 60% × 60% |
 
 - `-E` フラグにより、コマンド終了時に popup 自動クローズ
 - `G` の gh-dash は 85% サイズ（列が多いため lazygit より少し大きめ）
-- `j` の Scratchpad は `exit` / `Ctrl+D` で終了
+- `j` の Scratchpad は永続セッション (`scratch`) を使用。再度 `prefix + j` でトグル（セッション状態を維持）
 - `f` はデフォルトの `find-window` を上書き
-- `F` はプロジェクト名でセッションを作成（既存なら切り替え）
+- `F` はプロジェクト名でセッションを作成（既存なら切り替え）。プロジェクトルートに `.tmux` ファイルがあれば新規セッション時に自動実行
 
 ### Copy Mode (vi スタイル)
 
@@ -64,10 +64,10 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | `prefix + u` / `prefix + C-u` | Copy Mode に入り即スクロールアップ |
 | `v` | 選択開始 |
 | `Ctrl+v` | 矩形選択切替 |
-| `y` | コピー |
+| `y` | コピー（OSC52 経由でクリップボードへ） |
 | `Enter` / `Esc` | キャンセル |
 | `Ctrl+u` / `Ctrl+d` | 4 行スクロール |
-| マウスドラッグ | 自動コピー → pbcopy（Copy Mode 終了） |
+| マウスドラッグ | 自動コピー → OSC52（Copy Mode 終了） |
 
 ## ステータスバー
 
@@ -266,10 +266,15 @@ scripts/
 | tmux-cpu | CPU/RAM 使用率をステータスバーに表示 |
 | tmux-resurrect | セッション保存・復元（Pane 内容含む） |
 | tmux-continuum | 自動復元（`@continuum-restore on`） |
+| tmux-thumbs | Vimium風ヒントベーステキスト選択（URL、パス、gitハッシュ等を即コピー） |
 
 Resurrect 設定:
 - `@resurrect-capture-pane-contents on` — Pane の表示内容も保存
-- `@resurrect-strategy-nvim session` — Neovim セッションも復元
+- Neovim セッション復元は resession.nvim が担当（tmux-resurrect の `@resurrect-strategy-nvim` は使用しない）
+
+tmux-thumbs 設定:
+- `prefix + Space` (デフォルト) でヒント表示
+- 選択した文字列は `pbcopy` でクリップボードにコピー
 
 以前使用していた tmux-sensible、tmux-yank は削除済み:
 - tmux-sensible: 自前設定でカバー（`focus-events`、`history-limit` 等を明示指定）

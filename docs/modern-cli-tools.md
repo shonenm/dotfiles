@@ -19,29 +19,30 @@
 | `du` | `dust` | dust | `du` | ディスク使用量の可視化 |
 | `top` | `btm` | bottom | `top` | システムモニター（グラフ表示） |
 | `rm` | `rip` | rip2 | `rm` | 安全なファイル削除（ゴミ箱方式） |
+| `watch` | `viddy` | viddy | `watch` | 差分ハイライト付き定期実行 |
+| `dig` | `doggo` | doggo | `dig` | カラー+JSON対応DNSクライアント |
+| `curl`/`httpie` | `xh` | xh | `http` | モダンHTTPクライアント（Rust製） |
 
 ## インストール
 
 ### macOS
 
 ```bash
-brew install eza bat ripgrep fd tealdeer procs sd dust bottom rip2
+brew bundle --file=~/dotfiles/config/Brewfile
 ```
 
-### Linux (Debian/Ubuntu)
+### Linux (Debian/Ubuntu / Alpine)
 
-基本ツール（eza, bat, ripgrep, fd）は apt で、残りは cargo でインストール:
+`install.sh` で自動インストール。ツール定義は `config/tools.linux.bash` に一元管理:
 
 ```bash
-cargo install tealdeer procs sd du-dust bottom rm-improved
+./install.sh   # apt/apk パッケージ + GitHub release + cargo を自動判別
 ```
 
-### Linux (Alpine)
-
-```bash
-apk add eza bat ripgrep fd tealdeer dust bottom
-cargo install procs sd rm-improved
-```
+各ツールのインストール方法:
+- **apt/apk**: eza, bat, ripgrep, fd 等
+- **GitHub release**: direnv, just, watchexec, hyperfine, gitleaks, xh, ouch, glow, viddy, doggo, topgrade, grex 等
+- **cargo**: tealdeer, procs, sd, du-dust, bottom, rm-improved, git-absorb 等
 
 ## エイリアス定義
 
@@ -65,6 +66,9 @@ command -v sd &>/dev/null && alias sed="sd"
 command -v dust &>/dev/null && alias du="dust"
 command -v btm &>/dev/null && alias top="btm"
 command -v rip &>/dev/null && alias rm="rip"
+command -v viddy &>/dev/null && alias watch="viddy"
+command -v doggo &>/dev/null && alias dig="doggo"
+command -v xh &>/dev/null && alias http="xh"
 ```
 
 ## 注意事項
@@ -73,3 +77,29 @@ command -v rip &>/dev/null && alias rm="rip"
 - 元のコマンドを使いたい場合は `\command` でエイリアスをバイパス（例: `\rm file.txt`）
 - `rip` はファイルをゴミ箱（`~/.local/share/graveyard`）に移動するため、完全削除には `\rm` を使用
 - `tldr` は初回実行時にキャッシュのダウンロードが必要（`tldr --update`）
+
+## エイリアスなしツール
+
+エイリアスは設定されないが、Brewfile に含まれる追加ツール:
+
+| ツール | パッケージ名 | 説明 |
+|--------|-------------|------|
+| `direnv` | direnv | ディレクトリ毎の環境変数自動ロード (`.envrc`) |
+| `just` | just | モダンタスクランナー (Makefile代替) |
+| `watchexec` | watchexec | ファイル監視・コマンド自動再実行 |
+| `hyperfine` | hyperfine | コマンドベンチマーク（統計的精度） |
+| `gitleaks` | gitleaks | Git秘密情報スキャン (`git secrets`) |
+| `git-absorb` | git-absorb | 自動fixupコミット生成 (`git absorb`) |
+| `ouch` | ouch | ユニバーサル圧縮/解凍（フォーマット自動検出） |
+| `glow` | glow | ターミナルMarkdownレンダラー |
+| `topgrade` | topgrade | 一括パッケージマネージャ更新 |
+| `grex` | grex | 例文から正規表現を生成 |
+| `quay` | quay-tui | TUIポートマネージャー（ローカルプロセス・SSHフォワード・Dockerコンテナ） |
+
+## bat 設定
+
+`common/bat/.config/bat/config` でグローバル設定:
+
+- **テーマ**: Visual Studio Dark+
+- **スタイル**: 行番号、Git変更マーカー、ヘッダー表示
+- **構文マッピング**: `.env` → DotENV、`.envrc` → Bash

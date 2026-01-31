@@ -27,11 +27,13 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | mini.icons               | ファイルアイコン                       |
 | which-key.nvim           | キーバインドヘルプ表示                 |
 | snacks.nvim              | ユーティリティ集（ファイルピッカー等） |
-| hlchunk.nvim             | インデントガイド・チャンクハイライト   |
-| nvim-hlslens             | 検索マッチ数・位置表示                 |
-| nvim-scrollbar           | スクロールバー・診断/Git マーカー      |
-| treesitter-context       | 関数/クラスコンテキスト表示            |
-| rainbow-delimiters.nvim  | ブラケットペアカラー化                 |
+| hlchunk.nvim                | インデントガイド・チャンクハイライト    |
+| nvim-hlslens                | 検索マッチ数・位置表示                  |
+| nvim-scrollbar              | スクロールバー・診断/Git マーカー       |
+| treesitter-context          | 関数/クラスコンテキスト表示             |
+| rainbow-delimiters.nvim     | ブラケットペアカラー化                  |
+| dropbar.nvim                | VS Code風ブレッドクラムナビゲーション   |
+| tiny-inline-diagnostic.nvim | フォーマットされたインライン診断表示    |
 
 ### エディタ機能
 
@@ -144,11 +146,13 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 
 | プラグイン         | 役割                        |
 | ------------------ | --------------------------- |
-| neotest            | テストランナー UI           |
+| neotest            | テストランナー UI（overseer 統合） |
 | neotest-jest       | Jest アダプター (BFF)       |
 | neotest-vitest     | Vitest アダプター (Web)     |
 | neotest-python     | pytest アダプター (Agents)  |
 | neotest-playwright | Playwright アダプター (E2E) |
+
+neotest は overseer.nvim と統合済み。テスト実行時の出力が overseer パネルにストリーミングされ、履歴管理・再実行が可能。
 
 ### デバッグ
 
@@ -291,8 +295,10 @@ common/nvim/.config/nvim/lua/plugins/
 ├── scrollbar.lua          # スクロールバー設定
 ├── session.lua            # セッション管理設定
 ├── solidity.lua           # Solidity 開発支援 (LSP, treesitter, forge fmt)
+├── tiny-inline-diagnostic.lua # インライン診断表示 (virtual_text 置換)
 ├── tmux-navigator.lua     # tmux 連携設定
-└── typescript-enhanced.lua # vtsls import設定 (non-relative, auto-update)
+├── typescript-enhanced.lua # vtsls 設定 (import, inlay hints)
+└── dropbar.lua            # ブレッドクラムナビゲーション
 ```
 
 ## キーバインド
@@ -407,6 +413,19 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 
 ## 自動化
 
-- TypeScript/JavaScript 保存時に import 自動整理 (`source.organizeImports`)
+- TypeScript/JavaScript 保存時に import 自動整理 (`source.organizeImports`、同期実行で conform.nvim との競合を回避)
 - 外部ファイル変更の自動リロード (`checktime`)
 - snacks.nvim picker で frecency（頻度+新しさ）ベースのファイルソート
+
+## TypeScript Inlay Hints
+
+vtsls で TypeScript/JavaScript の inlay hints を設定済み:
+
+- **パラメータ名**: リテラル引数にパラメータ名を表示
+- **パラメータ型**: 関数パラメータの型を表示
+- **変数型**: 変数の推論された型を表示
+- **プロパティ宣言型**: プロパティの型を表示
+- **関数戻り値型**: 関数の戻り値型を表示
+- **enum メンバー値**: enum の値を表示
+
+トグル: `<leader>uh`
