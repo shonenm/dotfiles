@@ -68,6 +68,29 @@ abbr R="ws.sh --Research"
 abbr n="ws.sh --netse"
 abbr K="cd ~/works/KetchApp; code ."
 
+# GitHub CLI
+abbr gpr="gh pr create"
+abbr gpv="gh pr view --web"
+abbr gic="gh issue create"
+
+# Docker Compose
+abbr dc="docker compose"
+abbr dcu="docker compose up -d"
+abbr dcd="docker compose down"
+abbr dcl="docker compose logs -f"
+
+# Just (task runner)
+abbr j="just"
+abbr jl="just --list"
+
+# Mise
+abbr mi="mise install"
+abbr mr="mise run"
+
+# uv
+abbr uvr="uv run"
+abbr uvs="uv sync"
+
 # Claude Code
 abbr claude-ps="claude-cleanup.sh list"
 abbr claude-kill="claude-cleanup.sh kill-all"

@@ -1,6 +1,11 @@
 # plugins.toml
 shell = "zsh"
 
+[plugins.zsh-completions]
+github = "zsh-users/zsh-completions"
+dir = "src"
+apply = ["fpath"]
+
 [plugins.zsh-abbr]
 github = "olets/zsh-abbr"
 

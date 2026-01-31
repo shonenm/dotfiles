@@ -16,6 +16,9 @@ export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 # Mise
 command -v mise &>/dev/null && eval "$(mise activate zsh)"
 
+# Direnv
+command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
+
 # Cargo
 [[ -d "$HOME/.cargo/bin" ]] && export PATH="$HOME/.cargo/bin:$PATH"
 
@@ -28,6 +31,22 @@ export DENO_INSTALL="$HOME/.deno"
 
 # User bin
 [[ -d "$HOME/bin" ]] && export PATH="$PATH:$HOME/bin"
+
+# --- fzf (TokyoNight theme) ---
+export FZF_DEFAULT_OPTS="
+  --height=80%
+  --layout=reverse
+  --border=rounded
+  --info=inline
+  --color=fg:#c0caf5,bg:-1,hl:#bb9af7
+  --color=fg+:#c0caf5,bg+:#283457,hl+:#7dcfff
+  --color=info:#7aa2f7,prompt:#7dcfff,pointer:#7dcfff
+  --color=marker:#9ece6a,spinner:#9ece6a,header:#9ece6a
+  --bind='ctrl-d:half-page-down,ctrl-u:half-page-up'
+"
+export FZF_DEFAULT_COMMAND="fd --type f --hidden --exclude .git"
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_C_COMMAND="fd --type d --hidden --exclude .git"
 
 # --- Completion Init (cached: full rebuild once per 24h) ---
 autoload -Uz compinit
@@ -56,6 +75,9 @@ command -v sd &>/dev/null && alias sed="sd"
 command -v dust &>/dev/null && alias du="dust"
 command -v btm &>/dev/null && alias top="btm"
 command -v rip &>/dev/null && alias rm="rip"
+command -v viddy &>/dev/null && alias watch="viddy"
+command -v doggo &>/dev/null && alias dig="doggo"
+command -v xh &>/dev/null && alias http="xh"
 
 # --- Modern Tools Init (cross-platform) ---
 # gh completion: static file in fpath (regenerate after gh upgrade: gh completion -s zsh > ~/.zsh/completions/_gh)
