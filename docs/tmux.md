@@ -112,7 +112,7 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 ### Window タブ
 
 - 非アクティブ: グレー背景 `#3b4261` + 角丸
-- アクティブ: 青背景 `#7aa2f7` + 太字 + 角丸
+- アクティブ: セッション固有のアクセントカラー + 太字 + 角丸（後述「Per-session アクセントカラー」参照）
 - Claude 通知バッジ: オレンジ `#ff6600` で件数表示（後述）
 
 ## ビジュアル設定
@@ -173,6 +173,37 @@ OFF 中の視覚的変化:
 
 参考: [samoshkin/tmux-config](https://github.com/samoshkin/tmux-config)
 
+## Per-session アクセントカラー
+
+セッション名のハッシュから自動的にアクセントカラーを決定し、セッション名バッジとアクティブ Window タブに適用。複数セッションを同時に開いた際の視認性を向上させる。
+
+### カラーパレット（TokyoNight 準拠）
+
+| 色 | Hex |
+|-----|-----|
+| Red/Pink | `#f7768e` |
+| Orange | `#ff9e64` |
+| Yellow | `#e0af68` |
+| Green | `#9ece6a` |
+| Teal | `#73daca` |
+| Blue | `#7aa2f7` |
+| Purple | `#bb9af7` |
+| Cyan | `#7dcfff` |
+
+### 仕組み
+
+1. `session-created` Hook で `tmux-session-color.sh apply` を実行
+2. セッション名を `cksum` でハッシュ化し、8 色から 1 色を決定
+3. `@session_color` にセッション固有の色を保存
+4. `status-left`（セッション名バッジ）と `window-status-current-format`（アクティブ Window タブ）を per-session で設定
+5. `client-session-changed` / `client-attached` Hook で `refresh` を実行し、色を再適用
+
+per-session 設定により、複数 Ghostty ウィンドウで異なるセッションを開いても各セッション固有の色が維持される。
+
+### セッション切り替え
+
+`prefix + f` で fzf ベースのセッション切り替え。各セッション名がアクセントカラーで ANSI 着色表示される。
+
 ## Claude Code 通知統合
 
 tmux ステータスバーに Claude Code の状態を通知バッジとして表示。
@@ -223,6 +254,7 @@ scripts/
 ├── tmux-storage.sh           # ストレージ使用率取得（閾値超過時のみ表示）
 ├── tmux-claude-badge.sh      # 通知バッジ表示
 ├── tmux-claude-focus.sh      # 通知自動消去
+├── tmux-session-color.sh     # Per-session アクセントカラー（apply / refresh / fzf-sessions）
 └── tmux-popup-ghq.sh         # ghq プロジェクト切り替え（popup 用）
 ```
 
