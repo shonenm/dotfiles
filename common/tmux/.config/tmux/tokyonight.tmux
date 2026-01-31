@@ -34,9 +34,10 @@ set -g status-right-style NONE
 # Left: Session name (桃色 #f7768e、左端は角丸なし)
 set -g status-left "#[fg=#1a1b26,bg=#f7768e,bold]  #S #[fg=#f7768e,bg=default] "
 
-# Right: Custom mode indicator + Git branch, Date, Time, Hostname
-# Mode indicator: off=grey, copy=red, sync=teal, prefix=yellow, normal=blue
-set -g status-right "#{?#{==:#{client_key_table},off},#[fg=#545c7e]#[fg=#1a1b26 bg=#545c7e bold]  OFF #[fg=#545c7e bg=default],#{?pane_in_mode,#[fg=#f7768e]#[fg=#1a1b26 bg=#f7768e bold] COPY #[fg=#f7768e bg=default],#{?pane_synchronized,#[fg=#73daca]#[fg=#1a1b26 bg=#73daca bold] SYNC #[fg=#73daca bg=default],#{?client_prefix,#[fg=#e0af68]#[fg=#1a1b26 bg=#e0af68 bold] PREFIX #[fg=#e0af68 bg=default],#[fg=#7aa2f7]#[fg=#1a1b26 bg=#7aa2f7] NORMAL #[fg=#7aa2f7 bg=default]}}}}\
+# Right: System stats + Mode indicator + Git branch, Date, Time, Hostname
+# Layout (left→right): [SYSSTAT] [MODE] [GIT] [DATE] [HOST]
+set -g status-right "#[fg=#292e42,bg=default]#[fg=#a9b1d6,bg=#292e42] #{cpu_fg_color}#{cpu_percentage}#[fg=#545c7e,bg=#292e42]|#[fg=#a9b1d6,bg=#292e42] #{ram_fg_color}#{ram_percentage}#(~/dotfiles/scripts/tmux-gpu.sh)#(~/dotfiles/scripts/tmux-storage.sh)#[fg=#292e42,bg=default] \
+#{?pane_in_mode,#[fg=#f7768e]#[fg=#1a1b26 bg=#f7768e bold] COPY #[fg=#f7768e bg=default],#{?pane_synchronized,#[fg=#73daca]#[fg=#1a1b26 bg=#73daca bold] SYNC #[fg=#73daca bg=default],#{?client_prefix,#[fg=#e0af68]#[fg=#1a1b26 bg=#e0af68 bold] PREFIX #[fg=#e0af68 bg=default],#[fg=#7aa2f7]#[fg=#1a1b26 bg=#7aa2f7] NORMAL #[fg=#7aa2f7 bg=default]}}}\
 #[fg=#9ece6a,bg=default]#[fg=#1a1b26,bg=#9ece6a]  #(cd #{pane_current_path}; git branch --show-current 2>/dev/null || echo '-') #[fg=#9ece6a,bg=default]\
 #[fg=#7aa2f7,bg=default]#[fg=#1a1b26,bg=#7aa2f7]  %m/%d %H:%M #[fg=#7aa2f7,bg=default]\
 #[fg=#7dcfff,bg=default]#[fg=#1a1b26,bg=#7dcfff,bold]  #h #[fg=#7dcfff,bg=default]"
