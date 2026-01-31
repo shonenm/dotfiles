@@ -66,29 +66,23 @@ mkdir -p ~/.zsh/completions
 gh completion -s zsh > ~/.zsh/completions/_gh
 ```
 
-### 4. sheldon + zsh-defer でプラグイン遅延読み込み (~35ms)
+### 4. sheldon でプラグイン管理
 
-sheldon 公式推奨の `zsh-defer` (romkatv 製) を導入。
-syntax-highlighting と autosuggestions を遅延読み込みに変更。
+sheldon でプラグインを直接読み込み。
 
 ```toml
 # common/sheldon/.config/sheldon/plugins.toml
-[templates]
-defer = "{% for file in files %}zsh-defer source \"{{ file }}\"\n{% endfor %}"
-
-[plugins.zsh-defer]
-github = "romkatv/zsh-defer"
+[plugins.zsh-abbr]
+github = "olets/zsh-abbr"
 
 [plugins.zsh-syntax-highlighting]
 github = "zsh-users/zsh-syntax-highlighting"
-apply = ["defer"]
 
 [plugins.zsh-autosuggestions]
 github = "zsh-users/zsh-autosuggestions"
-apply = ["defer"]
 ```
 
-zsh-abbr は compdef を使うため即時読み込みのまま維持。
+> **Note**: 以前は `zsh-defer` (romkatv 製) で遅延読み込みしていたが、macOS zsh 5.9 で `zle -F` コールバックが発火しない問題が発生し、プラグインがロードされなくなったため直接読み込みに変更。起動時間への影響は軽微（~35ms 増）。
 
 ### 5. brew shellenv 重複排除 (~20ms)
 
@@ -127,7 +121,7 @@ pane 起動時は `.zshenv` → `.zshrc` のみが実行され、`.zprofile` を
 | ファイル | 変更内容 |
 |----------|----------|
 | `common/zsh/.zshrc.common` | tmux reload 削除、compinit キャッシュ化、gh completion 静的化 |
-| `common/sheldon/.config/sheldon/plugins.toml` | zsh-defer 追加、プラグイン遅延読み込み |
+| `common/sheldon/.config/sheldon/plugins.toml` | プラグイン管理（zsh-defer 廃止、直接読み込み） |
 | `mac/zsh/.zshrc.local` | brew shellenv 重複削除、Node fallback 削除 |
 | `common/zsh/.zprofile` | .zshrc 二重ロード行を削除 |
 | `common/tmux/.config/tmux/tmux.conf` | `default-command "${SHELL}"` 追加 |
