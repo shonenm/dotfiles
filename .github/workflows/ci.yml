@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: ./scripts
+
+  stow-dry-run:
+    name: Stow Dry Run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install stow
+        run: sudo apt-get update && sudo apt-get install -y stow
+      - name: Dry-run stow for common packages
+        run: |
+          for dir in common/*/; do
+            pkg=$(basename "$dir")
+            echo "==> stow --no (dry-run): $pkg"
+            stow --dir=common --target="$HOME" --no "$pkg" 2>&1 || true
+          done

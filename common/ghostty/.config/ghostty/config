@@ -49,6 +49,7 @@ keybind = cmd+shift+r=reload_config
 
 # --- Integration ---
 shell-integration = zsh
+shell-integration-features = cursor,sudo,title
 cursor-style = block
 cursor-style-blink = false
 copy-on-select = clipboard

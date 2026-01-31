@@ -3,3 +3,34 @@ node = "lts"
 python = "latest"
 pnpm = "latest"
 deno = "latest"
+
+[tasks.update]
+description = "Update all package managers and tools"
+run = """
+brew update && brew upgrade
+sheldon lock --update
+tldr --update
+"""
+
+[tasks.doctor]
+description = "Check dotfiles health"
+run = """
+echo "==> Checking required tools..."
+for cmd in zsh tmux nvim starship sheldon atuin zoxide fzf fd rg bat eza ghq mise stow; do
+  if command -v "$cmd" >/dev/null 2>&1; then
+    printf "  ✓ %s (%s)\\n" "$cmd" "$(command -v "$cmd")"
+  else
+    printf "  ✗ %s NOT FOUND\\n" "$cmd"
+  fi
+done
+echo ""
+echo "==> Checking stow links..."
+for dir in ~/dotfiles/common/*/; do
+  pkg=$(basename "$dir")
+  stow --dir=~/dotfiles/common --target="$HOME" --no "$pkg" 2>&1 | grep -q "CONFLICT" && echo "  ⚠ $pkg has conflicts" || echo "  ✓ $pkg"
+done
+"""
+
+[tasks.lint]
+description = "Lint shell scripts with shellcheck"
+run = "shellcheck ~/dotfiles/scripts/*.sh"
