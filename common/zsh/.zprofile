@@ -10,7 +10,3 @@ if [[ "$OSTYPE" == darwin* ]]; then
   # OrbStack: command-line tools and integration
   source ~/.orbstack/shell/init.zsh 2>/dev/null || :
 fi
-
-# --- For login shells, also source .zshrc ---
-# This ensures .zshrc is loaded for interactive login shells (e.g., Docker, SSH)
-[[ -o interactive ]] && [[ -f "$HOME/.zshrc" ]] && source "$HOME/.zshrc"
