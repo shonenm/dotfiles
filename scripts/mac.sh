@@ -60,6 +60,21 @@ install_dops() {
   log_success "dops installed to ~/.local/bin"
 }
 
+install_gh_extensions() {
+  if ! command_exists gh; then
+    log_warn "gh CLI not found, skipping gh extensions"
+    return
+  fi
+
+  if gh extension list | grep -q "dlvhdr/gh-dash"; then
+    log_success "gh-dash already installed"
+  else
+    log_info "Installing gh-dash extension..."
+    gh extension install dlvhdr/gh-dash
+    log_success "gh-dash installed"
+  fi
+}
+
 install_mise_tools() {
   if ! command_exists mise; then
     log_warn "mise not found, skipping mise tools"
@@ -97,6 +112,7 @@ install_brew_bundle
 install_mise_tools
 install_npm_packages
 install_dops
+install_gh_extensions
 link_ai_scripts
 set_default_shell
 

@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=https://gh-dash.dev/schema.json
+
+prSections:
+  - title: My PRs
+    filters: is:open author:@me
+    limit: 20
+  - title: Review Requested
+    filters: is:open review-requested:@me
+    limit: 20
+  - title: Involved
+    filters: is:open involves:@me -author:@me updated:>={{ nowModify "-2w" }}
+    limit: 20
+
+issuesSections:
+  - title: My Issues
+    filters: is:open author:@me
+    limit: 20
+  - title: Assigned
+    filters: is:open assignee:@me
+    limit: 20
+
+repoPaths:
+  "*/*": ~/ghq/github.com/*/*
+
+keybindings:
+  prs:
+    - key: c
+      command: >
+        tmux new-window -c "{{.RepoPath}}" '
+          gh pr checkout {{.PrNumber}} &&
+          nvim -c ":CodeDiff {{.BaseRefName}}...{{.HeadRefName}}"
+        '
+    - key: b
+      command: >
+        gh pr view {{.PrNumber}} --repo {{.RepoName}} --web
+  issues:
+    - key: b
+      command: >
+        gh issue view {{.IssueNumber}} --repo {{.RepoName}} --web
+
+defaults:
+  prsLimit: 20
+  issuesLimit: 20
+  view: prs
+  preview:
+    open: true
+    width: 50
+  refetchIntervalMinutes: 30
+
+pager:
+  diff: delta
