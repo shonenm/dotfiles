@@ -20,6 +20,9 @@ return {
         explorer = {
           hidden = true,
           ignored = true,
+          win = {
+            list = { width = 32 },
+          },
         },
       },
     },
