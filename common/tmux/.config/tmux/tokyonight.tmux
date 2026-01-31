@@ -31,8 +31,9 @@ set -g status-right-length "250"
 set -g status-left-style NONE
 set -g status-right-style NONE
 
-# Left: Session name (桃色 #f7768e、左端は角丸なし)
-set -g status-left "#[fg=#1a1b26,bg=#f7768e,bold]  #S #[fg=#f7768e,bg=default] "
+# Left: Session name (per-session accent color, fallback to #f7768e)
+set -g @session_color "#f7768e"
+set -g status-left "#[fg=#1a1b26,bg=#{@session_color},bold]  #S #[fg=#{@session_color},bg=default] "
 
 # Right: System stats + Mode indicator + Git branch, Date, Time, Hostname
 # Layout (left→right): [SYSSTAT] [MODE] [GIT] [DATE] [HOST]
