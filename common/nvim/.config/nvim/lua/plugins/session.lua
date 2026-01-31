@@ -91,6 +91,19 @@ return {
       local resession = require("resession")
       resession.setup(opts)
 
+      -- Close plugin windows before saving to prevent empty splits on restore
+      resession.add_hook("pre_save", function()
+        for _, win in ipairs(vim.api.nvim_list_wins()) do
+          local buf = vim.api.nvim_win_get_buf(win)
+          local bt = vim.bo[buf].buftype
+          local ft = vim.bo[buf].filetype
+          -- Close non-file windows (explorer, terminal, quickfix, etc.)
+          if bt ~= "" and bt ~= "help" and ft ~= "qf" then
+            pcall(vim.api.nvim_win_close, win, true)
+          end
+        end
+      end)
+
       -- Auto save session on exit (per directory)
       vim.api.nvim_create_autocmd("VimLeavePre", {
         callback = function()
