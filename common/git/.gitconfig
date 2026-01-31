@@ -76,3 +76,7 @@
 
 [commit]
     verbose = true
+
+# === ghq (Repository Management) ===
+[ghq]
+    root = ~/ghq

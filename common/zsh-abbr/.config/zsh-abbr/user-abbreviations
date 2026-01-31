@@ -17,6 +17,11 @@ abbr grh="git reset --hard HEAD"
 abbr grs="git reset --soft HEAD^"
 abbr gpf="git push --force"
 
+# ghq
+abbr gq="ghq get"
+abbr gql="ghq list"
+abbr gqc="ghq create"
+
 # Navigation
 abbr ..="builtin cd .."
 abbr ..2="builtin cd ../.."

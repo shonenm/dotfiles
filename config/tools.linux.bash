@@ -91,6 +91,13 @@ TOOL_lazygit_archive_pattern='lazygit_${VERSION_NOTAG}_Linux_${ARCH}.tar.gz'
 TOOL_lazygit_binary_path='lazygit'
 TOOL_lazygit_arch_map='x86_64:x86_64 aarch64:arm64'
 
+TOOL_ghq_check_cmd="ghq"
+TOOL_ghq_method="github_release"
+TOOL_ghq_github_repo="x-motemen/ghq"
+TOOL_ghq_archive_pattern='ghq_linux_${ARCH}.zip'
+TOOL_ghq_binary_path='ghq_linux_${ARCH}/ghq'
+TOOL_ghq_arch_map='x86_64:amd64 aarch64:arm64'
+
 TOOL_neovim_check_cmd="nvim"
 TOOL_neovim_method="github_release"
 TOOL_neovim_github_repo="neovim/neovim"
@@ -183,7 +190,7 @@ LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
   starship mise sheldon zoxide atuin dotenvx uv rust lazydocker
   # GitHub releases (no deps)
-  fastfetch delta lazygit dops yazi
+  fastfetch delta lazygit ghq dops yazi
   # APT-only (skipped on Alpine)
   gh neovim eza bat
   # Cargo tools (depend on rust)

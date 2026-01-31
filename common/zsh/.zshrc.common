@@ -107,6 +107,21 @@ function y() {
   rm -f -- "$tmp"
 }
 
+# --- ghq (repository manager) ---
+if command -v ghq &>/dev/null && command -v fzf &>/dev/null; then
+  repo() {
+    local selected
+    selected=$(ghq list | fzf --query="${1:-}" \
+      --preview "bat --style=plain --color=always $(ghq root)/{}/README.md 2>/dev/null || eza --icons -la $(ghq root)/{} 2>/dev/null || ls -la $(ghq root)/{}" \
+      --preview-window=right:50%:wrap \
+      --prompt="repo> " \
+      --height=80%)
+    if [[ -n "$selected" ]]; then
+      cd "$(ghq root)/$selected"
+    fi
+  }
+fi
+
 # --- Local bin ---
 [[ -f "$HOME/.local/bin/env" ]] && . "$HOME/.local/bin/env"
 
