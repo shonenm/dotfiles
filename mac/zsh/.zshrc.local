@@ -1,11 +1,5 @@
 # Mac-specific zsh configuration
 
-# --- Homebrew ---
-[[ -f /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
-
-# --- Homebrew Node (fallback) ---
-[[ -d "/opt/homebrew/Cellar/node/23.2.0/bin" ]] && export PATH="/opt/homebrew/Cellar/node/23.2.0/bin:$PATH"
-
 # --- Mac Tools Init ---
 command -v sheldon &>/dev/null && eval "$(sheldon source)"
 command -v atuin &>/dev/null && eval "$(atuin init zsh)"
