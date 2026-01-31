@@ -33,7 +33,7 @@ gpu_pct=""
 case "$(uname -s)" in
   Darwin)
     if command -v macmon &>/dev/null; then
-      json=$(macmon pipe -s 1 -i 100 2>/dev/null | head -1)
+      json=$(timeout 2 macmon pipe -s 1 -i 100 2>/dev/null | head -1)
       if [[ -n "$json" ]]; then
         gpu_pct=$(echo "$json" | jq -r '.gpu_usage[1] // empty' 2>/dev/null)
         [[ -n "$gpu_pct" ]] && gpu_pct=$(printf "%.0f" "$gpu_pct")
