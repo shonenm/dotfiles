@@ -112,7 +112,7 @@ exec zsh
 | -------- | ----------------------------------------------------------------------------- |
 | Shell    | zsh, starship, sheldon, atuin, zoxide                                         |
 | Editor   | neovim                                                                        |
-| Git      | lazygit, gh                                                                   |
+| Git      | lazygit, gh, ghq                                                              |
 | CLI      | eza, bat, ripgrep, fd, fzf, jq, yazi, tealdeer, procs, sd, dust, bottom, rip2 |
 | Dev      | mise, uv                                                                      |
 | Terminal | ghostty, tmux                                                                 |
@@ -126,6 +126,7 @@ exec zsh
 | System   | build-essential, zsh, tmux, jq, stow, rsync                     |
 | Editor   | neovim                                                          |
 | CLI      | ripgrep, fzf, eza, bat, tealdeer, procs, sd, dust, bottom, rip2 |
+| Git      | lazygit, ghq                                                    |
 | Dev      | mise, starship, sheldon, zoxide, atuin, uv, dotenvx             |
 | Font     | UDEV Gothic Nerd Font                                           |
 
@@ -176,6 +177,8 @@ exec zsh
 
 - ユーザー情報は `.gitconfig.local` で管理
 - 初回セットアップ時に1Passwordから取得
+- **ghq**: リポジトリ管理ツール（`~/ghq` 配下に統一管理）
+- `repo` 関数で ghq + fzf によるリポジトリ移動
 - 詳細は `docs/git-config.md` を参照
 
 ### SSH

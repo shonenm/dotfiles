@@ -153,6 +153,10 @@ op read "op://Personal/Git Config/email"
 
 [commit]
     verbose = true
+
+# === ghq (Repository Management) ===
+[ghq]
+    root = ~/ghq
 ```
 
 ### ~/.gitconfig.local (local only)
@@ -405,6 +409,67 @@ git tag     # Semantic version order
 ```bash
 git stauts  # → Executes git status after 1 second
 ```
+
+## ghq (Repository Management)
+
+[ghq](https://github.com/x-motemen/ghq) はリモートリポジトリをローカルに統一的なディレクトリ構造で管理するツール。
+
+### 設定
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `ghq.root` | `~/ghq` | リポジトリの保存先ディレクトリ |
+
+### ディレクトリ構造
+
+```
+~/ghq/
+├── github.com/
+│   ├── user/repo-a/
+│   └── user/repo-b/
+└── gitlab.com/
+    └── user/repo-c/
+```
+
+### 基本コマンド
+
+```bash
+# リポジトリを取得
+ghq get https://github.com/user/repo
+
+# リポジトリ一覧を表示
+ghq list
+
+# リポジトリを新規作成
+ghq create repo-name
+
+# リポジトリのルートパスを表示
+ghq root
+```
+
+### シェル統合
+
+`repo` 関数（`common/zsh/.zshrc.common` で定義）で ghq + fzf によるリポジトリ移動が可能:
+
+```bash
+# fzf でリポジトリを選択して cd
+repo
+
+# 初期フィルタ付きで起動
+repo my-project
+```
+
+- `ghq` と `fzf` の両方がインストールされている場合のみ有効
+- fzf preview で README.md またはディレクトリ内容を表示
+- `cd` は zoxide ラップ版を使用するため、訪問したリポジトリが zoxide の frecency DB に蓄積される
+
+### 略語（zsh-abbr）
+
+| 略語 | 展開後 | 説明 |
+|------|--------|------|
+| `gq` | `ghq get` | リポジトリを取得 |
+| `gql` | `ghq list` | リポジトリ一覧 |
+| `gqc` | `ghq create` | リポジトリを新規作成 |
 
 ## Global Ignore
 
