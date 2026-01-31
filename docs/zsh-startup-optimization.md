@@ -4,10 +4,10 @@ tmux pane 起動時の遅延を解消するために実施した最適化の記�
 
 ## 計測結果
 
-| 状態 | login shell | non-login shell | 備考 |
-|------|------------|-----------------|------|
-| 最適化前 | ~1.3s | ~750ms | tmux reload 560ms + zsh 750ms |
-| 最適化後 | ~540ms | ~140ms | Phase 2 で更に改善予定 |
+| 状態 | login shell | non-login shell (tmux pane) |
+|------|------------|-----------|
+| 最適化前 | ~1.3s | ~1.3s |
+| 最適化後 | **180ms** | **150ms** |
 
 ## ボトルネック分析 (zprof)
 
@@ -99,6 +99,29 @@ zsh-abbr は compdef を使うため即時読み込みのまま維持。
 
 mise で node を管理しているため、ハードコードされた `/opt/homebrew/Cellar/node/23.2.0/bin` を削除。
 
+### 7. .zprofile の .zshrc 二重ロード解消 (~400ms)
+
+`.zprofile` 末尾で `source "$HOME/.zshrc"` していたため、login shell 時に .zshrc が 2 回実行されていた。
+
+zsh の login + interactive shell ロード順:
+```
+.zshenv → .zprofile → .zshrc → .zlogin
+```
+
+zsh 本体が `.zshrc` を自動でロードするため、`.zprofile` 内の source は冗長。削除。
+
+### 8. tmux pane を non-login shell に変更 (~30ms)
+
+tmux はデフォルトで login shell (`-zsh`) を起動するため、pane 毎に `.zprofile` が実行される。
+親 tmux プロセスが既に PATH 等を設定済みなので不要。
+
+```tmux
+# common/tmux/.config/tmux/tmux.conf
+set -g default-command "${SHELL}"  # non-login shell
+```
+
+pane 起動時は `.zshenv` → `.zshrc` のみが実行され、`.zprofile` をスキップ。
+
 ## 変更ファイル一覧
 
 | ファイル | 変更内容 |
@@ -106,13 +129,15 @@ mise で node を管理しているため、ハードコードされた `/opt/ho
 | `common/zsh/.zshrc.common` | tmux reload 削除、compinit キャッシュ化、gh completion 静的化 |
 | `common/sheldon/.config/sheldon/plugins.toml` | zsh-defer 追加、プラグイン遅延読み込み |
 | `mac/zsh/.zshrc.local` | brew shellenv 重複削除、Node fallback 削除 |
+| `common/zsh/.zprofile` | .zshrc 二重ロード行を削除 |
+| `common/tmux/.config/tmux/tmux.conf` | `default-command "${SHELL}"` 追加 |
 
 ## 計測方法
 
 ```bash
 # 起動時間
-time zsh -i -c exit          # non-login shell
-time zsh -l -i -c exit       # login shell (tmux default)
+time zsh -i -c exit          # non-login shell (tmux pane)
+time zsh -l -i -c exit       # login shell
 
 # プロファイリング
 zsh -c 'zmodload zsh/zprof; source ~/.zshenv; source ~/.zprofile; source ~/.zshrc; zprof'

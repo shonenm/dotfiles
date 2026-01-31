@@ -7,8 +7,11 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | 設定 | 値 | 備考 |
 |------|-----|------|
 | Prefix | `Ctrl+Space` | デフォルト `Ctrl+b` から変更 |
+| Default command | `${SHELL}` | non-login shell（pane 起動高速化） |
 | Mouse | ON | ドラッグ選択、スクロール対応 |
 | Clipboard | OSC52 | SSH 経由でもコピー可能 |
+| Focus events | ON | Neovim autoread 等に必要 |
+| History limit | 50000 | スクロールバック行数 |
 | Passthrough | ON | Kitty graphics protocol（image.nvim 等） |
 | Base index | 1 | Window/Pane 番号が 1 から開始 |
 | Escape time | 0 | ESC 遅延なし（Neovim 対応） |
@@ -197,12 +200,14 @@ scripts/
 
 | プラグイン | 用途 |
 |------------|------|
-| tmux-sensible | 共通の推奨設定 |
 | vim-tmux-navigator | Neovim ⇔ tmux シームレス移動 |
 | tmux-resurrect | セッション保存・復元（Pane 内容含む） |
 | tmux-continuum | 自動復元（`@continuum-restore on`） |
-| tmux-yank | クリップボード連携 |
 
 Resurrect 設定:
 - `@resurrect-capture-pane-contents on` — Pane の表示内容も保存
 - `@resurrect-strategy-nvim session` — Neovim セッションも復元
+
+以前使用していた tmux-sensible、tmux-yank は削除済み:
+- tmux-sensible: 自前設定でカバー（`focus-events`、`history-limit` 等を明示指定）
+- tmux-yank: OSC52 (`set-clipboard on`) で代替
