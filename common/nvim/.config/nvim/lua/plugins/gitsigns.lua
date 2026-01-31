@@ -1,5 +1,9 @@
 return {
   "lewis6991/gitsigns.nvim",
+  keys = {
+    -- Disable default <leader>gd (diffthis) to free it for CodeDiff
+    { "<leader>gd", false },
+  },
   opts = {
     current_line_blame = true,
     current_line_blame_opts = {
