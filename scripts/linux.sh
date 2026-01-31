@@ -193,7 +193,11 @@ _install_github_release() {
     archive_pattern=$(eval echo "$(_tool_field "$tool" "archive_pattern")")
     binary_path=$(eval echo "$(_tool_field "$tool" "binary_path")")
     curl -fLo "/tmp/$archive_pattern" "https://github.com/$repo/releases/download/$VERSION/$archive_pattern"
-    tar xf "/tmp/$archive_pattern" -C /tmp
+    if [[ "$archive_pattern" == *.zip ]]; then
+      unzip -o "/tmp/$archive_pattern" -d /tmp
+    else
+      tar xf "/tmp/$archive_pattern" -C /tmp
+    fi
     $SUDO install "/tmp/$binary_path" /usr/local/bin/
     rm -rf "/tmp/$archive_pattern" "/tmp/${binary_path%/*}"
   fi

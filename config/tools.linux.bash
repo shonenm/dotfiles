@@ -51,7 +51,7 @@ TOOL_atuin_curl_cmd='curl --proto =https --tlsv1.2 -LsSf https://setup.atuin.sh 
 
 TOOL_dotenvx_check_cmd="dotenvx"
 TOOL_dotenvx_method="curl_pipe"
-TOOL_dotenvx_curl_cmd='curl -sfS https://dotenvx.sh | sh'
+TOOL_dotenvx_curl_cmd='curl -sfS "https://dotenvx.sh?directory=$HOME/.local/bin" | sh'
 
 TOOL_uv_check_cmd="uv"
 TOOL_uv_method="curl_pipe"
@@ -149,9 +149,11 @@ TOOL_rip2_cargo_crate="rm-improved"
 TOOL_rip2_depends_on="rust"
 
 TOOL_yazi_check_cmd="yazi"
-TOOL_yazi_method="cargo"
-TOOL_yazi_cargo_crate="yazi-fm"
-TOOL_yazi_depends_on="rust"
+TOOL_yazi_method="github_release"
+TOOL_yazi_github_repo="sxyazi/yazi"
+TOOL_yazi_archive_pattern='yazi-${ARCH}-unknown-linux-gnu.zip'
+TOOL_yazi_binary_path='yazi-${ARCH}-unknown-linux-gnu/yazi'
+TOOL_yazi_arch_map='x86_64:x86_64 aarch64:aarch64'
 
 # ════════════════════════════════════════
 # APT repo installs (Debian/Ubuntu only)
@@ -181,9 +183,9 @@ LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
   starship mise sheldon zoxide atuin dotenvx uv rust lazydocker
   # GitHub releases (no deps)
-  fastfetch delta lazygit dops
+  fastfetch delta lazygit dops yazi
   # APT-only (skipped on Alpine)
   gh neovim eza bat
   # Cargo tools (depend on rust)
-  tokei tealdeer procs sd dust bottom rip2 yazi
+  tokei tealdeer procs sd dust bottom rip2
 )

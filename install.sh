@@ -423,7 +423,7 @@ print_install_summary() {
         local var="TOOL_${tool}_check_cmd"
         local check_cmd="${!var}"
         local var2="TOOL_${tool}_alt_check_cmd"
-        local alt="${!var2}"
+        local alt="${!var2:-}"
         ((tools_total++))
         if command_exists "$check_cmd" || { [[ -n "$alt" ]] && command_exists "$alt"; }; then
           ((tools_ok++))
