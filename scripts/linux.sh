@@ -279,16 +279,24 @@ install_modern_tools() {
       continue
     fi
 
-    # Check if already installed
+    # Check if already installed (also verify binary runs on this arch)
     if command_exists "$check_cmd"; then
-      log_success "$tool already installed"
-      _existing+=("$tool")
-      continue
+      if "$check_cmd" --version &>/dev/null || "$check_cmd" --help &>/dev/null || "$check_cmd" version &>/dev/null; then
+        log_success "$tool already installed"
+        _existing+=("$tool")
+        continue
+      else
+        log_warn "$tool found but not executable (wrong arch?), reinstalling..."
+      fi
     fi
     if [[ -n "$alt_check_cmd" ]] && command_exists "$alt_check_cmd"; then
-      log_success "$tool already installed"
-      _existing+=("$tool")
-      continue
+      if "$alt_check_cmd" --version &>/dev/null || "$alt_check_cmd" --help &>/dev/null || "$alt_check_cmd" version &>/dev/null; then
+        log_success "$tool already installed"
+        _existing+=("$tool")
+        continue
+      else
+        log_warn "$tool found but not executable (wrong arch?), reinstalling..."
+      fi
     fi
 
     # Check dependency
