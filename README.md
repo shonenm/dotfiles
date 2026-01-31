@@ -15,6 +15,7 @@ dotfiles/
 │   ├── tmux/        # Tmux設定 (TokyoNight + Powerline)
 │   ├── git/         # Git設定
 │   ├── lazygit/     # LazyGit設定
+│   ├── gh-dash/     # gh-dash設定 (GitHub Dashboard TUI)
 │   ├── mise/        # mise (Node.js, Python等のバージョン管理)
 │   ├── ghostty/     # Ghosttyターミナル
 │   ├── aerospace/   # AeroSpace (タイリングWM)
@@ -112,7 +113,7 @@ exec zsh
 | -------- | ----------------------------------------------------------------------------- |
 | Shell    | zsh, starship, sheldon, atuin, zoxide                                         |
 | Editor   | neovim                                                                        |
-| Git      | lazygit, gh, ghq                                                              |
+| Git      | lazygit, gh, gh-dash, ghq                                                     |
 | CLI      | eza, bat, ripgrep, fd, fzf, jq, yazi, tealdeer, procs, sd, dust, bottom, rip2 |
 | Dev      | mise, uv                                                                      |
 | Terminal | ghostty, tmux                                                                 |

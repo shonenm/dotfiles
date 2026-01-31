@@ -95,9 +95,10 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 
 ### GitHub
 
-| プラグイン | 役割                               |
-| ---------- | ---------------------------------- |
-| octo.nvim  | GitHub PR/Issue 管理（レビュー等） |
+| プラグイン    | 役割                               |
+| ------------- | ---------------------------------- |
+| octo.nvim     | GitHub PR/Issue 管理（レビュー等） |
+| gh-dash.nvim  | GitHub Dashboard TUI（PR/Issue 一覧） |
 
 ### 検索・診断
 
@@ -270,6 +271,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── dotenv.lua             # .env ファイルサポート
 ├── explorer.lua           # ファイルエクスプローラー・snacks設定 (frecency)
 ├── git.lua                # Git 関連設定 (fugitive, lazygit, lazydocker)
+├── gh-dash.lua            # GitHub Dashboard TUI (gh-dash.nvim)
 ├── git-conflict.lua       # コンフリクト解決設定
 ├── git-worktree.lua       # telescope-repo (サブモジュール/リポジトリ切替)
 ├── gitsigns.lua           # Git 行blame設定 (GitLens相当)
@@ -341,6 +343,7 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | `<leader>gd` | CodeDiff 開く                    |
 | `<leader>gf` | ファイル履歴                     |
 | `<leader>gF` | コミット履歴                     |
+| `<leader>gH` | GH Dash（GitHub Dashboard）      |
 | `<leader>gR` | リポジトリ/サブモジュール切替    |
 
 ### CodeDiff 内操作

@@ -45,11 +45,13 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | キー | 動作 | サイズ |
 |------|------|--------|
 | `g` | lazygit（カレントパスで起動） | 80% × 80% |
+| `G` | gh-dash（GitHub Dashboard） | 85% × 85% |
 | `j` | Scratchpad シェル（カレントパスで起動） | 80% × 80% |
 | `f` | セッション切り替え（fzf + プレビュー） | 60% × 60% |
 | `F` | ghq プロジェクト切り替え（fzf） | 60% × 60% |
 
 - `-E` フラグにより、コマンド終了時に popup 自動クローズ
+- `G` の gh-dash は 85% サイズ（列が多いため lazygit より少し大きめ）
 - `j` の Scratchpad は `exit` / `Ctrl+D` で終了
 - `f` はデフォルトの `find-window` を上書き
 - `F` はプロジェクト名でセッションを作成（既存なら切り替え）

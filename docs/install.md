@@ -27,7 +27,7 @@ OS に応じたセットアップスクリプトを実行:
 
 | OS | スクリプト | 内容 |
 |----|-----------|------|
-| Mac | `scripts/mac.sh` | Homebrew パッケージ、Aerospace、SketchyBar 等 |
+| Mac | `scripts/mac.sh` | Homebrew パッケージ、gh 拡張機能、Aerospace、SketchyBar 等 |
 | Linux | `scripts/linux.sh` | apt パッケージ、開発ツール等 |
 
 ### 4. Dotfiles リンク (stow)
@@ -36,6 +36,7 @@ OS に応じたセットアップスクリプトを実行:
 
 ```
 common/
+├── gh-dash/  → ~/.config/gh-dash/
 ├── git/      → ~/.gitconfig
 ├── mise/     → ~/.config/mise/
 ├── nvim/     → ~/.config/nvim/
