@@ -150,7 +150,7 @@ exec zsh
 ### Tmux
 
 - **テーマ**: TokyoNight (透過 + Powerline風角丸デザイン)
-- **ステータスバー**: CPU/メモリ使用率、Gitブランチ、日時
+- **ステータスバー**: CPU/RAM/GPU/Storage 使用率、Gitブランチ、日時
 - **キーバインド** (prefix: `C-Space`):
 
   | キー | 機能 |

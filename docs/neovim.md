@@ -115,6 +115,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | crates.nvim            | Cargo.toml クレート情報 |
 | venv-selector.nvim     | Python 仮想環境選択     |
 | clangd_extensions.nvim | C/C++ 開発支援 (clangd) |
+| solidity (custom)      | Solidity 開発支援 (LSP + treesitter + forge fmt) |
 | package-info.nvim      | package.json バージョン表示 (pnpm 対応) |
 
 ### ターミナル・外部連携
@@ -288,6 +289,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── remote.lua             # リモート/コンテナ開発 (remote-nvim)
 ├── scrollbar.lua          # スクロールバー設定
 ├── session.lua            # セッション管理設定
+├── solidity.lua           # Solidity 開発支援 (LSP, treesitter, forge fmt)
 ├── tmux-navigator.lua     # tmux 連携設定
 └── typescript-enhanced.lua # vtsls import設定 (non-relative, auto-update)
 ```

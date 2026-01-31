@@ -58,17 +58,30 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 位置: 上部（`status-position top`）、透過背景。
 
 ```
- Session   1 zsh  2 nvim   MODE   branch  01/30 15:00   host
+ Session   1 zsh  2 nvim   CPU 12% | RAM 45% | GPU 8% | SSD 82%   MODE   branch  01/30 15:00   host
 ```
 
 ### 右側セグメント
 
 | セグメント | アイコン | 色 | 内容 |
 |------------|----------|-----|------|
+| CPU |  | 閾値別（緑/黄/赤） | CPU 使用率（tmux-cpu プラグイン） |
+| RAM |  | 閾値別（緑/黄/赤） | メモリ使用率（tmux-cpu プラグイン） |
+| GPU |  | 閾値別（緑/黄/赤） | GPU 使用率（macOS: macmon / Linux: nvidia-smi） |
+| Storage |  | 閾値別（紫/黄/赤） | ディスク使用率（80% 以上で表示） |
 | モード | なし | モード別 | OFF / COPY / SYNC / PREFIX / NORMAL |
 | Git branch |  | 緑 `#9ece6a` | カレントディレクトリのブランチ名 |
 | 日時 |  | 青 `#7aa2f7` | `MM/DD HH:MM` |
 | ホスト |  | 水色 `#7dcfff` | ホスト名（太字） |
+
+### システム統計の閾値
+
+| メトリクス | 低 (緑) | 中 (黄) | 高 (赤) |
+|------------|---------|---------|---------|
+| CPU | < 50% | 50-79% | ≥ 80% |
+| RAM | < 70% | 70-89% | ≥ 90% |
+| GPU | < 50% | 50-79% | ≥ 80% |
+| Storage | 80-89% (紫) | 90-94% (黄) | ≥ 95% (赤) |
 
 ### モード表示
 
@@ -180,8 +193,6 @@ Linux 環境では `install.sh` 実行時に自動で再生成される。
 
 **重要**: `tokyonight.tmux` を直接編集せず、`regenerate-tmux-theme.sh` を編集して再生成すること。Powerline 文字が git 操作で破損する可能性があるため。
 
-> **Note**: OFF インジケーター（F12 ネストセッション）は `tokyonight.tmux` に直接追加されている。`regenerate-tmux-theme.sh` を実行すると上書きされるため、スクリプト側への反映が必要。
-
 ## ファイル構成
 
 ```
@@ -192,6 +203,8 @@ common/tmux/.config/tmux/
 
 scripts/
 ├── regenerate-tmux-theme.sh  # テーマ再生成
+├── tmux-gpu.sh               # GPU 使用率取得（macmon / nvidia-smi）
+├── tmux-storage.sh           # ストレージ使用率取得（閾値超過時のみ表示）
 ├── tmux-claude-badge.sh      # 通知バッジ表示
 └── tmux-claude-focus.sh      # 通知自動消去
 ```
@@ -201,6 +214,7 @@ scripts/
 | プラグイン | 用途 |
 |------------|------|
 | vim-tmux-navigator | Neovim ⇔ tmux シームレス移動 |
+| tmux-cpu | CPU/RAM 使用率をステータスバーに表示 |
 | tmux-resurrect | セッション保存・復元（Pane 内容含む） |
 | tmux-continuum | 自動復元（`@continuum-restore on`） |
 
