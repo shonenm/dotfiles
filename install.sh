@@ -188,8 +188,18 @@ fixup_bind_mounts() {
   local dotfiles_gitconfig="$DOTFILES_DIR/common/git/.gitconfig"
   if [[ -f "$HOME/.gitconfig" && ! -L "$HOME/.gitconfig" && -f "$dotfiles_gitconfig" ]]; then
     if ! grep -qF "path = $dotfiles_gitconfig" "$HOME/.gitconfig" 2>/dev/null; then
-      printf '\n[include]\n    path = %s\n' "$dotfiles_gitconfig" >> "$HOME/.gitconfig"
-      log_info "  Injected [include] into bind-mounted .gitconfig"
+      if [[ -w "$HOME/.gitconfig" ]]; then
+        printf '\n[include]\n    path = %s\n' "$dotfiles_gitconfig" >> "$HOME/.gitconfig"
+        log_info "  Injected [include] into bind-mounted .gitconfig"
+      else
+        # Fallback: Git reads both ~/.gitconfig and $XDG_CONFIG_HOME/git/config
+        local xdg_git_config="${XDG_CONFIG_HOME:-$HOME/.config}/git/config"
+        mkdir -p "$(dirname "$xdg_git_config")"
+        if ! grep -qF "path = $dotfiles_gitconfig" "$xdg_git_config" 2>/dev/null; then
+          printf '[include]\n    path = %s\n' "$dotfiles_gitconfig" >> "$xdg_git_config"
+        fi
+        log_info "  .gitconfig is read-only, wrote [include] to $xdg_git_config"
+      fi
     else
       log_success "  .gitconfig already includes dotfiles config"
     fi
@@ -200,13 +210,17 @@ fixup_bind_mounts() {
   local dotfiles_ssh="$DOTFILES_DIR/$os/ssh/.ssh/config"
   if [[ -f "$HOME/.ssh/config" && ! -L "$HOME/.ssh/config" && -f "$dotfiles_ssh" ]]; then
     if ! grep -qF "Include $dotfiles_ssh" "$HOME/.ssh/config" 2>/dev/null; then
-      local tmp
-      tmp=$(mktemp)
-      printf 'Include %s\n\n' "$dotfiles_ssh" > "$tmp"
-      cat "$HOME/.ssh/config" >> "$tmp"
-      cp "$tmp" "$HOME/.ssh/config"
-      rm "$tmp"
-      log_info "  Injected Include into bind-mounted .ssh/config"
+      if [[ -w "$HOME/.ssh/config" ]]; then
+        local tmp
+        tmp=$(mktemp)
+        printf 'Include %s\n\n' "$dotfiles_ssh" > "$tmp"
+        cat "$HOME/.ssh/config" >> "$tmp"
+        cp "$tmp" "$HOME/.ssh/config"
+        rm "$tmp"
+        log_info "  Injected Include into bind-mounted .ssh/config"
+      else
+        log_warn "  .ssh/config is read-only, skipping injection"
+      fi
     else
       log_success "  .ssh/config already includes dotfiles config"
     fi
