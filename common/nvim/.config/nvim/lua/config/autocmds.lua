@@ -83,3 +83,16 @@ vim.api.nvim_create_autocmd("BufWritePre", {
   end,
 })
 
+-- Auto-close Lazy popup when focus is lost
+vim.api.nvim_create_autocmd("BufLeave", {
+  group = vim.api.nvim_create_augroup("lazy_auto_close", { clear = true }),
+  callback = function()
+    if vim.bo.filetype == "lazy" then
+      local view = require("lazy.view")
+      if view.view then
+        view.view:close()
+      end
+    end
+  end,
+})
+
