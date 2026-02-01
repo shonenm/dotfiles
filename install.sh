@@ -477,11 +477,13 @@ print_install_summary() {
   if [[ -f "$mise_config" ]]; then
     local mise_items=()
     while IFS='=' read -r tool version; do
-      tool=$(echo "$tool" | xargs)
-      version=$(echo "$version" | xargs | tr -d '"')
-      [[ -z "$tool" || "$tool" == "["* ]] && continue
+      tool="${tool// /}"
+      version="${version## }"
+      version="${version%% }"
+      version="${version//\"/}"
+      [[ -z "$tool" ]] && continue
       mise_items+=("$tool:$version")
-    done < "$mise_config"
+    done < <(awk '/^\[tools\]/{f=1;next} /^\[/{f=0} f && /=/' "$mise_config")
     printf "  %-14s " "mise"
     local first=true
     for item in "${mise_items[@]}"; do
