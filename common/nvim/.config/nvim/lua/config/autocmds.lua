@@ -41,6 +41,25 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   end,
 })
 
+-- Auto delete empty [No Name] buffers when hidden
+vim.api.nvim_create_autocmd("BufHidden", {
+  group = vim.api.nvim_create_augroup("delete_noname_buf", { clear = true }),
+  callback = function(event)
+    local buf = event.buf
+    if
+      vim.bo[buf].buftype == ""
+      and vim.api.nvim_buf_get_name(buf) == ""
+      and not vim.bo[buf].modified
+      and vim.api.nvim_buf_line_count(buf) <= 1
+      and vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1] == ""
+    then
+      vim.schedule(function()
+        pcall(vim.api.nvim_buf_delete, buf, { force = false })
+      end)
+    end
+  end,
+})
+
 -- Auto organize imports on save for TypeScript/JavaScript
 -- Uses filter+apply to execute synchronously before conform.nvim formatting
 vim.api.nvim_create_autocmd("BufWritePre", {
