@@ -27,7 +27,7 @@ OS に応じたセットアップスクリプトを実行:
 
 | OS | スクリプト | 内容 |
 |----|-----------|------|
-| Mac | `scripts/mac.sh` | Homebrew パッケージ (Brewfile)、cargo ツール (quay)、gh 拡張機能、Aerospace、SketchyBar 等 |
+| Mac | `scripts/mac.sh` | Homebrew パッケージ (Brewfile)、cargo ツール (quay, cargo-update)、gh 拡張機能、Aerospace、SketchyBar 等 |
 | Linux | `scripts/linux.sh` | apt/apk パッケージ、GitHub release バイナリ、cargo ツール等（`config/tools.linux.bash` で定義） |
 
 ### 4. Dotfiles リンク (stow)

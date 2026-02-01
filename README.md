@@ -116,7 +116,7 @@ exec zsh
 | Editor   | neovim                                                                                    |
 | Git      | lazygit, gh, gh-dash, ghq, git-absorb, gitleaks                                           |
 | CLI      | eza, bat, ripgrep, fd, fzf, jq, yazi, tealdeer, procs, sd, dust, bottom, rip2, xh, ouch, glow, viddy, doggo, grex, quay |
-| Dev      | mise, uv, direnv, just, watchexec, hyperfine, topgrade                                    |
+| Dev      | mise, uv, direnv, just, watchexec, hyperfine, topgrade, cargo-update                      |
 | Terminal | ghostty, tmux                                                                             |
 | Window   | aerospace, sketchybar, borders                                                            |
 | Apps     | raycast, karabiner-elements                                                               |
@@ -127,7 +127,7 @@ exec zsh
 | -------- | --------------------------------------------------------------- |
 | System   | build-essential, zsh, tmux, jq, stow, rsync                     |
 | Editor   | neovim                                                          |
-| CLI      | ripgrep, fzf, eza, bat, tealdeer, procs, sd, dust, bottom, rip2, quay |
+| CLI      | ripgrep, fzf, eza, bat, tealdeer, procs, sd, dust, bottom, rip2, quay, cargo-update |
 | Git      | lazygit, ghq                                                    |
 | Dev      | mise, starship, sheldon, zoxide, atuin, uv, dotenvx             |
 | Font     | UDEV Gothic Nerd Font                                           |

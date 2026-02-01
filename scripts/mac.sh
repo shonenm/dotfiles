@@ -76,6 +76,22 @@ install_quay() {
   log_success "quay installed"
 }
 
+install_cargo_update() {
+  if command_exists cargo-install-update; then
+    log_success "cargo-update already installed"
+    return
+  fi
+
+  if ! command_exists cargo; then
+    log_warn "cargo not found, skipping cargo-update"
+    return
+  fi
+
+  log_info "Installing cargo-update..."
+  cargo install cargo-update
+  log_success "cargo-update installed"
+}
+
 install_gh_extensions() {
   if ! command_exists gh; then
     log_warn "gh CLI not found, skipping gh extensions"
@@ -129,6 +145,7 @@ install_mise_tools
 install_npm_packages
 install_dops
 install_quay
+install_cargo_update
 install_gh_extensions
 link_ai_scripts
 set_default_shell
