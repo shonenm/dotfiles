@@ -1,4 +1,7 @@
 return {
+  -- Disable snacks_picker's <leader>gd (Git Diff hunks) to free it for CodeDiff
+  { "folke/snacks.nvim", keys = { { "<leader>gd", false } } },
+  {
   "esmuellert/codediff.nvim",
   dependencies = { "MunifTanjim/nui.nvim" },
   cmd = { "CodeDiff" },
@@ -19,4 +22,5 @@ return {
       end,
     })
   end,
+  },
 }

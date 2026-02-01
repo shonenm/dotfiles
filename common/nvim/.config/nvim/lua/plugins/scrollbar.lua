@@ -23,4 +23,16 @@ return {
       gitsigns = true,
     },
   },
+  config = function(_, opts)
+    require("scrollbar").setup(opts)
+    -- Guard against invalid buffer in diagnostic handler
+    local diag = require("scrollbar.handlers.diagnostic")
+    local orig = diag.generic_handler
+    diag.generic_handler = function(bufnr, ...)
+      if bufnr ~= 0 and not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+      end
+      return orig(bufnr, ...)
+    end
+  end,
 }
