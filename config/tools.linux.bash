@@ -224,7 +224,7 @@ TOOL_glow_check_cmd="glow"
 TOOL_glow_method="github_release"
 TOOL_glow_github_repo="charmbracelet/glow"
 TOOL_glow_archive_pattern='glow_${VERSION_NOTAG}_Linux_${ARCH}.tar.gz'
-TOOL_glow_binary_path='glow'
+TOOL_glow_binary_path='glow_${VERSION_NOTAG}_Linux_${ARCH}/glow'
 TOOL_glow_arch_map='x86_64:x86_64 aarch64:arm64'
 
 TOOL_viddy_check_cmd="viddy"
@@ -238,7 +238,7 @@ TOOL_doggo_check_cmd="doggo"
 TOOL_doggo_method="github_release"
 TOOL_doggo_github_repo="mr-karan/doggo"
 TOOL_doggo_archive_pattern='doggo_${VERSION_NOTAG}_Linux_${ARCH}.tar.gz'
-TOOL_doggo_binary_path='doggo'
+TOOL_doggo_binary_path='doggo_${VERSION_NOTAG}_Linux_${ARCH}/doggo'
 TOOL_doggo_arch_map='x86_64:x86_64 aarch64:arm64'
 
 TOOL_topgrade_check_cmd="topgrade"
