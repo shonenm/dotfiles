@@ -10,7 +10,7 @@ return {
       "stevearc/dressing.nvim",
       "nvim-lua/plenary.nvim",
       "MunifTanjim/nui.nvim",
-      "echasnovski/mini.icons",
+      "nvim-mini/mini.icons",
     },
     opts = {
       provider = "claude",

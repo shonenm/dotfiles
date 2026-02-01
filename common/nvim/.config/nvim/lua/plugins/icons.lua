@@ -46,7 +46,7 @@ return {
 
   -- Inject material glyphs into mini.icons
   {
-    "echasnovski/mini.icons",
+    "nvim-mini/mini.icons",
     dependencies = { "Allianaab2m/nvim-material-icon-v3" },
     opts = function(_, opts)
       local material_icons = require("nvim-material-icon").get_icons()
