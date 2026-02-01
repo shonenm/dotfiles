@@ -19,7 +19,7 @@ return {
 
   -- Mason: auto-install LSP server
   {
-    "williamboman/mason.nvim",
+    "mason-org/mason.nvim",
     opts = {
       ensure_installed = { "nomicfoundation-solidity-language-server" },
     },
