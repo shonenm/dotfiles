@@ -52,6 +52,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | vim-visual-multi  | マルチカーソル編集                |
 | harpoon2          | 高速ファイルナビゲーション        |
 | LazyVim core fold | LSP ベースコードフォールディング  |
+| mini.bufremove    | レイアウト維持バッファ削除     |
 | resession.nvim    | セッション管理（保存・復元・削除）|
 | neogen            | JSDoc/docstring 自動生成          |
 | refactoring.nvim  | Extract function/variable 等      |
@@ -267,6 +268,7 @@ neotest は overseer.nvim と統合済み。テスト実行時の出力が overs
 common/nvim/.config/nvim/lua/plugins/
 ├── alpha.lua              # スタートスクリーン設定
 ├── avante.lua             # Claude AI 統合 (avante.nvim)
+├── buffer.lua             # バッファ管理 (mini.bufremove)
 ├── colorscheme.lua        # カラースキーム設定
 ├── copilot.lua            # Copilot 設定
 ├── dap.lua                # DAP カスタム設定 (Docker attach, Playwright debug)
@@ -331,6 +333,13 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | `Ctrl+Shift+Up`    | 上にカーソル追加       |
 | `Ctrl+Shift+l`     | 全一致を選択           |
 | `Ctrl+x`           | 現在の一致をスキップ   |
+
+### バッファ
+
+| キー         | 動作                           |
+| ------------ | ------------------------------ |
+| `<leader>bd` | バッファ削除（レイアウト維持） |
+| `<leader>bD` | バッファ強制削除               |
 
 ### AI
 
@@ -415,6 +424,7 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 
 - TypeScript/JavaScript 保存時に import 自動整理 (`source.organizeImports`、同期実行で conform.nvim との競合を回避)
 - 外部ファイル変更の自動リロード (`checktime`)
+- 空の `[No Name]` バッファを非表示時に自動削除 (`BufHidden`)
 - snacks.nvim picker で frecency（頻度+新しさ）ベースのファイルソート
 
 ## TypeScript Inlay Hints
