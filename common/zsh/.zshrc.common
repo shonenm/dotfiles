@@ -66,11 +66,9 @@ fi
 alias l='ls -CF'
 
 # Modern replacements
-command -v bat &>/dev/null && alias cat="bat"
 command -v rg &>/dev/null && alias grep="rg"
 command -v fd &>/dev/null && alias find="fd"
 command -v tldr &>/dev/null && alias man="tldr"
-command -v procs &>/dev/null && alias ps="procs"
 command -v sd &>/dev/null && alias sed="sd"
 command -v dust &>/dev/null && alias du="dust"
 command -v btm &>/dev/null && alias top="btm"
