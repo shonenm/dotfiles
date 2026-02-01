@@ -425,6 +425,7 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 - TypeScript/JavaScript 保存時に import 自動整理 (`source.organizeImports`、同期実行で conform.nvim との競合を回避)
 - 外部ファイル変更の自動リロード (`checktime`)
 - 空の `[No Name]` バッファを非表示時に自動削除 (`BufHidden`)
+- Lazy popup のフォーカス喪失時に自動 close (`BufLeave`)
 - snacks.nvim picker で frecency（頻度+新しさ）ベースのファイルソート
 
 ## TypeScript Inlay Hints
