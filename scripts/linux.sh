@@ -449,6 +449,21 @@ link_ai_scripts() {
   fi
 }
 
+install_gh_extensions() {
+  if ! command_exists gh; then
+    log_warn "gh CLI not found, skipping gh extensions"
+    return
+  fi
+
+  if gh extension list | grep -q "dlvhdr/gh-dash"; then
+    log_success "gh-dash already installed"
+  else
+    log_info "Installing gh-dash extension..."
+    gh extension install dlvhdr/gh-dash
+    log_success "gh-dash installed"
+  fi
+}
+
 # --- Main Execution ---
 
 check_requirements
@@ -456,6 +471,7 @@ install_system_packages
 install_modern_tools
 install_npm_packages
 link_ai_scripts
+install_gh_extensions
 install_1password_cli
 check_1password
 set_default_shell
