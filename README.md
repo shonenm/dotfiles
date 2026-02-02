@@ -127,7 +127,7 @@ exec zsh
 | -------- | --------------------------------------------------------------- |
 | System   | build-essential, zsh, tmux, jq, stow, rsync                     |
 | Editor   | neovim                                                          |
-| CLI      | ripgrep, fzf, eza, bat, tealdeer, procs, sd, dust, bottom, rip2, quay, cargo-update |
+| CLI      | lsd, ripgrep, fzf, eza, bat, tealdeer, procs, sd, dust, bottom, rip2, quay, cargo-update |
 | Git      | lazygit, ghq                                                    |
 | Dev      | mise, starship, sheldon, zoxide, atuin, uv, dotenvx             |
 | Font     | UDEV Gothic Nerd Font                                           |

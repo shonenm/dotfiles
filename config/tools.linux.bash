@@ -166,6 +166,11 @@ TOOL_quay_method="cargo"
 TOOL_quay_cargo_crate="quay-tui"
 TOOL_quay_depends_on="rust"
 
+TOOL_lsd_check_cmd="lsd"
+TOOL_lsd_method="cargo"
+TOOL_lsd_cargo_crate="lsd"
+TOOL_lsd_depends_on="rust"
+
 TOOL_gitabsorb_check_cmd="git-absorb"
 TOOL_gitabsorb_method="cargo"
 TOOL_gitabsorb_cargo_crate="git-absorb"
@@ -293,5 +298,5 @@ LINUX_TOOL_ORDER=(
   # APT-only (skipped on Alpine)
   gh neovim eza bat
   # Cargo tools (depend on rust)
-  tokei tealdeer procs sd dust bottom rip2 quay gitabsorb cargoupdate
+  tokei tealdeer procs sd dust bottom rip2 lsd quay gitabsorb cargoupdate
 )
