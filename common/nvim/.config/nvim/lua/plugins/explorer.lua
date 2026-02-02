@@ -8,10 +8,12 @@ return {
     picker = {
       sources = {
         smart = {
+          ignored = true,
           matcher = { frecency = true, sort_empty = true },
         },
         files = {
           hidden = true,
+          ignored = true,
           matcher = { frecency = true },
         },
         recent = {
@@ -55,6 +57,8 @@ return {
       vim.api.nvim_set_hl(0, "SnacksPickerPathHidden", { link = "Normal" })
       -- ignored ファイル（.gitignore）は薄暗く表示
       vim.api.nvim_set_hl(0, "SnacksPickerPathIgnored", { link = "Comment" })
+      -- untracked ファイルは新規扱いで緑系表示（デフォルト NonText だと薄暗くなる）
+      vim.api.nvim_set_hl(0, "SnacksPickerGitStatusUntracked", { link = "Added" })
     end
     set_explorer_hl()
     vim.api.nvim_create_autocmd("ColorScheme", {
