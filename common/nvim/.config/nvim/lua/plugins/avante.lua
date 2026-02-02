@@ -17,7 +17,9 @@ return {
       providers = {
         claude = {
           model = "claude-sonnet-4-20250514",
-          max_tokens = 4096,
+          extra_request_body = {
+            max_tokens = 4096,
+          },
         },
       },
       -- Avoid conflict with CopilotChat (<leader>a prefix)

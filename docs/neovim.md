@@ -287,7 +287,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── hlslens.lua            # 検索マッチ表示設定
 ├── image.lua              # 画像表示設定
 ├── kulala.lua             # HTTP クライアント設定
-├── lint.lua               # CSpell リンター設定
+├── lint.lua               # CSpell リンター設定 (mise で自動インストール)
 ├── lualine.lua            # ステータスライン強化 (diff移動, リポジトリ全体diff, Copilot, LSP名)
 ├── multicursor.lua        # マルチカーソル (vim-visual-multi)
 ├── neoscroll.lua          # スムーズスクロール (C-d/C-u, scroll-state ガード)

@@ -3,6 +3,7 @@ node = "lts"
 python = "latest"
 pnpm = "latest"
 deno = "latest"
+"npm:cspell" = "latest"
 
 [tasks.update]
 description = "Update all package managers and tools"
