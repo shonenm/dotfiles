@@ -4,6 +4,7 @@ python = "latest"
 pnpm = "latest"
 deno = "latest"
 "npm:cspell" = "latest"
+go = "latest"
 
 [tasks.update]
 description = "Update all package managers and tools"

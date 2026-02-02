@@ -17,7 +17,7 @@ dotfiles/
 │   ├── git/         # Git設定
 │   ├── lazygit/     # LazyGit設定
 │   ├── gh-dash/     # gh-dash設定 (GitHub Dashboard TUI)
-│   ├── mise/        # mise (Node.js, Python等のバージョン管理)
+│   ├── mise/        # mise (Node.js, Python, Go等のバージョン管理)
 │   ├── ghostty/     # Ghosttyターミナル
 │   ├── aerospace/   # AeroSpace (タイリングWM)
 │   ├── sketchybar/  # SketchyBar (ステータスバー)

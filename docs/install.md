@@ -83,7 +83,7 @@ mise run doctor    # 必要ツールの存在確認 + stow リンク健全性チ
 mise run lint      # shellcheck で scripts/*.sh を静的解析
 ```
 
-mise は Node.js, Python 等のランタイムに加え、npm パッケージ（`npm:cspell` 等）も管理する。`mise install` で一括インストールされる。
+mise は Node.js, Python, Go 等のランタイムに加え、npm パッケージ（`npm:cspell` 等）も管理する。`mise install` で一括インストールされる。
 
 ## CI
 
