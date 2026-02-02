@@ -96,3 +96,15 @@ vim.api.nvim_create_autocmd("BufLeave", {
   end,
 })
 
+-- :ProfileStart → カーソル移動等を操作 → :ProfileStop で profile.log に出力
+vim.api.nvim_create_user_command("ProfileStart", function()
+  vim.cmd("profile start /tmp/nvim-profile.log")
+  vim.cmd("profile func *")
+  vim.cmd("profile file *")
+end, {})
+
+vim.api.nvim_create_user_command("ProfileStop", function()
+  vim.cmd("profile pause")
+  vim.notify("Profile saved to /tmp/nvim-profile.log", vim.log.levels.INFO)
+end, {})
+
