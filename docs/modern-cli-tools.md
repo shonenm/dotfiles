@@ -9,7 +9,7 @@
 
 | 従来コマンド | 新コマンド | パッケージ名 | エイリアス | 説明 |
 |-------------|-----------|-------------|-----------|------|
-| `ls` | `eza` | eza | `ls`, `ll`, `la` | ファイル一覧（アイコン・Git対応） |
+| `ls` | `lsd` | lsd | `ls`, `ll`, `la` | ファイル一覧（アイコン・カラー表示） |
 | `cat` | `bat` | bat | `cat` | シンタックスハイライト付きファイル表示 |
 | `grep` | `rg` | ripgrep | `grep` | 高速な正規表現検索 |
 | `find` | `fd` | fd | `find` | 高速なファイル検索 |
@@ -49,12 +49,21 @@ brew bundle --file=~/dotfiles/config/Brewfile
 `common/zsh/.zshrc.common` より:
 
 ```bash
-# ls -> eza
-if command -v eza &>/dev/null; then
+# ls -> lsd (fallback: eza)
+if command -v lsd &>/dev/null; then
+  alias ls="lsd"
+  alias ll="lsd -l"
+  alias la="lsd -la"
+elif command -v eza &>/dev/null; then
   alias ls="eza --icons --git"
   alias ll="eza --icons --git -l"
   alias la="eza --icons --git -la"
 fi
+
+# Auto ls on cd
+chpwd() {
+  ls
+}
 
 # Modern replacements
 command -v bat &>/dev/null && alias cat="bat"
@@ -73,6 +82,8 @@ command -v xh &>/dev/null && alias http="xh"
 
 ## 注意事項
 
+- `lsd` がインストールされていない環境（Linux等）では `eza` にフォールバック
+- `cd` 実行時に `chpwd` フックで自動的に `ls` が実行される（zoxide の `cd` でも発火）
 - エイリアスは `command -v` で存在確認してから設定されるため、ツールが未インストールでも安全
 - 元のコマンドを使いたい場合は `\command` でエイリアスをバイパス（例: `\rm file.txt`）
 - `rip` はファイルをゴミ箱（`~/.local/share/graveyard`）に移動するため、完全削除には `\rm` を使用

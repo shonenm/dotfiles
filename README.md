@@ -115,7 +115,7 @@ exec zsh
 | Shell    | zsh, starship, sheldon, atuin, zoxide                                                     |
 | Editor   | neovim                                                                                    |
 | Git      | lazygit, gh, gh-dash, ghq, git-absorb, gitleaks                                           |
-| CLI      | eza, bat, ripgrep, fd, fzf, jq, yazi, tealdeer, procs, sd, dust, bottom, rip2, xh, ouch, glow, viddy, doggo, grex, quay |
+| CLI      | lsd, eza, bat, ripgrep, fd, fzf, jq, yazi, tealdeer, procs, sd, dust, bottom, rip2, xh, ouch, glow, viddy, doggo, grex, quay |
 | Dev      | mise, uv, direnv, just, watchexec, hyperfine, topgrade, cargo-update                      |
 | Terminal | ghostty, tmux                                                                             |
 | Window   | aerospace, sketchybar, borders                                                            |
