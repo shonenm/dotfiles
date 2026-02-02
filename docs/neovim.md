@@ -34,6 +34,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | rainbow-delimiters.nvim     | ブラケットペアカラー化                  |
 | dropbar.nvim                | VS Code風ブレッドクラムナビゲーション   |
 | tiny-inline-diagnostic.nvim | フォーマットされたインライン診断表示    |
+| neoscroll.nvim              | スムーズスクロール（C-d/C-u）           |
 
 ### エディタ機能
 
@@ -289,6 +290,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── lint.lua               # CSpell リンター設定
 ├── lualine.lua            # ステータスライン強化 (diff移動, リポジトリ全体diff, Copilot, LSP名)
 ├── multicursor.lua        # マルチカーソル (vim-visual-multi)
+├── neoscroll.lua          # スムーズスクロール (C-d/C-u, scroll-state ガード)
 ├── neotest.lua            # テストランナー設定 (4アダプター, monorepo対応)
 ├── overseer.lua           # タスクランナー設定 (タスク出力表示強化)
 ├── package-info.lua       # package.json バージョン表示 (pnpm)
@@ -307,6 +309,13 @@ common/nvim/.config/nvim/lua/plugins/
 ## キーバインド
 
 LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`。
+
+### スクロール
+
+| キー   | 動作                          |
+| ------ | ----------------------------- |
+| `C-d`  | 20行スムーズスクロール（下）  |
+| `C-u`  | 20行スムーズスクロール（上）  |
 
 ### 基本操作
 
@@ -428,6 +437,7 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 - 空の `[No Name]` バッファを非表示時に自動削除 (`BufHidden`)
 - Lazy popup のフォーカス喪失時に自動 close (`BufLeave`)
 - snacks.nvim picker で frecency（頻度+新しさ）ベースのファイルソート
+- `:ProfileStart` / `:ProfileStop` でカーソル移動等のプロファイリング（`/tmp/nvim-profile.log` に出力）
 
 ## ステータスライン (lualine)
 
