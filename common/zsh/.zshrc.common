@@ -57,8 +57,12 @@ else
 fi
 
 # --- Conditional Aliases (runtime checks) ---
-# ls -> eza
-if command -v eza &>/dev/null; then
+# ls -> lsd (fallback: eza)
+if command -v lsd &>/dev/null; then
+  alias ls="lsd"
+  alias ll="lsd -l"
+  alias la="lsd -la"
+elif command -v eza &>/dev/null; then
   alias ls="eza --icons --git"
   alias ll="eza --icons --git -l"
   alias la="eza --icons --git -la"
@@ -82,6 +86,11 @@ command -v xh &>/dev/null && alias http="xh"
 [[ -d "$HOME/.zsh/completions" ]] && fpath=("$HOME/.zsh/completions" $fpath)
 command -v starship &>/dev/null && eval "$(starship init zsh)"
 command -v zoxide &>/dev/null && eval "$(zoxide init zsh --cmd cd)"
+
+# --- Auto ls on cd (chpwd hook) ---
+chpwd() {
+  ls
+}
 
 # --- 1Password CLI ---
 if command -v op &>/dev/null; then

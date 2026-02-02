@@ -36,6 +36,7 @@ brew "gitleaks"
 
 # --- Modern CLI tools ---
 brew "eza"
+brew "lsd"
 brew "bat"
 brew "ripgrep"
 brew "fd"
