@@ -95,25 +95,22 @@ return {
     opts.sections.lualine_x = lualine_x
 
     -- ── section y: lsp + encoding/format + position ─────────
+    local lsp_names = {}
+
     opts.sections.lualine_y = {
       {
         function()
-          local names = {}
-          for _, client in ipairs(vim.lsp.get_clients({ bufnr = 0 })) do
-            if client.name ~= "copilot" then
-              names[#names + 1] = client.name
-            end
-          end
-          return table.concat(names, ", ")
+          return table.concat(lsp_names, ", ")
         end,
         icon = " ",
         cond = function()
+          lsp_names = {}
           for _, client in ipairs(vim.lsp.get_clients({ bufnr = 0 })) do
             if client.name ~= "copilot" then
-              return true
+              lsp_names[#lsp_names + 1] = client.name
             end
           end
-          return false
+          return #lsp_names > 0
         end,
       },
       {
