@@ -438,6 +438,7 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 - Lazy popup のフォーカス喪失時に自動 close (`BufLeave`)
 - snacks.nvim picker で frecency（頻度+新しさ）ベースのファイルソート
 - `:ProfileStart` / `:ProfileStop` でカーソル移動等のプロファイリング（`/tmp/nvim-profile.log` に出力）
+- LazyVim デフォルトの `lazyvim_wrap_spell` を無効化（日本語テキストが SpellBad 扱いされるのを防止）
 
 ## ステータスライン (lualine)
 
