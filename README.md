@@ -13,6 +13,7 @@ dotfiles/
 │   ├── sheldon/     # Zshプラグインマネージャー
 │   ├── zsh-abbr/    # Zsh略語定義 (zsh-abbr)
 │   ├── bat/         # bat設定 (テーマ・構文マッピング)
+│   ├── fd/          # fd設定 (グローバルignore)
 │   ├── tmux/        # Tmux設定 (TokyoNight + Powerline)
 │   ├── git/         # Git設定
 │   ├── lazygit/     # LazyGit設定

@@ -17,7 +17,6 @@ map("n", "<leader>sh", "<cmd>split<cr>", { desc = "Horizontal split" })
 
 -- Better escape
 map("i", "jk", "<Esc>", { desc = "Escape" })
-map("i", "jj", "<Esc>", { desc = "Escape" })
 
 -- Move lines
 map("v", "J", ":m '>+1<CR>gv=gv", { desc = "Move line down" })

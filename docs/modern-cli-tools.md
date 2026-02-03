@@ -108,6 +108,24 @@ command -v xh &>/dev/null && alias http="xh"
 | `quay` | quay-tui | TUIポートマネージャー（ローカルプロセス・SSHフォワード・Dockerコンテナ） |
 | `cargo-install-update` | cargo-update | cargo install パッケージの一括アップデート (`cargo install-update -a`) |
 
+## fd 設定
+
+`common/fd/.config/fd/ignore` でグローバル ignore パターン:
+
+```
+node_modules
+.cache
+__pycache__
+.venv
+target
+.next
+.turbo
+```
+
+- fd は `~/.config/fd/ignore` をグローバル ignore として自動で読む
+- snacks.nvim の picker で `--no-ignore-vcs` を使用し、`.gitignore` はバイパスしつつこの ignore は尊重
+- ターミナルでの素の `fd` コマンドにも効く
+
 ## bat 設定
 
 `common/bat/.config/bat/config` でグローバル設定:
