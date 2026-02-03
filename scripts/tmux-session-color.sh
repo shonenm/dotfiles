@@ -70,8 +70,10 @@ cmd_fzf_sessions() {
   done <<< "$sessions"
 
   local selected
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   selected=$(printf '%s' "$colored_list" | fzf --ansi --reverse --header='Switch Session' \
-    --preview='tmux capture-pane -ep -t {1}')
+    --preview="${script_dir}/tmux-session-preview.sh {1}" --preview-window=right:60%)
   [ -z "$selected" ] && exit 0
 
   # Strip ANSI codes from selection

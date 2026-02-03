@@ -18,6 +18,7 @@ dotfiles/
 │   ├── git/         # Git設定
 │   ├── lazygit/     # LazyGit設定
 │   ├── gh-dash/     # gh-dash設定 (GitHub Dashboard TUI)
+│   ├── quay/        # quay設定 (ポートマネージャー接続先)
 │   ├── mise/        # mise (Node.js, Python, Go等のバージョン管理)
 │   ├── ghostty/     # Ghosttyターミナル
 │   ├── aerospace/   # AeroSpace (タイリングWM)
@@ -38,7 +39,9 @@ dotfiles/
 │   ├── linux.sh     # Linuxパッケージインストール
 │   ├── claude-status.sh  # Claude Code通知連携
 │   ├── ai-notify.sh      # AI通知ヘルパー
-│   └── pomodoro.sh       # ポモドーロタイマー
+│   ├── pomodoro.sh       # ポモドーロタイマー
+│   ├── tmux-session-color.sh    # tmuxセッションカラー管理
+│   └── tmux-session-preview.sh  # fzfセッション切替プレビュー
 ├── templates/       # AI CLI設定テンプレート
 │   ├── claude-settings.json
 │   ├── codex-config.toml
@@ -166,6 +169,7 @@ exec zsh
   | `h/j/k/l` | ペイン移動 |
   | `H/J/K/L` | ペインリサイズ |
   | `\|` / `-` | 縦/横分割 |
+  | `f` | fzfセッション切替 (プレビュー付き) |
   | `j` | Scratchpad (永続セッション、トグル) |
   | `Space` | tmux-thumbs (ヒントベーステキスト選択) |
   | `r` | 設定リロード |
