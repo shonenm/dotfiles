@@ -191,6 +191,7 @@ exec zsh
 
 - 1Password SSH Agentを使用
 - ホスト固有の設定は `~/.ssh/config.d/` に配置
+- `rcon <target>` でリモート接続（SSH + Docker + tmux）をワンコマンド実行（ターゲット定義: `~/.config/rcon/targets`）
 
 ## カスタマイズ
 
@@ -199,6 +200,7 @@ exec zsh
 以下のファイルはdotfilesに含まれず、ローカルで管理：
 
 - `~/.ssh/config.d/*` - SSH接続先設定
+- `~/.config/rcon/targets` - rcon リモート接続ターゲット定義
 - `~/.zshrc.local` - マシン固有のZsh設定（あれば読み込まれる）
 - `~/.gitconfig.local` - Git ユーザー情報（name, email）
 

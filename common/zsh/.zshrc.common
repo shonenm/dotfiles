@@ -256,3 +256,46 @@ rssh() {
     ssh -t "${args[@]}" "export CLAUDE_CONTEXT='$context' && exec \$SHELL -l"
   fi
 }
+
+# リモート接続 (SSH + Docker + tmux をワンコマンドで)
+# Usage: rcon <target> [tmux-session]
+# Targets are defined in ~/.config/rcon/targets
+rcon() {
+  local target="$1" session="${2:-main}"
+  [[ -z "$target" ]] && { _rcon_usage; return 1; }
+
+  local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/rcon/targets"
+  [[ ! -f "$config_file" ]] && { echo "rcon: config not found: $config_file" >&2; return 1; }
+
+  local line
+  line=$(command grep "^${target}|" "$config_file" 2>/dev/null)
+  [[ -z "$line" ]] && { echo "rcon: unknown target '$target'" >&2; _rcon_usage; return 1; }
+
+  local host container
+  host=$(echo "$line" | cut -d'|' -f2)
+  container=$(echo "$line" | cut -d'|' -f3)
+
+  local context="${CLAUDE_CONTEXT:-$(_claude_context)}"
+
+  if [[ -n "$container" ]]; then
+    ssh -t "$host" "docker exec -it -e CLAUDE_CONTEXT='$context' $container tmux new-session -A -s $session"
+  else
+    ssh -t "$host" "export CLAUDE_CONTEXT='$context' && tmux new-session -A -s $session"
+  fi
+}
+
+_rcon_usage() {
+  local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/rcon/targets"
+  echo "Usage: rcon <target> [session]" >&2
+  if [[ -f "$config_file" ]]; then
+    echo "Targets:" >&2
+    while IFS='|' read -r name host container; do
+      [[ "$name" == \#* || -z "$name" ]] && continue
+      if [[ -n "$container" ]]; then
+        echo "  $name  →  $host ($container)" >&2
+      else
+        echo "  $name  →  $host" >&2
+      fi
+    done < "$config_file"
+  fi
+}

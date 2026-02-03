@@ -95,5 +95,8 @@ abbr uvs="uv sync"
 abbr claude-ps="claude-cleanup.sh list"
 abbr claude-kill="claude-cleanup.sh kill-all"
 
+# Remote connect
+abbr rc="rcon"
+
 # Mac
 abbr o="open"
