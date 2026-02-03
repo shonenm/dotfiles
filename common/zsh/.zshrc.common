@@ -258,22 +258,28 @@ rssh() {
 }
 
 # リモート接続 (SSH + Docker + tmux をワンコマンドで)
-# Usage: rcon <target> [tmux-session]
-# Targets are defined in ~/.config/rcon/targets
+# Usage: rcon [host:container | host] [tmux-session]
+#   rcon                      → fzf でターゲット選択
+#   rcon ailab:syntopic-dev   → 直接指定 (host:container)
+#   rcon pi-500               → 直接指定 (host のみ)
+# Targets for fzf: ~/.config/rcon/targets (1行1ターゲット: host:container or host)
 rcon() {
   local target="$1" session="${2:-main}"
-  [[ -z "$target" ]] && { _rcon_usage; return 1; }
 
-  local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/rcon/targets"
-  [[ ! -f "$config_file" ]] && { echo "rcon: config not found: $config_file" >&2; return 1; }
-
-  local line
-  line=$(command grep "^${target}|" "$config_file" 2>/dev/null)
-  [[ -z "$line" ]] && { echo "rcon: unknown target '$target'" >&2; _rcon_usage; return 1; }
+  if [[ -z "$target" ]]; then
+    local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/rcon/targets"
+    [[ ! -f "$config_file" ]] && { echo "rcon: config not found: $config_file" >&2; return 1; }
+    target=$(command grep -v '^\s*#' "$config_file" | command grep -v '^\s*$' | fzf --prompt="rcon> ")
+    [[ -z "$target" ]] && return 1
+  fi
 
   local host container
-  host=$(echo "$line" | cut -d'|' -f2)
-  container=$(echo "$line" | cut -d'|' -f3)
+  if [[ "$target" == *:* ]]; then
+    host="${target%%:*}"
+    container="${target#*:}"
+  else
+    host="$target"
+  fi
 
   local context="${CLAUDE_CONTEXT:-$(_claude_context)}"
 
@@ -281,21 +287,5 @@ rcon() {
     ssh -t "$host" "docker exec -it -e CLAUDE_CONTEXT='$context' $container tmux new-session -A -s $session"
   else
     ssh -t "$host" "export CLAUDE_CONTEXT='$context' && tmux new-session -A -s $session"
-  fi
-}
-
-_rcon_usage() {
-  local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/rcon/targets"
-  echo "Usage: rcon <target> [session]" >&2
-  if [[ -f "$config_file" ]]; then
-    echo "Targets:" >&2
-    while IFS='|' read -r name host container; do
-      [[ "$name" == \#* || -z "$name" ]] && continue
-      if [[ -n "$container" ]]; then
-        echo "  $name  →  $host ($container)" >&2
-      else
-        echo "  $name  →  $host" >&2
-      fi
-    done < "$config_file"
   fi
 }
