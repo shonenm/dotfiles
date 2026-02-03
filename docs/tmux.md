@@ -263,6 +263,7 @@ common/tmux/.config/tmux/
 
 scripts/
 ├── regenerate-tmux-theme.sh  # テーマ再生成
+├── tmux-utils.sh             # 共通ユーティリティ（get_mtime: クロスプラットフォーム対応）
 ├── tmux-cpu.sh               # CPU 使用率取得（macOS: iostat / Linux: /proc/stat、3秒キャッシュ）
 ├── tmux-ram.sh               # RAM 使用率取得（macOS: vm_stat / Linux: /proc/meminfo、3秒キャッシュ）
 ├── tmux-gpu.sh               # GPU 使用率取得（macmon / nvidia-smi、3秒キャッシュ）
