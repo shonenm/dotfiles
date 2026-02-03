@@ -6,6 +6,9 @@ github = "zsh-users/zsh-completions"
 dir = "src"
 apply = ["fpath"]
 
+[plugins.forgit]
+github = "wfxr/forgit"
+
 [plugins.zsh-abbr]
 github = "olets/zsh-abbr"
 
