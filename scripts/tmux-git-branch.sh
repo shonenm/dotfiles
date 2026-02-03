@@ -15,10 +15,12 @@ CACHE_FILE="$CACHE_DIR/git_branch_$CACHE_KEY"
 
 mkdir -p "$CACHE_DIR"
 
+source "${BASH_SOURCE%/*}/tmux-utils.sh"
+
 # Check cache freshness
 if [[ -f "$CACHE_FILE" ]]; then
   now=$(date +%s)
-  mtime=$(stat -f %m "$CACHE_FILE" 2>/dev/null || stat -c %Y "$CACHE_FILE" 2>/dev/null || echo 0)
+  mtime=$(get_mtime "$CACHE_FILE")
   cache_age=$(( now - mtime ))
   if [[ $cache_age -lt $CACHE_TTL ]]; then
     cat "$CACHE_FILE"

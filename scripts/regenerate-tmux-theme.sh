@@ -66,10 +66,10 @@ setw -g window-status-separator ""
 setw -g window-status-style "NONE,fg=#a9b1d6,bg=default"
 
 # Inactive window (Rounded style) + Claude badge
-setw -g window-status-format "#[fg=#3b4261,bg=default]${LEFT}#[fg=#a9b1d6,bg=#3b4261] #I #W #[fg=#3b4261,bg=default]${RIGHT}#(~/dotfiles/scripts/tmux-claude-badge.sh window #{window_index})"
+setw -g window-status-format "#[fg=#3b4261,bg=default]${LEFT}#[fg=#a9b1d6,bg=#3b4261] #I #W #[fg=#3b4261,bg=default]${RIGHT}#(~/dotfiles/scripts/tmux-claude-badge.sh window #{window_index} '' #S)"
 
 # Active window (Rounded style with highlight) + Claude badge (dimmed)
-setw -g window-status-current-format "#[fg=#7aa2f7,bg=default]${LEFT}#[fg=#1a1b26,bg=#7aa2f7,bold] #I #W #[fg=#7aa2f7,bg=default]${RIGHT}#(~/dotfiles/scripts/tmux-claude-badge.sh window #{window_index} focused)"
+setw -g window-status-current-format "#[fg=#7aa2f7,bg=default]${LEFT}#[fg=#1a1b26,bg=#7aa2f7,bold] #I #W #[fg=#7aa2f7,bg=default]${RIGHT}#(~/dotfiles/scripts/tmux-claude-badge.sh window #{window_index} focused #S)"
 
 # Prefix highlight plugin settings (not used, kept for compatibility)
 set -g @prefix_highlight_output_prefix ""
