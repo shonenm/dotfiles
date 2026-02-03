@@ -8,12 +8,12 @@ return {
     picker = {
       sources = {
         smart = {
-          ignored = true,
+          args = { "--no-ignore-vcs" },
           matcher = { frecency = true, sort_empty = true },
         },
         files = {
           hidden = true,
-          ignored = true,
+          args = { "--no-ignore-vcs" },
           matcher = { frecency = true },
         },
         recent = {
@@ -22,6 +22,15 @@ return {
         explorer = {
           hidden = true,
           ignored = true,
+          exclude = {
+            "node_modules",
+            ".cache",
+            "__pycache__",
+            ".venv",
+            "target",
+            ".next",
+            ".turbo",
+          },
           win = {
             list = { width = 32 },
           },
