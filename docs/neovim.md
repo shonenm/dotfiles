@@ -273,7 +273,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── colorscheme.lua        # カラースキーム設定
 ├── copilot.lua            # Copilot 設定
 ├── dap.lua                # DAP カスタム設定 (Docker attach, Playwright debug)
-├── codediff.lua           # Git diff 表示設定
+├── codediff.lua           # Git diff 表示設定 (カーソル追従 + debounce)
 ├── disabled.lua           # プラグイン無効化
 ├── dotenv.lua             # .env ファイルサポート
 ├── explorer.lua           # ファイルエクスプローラー・snacks設定 (frecency, --no-ignore-vcs)
