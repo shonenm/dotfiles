@@ -33,7 +33,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | treesitter-context          | 関数/クラスコンテキスト表示             |
 | rainbow-delimiters.nvim     | ブラケットペアカラー化                  |
 | dropbar.nvim                | VS Code風ブレッドクラムナビゲーション   |
-| tiny-inline-diagnostic.nvim | フォーマットされたインライン診断表示    |
+| tiny-inline-diagnostic.nvim | インライン診断表示（ERROR/WARN/INFO のみ） |
 | neoscroll.nvim              | スムーズスクロール（C-d/C-u）           |
 
 ### エディタ機能
@@ -85,7 +85,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | プラグイン   | 役割                                    |
 | ------------ | --------------------------------------- |
 | conform.nvim | フォーマッター（Biome, Prettier, Ruff） |
-| nvim-lint    | リンター（CSpell, Mypy, ESLint）       |
+| nvim-lint    | リンター（CSpell（HINT severity）, Mypy, ESLint） |
 
 ### Git
 
@@ -287,7 +287,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── hlslens.lua            # 検索マッチ表示設定
 ├── image.lua              # 画像表示設定
 ├── kulala.lua             # HTTP クライアント設定
-├── lint.lua               # CSpell リンター設定 (mise で自動インストール)
+├── lint.lua               # CSpell リンター設定 (HINT severity, mise で自動インストール)
 ├── lualine.lua            # ステータスライン強化 (diff移動, リポジトリ全体diff, Copilot, LSP名)
 ├── multicursor.lua        # マルチカーソル (vim-visual-multi)
 ├── neoscroll.lua          # スムーズスクロール (C-d/C-u, scroll-state ガード)
