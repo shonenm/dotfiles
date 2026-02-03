@@ -191,7 +191,7 @@ exec zsh
 
 - 1Password SSH Agentを使用
 - ホスト固有の設定は `~/.ssh/config.d/` に配置
-- `rcon` でリモート接続（SSH + Docker + tmux）をワンコマンド実行（引数なしで fzf 選択、`rcon host:container` で直接指定）
+- `rcon` でリモート接続（SSH + Docker + tmux）をワンコマンド実行（引数なしで fzf 選択、`rcon host:container` で直接指定、既存セッションに自動アタッチ）
 
 ## カスタマイズ
 
