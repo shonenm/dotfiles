@@ -2,12 +2,10 @@
 
 # Git
 abbr g="git"
-abbr ga="git add"
-abbr gd="git diff"
 abbr gs="git status"
 abbr gp="git push"
 abbr gb="git branch"
-abbr gsh="git stash"
+abbr gsh="git stash push -m"
 abbr gsp="git stash pop"
 abbr gco="git checkout"
 abbr gf="git fetch"

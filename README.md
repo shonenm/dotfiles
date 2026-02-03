@@ -136,7 +136,7 @@ exec zsh
 
 ### Zsh
 
-- **プラグインマネージャー**: Sheldon (zsh-completions, zsh-abbr, zsh-syntax-highlighting, zsh-autosuggestions)
+- **プラグインマネージャー**: Sheldon (zsh-completions, forgit, zsh-abbr, zsh-syntax-highlighting, zsh-autosuggestions)
 - **略語展開**: zsh-abbr (エイリアスの代替、履歴に展開後コマンドが残る)
 - **プロンプト**: Starship (Draculaテーマ)
 - **履歴検索**: Atuin (fuzzy検索、workspace対応、secrets_filter)
@@ -183,6 +183,7 @@ exec zsh
 
 - ユーザー情報は `.gitconfig.local` で管理
 - 初回セットアップ時に1Passwordから取得
+- **forgit**: fzf ベースの Git 操作強化（interactive add/diff/log/stash）
 - **ghq**: リポジトリ管理ツール（`~/ghq` 配下に統一管理）
 - `repo` 関数で ghq + fzf によるリポジトリ移動
 - 詳細は `docs/git-config.md` を参照

@@ -48,6 +48,17 @@ export FZF_DEFAULT_COMMAND="fd --type f --hidden --exclude .git"
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_ALT_C_COMMAND="fd --type d --hidden --exclude .git"
 
+# --- forgit ---
+# Rename conflicting aliases (gsp is used by zsh-abbr for 'git stash pop')
+export forgit_stash_push="gspu"
+# Stash viewer keybindings: pop, apply, drop with auto-reload
+export FORGIT_STASH_FZF_OPTS='
+  --bind="alt-p:reload(git stash pop $(cut -d: -f1 <<<{}) 1>/dev/null && git stash list)"
+  --bind="alt-a:reload(git stash apply $(cut -d: -f1 <<<{}) 1>/dev/null && git stash list)"
+  --bind="alt-d:reload(git stash drop $(cut -d: -f1 <<<{}) 1>/dev/null && git stash list)"
+  --header="enter:show | alt-p:pop | alt-a:apply | alt-d:drop | ctrl-y:copy ref"
+'
+
 # --- Completion Init (cached: full rebuild once per 24h) ---
 autoload -Uz compinit
 if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then

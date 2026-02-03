@@ -440,6 +440,54 @@ git add -p       # 修正をステージ
 git absorb       # 自動fixup + rebase
 ```
 
+## forgit (fzf-powered Git)
+
+[forgit](https://github.com/wfxr/forgit) は fzf を使った Git 操作のインタラクティブ強化プラグイン。sheldon 経由でインストール。
+
+### Stash 操作
+
+| コマンド | 動作 | 提供元 |
+|----------|------|--------|
+| `gsh "説明"` | 名前付き stash 作成 | abbreviation (`git stash push -m`) |
+| `gsp` | 最新 stash を即 pop | abbreviation |
+| `gss` | fzf stash ブラウザ (preview + pop/apply/drop) | forgit |
+| `gspu` | fzf でファイル選択して stash push | forgit (renamed) |
+
+`gss` のキーバインド:
+
+| キー | 動作 |
+|------|------|
+| `enter` | stash 詳細表示 |
+| `alt-p` | pop (適用+削除) → リスト再読み込み |
+| `alt-a` | apply (適用、stash は残す) → リスト再読み込み |
+| `alt-d` | drop (削除) → リスト再読み込み |
+| `ctrl-y` | stash ref をクリップボードにコピー |
+
+### その他の forgit コマンド
+
+| コマンド | 動作 |
+|----------|------|
+| `ga` | fzf で diff preview 見ながら interactive add |
+| `gd` | fzf で interactive diff viewer |
+| `glo` | fzf で interactive git log |
+| `gcb` | fzf で branch checkout |
+| `gclean` | fzf で interactive clean |
+| `gbl` | fzf で interactive blame |
+
+### 設定
+
+```bash
+# common/zsh/.zshrc.common
+export forgit_stash_push="gspu"   # gsp (stash pop abbreviation) との衝突回避
+export FORGIT_STASH_FZF_OPTS='...' # stash ブラウザのキーバインド
+```
+
+### abbreviation との共存
+
+- forgit は zsh-abbr より前に sheldon で読み込まれる
+- abbreviation が同名で定義されている場合は abbreviation が優先される
+- `ga`, `gd` は abbreviation を削除し forgit の関数を直接使用
+
 ## ghq (Repository Management)
 
 [ghq](https://github.com/x-motemen/ghq) はリモートリポジトリをローカルに統一的なディレクトリ構造で管理するツール。
