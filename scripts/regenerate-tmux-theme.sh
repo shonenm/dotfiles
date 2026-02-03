@@ -39,7 +39,7 @@ set -g pane-active-border-style "#{?pane_in_mode,fg=#f7768e,#{?pane_synchronized
 
 # Status bar (transparent)
 set -g status "on"
-set -g status-interval 2
+set -g status-interval 10
 set -g status-justify "left"
 set -g status-style "fg=#7aa2f7,bg=default"
 
