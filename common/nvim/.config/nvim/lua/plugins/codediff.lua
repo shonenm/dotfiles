@@ -14,13 +14,15 @@ return {
   config = function(_, opts)
     require("codediff").setup(opts)
 
-    -- Auto-select file on cursor move (j/k updates diff instantly)
+    -- Auto-select file on cursor move (j/k updates diff with debounce)
     local keymaps = require("codediff.ui.explorer.keymaps")
     local orig_setup = keymaps.setup
     keymaps.setup = function(explorer)
       orig_setup(explorer)
       local tree = explorer.tree
       local last_node_id = nil
+      local debounce_timer = nil
+      local debounce_ms = 250
       vim.api.nvim_create_autocmd("CursorMoved", {
         buffer = explorer.bufnr,
         callback = function()
@@ -30,7 +32,12 @@ return {
           local node_id = node:get_id()
           if node_id == last_node_id then return end
           last_node_id = node_id
-          explorer.on_file_select(node.data)
+          if debounce_timer then
+            debounce_timer:stop()
+          end
+          debounce_timer = vim.defer_fn(function()
+            explorer.on_file_select(node.data)
+          end, debounce_ms)
         end,
       })
     end
