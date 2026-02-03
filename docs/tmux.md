@@ -18,6 +18,7 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | Renumber | ON | Window 削除時に自動採番 |
 | Activity | ON | 非アクティブ Window の変更を検知 |
 | Terminal title | `#{b:pane_current_path}` | aerospace ウィンドウ検出用 |
+| Status interval | 5秒 | ステータスバー更新間隔（遅延対策） |
 
 ## キーバインド
 
@@ -227,6 +228,18 @@ session-window-changed → tmux-claude-focus.sh
 client-session-changed → tmux-claude-focus.sh
 ```
 
+## ステータスバー最適化
+
+リモートコンテナ環境でのキー入力遅延を防ぐため、以下の最適化を実施:
+
+| 設定 | 値 | 備考 |
+|------|-----|------|
+| status-interval | 5秒 | 更新頻度を抑制（デフォルト 2秒から変更） |
+| スクリプトキャッシュ | 3秒 | CPU/RAM/GPU/Storage/Git branch すべてにキャッシュ適用 |
+| キャッシュ場所 | `/tmp/tmux_sysstat/` | 一時ディレクトリに統一 |
+
+キャッシュにより、status-interval (5秒) ごとの更新時にスクリプトが実行されても、3秒以内の再呼び出しはキャッシュから返却される。
+
 ## テーマ再生成
 
 Powerline 文字が表示されない場合:
@@ -250,10 +263,11 @@ common/tmux/.config/tmux/
 
 scripts/
 ├── regenerate-tmux-theme.sh  # テーマ再生成
-├── tmux-cpu.sh               # CPU 使用率取得（macOS: iostat / Linux: /proc/stat）
-├── tmux-ram.sh               # RAM 使用率取得（macOS: vm_stat / Linux: /proc/meminfo）
-├── tmux-gpu.sh               # GPU 使用率取得（macmon / nvidia-smi）
-├── tmux-storage.sh           # ストレージ使用率取得（閾値超過時のみ表示）
+├── tmux-cpu.sh               # CPU 使用率取得（macOS: iostat / Linux: /proc/stat、3秒キャッシュ）
+├── tmux-ram.sh               # RAM 使用率取得（macOS: vm_stat / Linux: /proc/meminfo、3秒キャッシュ）
+├── tmux-gpu.sh               # GPU 使用率取得（macmon / nvidia-smi、3秒キャッシュ）
+├── tmux-storage.sh           # ストレージ使用率取得（閾値超過時のみ表示、3秒キャッシュ）
+├── tmux-git-branch.sh        # Git ブランチ名取得（パスごとに3秒キャッシュ）
 ├── tmux-claude-badge.sh      # 通知バッジ表示
 ├── tmux-claude-focus.sh      # 通知自動消去
 ├── tmux-session-color.sh     # Per-session アクセントカラー（apply / refresh / fzf-sessions）
