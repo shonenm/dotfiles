@@ -288,7 +288,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── image.lua              # 画像表示設定
 ├── kulala.lua             # HTTP クライアント設定
 ├── lint.lua               # CSpell リンター設定 (HINT severity, mise で自動インストール)
-├── lualine.lua            # ステータスライン強化 (diff移動, リポジトリ全体diff, Copilot, LSP名)
+├── lualine.lua            # ステータスライン強化 (リポジトリ全体diff, Copilot, LSP名)
 ├── multicursor.lua        # マルチカーソル (vim-visual-multi)
 ├── neoscroll.lua          # スムーズスクロール (C-d/C-u, scroll-state ガード)
 ├── neotest.lua            # テストランナー設定 (4アダプター, monorepo対応)
@@ -446,11 +446,10 @@ LazyVim デフォルトをベースに以下をカスタマイズ:
 
 | セクション | 内容 |
 |-----------|------|
-| `lualine_b` | branch + per-buffer diff + **リポジトリ全体 diff サマリ** |
+| `lualine_b` | branch + **リポジトリ全体 diff サマリ** |
 | `lualine_x` | profiler, **Copilot ステータス**, noice, dap, lazy updates |
 | `lualine_y` | **LSP サーバー名**, encoding（非utf-8時のみ）, fileformat（非unix時のみ）, progress, location |
 
-- diff は gitsigns source を使用し、ブランチ名の隣に `+3 ~1 -2` 形式で色付き表示
 - Copilot ステータスは ok=緑, pending=黄, error=赤 のアイコン表示（未ロード時は非表示）
 - LSP サーバー名は copilot を除外し、アクティブな言語サーバーのみ表示（例: `vtsls`, `basedpyright`）
 - リポジトリ全体の変更ファイル数・追加行・削除行を常時表示（30秒ごと + 保存時・フォーカス復帰時に更新）
