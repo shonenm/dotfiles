@@ -35,36 +35,32 @@ return {
       callback = refresh_repo_diff,
     })
 
-    -- ── section b: branch + per-buffer diff + repo summary ──
+    -- ── section b: branch + repo summary ───────────────────
     opts.sections.lualine_b = {
       "branch",
       {
-        "diff",
-        symbols = {
-          added = icons.git.added,
-          modified = icons.git.modified,
-          removed = icons.git.removed,
-        },
-        source = function()
-          local gitsigns = vim.b.gitsigns_status_dict
-          if gitsigns then
-            return {
-              added = gitsigns.added,
-              modified = gitsigns.changed,
-              removed = gitsigns.removed,
-            }
-          end
+        function()
+          return string.format(" %d", repo_diff.files)
         end,
+        cond = function() return repo_diff.files > 0 end,
+        color = { fg = "#9399b2" },
+        padding = { left = 1, right = 0 },
       },
       {
         function()
-          local d = repo_diff
-          return string.format(" %d  +%d  -%d", d.files, d.added, d.removed)
+          return string.format("+%d", repo_diff.added)
         end,
-        cond = function()
-          return repo_diff.files > 0
+        cond = function() return repo_diff.files > 0 end,
+        color = { fg = "#9ece6a" },
+        padding = { left = 1, right = 0 },
+      },
+      {
+        function()
+          return string.format("-%d", repo_diff.removed)
         end,
-        color = { fg = "#9399b2" },
+        cond = function() return repo_diff.files > 0 end,
+        color = { fg = "#db4b4b" },
+        padding = { left = 1, right = 1 },
       },
     }
 
