@@ -18,7 +18,6 @@ dotfiles/
 │   ├── git/         # Git設定
 │   ├── lazygit/     # LazyGit設定
 │   ├── gh-dash/     # gh-dash設定 (GitHub Dashboard TUI)
-│   ├── quay/        # quay設定 (ポートマネージャー接続先)
 │   ├── mise/        # mise (Node.js, Python, Go等のバージョン管理)
 │   ├── ghostty/     # Ghosttyターミナル
 │   ├── aerospace/   # AeroSpace (タイリングWM)
@@ -207,6 +206,7 @@ exec zsh
 
 - `~/.ssh/config.d/*` - SSH接続先設定
 - `~/.config/rcon/targets` - rcon ターゲット一覧（`host:container` or `host`、1行1ターゲット）
+- `~/.config/quay/connections.toml` - quay 接続先プリセット
 - `~/.zshrc.local` - マシン固有のZsh設定（あれば読み込まれる）
 - `~/.gitconfig.local` - Git ユーザー情報（name, email）
 
