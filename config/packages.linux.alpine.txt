@@ -1,5 +1,7 @@
 # Alpine Linux system packages (installed via apk)
 build-base
+openssl-dev
+pkgconf
 zsh
 tmux
 jq

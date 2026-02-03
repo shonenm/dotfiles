@@ -1,5 +1,7 @@
 # Debian/Ubuntu system packages (installed via apt)
 build-essential
+pkg-config
+libssl-dev
 zsh
 tmux
 jq
