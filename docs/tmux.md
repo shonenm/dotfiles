@@ -81,8 +81,8 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 
 | セグメント | アイコン | 色 | 内容 |
 |------------|----------|-----|------|
-| CPU |  | 閾値別（緑/黄/赤） | CPU 使用率（tmux-cpu プラグイン） |
-| RAM |  | 閾値別（緑/黄/赤） | メモリ使用率（tmux-cpu プラグイン） |
+| CPU |  | 閾値別（緑/黄/赤） | CPU 使用率（macOS: iostat / Linux: /proc/stat） |
+| RAM |  | 閾値別（緑/黄/赤） | メモリ使用率（macOS: vm_stat / Linux: /proc/meminfo） |
 | GPU |  | 閾値別（緑/黄/赤） | GPU 使用率（macOS: macmon / Linux: nvidia-smi） |
 | Storage |  | 閾値別（紫/黄/赤） | ディスク使用率（80% 以上で表示） |
 | モード | なし | モード別 | OFF / COPY / SYNC / PREFIX / NORMAL |
@@ -250,6 +250,8 @@ common/tmux/.config/tmux/
 
 scripts/
 ├── regenerate-tmux-theme.sh  # テーマ再生成
+├── tmux-cpu.sh               # CPU 使用率取得（macOS: iostat / Linux: /proc/stat）
+├── tmux-ram.sh               # RAM 使用率取得（macOS: vm_stat / Linux: /proc/meminfo）
 ├── tmux-gpu.sh               # GPU 使用率取得（macmon / nvidia-smi）
 ├── tmux-storage.sh           # ストレージ使用率取得（閾値超過時のみ表示）
 ├── tmux-claude-badge.sh      # 通知バッジ表示
@@ -263,7 +265,6 @@ scripts/
 | プラグイン | 用途 |
 |------------|------|
 | vim-tmux-navigator | Neovim ⇔ tmux シームレス移動 |
-| tmux-cpu | CPU/RAM 使用率をステータスバーに表示 |
 | tmux-resurrect | セッション保存・復元（Pane 内容含む） |
 | tmux-continuum | 自動復元（`@continuum-restore on`） |
 | tmux-thumbs | Vimium風ヒントベーステキスト選択（URL、パス、gitハッシュ等を即コピー） |
@@ -276,6 +277,7 @@ tmux-thumbs 設定:
 - `prefix + Space` (デフォルト) でヒント表示
 - 選択した文字列は `pbcopy` でクリップボードにコピー
 
-以前使用していた tmux-sensible、tmux-yank は削除済み:
+以前使用していた tmux-sensible、tmux-yank、tmux-cpu は削除済み:
 - tmux-sensible: 自前設定でカバー（`focus-events`、`history-limit` 等を明示指定）
 - tmux-yank: OSC52 (`set-clipboard on`) で代替
+- tmux-cpu: カスタムスクリプト (`tmux-cpu.sh`, `tmux-ram.sh`) で代替。Linux で sysstat 不要（`/proc/stat`, `/proc/meminfo` を直接読み取り）
