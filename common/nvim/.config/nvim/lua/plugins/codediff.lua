@@ -10,7 +10,12 @@ return {
     { "<leader>gf", "<cmd>CodeDiff history %<cr>", desc = "File History" },
     { "<leader>gF", "<cmd>CodeDiff history<cr>", desc = "Commit History" },
   },
-  opts = {},
+  opts = {
+    explorer = {
+      view_mode = "tree",
+      indent_markers = true,
+    },
+  },
   config = function(_, opts)
     require("codediff").setup(opts)
 
@@ -42,12 +47,50 @@ return {
       })
     end
 
-    vim.api.nvim_create_autocmd("FileType", {
-      pattern = "codediff-explorer",
+    -- ヘルプライン用の namespace 作成
+    local ns = vim.api.nvim_create_namespace("codediff_help")
+
+    -- バッファ末尾にヘルプを仮想テキストとして追加
+    local function add_help_line(bufnr)
+      vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+      local help_text = "[-] stage  [S] all  [U] unstage  [X] restore  [i] tree/list  [R] refresh  [cc] commit"
+      local line_count = vim.api.nvim_buf_line_count(bufnr)
+      vim.api.nvim_buf_set_extmark(bufnr, ns, line_count - 1, 0, {
+        virt_lines = { { { "", "NonText" }, { help_text, "Comment" } } },
+        virt_lines_above = false,
+      })
+    end
+
+    local help_initialized = {}
+
+    vim.api.nvim_create_autocmd("BufEnter", {
+      pattern = "*",
       callback = function(ev)
-        local map_opts = { buffer = ev.buf, noremap = true, silent = true, nowait = true }
-        vim.keymap.set("n", "cc", "<cmd>Git commit<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit" }))
-        vim.keymap.set("n", "ca", "<cmd>Git commit --amend<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit --amend" }))
+        if vim.bo[ev.buf].filetype ~= "codediff-explorer" then return end
+
+        -- キーマップは一度だけ設定
+        if not help_initialized[ev.buf] then
+          local map_opts = { buffer = ev.buf, noremap = true, silent = true, nowait = true }
+          vim.keymap.set("n", "cc", "<cmd>Git commit<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit" }))
+          vim.keymap.set("n", "ca", "<cmd>Git commit --amend<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit --amend" }))
+
+          -- BufModifiedSet でツリー更新を検知して再描画
+          vim.api.nvim_create_autocmd("BufModifiedSet", {
+            buffer = ev.buf,
+            callback = function()
+              vim.schedule(function()
+                if vim.api.nvim_buf_is_valid(ev.buf) then
+                  add_help_line(ev.buf)
+                end
+              end)
+            end,
+          })
+
+          help_initialized[ev.buf] = true
+        end
+
+        -- ヘルプライン表示（毎回更新）
+        add_help_line(ev.buf)
       end,
     })
   end,
