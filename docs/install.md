@@ -61,6 +61,7 @@ git clone 時に特殊文字（U+E0B6, U+E0B4）が正しくコピーされな�
 Claude / Codex / Gemini の設定ファイルを生成:
 
 - `~/.claude/settings.json`
+- `~/.claude/skills/` (beacon, commit 等のスキル)
 - `~/.codex/config.toml`
 - `~/.gemini/settings.json`
 

@@ -689,8 +689,10 @@ dotfiles/
 │   └── claude-hooks.tmux           # tmux hooks configuration
 ├── templates/
 │   ├── claude-skills/
-│   │   └── beacon/
-│   │       └── SKILL.md            # /beacon skill template
+│   │   ├── beacon/
+│   │   │   └── SKILL.md            # /beacon skill template
+│   │   └── commit/
+│   │       └── SKILL.md            # /commit skill template
 │   └── com.user.claude-status-watch.plist  # launchd template
 └── docs/
     └── claude-beacon.md            # This documentation
@@ -700,6 +702,7 @@ dotfiles/
 
 - `~/.claude/settings.json` - Claude Code hooks configuration
 - `~/.claude/skills/beacon/` - Generated skill for workspace registration
+- `~/.claude/skills/commit/` - Generated skill for git commit
 - `~/.local/share/ai-notify/` - Webhook cache
 - `/tmp/claude_status/` - State files
 - `/tmp/claude_workspace_map.json` - Workspace mappings
