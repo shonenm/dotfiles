@@ -45,6 +45,31 @@ return {
           end, debounce_ms)
         end,
       })
+      local map_opts = { buffer = explorer.bufnr, noremap = true, silent = true, nowait = true }
+      vim.keymap.set("n", "h", function()
+        local node = tree:get_node()
+        if node and node:has_children() and node:is_expanded() then
+          if debounce_timer then
+            debounce_timer:stop()
+            debounce_timer = nil
+          end
+          node:collapse()
+          tree:render()
+        end
+      end, vim.tbl_extend("force", map_opts, { desc = "Collapse directory" }))
+      vim.keymap.set("n", "l", function()
+        local node = tree:get_node()
+        if node and node:has_children() and not node:is_expanded() then
+          if debounce_timer then
+            debounce_timer:stop()
+            debounce_timer = nil
+          end
+          node:expand()
+          tree:render()
+        else
+          vim.cmd("2wincmd l")
+        end
+      end, vim.tbl_extend("force", map_opts, { desc = "Expand directory or focus diff view" }))
     end
 
     -- ヘルプライン用の namespace
