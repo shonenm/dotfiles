@@ -22,6 +22,7 @@
 # === Init ===
 [init]
     defaultBranch = main
+    templateDir = ~/.git_template
 
 # === Diff ===
 [diff]

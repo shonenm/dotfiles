@@ -1,0 +1,19 @@
+#!/bin/sh
+# Pre-commit hook: Detect merge conflict markers
+# Applied automatically to new repos via init.templateDir
+
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+  against=HEAD
+else
+  # Initial commit: diff against an empty tree
+  against=$(git hash-object -t tree /dev/null)
+fi
+
+# Check for conflict markers in staged files
+if git diff-index --cached --diff-filter=ACM -z --name-only "$against" \
+  | xargs -0 grep -lE '^(<{7}|>{7}|={7})' 2>/dev/null; then
+  echo ""
+  echo "ERROR: Merge conflict markers found in staged files."
+  echo "Please resolve conflicts before committing."
+  exit 1
+fi
