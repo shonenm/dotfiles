@@ -73,6 +73,50 @@ op read "op://Personal/Git Config/name"
 op read "op://Personal/Git Config/email"
 ```
 
+## Pre-commit Hook Template
+
+`~/.git_template/hooks/pre-commit` にマージコンフリクトマーカー検出フックを配置。`init.templateDir` により `git init` した新規リポジトリに自動適用される。
+
+### 検出対象
+
+ステージされたファイル内の以下のマーカー:
+- `<<<<<<<`（7文字）
+- `=======`（7文字）
+- `>>>>>>>`（7文字）
+
+### 既存リポジトリへの適用
+
+```bash
+# 手動でフックをコピー
+cp ~/.git_template/hooks/pre-commit .git/hooks/
+
+# または git init で再適用（既存データには影響なし）
+git init
+```
+
+## Git ユーティリティスクリプト
+
+`~/dotfiles/scripts/` に配置。PATH に含まれているため直接実行可能。
+
+| スクリプト | 用途 |
+|-----------|------|
+| `git-find-big.sh [件数]` | リポジトリ履歴内の大きなファイルを検索（デフォルト上位10件） |
+| `git-rm-from-history.sh <ファイル>` | 指定ファイルを履歴から完全削除（`git-filter-repo` 優先、なければ `filter-branch`） |
+| `git-rm-submodule.sh <パス>` | サブモジュールをクリーンに削除（deinit + rm + modules削除） |
+
+```bash
+# リポジトリ内の大きなファイル上位20件を表示
+git-find-big.sh 20
+
+# 誤ってコミットした大きなファイルを履歴から削除
+git-rm-from-history.sh path/to/large-file.bin
+
+# サブモジュールを削除
+git-rm-submodule.sh vendor/library
+```
+
+**注意**: `git-rm-from-history.sh` は履歴を書き換えるため、実行後に `git push --force --all` が必要。
+
 ## File Structure
 
 ### ~/.gitconfig (managed by dotfiles)
@@ -99,6 +143,7 @@ op read "op://Personal/Git Config/email"
 # === Init ===
 [init]
     defaultBranch = main
+    templateDir = ~/.git_template
 
 # === Diff ===
 [diff]
@@ -367,6 +412,7 @@ cd ~/dotfiles && git pull
 | Setting | Value | Description |
 |---------|-------|-------------|
 | `init.defaultBranch` | main | Default branch name for new repositories |
+| `init.templateDir` | ~/.git_template | Template directory for new repositories (pre-commit hook) |
 | `help.autocorrect` | 10 | Auto-execute after 1 second on command typo |
 | `commit.verbose` | true | Show full diff when editing commit message |
 

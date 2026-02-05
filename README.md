@@ -39,6 +39,9 @@ dotfiles/
 │   ├── claude-status.sh  # Claude Code通知連携
 │   ├── ai-notify.sh      # AI通知ヘルパー
 │   ├── pomodoro.sh       # ポモドーロタイマー
+│   ├── git-find-big.sh   # Git大容量ファイル検索
+│   ├── git-rm-from-history.sh  # Git履歴からファイル削除
+│   ├── git-rm-submodule.sh     # Gitサブモジュール削除
 │   ├── tmux-session-color.sh    # tmuxセッションカラー管理
 │   └── tmux-session-preview.sh  # fzfセッション切替プレビュー
 ├── templates/       # AI CLI設定テンプレート
@@ -141,6 +144,9 @@ exec zsh
 
 - **プラグインマネージャー**: Sheldon (zsh-completions, forgit, zsh-abbr, zsh-syntax-highlighting, zsh-autosuggestions)
 - **略語展開**: zsh-abbr (エイリアスの代替、履歴に展開後コマンドが残る)
+- **グローバルエイリアス**: パイプ修飾子 (`L`=bat, `G`=rg, `C`=pbcopy, `H`=head, `T`=tail)
+- **Suffixエイリアス**: 拡張子ごとのオープナー (`.md`→nvim, `.py`→python, `.png`→open)
+- **Zshオプション**: `CORRECT` (スペルチェック), `AUTO_CD` (ディレクトリ名でcd), `NO_FLOW_CONTROL`
 - **プロンプト**: Starship (Draculaテーマ)
 - **履歴検索**: Atuin (fuzzy検索、workspace対応、secrets_filter)
 - **ディレクトリ移動**: Zoxide
@@ -187,6 +193,8 @@ exec zsh
 
 - ユーザー情報は `.gitconfig.local` で管理
 - 初回セットアップ時に1Passwordから取得
+- **Pre-commit hook template**: 新規リポジトリにコンフリクトマーカー検出フックを自動適用
+- **Gitユーティリティ**: `git-find-big.sh`, `git-rm-from-history.sh`, `git-rm-submodule.sh`
 - **forgit**: fzf ベースの Git 操作強化（interactive add/diff/log/stash）
 - **ghq**: リポジトリ管理ツール（`~/ghq` 配下に統一管理）
 - `repo` 関数で ghq + fzf によるリポジトリ移動

@@ -80,6 +80,38 @@ command -v doggo &>/dev/null && alias dig="doggo"
 command -v xh &>/dev/null && alias http="xh"
 ```
 
+## グローバルエイリアス（パイプ修飾子）
+
+コマンドの末尾に付けてパイプ処理を簡潔に書ける `alias -g`:
+
+| エイリアス | 展開先 | 使用例 |
+|-----------|--------|--------|
+| `L` | `\| bat` | `git log L` |
+| `G` | `\| rg` | `ps aux G node` |
+| `C` | `\| pbcopy` | `pwd C` |
+| `H` | `\| head` | `ls H` |
+| `T` | `\| tail` | `ls T` |
+
+## Suffixエイリアス（拡張子ごとのオープナー）
+
+ファイル名を直接入力するだけで適切なアプリで開く `alias -s`:
+
+| 拡張子 | 起動コマンド |
+|--------|-------------|
+| `.md`, `.txt`, `.yaml`, `.yml`, `.toml`, `.json` | `nvim` |
+| `.py` | `python` |
+| `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` | `open` |
+
+## Zshオプション
+
+`common/zsh/.zshrc.common` で設定:
+
+| オプション | 効果 |
+|-----------|------|
+| `CORRECT` | コマンドのスペルミスを検出して修正候補を提示 |
+| `AUTO_CD` | ディレクトリ名だけ入力すれば `cd` なしで移動 |
+| `NO_FLOW_CONTROL` | `Ctrl+S`/`Ctrl+Q` のフロー制御を無効化 |
+
 ## 注意事項
 
 - `lsd` がインストールされていない環境（Linux等）では `eza` にフォールバック
