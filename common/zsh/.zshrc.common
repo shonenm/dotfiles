@@ -92,6 +92,19 @@ command -v viddy &>/dev/null && alias watch="viddy"
 command -v doggo &>/dev/null && alias dig="doggo"
 command -v xh &>/dev/null && alias http="xh"
 
+# --- Global Aliases (pipe modifiers) ---
+# Usage: git log L → git log | bat
+alias -g L='| bat'
+alias -g G='| rg'
+alias -g C='| pbcopy'
+alias -g H='| head'
+alias -g T='| tail'
+
+# --- Suffix Aliases (open by extension) ---
+alias -s {md,txt,yaml,yml,toml,json}=nvim
+alias -s py=python
+alias -s {png,jpg,jpeg,gif,webp}=open
+
 # --- Modern Tools Init (cross-platform) ---
 # gh completion: static file in fpath (regenerate after gh upgrade: gh completion -s zsh > ~/.zsh/completions/_gh)
 [[ -d "$HOME/.zsh/completions" ]] && fpath=("$HOME/.zsh/completions" $fpath)
@@ -136,6 +149,11 @@ HISTFILE="$HOME/.zsh_history"
 HISTSIZE=50000
 SAVEHIST=50000
 setopt SHARE_HISTORY
+
+# --- Zsh Options ---
+setopt CORRECT          # Spell check for commands
+setopt AUTO_CD          # Type directory name to cd into it
+setopt NO_FLOW_CONTROL  # Disable Ctrl+S/Ctrl+Q flow control
 
 # --- Yazi (file manager) ---
 function y() {
