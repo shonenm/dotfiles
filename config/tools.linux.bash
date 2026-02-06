@@ -76,6 +76,13 @@ TOOL_direnv_install_dir="$HOME/.local/bin"
 # GitHub release installs (tarball)
 # ════════════════════════════════════════
 
+TOOL_fzf_check_cmd="fzf"
+TOOL_fzf_method="github_release"
+TOOL_fzf_github_repo="junegunn/fzf"
+TOOL_fzf_archive_pattern='fzf-${VERSION_NOTAG}-linux_${ARCH}.tar.gz'
+TOOL_fzf_binary_path='fzf'
+TOOL_fzf_arch_map='x86_64:amd64 aarch64:arm64'
+
 TOOL_fastfetch_check_cmd="fastfetch"
 TOOL_fastfetch_method="github_release"
 TOOL_fastfetch_github_repo="fastfetch-cli/fastfetch"
@@ -311,7 +318,7 @@ LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
   starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
-  fastfetch delta lazygit ghq dops yazi dblab
+  fzf fastfetch delta lazygit ghq dops yazi dblab
   just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex
   # APT-only (skipped on Alpine)
   gh neovim eza bat postgresql
