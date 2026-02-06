@@ -28,9 +28,11 @@ return {
       local last_node_id = nil
       local debounce_timer = nil
       local debounce_ms = 400
+      local is_toggling = false
       vim.api.nvim_create_autocmd("CursorMoved", {
         buffer = explorer.bufnr,
         callback = function()
+          if is_toggling then return end
           local node = tree:get_node()
           if not node or not node.data then return end
           if node.data.type == "group" or node.data.type == "directory" then return end
@@ -53,8 +55,10 @@ return {
             debounce_timer:stop()
             debounce_timer = nil
           end
+          is_toggling = true
           node:collapse()
           tree:render()
+          vim.schedule(function() is_toggling = false end)
         end
       end, vim.tbl_extend("force", map_opts, { desc = "Collapse directory" }))
       vim.keymap.set("n", "l", function()
@@ -64,12 +68,36 @@ return {
             debounce_timer:stop()
             debounce_timer = nil
           end
+          is_toggling = true
           node:expand()
           tree:render()
+          vim.schedule(function() is_toggling = false end)
         else
           vim.cmd("2wincmd l")
         end
       end, vim.tbl_extend("force", map_opts, { desc = "Expand directory or focus diff view" }))
+      vim.keymap.set("n", "<CR>", function()
+        local node = tree:get_node()
+        if node and node:has_children() then
+          if debounce_timer then
+            debounce_timer:stop()
+            debounce_timer = nil
+          end
+          is_toggling = true
+          if node:is_expanded() then
+            node:collapse()
+          else
+            node:expand()
+          end
+          tree:render()
+          vim.schedule(function() is_toggling = false end)
+        else
+          -- ファイルノードの場合は通常の選択動作
+          if node and node.data then
+            explorer.on_file_select(node.data)
+          end
+        end
+      end, vim.tbl_extend("force", map_opts, { desc = "Toggle directory or select file" }))
     end
 
     -- ヘルプライン用の namespace
