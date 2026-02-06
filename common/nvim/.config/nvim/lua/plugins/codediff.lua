@@ -5,6 +5,17 @@ return {
   "esmuellert/codediff.nvim",
   dependencies = { "MunifTanjim/nui.nvim" },
   cmd = { "CodeDiff" },
+  -- Patch refresh.lua to fix collapsed state for directories with same name
+  build = function()
+    local path = vim.fn.stdpath("data") .. "/lazy/codediff.nvim/lua/codediff/ui/explorer/refresh.lua"
+    local content = vim.fn.readfile(path)
+    for i, line in ipairs(content) do
+      if line:match("local key = node%.data%.path or node%.data%.name") then
+        content[i] = line:gsub("node%.data%.path or node%.data%.name", "node.data.dir_path or node.data.path or node.data.name")
+      end
+    end
+    vim.fn.writefile(content, path)
+  end,
   keys = {
     { "<leader>gd", "<cmd>CodeDiff<cr>", desc = "CodeDiff Open" },
     { "<leader>gf", "<cmd>CodeDiff history %<cr>", desc = "File History" },
