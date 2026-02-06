@@ -31,6 +31,17 @@ return {
       style = "dark",
       transparent = true,
       italic_comments = true,
+      group_overrides = {
+        -- VSCode-like diff highlighting
+        -- 追加行: 緑系の背景
+        DiffAdd = { fg = "NONE", bg = "#2d4a2d" },
+        -- 変更行全体: 暗い青系（行全体のマーカー）
+        DiffChange = { fg = "NONE", bg = "#1e3a50" },
+        -- 削除行: 赤系の背景
+        DiffDelete = { fg = "NONE", bg = "#4a2d2d" },
+        -- 変更箇所（行内）: より明るい青/シアン系で強調
+        DiffText = { fg = "NONE", bg = "#2d5a7a" },
+      },
     },
   },
 
