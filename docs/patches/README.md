@@ -8,6 +8,7 @@ upstream で修正され次第、該当パッチを削除する。
 | ツール | 対象 | ステータス | 適用日 | 詳細 |
 |--------|------|-----------|--------|------|
 | snacks.nvim | explorer diagnostics Invalid buffer id | active | 2025-01-29 | [詳細](./snacks-explorer-diagnostics.md) |
+| codediff.nvim | 同名ディレクトリの折りたたみ状態共有 | active | 2026-02-06 | [詳細](./codediff-directory-collapse.md) |
 
 ## パッチ追加時のテンプレート
 
