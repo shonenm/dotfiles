@@ -27,3 +27,13 @@ map("n", "N", "Nzzzv", { desc = "Previous search result" })
 
 -- Clear search highlight
 map("n", "<Esc>", "<cmd>noh<cr>", { desc = "Clear search highlight" })
+
+-- Emacs-style keybindings in Insert mode (macOS compatible)
+map("i", "<C-a>", "<Home>", { desc = "Beginning of line" })
+map("i", "<C-e>", "<End>", { desc = "End of line" })
+map("i", "<C-f>", "<Right>", { desc = "Forward char" })
+map("i", "<C-b>", "<Left>", { desc = "Backward char" })
+map("i", "<C-p>", "<Up>", { desc = "Previous line" })
+map("i", "<C-n>", "<Down>", { desc = "Next line" })
+map("i", "<C-d>", "<Del>", { desc = "Delete char" })
+map("i", "<C-k>", "<C-o>D", { desc = "Kill to end of line" })
