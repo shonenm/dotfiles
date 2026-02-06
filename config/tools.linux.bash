@@ -265,6 +265,13 @@ TOOL_grex_archive_pattern='grex-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
 TOOL_grex_binary_path='grex'
 TOOL_grex_arch_map='x86_64:x86_64 aarch64:aarch64'
 
+TOOL_dblab_check_cmd="dblab"
+TOOL_dblab_method="github_release"
+TOOL_dblab_github_repo="danvergara/dblab"
+TOOL_dblab_archive_pattern='dblab_${VERSION_NOTAG}_linux_${ARCH}.tar.gz'
+TOOL_dblab_binary_path='dblab'
+TOOL_dblab_arch_map='x86_64:amd64 aarch64:arm64'
+
 # ════════════════════════════════════════
 # APT repo installs (Debian/Ubuntu only)
 # ════════════════════════════════════════
@@ -285,6 +292,17 @@ TOOL_bat_method="apt_repo"
 TOOL_bat_apt_only="true"
 TOOL_bat_install_fn="install_bat_apt"
 
+TOOL_postgresql_check_cmd="psql"
+TOOL_postgresql_method="apt_repo"
+TOOL_postgresql_apt_only="true"
+TOOL_postgresql_install_fn="install_postgresql_apt"
+
+# pgcli via uv tool (depends on uv)
+TOOL_pgcli_check_cmd="pgcli"
+TOOL_pgcli_method="curl_pipe"
+TOOL_pgcli_curl_cmd='uv tool install pgcli'
+TOOL_pgcli_depends_on="uv"
+
 # ════════════════════════════════════════
 # Install order (dependencies must come before dependents)
 # ════════════════════════════════════════
@@ -293,10 +311,12 @@ LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
   starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
-  fastfetch delta lazygit ghq dops yazi
+  fastfetch delta lazygit ghq dops yazi dblab
   just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex
   # APT-only (skipped on Alpine)
-  gh neovim eza bat
+  gh neovim eza bat postgresql
   # Cargo tools (depend on rust)
   tokei tealdeer procs sd dust bottom rip2 lsd quay gitabsorb cargoupdate
+  # Python tools (depend on uv)
+  pgcli
 )
