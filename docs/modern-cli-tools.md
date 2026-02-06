@@ -169,3 +169,18 @@ target
 - **テーマ**: Visual Studio Dark+
 - **スタイル**: 行番号、Git変更マーカー、ヘッダー表示
 - **構文マッピング**: `.env` → DotENV、`.envrc` → Bash
+
+## atuin 設定
+
+シェル履歴をローカル SQLite に保存し、高速検索を提供する。
+
+### キーバインド
+
+| キー | 動作 | 関数 |
+|------|------|------|
+| `Ctrl+R` | 全文検索画面 | `atuin-search` |
+| `Up` | 入力中文字でフィルタ | `atuin-up-search` |
+| `Ctrl+P` | 入力中文字でフィルタ | `atuin-up-search` |
+
+- `Ctrl+R` と `Up` は `atuin init zsh` でデフォルト設定
+- `Ctrl+P` は `mac/zsh/.zshrc.local` で追加設定
