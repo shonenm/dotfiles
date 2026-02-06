@@ -10,7 +10,6 @@ neovim
 ripgrep
 fd
 bat
-fzf
 eza
 rsync
 github-cli
