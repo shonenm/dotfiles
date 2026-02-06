@@ -47,11 +47,13 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 |------|------|--------|
 | `g` | lazygit（カレントパスで起動） | 80% × 80% |
 | `G` | gh-dash（GitHub Dashboard） | 85% × 85% |
+| `P` | pgcli（PostgreSQL クライアント） | 80% × 80% |
 | `j` | Scratchpad シェル（永続 `scratch` セッション、トグル） | 80% × 80% |
 | `f` | セッション切り替え（fzf + プレビュー） | 60% × 60% |
 | `F` | ghq プロジェクト切り替え（fzf） | 60% × 60% |
 
 - `-E` フラグにより、コマンド終了時に popup 自動クローズ
+- `d` の pgcli は `$DATABASE_URL` 環境変数があれば使用、なければ `postgresql://postgres:postgres@localhost:5432/postgres` にフォールバック
 - `G` の gh-dash は 85% サイズ（列が多いため lazygit より少し大きめ）
 - `j` の Scratchpad は永続セッション (`scratch`) を使用。再度 `prefix + j` でトグル（セッション状態を維持）
 - `f` はデフォルトの `find-window` を上書き
