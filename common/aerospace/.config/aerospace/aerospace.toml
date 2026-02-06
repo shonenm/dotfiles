@@ -269,10 +269,6 @@ if.app-id = 'com.apple.finder'
 run = 'move-node-to-workspace F'
 
 [[on-window-detected]]
-if.app-id = 'com.mitchellh.ghostty'
-run = 'move-node-to-workspace G'
-
-[[on-window-detected]]
 if.app-id = 'com.cron.electron'
 run = 'move-node-to-workspace C'
 
