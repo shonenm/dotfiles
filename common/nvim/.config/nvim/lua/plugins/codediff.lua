@@ -27,7 +27,7 @@ return {
       local tree = explorer.tree
       local last_node_id = nil
       local debounce_timer = nil
-      local debounce_ms = 250
+      local debounce_ms = 400
       vim.api.nvim_create_autocmd("CursorMoved", {
         buffer = explorer.bufnr,
         callback = function()
