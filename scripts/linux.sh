@@ -257,6 +257,10 @@ install_bat_apt() {
   fi
 }
 
+install_postgresql_apt() {
+  $SUDO apt install -y postgresql-client
+}
+
 # --- Main Tool Dispatcher ---
 
 install_modern_tools() {
