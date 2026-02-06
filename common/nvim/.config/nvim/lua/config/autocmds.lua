@@ -109,3 +109,23 @@ vim.api.nvim_create_user_command("ProfileStop", function()
   vim.notify("Profile saved to /tmp/nvim-profile.log", vim.log.levels.INFO)
 end, {})
 
+-- Cursor visibility enhancement
+-- Mode-specific cursor colors matching vscode.nvim lualine theme
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("cursor_visibility", { clear = true }),
+  callback = function()
+    local cursor_hl = {
+      Cursor = { fg = "#1F1F1F", bg = "#0a7aca" },  -- Normal: blue
+      lCursor = { fg = "#1F1F1F", bg = "#0a7aca" },
+      iCursor = { fg = "#1F1F1F", bg = "#4EC9B0" }, -- Insert: green
+      vCursor = { fg = "#1F1F1F", bg = "#ffaf00" }, -- Visual: yellow
+      rCursor = { fg = "#1F1F1F", bg = "#f44747" }, -- Replace: red
+      CursorLine = { bg = "#2a2a2a" },
+      CursorLineNr = { fg = "#FFFFFF", bold = true },
+    }
+    for group, val in pairs(cursor_hl) do
+      vim.api.nvim_set_hl(0, group, val)
+    end
+  end,
+})
+

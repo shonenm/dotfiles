@@ -24,6 +24,16 @@ vim.opt.scrolloff = 8
 vim.opt.sidescrolloff = 8
 vim.opt.wrap = true
 
+-- Cursor visibility (mode-specific cursor shape)
+vim.opt.guicursor = table.concat({
+  "n-c:block-Cursor/lCursor",
+  "i-ci-ve:ver25-iCursor/lCursor",
+  "v:block-vCursor/lCursor",
+  "r-cr:hor20-rCursor/lCursor",
+  "o:hor50-Cursor/lCursor",
+  "a:blinkwait700-blinkoff400-blinkon250",
+}, ",")
+
 -- Disable swap files
 vim.opt.swapfile = false
 
