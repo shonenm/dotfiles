@@ -31,6 +31,11 @@ brew "just"
 brew "watchexec"
 brew "hyperfine"
 
+# --- Database ---
+brew "pgcli"         # PostgreSQL用インタラクティブクライアント（オートコンプリート・シンタックスハイライト）
+brew "dblab"         # TUIデータベースクライアント（スキーマブラウジング・クエリ実行）
+brew "postgresql@17" # psqlクライアント + pg_dump/pg_restore（Docker内のDBに接続するため）
+
 # --- Security ---
 brew "gitleaks"
 
