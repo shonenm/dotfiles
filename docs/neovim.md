@@ -474,6 +474,21 @@ DBUI 内での操作:
 - `:ProfileStart` / `:ProfileStop` でカーソル移動等のプロファイリング（`/tmp/nvim-profile.log` に出力）
 - LazyVim デフォルトの `lazyvim_wrap_spell` を無効化（日本語テキストが SpellBad 扱いされるのを防止）
 
+## カーソル視認性
+
+モード別にカーソルの色と形状を変更。vscode.nvim lualine テーマと色を統一。
+
+| モード | 色 | 形状 |
+|--------|-----|------|
+| Normal/Command | 青 `#0a7aca` | ブロック |
+| Insert | 緑 `#4EC9B0` | 縦線 |
+| Visual | 黄 `#ffaf00` | ブロック |
+| Replace | 赤 `#f44747` | 横線 |
+
+- ブリンク: 700ms待機 → 400ms消灯 → 250ms点灯
+- `ColorScheme` autocmd で色を設定（カラースキーム変更後も維持）
+- `CursorLine` / `CursorLineNr` も強調表示
+
 ## ステータスライン (lualine)
 
 LazyVim デフォルトをベースに以下をカスタマイズ:
