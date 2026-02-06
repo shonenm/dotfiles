@@ -77,6 +77,10 @@ abbr dcu="docker compose up -d"
 abbr dcd="docker compose down"
 abbr dcl="docker compose logs -f"
 
+# Database
+abbr pg="pgcli"
+abbr dbl="dblab"
+
 # Just (task runner)
 abbr j="just"
 abbr jl="just --list"
