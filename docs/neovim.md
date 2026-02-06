@@ -272,6 +272,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── buffer.lua             # バッファ管理 (mini.bufremove)
 ├── colorscheme.lua        # カラースキーム設定
 ├── copilot.lua            # Copilot 設定
+├── dadbod.lua             # データベース (DBUI + pgcli/dblab toggleterm)
 ├── dap.lua                # DAP カスタム設定 (Docker attach, Playwright debug)
 ├── codediff.lua           # Git diff 表示設定 (カーソル追従 + debounce)
 ├── disabled.lua           # プラグイン無効化
@@ -399,6 +400,23 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | キー         | 動作                     |
 | ------------ | ------------------------ |
 | `<leader>od` | Lazydocker               |
+
+### データベース
+
+| キー         | 動作                     |
+| ------------ | ------------------------ |
+| `<leader>db` | DBUI トグル              |
+| `<leader>df` | DBUI バッファ検索        |
+| `<leader>dl` | 直前のクエリ情報         |
+| `<leader>dp` | pgcli（フローティング）  |
+| `<leader>de` | dblab（フローティング）  |
+
+DBUI 内での操作:
+- `<leader>S`: クエリ実行
+- `o` / `Enter`: 展開・選択
+- `R`: リフレッシュ
+
+詳細: [docs/database.md](database.md)
 
 ### パッケージ管理 (package.json)
 
