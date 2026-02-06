@@ -1,6 +1,9 @@
 # --- Font ---
 font-family = "UDEV Gothic NFLG"
 font-size = 12
+font-feature = -calt
+font-feature = -liga
+font-feature = -dlig
 
 # --- Mouse ---
 mouse-hide-while-typing = true
