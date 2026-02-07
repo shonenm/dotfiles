@@ -109,6 +109,37 @@ vim.api.nvim_create_user_command("ProfileStop", function()
   vim.notify("Profile saved to /tmp/nvim-profile.log", vim.log.levels.INFO)
 end, {})
 
+-- Large file optimization (disable heavy features for files > 100KB)
+-- Improves performance on remote/SSH connections
+vim.api.nvim_create_autocmd("BufReadPre", {
+  group = vim.api.nvim_create_augroup("large_buf_optimization", { clear = true }),
+  callback = function()
+    local max_filesize = 100 * 1024 -- 100KB
+    local filepath = vim.api.nvim_buf_get_name(0)
+    if filepath == "" then
+      return
+    end
+    local ok, stats = pcall(vim.uv.fs_stat, filepath)
+    if ok and stats and stats.size > max_filesize then
+      vim.b.large_buf = true
+      -- Disable syntax highlighting
+      vim.cmd("syntax off")
+      -- Disable filetype detection (prevents LSP auto-attach)
+      vim.opt_local.filetype = ""
+      -- Disable swap and undo for large files
+      vim.opt_local.swapfile = false
+      vim.opt_local.undofile = false
+      -- Disable fold computation
+      vim.opt_local.foldmethod = "manual"
+      vim.opt_local.foldexpr = "0"
+      vim.notify(
+        string.format("Large file detected (%.1fKB) - heavy features disabled", stats.size / 1024),
+        vim.log.levels.WARN
+      )
+    end
+  end,
+})
+
 -- Cursor visibility enhancement
 -- Mode-specific cursor colors matching vscode.nvim lualine theme
 vim.api.nvim_create_autocmd("ColorScheme", {
