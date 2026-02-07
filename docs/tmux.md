@@ -236,7 +236,7 @@ client-session-changed → tmux-claude-focus.sh
 
 | 設定 | 値 | 備考 |
 |------|-----|------|
-| status-interval | 10秒 | 更新頻度を抑制（SSH環境での遅延対策） |
+| status-interval | 5秒 | 更新頻度を抑制（SSH環境での遅延対策） |
 | history-limit | 10000 | スクロールバック行数（大量履歴による遅延対策） |
 | スクリプトキャッシュ | 3秒 | CPU/RAM/GPU/Storage/Git branch すべてにキャッシュ適用 |
 | キャッシュ場所 | `/tmp/tmux_sysstat/` | 一時ディレクトリに統一 |
