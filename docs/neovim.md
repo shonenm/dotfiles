@@ -473,6 +473,7 @@ DBUI 内での操作:
 - snacks.nvim picker で `--no-ignore-vcs` により `.gitignore` されたファイルも表示（`~/.config/fd/ignore` で node_modules 等は除外）
 - `:ProfileStart` / `:ProfileStop` でカーソル移動等のプロファイリング（`/tmp/nvim-profile.log` に出力）
 - LazyVim デフォルトの `lazyvim_wrap_spell` を無効化（日本語テキストが SpellBad 扱いされるのを防止）
+- **大きいファイル最適化**: 100KB 以上のファイルを開いた際、syntax / filetype / swapfile / undofile / fold を自動無効化（リモート環境での遅延対策）
 
 ## カーソル視認性
 
