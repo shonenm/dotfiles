@@ -282,6 +282,39 @@ link_dotfiles() {
   log_success "Dotfiles linked successfully"
 }
 
+# --- 3.7. Setup tmux plugins (TPM + tmux-which-key) ---
+setup_tmux_plugins() {
+  local tpm_path="$HOME/.tmux/plugins/tpm"
+
+  # Install TPM if not present
+  if [[ ! -d "$tpm_path" ]]; then
+    log_info "Installing TPM..."
+    git clone https://github.com/tmux-plugins/tpm "$tpm_path"
+  fi
+
+  # Install TPM plugins (non-interactive)
+  if [[ -x "$tpm_path/bin/install_plugins" ]]; then
+    log_info "Installing tmux plugins via TPM..."
+    "$tpm_path/bin/install_plugins" >/dev/null 2>&1 || true
+  fi
+
+  # Setup tmux-which-key config symlink
+  local whichkey_plugin="$HOME/.tmux/plugins/tmux-which-key"
+  local whichkey_config="$HOME/.config/tmux/plugins/tmux-which-key/config.yaml"
+  if [[ -d "$whichkey_plugin" && -f "$whichkey_config" ]]; then
+    ln -sf "$whichkey_config" "$whichkey_plugin/config.yaml"
+    log_info "Linked tmux-which-key config"
+
+    # Rebuild tmux-which-key menu (requires Python)
+    if command_exists python3 && [[ -x "$whichkey_plugin/plugin.sh.tmux" ]]; then
+      log_info "Building tmux-which-key menu..."
+      "$whichkey_plugin/plugin.sh.tmux" >/dev/null 2>&1 || true
+    fi
+  fi
+
+  log_success "tmux plugins installed"
+}
+
 # --- 4. Generate AI CLI configs from templates ---
 # These configs need absolute paths for hooks to work in non-interactive shells
 generate_ai_cli_configs() {
@@ -384,6 +417,9 @@ main() {
     log_info "Regenerating tmux theme for Linux..."
     "$DOTFILES_DIR/scripts/regenerate-tmux-theme.sh" "$HOME/.config/tmux/tokyonight.tmux"
   fi
+
+  # 3.7. Install TPM plugins and setup tmux-which-key
+  setup_tmux_plugins
 
   # 4. Generate AI CLI configs (with absolute paths)
   generate_ai_cli_configs
