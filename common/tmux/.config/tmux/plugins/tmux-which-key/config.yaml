@@ -1,0 +1,195 @@
+# yaml-language-server: $schema=config.schema.yaml
+# tmux-which-key configuration
+# prefix + Space でメニュー表示
+
+command_alias_start_index: 200
+
+keybindings:
+  prefix_table: Space
+
+title:
+  style: align=centre,bold
+  prefix: " tmux "
+  prefix_style: "fg=#1a1b26,bg=#7aa2f7,bold"
+
+position:
+  x: C
+  y: C
+
+custom_variables: []
+
+macros:
+  - name: reload-config
+    commands:
+      - source-file ~/.config/tmux/tmux.conf
+      - display-message -d 800 "Config Reloaded!"
+  - name: popup-lazygit
+    commands:
+      - "display-popup -E -w 80% -h 80% -d #{pane_current_path} lazygit"
+  - name: popup-ghdash
+    commands:
+      - "display-popup -E -w 85% -h 85% -d #{pane_current_path} gh\\ dash"
+  - name: popup-pgcli
+    commands:
+      - "display-popup -E -w 80% -h 80% -d #{pane_current_path} pgcli"
+  - name: popup-scratch
+    commands:
+      - "display-popup -E -w 80% -h 80% -d #{pane_current_path} tmux\\ new-session\\ -A\\ -s\\ scratch"
+  - name: popup-sessions
+    commands:
+      - "display-popup -E -w 60% -h 60% ~/dotfiles/scripts/tmux-session-color.sh\\ fzf-sessions"
+  - name: popup-projects
+    commands:
+      - "display-popup -E -w 60% -h 60% ~/dotfiles/scripts/tmux-popup-ghq.sh"
+  - name: sync-toggle
+    commands:
+      - "run-shell ~/dotfiles/scripts/tmux-sync-toggle.sh"
+
+items:
+  # === Direct shortcuts ===
+  - name: Split horizontal
+    key: "|"
+    command: "splitw -h -c #{pane_current_path}"
+  - name: Split vertical
+    key: "-"
+    command: "splitw -v -c #{pane_current_path}"
+  - separator: true
+  - name: Lazygit
+    key: g
+    macro: popup-lazygit
+  - name: gh-dash
+    key: G
+    macro: popup-ghdash
+  - name: Scratchpad
+    key: j
+    macro: popup-scratch
+  - name: Sessions
+    key: f
+    macro: popup-sessions
+  - name: Projects
+    key: F
+    macro: popup-projects
+  - separator: true
+  - name: Copy mode
+    key: v
+    command: copy-mode
+  - name: Scroll up
+    key: u
+    command: copy-mode -u
+  - separator: true
+
+  # === Submenus ===
+  - name: +Pane
+    key: p
+    menu:
+      - name: Split horizontal
+        key: "|"
+        command: "splitw -h -c #{pane_current_path}"
+      - name: Split vertical
+        key: "-"
+        command: "splitw -v -c #{pane_current_path}"
+      - separator: true
+      - name: Resize left
+        key: H
+        command: resizep -L 2
+        transient: true
+      - name: Resize down
+        key: J
+        command: resizep -D 2
+        transient: true
+      - name: Resize up
+        key: K
+        command: resizep -U 2
+        transient: true
+      - name: Resize right
+        key: L
+        command: resizep -R 2
+        transient: true
+      - separator: true
+      - name: Set title
+        key: t
+        command: "command-prompt -p Pane\\ title: -I #{pane_title} selectp\\ -T\\ %%"
+      - name: Zoom toggle
+        key: z
+        command: resizep -Z
+      - name: Sync toggle
+        key: S
+        macro: sync-toggle
+      - separator: true
+      - name: Kill pane
+        key: x
+        command: "confirm -p Kill\\ pane? killp"
+
+  - name: +Window
+    key: w
+    menu:
+      - name: New window
+        key: c
+        command: "neww -c #{pane_current_path}"
+      - name: Previous
+        key: p
+        command: previous-window
+      - name: Next
+        key: n
+        command: next-window
+      - name: Last
+        key: l
+        command: last-window
+      - separator: true
+      - name: Rename
+        key: T
+        command: "command-prompt -I #W renamew\\ %%"
+      - name: Kill window
+        key: X
+        command: "confirm -p Kill\\ window? killw"
+
+  - name: +Session
+    key: s
+    menu:
+      - name: Sessions
+        key: f
+        macro: popup-sessions
+      - name: Projects
+        key: F
+        macro: popup-projects
+      - name: Choose tree
+        key: s
+        command: choose-tree -Zs
+      - separator: true
+      - name: Rename
+        key: r
+        command: "command-prompt -I #S rename\\ %%"
+      - name: Detach
+        key: d
+        command: detach
+
+  - name: +Popup
+    key: o
+    menu:
+      - name: Lazygit
+        key: g
+        macro: popup-lazygit
+      - name: gh-dash
+        key: G
+        macro: popup-ghdash
+      - name: pgcli
+        key: P
+        macro: popup-pgcli
+      - separator: true
+      - name: Scratchpad
+        key: j
+        macro: popup-scratch
+      - name: Sessions
+        key: f
+        macro: popup-sessions
+      - name: Projects
+        key: F
+        macro: popup-projects
+
+  - separator: true
+  - name: Reload config
+    key: r
+    macro: reload-config
+  - name: List keys
+    key: "?"
+    command: list-keys -N
