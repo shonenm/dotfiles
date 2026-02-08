@@ -6,15 +6,26 @@ return {
   dependencies = { "MunifTanjim/nui.nvim" },
   cmd = { "CodeDiff" },
   -- Patch refresh.lua to fix collapsed state for directories with same name
-  build = function()
+  -- Apply on startup if not already patched (handles updates that reset the file)
+  init = function()
     local path = vim.fn.stdpath("data") .. "/lazy/codediff.nvim/lua/codediff/ui/explorer/refresh.lua"
-    local content = vim.fn.readfile(path)
-    for i, line in ipairs(content) do
+    local ok, content = pcall(vim.fn.readfile, path)
+    if not ok then return end
+    local needs_patch = false
+    for _, line in ipairs(content) do
       if line:match("local key = node%.data%.path or node%.data%.name") then
-        content[i] = line:gsub("node%.data%.path or node%.data%.name", "node.data.dir_path or node.data.path or node.data.name")
+        needs_patch = true
+        break
       end
     end
-    vim.fn.writefile(content, path)
+    if needs_patch then
+      for i, line in ipairs(content) do
+        if line:match("local key = node%.data%.path or node%.data%.name") then
+          content[i] = line:gsub("node%.data%.path or node%.data%.name", "node.data.dir_path or node.data.path or node.data.name")
+        end
+      end
+      vim.fn.writefile(content, path)
+    end
   end,
   keys = {
     { "<leader>gd", "<cmd>CodeDiff<cr>", desc = "CodeDiff Open" },
