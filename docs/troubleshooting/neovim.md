@@ -55,3 +55,47 @@ cat ~/.local/state/nvim/noice.log
 
 - `lazy.lua`: omnisharp コメントアウト
 - mason の omnisharp パッケージも削除済み (`~/.local/share/nvim/mason/packages/omnisharp`)
+
+---
+
+## Lazy.nvim が "You have local changes" で更新を拒否する
+
+**日付**: 2026-02-09
+
+### 症状
+
+`:Lazy sync` 実行時に以下のエラーが表示され、プラグインが更新されない:
+
+```
+You have local changes in `/path/to/nvim/lazy/plugin-name`:
+  * path/to/modified/file.lua
+Please remove them to update.
+```
+
+### 原因
+
+プラグインのソースファイルがローカルで変更されている。以下のケースで発生:
+
+1. **パッチ適用方式の変更後**: dotfiles で以前 `init` フックでソースファイルを直接変更していたが、ランタイムパッチ方式に変更した場合、古い変更が残っている
+2. **手動でのデバッグ・修正**: プラグインのコードを直接編集した場合
+
+### 修正手順
+
+```bash
+# 方法1: 変更を破棄
+git -C ~/.local/share/nvim/lazy/plugin-name restore path/to/modified/file.lua
+
+# 方法2: プラグイン全体を再インストール
+# Lazy.nvim の画面で該当プラグインにカーソルを合わせ:
+# x (削除) → I (インストール)
+
+# 方法3: lazy ディレクトリごと削除して全再インストール
+rm -rf ~/.local/share/nvim/lazy/plugin-name
+nvim  # 自動で再インストールされる
+```
+
+### 予防策
+
+プラグインのソースファイルを直接変更するパッチは避け、`config` 関数内でのランタイムオーバーライド（monkey-patch）を使用する。
+
+参考: `docs/patches/codediff-directory-collapse.md`
