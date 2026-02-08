@@ -56,7 +56,16 @@ scripts/regenerate-tmux-theme.sh
 
 git clone 時に特殊文字（U+E0B6, U+E0B4）が正しくコピーされない問題への対処。
 
-### 6. AI CLI 設定生成
+### 6. tmux プラグインセットアップ
+
+TPM と tmux-which-key を自動セットアップ:
+
+1. **TPM インストール** - `~/.tmux/plugins/tpm` がなければ自動 clone
+2. **プラグインインストール** - `tpm/bin/install_plugins` で全プラグインをインストール
+3. **tmux-which-key 設定** - dotfiles の `config.yaml` をプラグインディレクトリにシンボリックリンク
+4. **メニュービルド** - Python で which-key メニューを生成
+
+### 7. AI CLI 設定生成
 
 Claude / Codex / Gemini の設定ファイルを生成:
 
