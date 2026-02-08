@@ -34,7 +34,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | rainbow-delimiters.nvim     | ブラケットペアカラー化                  |
 | dropbar.nvim                | VS Code風ブレッドクラムナビゲーション   |
 | tiny-inline-diagnostic.nvim | インライン診断表示（ERROR/WARN/INFO のみ） |
-| cinnamon.nvim               | スムーズスクロール（C-d/C-u/C-b/C-f）   |
+| snacks.scroll               | スムーズスクロール（C-d/C-u/C-b/C-f）   |
 
 ### エディタ機能
 
@@ -291,7 +291,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── lint.lua               # CSpell リンター設定 (HINT severity, mise で自動インストール)
 ├── lualine.lua            # ステータスライン強化 (リポジトリ全体diff, Copilot, LSP名)
 ├── multicursor.lua        # マルチカーソル (vim-visual-multi)
-├── cinnamon.lua           # スムーズスクロール (C-d/C-u/C-b/C-f)
+├── scroll.lua             # スムーズスクロール (snacks.scroll)
 ├── neotest.lua            # テストランナー設定 (4アダプター, monorepo対応)
 ├── overseer.lua           # タスクランナー設定 (タスク出力表示強化)
 ├── package-info.lua       # package.json バージョン表示 (pnpm)
