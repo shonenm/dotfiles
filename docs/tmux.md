@@ -24,6 +24,20 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 
 全て `prefix` 付き（特記がない限り）。
 
+### which-key メニュー
+
+`prefix + Space` で which-key スタイルのキーバインドヘルプをポップアップ表示。nvim の which-key.nvim と同じ UX。
+
+| キー | 動作 |
+|------|------|
+| `Space` | メニュー表示 |
+| `p` | +Pane サブメニュー（分割、リサイズ、タイトル、sync）|
+| `w` | +Window サブメニュー（作成、移動、削除）|
+| `s` | +Session サブメニュー（切り替え、リネーム）|
+| `o` | +Popup サブメニュー（lazygit, gh-dash 等）|
+
+よく使うショートカットはトップレベルにも配置（`|`, `-`, `g`, `G`, `j`, `f`, `F`, `v`, `r`, `?`）。
+
 ### Pane / Window 操作
 
 | キー | 動作 |
@@ -262,7 +276,9 @@ Linux 環境では `install.sh` 実行時に自動で再生成される。
 common/tmux/.config/tmux/
 ├── tmux.conf          # メイン設定
 ├── tokyonight.tmux    # テーマ（生成ファイル）
-└── claude-hooks.tmux  # Claude 通知 Hook
+├── claude-hooks.tmux  # Claude 通知 Hook
+└── plugins/tmux-which-key/
+    └── config.yaml    # which-key メニュー設定
 
 scripts/
 ├── regenerate-tmux-theme.sh  # テーマ再生成
@@ -275,7 +291,8 @@ scripts/
 ├── tmux-claude-badge.sh      # 通知バッジ表示
 ├── tmux-claude-focus.sh      # 通知自動消去
 ├── tmux-session-color.sh     # Per-session アクセントカラー（apply / refresh / fzf-sessions）
-└── tmux-popup-ghq.sh         # ghq プロジェクト切り替え（popup 用）
+├── tmux-popup-ghq.sh         # ghq プロジェクト切り替え（popup 用）
+└── tmux-sync-toggle.sh       # SYNC モード切替（which-key から呼び出し）
 ```
 
 ## プラグイン (TPM)
@@ -286,14 +303,20 @@ scripts/
 | tmux-resurrect | セッション保存・復元（Pane 内容含む） |
 | tmux-continuum | 自動復元（`@continuum-restore on`） |
 | tmux-thumbs | Vimium風ヒントベーステキスト選択（URL、パス、gitハッシュ等を即コピー） |
+| tmux-which-key | which-key スタイルのキーバインドヘルプポップアップ |
 
 Resurrect 設定:
 - `@resurrect-capture-pane-contents on` — Pane の表示内容も保存
 - Neovim セッション復元は resession.nvim が担当（tmux-resurrect の `@resurrect-strategy-nvim` は使用しない）
 
 tmux-thumbs 設定:
-- `prefix + Space` (デフォルト) でヒント表示
+- `prefix + t` (変更予定) でヒント表示
 - 選択した文字列は `pbcopy` でクリップボードにコピー
+
+tmux-which-key 設定:
+- 設定ファイル: `plugins/tmux-which-key/config.yaml`（dotfiles で管理）
+- `tmux.conf` でプラグインディレクトリへシンボリックリンクを自動作成
+- TokyoNight テーマに合わせたスタイリング
 
 以前使用していた tmux-sensible、tmux-yank、tmux-cpu は削除済み:
 - tmux-sensible: 自前設定でカバー（`focus-events`、`history-limit` 等を明示指定）
