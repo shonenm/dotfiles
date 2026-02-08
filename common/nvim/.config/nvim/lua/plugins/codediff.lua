@@ -5,28 +5,6 @@ return {
   "esmuellert/codediff.nvim",
   dependencies = { "MunifTanjim/nui.nvim" },
   cmd = { "CodeDiff" },
-  -- Patch refresh.lua to fix collapsed state for directories with same name
-  -- Apply on startup if not already patched (handles updates that reset the file)
-  init = function()
-    local path = vim.fn.stdpath("data") .. "/lazy/codediff.nvim/lua/codediff/ui/explorer/refresh.lua"
-    local ok, content = pcall(vim.fn.readfile, path)
-    if not ok then return end
-    local needs_patch = false
-    for _, line in ipairs(content) do
-      if line:match("local key = node%.data%.path or node%.data%.name") then
-        needs_patch = true
-        break
-      end
-    end
-    if needs_patch then
-      for i, line in ipairs(content) do
-        if line:match("local key = node%.data%.path or node%.data%.name") then
-          content[i] = line:gsub("node%.data%.path or node%.data%.name", "node.data.dir_path or node.data.path or node.data.name")
-        end
-      end
-      vim.fn.writefile(content, path)
-    end
-  end,
   keys = {
     { "<leader>gd", "<cmd>CodeDiff<cr>", desc = "CodeDiff Open" },
     { "<leader>gf", "<cmd>CodeDiff history %<cr>", desc = "File History" },
@@ -40,6 +18,133 @@ return {
   },
   config = function(_, opts)
     require("codediff").setup(opts)
+
+    -- Runtime monkey-patch: Fix collapsed state key to use dir_path for unique identification
+    -- This avoids modifying source files which would block Lazy.nvim updates
+    -- See: docs/patches/codediff-directory-collapse.md
+    local refresh_mod = require("codediff.ui.explorer.refresh")
+    local config_mod = require("codediff.config")
+
+    -- Fixed collect_collapsed_state (uses dir_path for unique key)
+    local function collect_collapsed_state(tree)
+      local collapsed = {}
+      local function collect_from_node(node)
+        if not node.data then return end
+        local node_type = node.data.type
+        if node_type == "group" or node_type == "directory" then
+          local key = node.data.dir_path or node.data.path or node.data.name
+          if key and not node:is_expanded() then
+            collapsed[key] = true
+          end
+          if node:has_children() then
+            for _, child_id in ipairs(node:get_child_ids()) do
+              local child = tree:get_node(child_id)
+              if child then collect_from_node(child) end
+            end
+          end
+        end
+      end
+      for _, node in ipairs(tree:get_nodes()) do
+        collect_from_node(node)
+      end
+      return collapsed
+    end
+
+    -- Fixed restore_collapsed_state (uses dir_path for unique key)
+    local function restore_collapsed_state(tree, collapsed, root_nodes)
+      local function restore_node(node)
+        if not node.data then return end
+        local node_type = node.data.type
+        if node_type == "group" or node_type == "directory" then
+          local key = node.data.dir_path or node.data.path or node.data.name
+          if key and collapsed[key] then
+            node:collapse()
+          end
+          if node:has_children() then
+            for _, child_id in ipairs(node:get_child_ids()) do
+              local child = tree:get_node(child_id)
+              if child then restore_node(child) end
+            end
+          end
+        end
+      end
+      for _, node in ipairs(root_nodes) do
+        restore_node(node)
+      end
+    end
+
+    -- Replace M.refresh with fixed version (captures fixed local functions)
+    refresh_mod.refresh = function(explorer)
+      local git = require("codediff.core.git")
+
+      if explorer.is_hidden then return end
+      if not vim.api.nvim_win_is_valid(explorer.winid) then return end
+
+      local current_node = explorer.tree:get_node()
+      local current_path = current_node and current_node.data and current_node.data.path
+      local collapsed_state = collect_collapsed_state(explorer.tree)
+
+      local function process_result(err, status_result)
+        vim.schedule(function()
+          if err then
+            vim.notify("Failed to refresh: " .. err, vim.log.levels.ERROR)
+            return
+          end
+
+          local tree_module = require("codediff.ui.explorer.tree")
+          local root_nodes = tree_module.create_tree_data(status_result, explorer.git_root, explorer.base_revision, not explorer.git_root)
+
+          for _, node in ipairs(root_nodes) do
+            node:expand()
+          end
+
+          explorer.tree:set_nodes(root_nodes)
+
+          local explorer_config = config_mod.options.explorer or {}
+          if explorer_config.view_mode == "tree" then
+            local function expand_all_dirs(parent_node)
+              if not parent_node:has_children() then return end
+              for _, child_id in ipairs(parent_node:get_child_ids()) do
+                local child = explorer.tree:get_node(child_id)
+                if child and child.data and child.data.type == "directory" then
+                  child:expand()
+                  expand_all_dirs(child)
+                end
+              end
+            end
+            for _, node in ipairs(root_nodes) do
+              expand_all_dirs(node)
+            end
+          end
+
+          restore_collapsed_state(explorer.tree, collapsed_state, root_nodes)
+          explorer.tree:render()
+          explorer.status_result = status_result
+
+          if current_path then
+            local nodes = explorer.tree:get_nodes()
+            for _, node in ipairs(nodes) do
+              if node.data and node.data.path == current_path then
+                explorer.tree:set_node(node:get_id())
+                break
+              end
+            end
+          end
+        end)
+      end
+
+      if not explorer.git_root then
+        local dir_mod = require("codediff.core.dir")
+        local diff = dir_mod.diff_directories(explorer.dir1, explorer.dir2)
+        process_result(nil, diff.status_result)
+      elseif explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
+        git.get_diff_revisions(explorer.base_revision, explorer.target_revision, explorer.git_root, process_result)
+      elseif explorer.base_revision then
+        git.get_diff_revision(explorer.base_revision, explorer.git_root, process_result)
+      else
+        git.get_status(explorer.git_root, process_result)
+      end
+    end
 
     -- Auto-select file on cursor move (j/k updates diff with debounce)
     local keymaps = require("codediff.ui.explorer.keymaps")
