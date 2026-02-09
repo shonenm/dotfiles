@@ -32,7 +32,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | nvim-scrollbar              | スクロールバー・診断/Git マーカー       |
 | treesitter-context          | 関数/クラスコンテキスト表示             |
 | rainbow-delimiters.nvim     | ブラケットペアカラー化                  |
-| dropbar.nvim                | VS Code風ブレッドクラムナビゲーション   |
+| dropbar.nvim                | VS Code風ブレッドクラムナビゲーション（cwd相対パス表示） |
 | tiny-inline-diagnostic.nvim | インライン診断表示（ERROR/WARN/INFO のみ） |
 | snacks.scroll               | スムーズスクロール（C-d/C-u/C-b/C-f）   |
 
