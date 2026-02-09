@@ -93,7 +93,9 @@ case "$1" in
     ;;
   *)
     session="$1"
-    [ -z "$session" ] && exit 1
+    [ -z "$session" ] && exit 0
     get_color "$session"
     ;;
 esac
+
+exit 0
