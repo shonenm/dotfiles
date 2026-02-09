@@ -44,7 +44,9 @@ macros:
   - name: sync-toggle
     commands:
       - "run-shell ~/dotfiles/scripts/tmux-sync-toggle.sh"
-
+  - name: zoom-toggle
+    commands:
+      - "run-shell ~/dotfiles/scripts/tmux-zoom-toggle.sh"
 items:
   # === Direct shortcuts ===
   - name: Split horizontal
@@ -111,7 +113,7 @@ items:
         command: "command-prompt -p Pane\\ title: -I #{pane_title} selectp\\ -T\\ %%"
       - name: Zoom toggle
         key: z
-        command: resizep -Z
+        macro: zoom-toggle
       - name: Sync toggle
         key: S
         macro: sync-toggle
