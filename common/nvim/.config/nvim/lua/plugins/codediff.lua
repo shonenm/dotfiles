@@ -386,12 +386,84 @@ return {
       end
     end
 
+    -- ヘルプライン用の namespace と定義
+    local help_ns = vim.api.nvim_create_namespace("codediff_help")
+    local explorer_help_lines = {
+      { { "[-]", "Special" }, { " stage  ", "Normal" }, { "[S]", "Special" }, { " all  ", "Normal" }, { "[U]", "Special" }, { " unstage", "Normal" } },
+      { { "[X]", "Special" }, { " restore  ", "Normal" }, { "[i]", "Special" }, { " tree/list", "Normal" } },
+      { { "[R]", "Special" }, { " refresh  ", "Normal" }, { "[cc]", "Special" }, { " commit", "Normal" } },
+    }
+    local diff_help_lines = {
+      { { "[", "Special" }, { "]c", "Normal" }, { "/", "Special" }, { "[c", "Normal" }, { "]", "Special" }, { " hunk  ", "Normal" }, { "[gs]", "Special" }, { " stage  ", "Normal" }, { "[gr]", "Special" }, { " reset", "Normal" } },
+      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[h]", "Special" }, { " sidebar", "Normal" } },
+    }
+
     -- Auto-select file on cursor move (j/k updates diff with debounce)
     local keymaps = require("codediff.ui.explorer.keymaps")
     local orig_setup = keymaps.setup
     keymaps.setup = function(explorer)
       orig_setup(explorer)
       local tree = explorer.tree
+
+      -- ヘルプ表示関数（このexplorerに特化）
+      local function update_help_line()
+        local bufnr = explorer.bufnr
+        local winid = explorer.winid
+        if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_win_is_valid(winid) then return end
+
+        local last_visible = vim.fn.line("w$", winid)
+        local line_count = vim.api.nvim_buf_line_count(bufnr)
+        local target_line = math.min(last_visible, line_count) - 1
+        if target_line < 0 then target_line = 0 end
+
+        -- diffview にフォーカスがあるか判定
+        local ok, session_mod = pcall(require, "codediff.ui.lifecycle.session")
+        local in_diff = false
+        if ok then
+          local active_diffs = session_mod.get_active_diffs()
+          local session = active_diffs[vim.api.nvim_get_current_tabpage()]
+          if session then
+            local cur_buf = vim.api.nvim_get_current_buf()
+            in_diff = cur_buf == session.original_bufnr or cur_buf == session.modified_bufnr
+          end
+        end
+        local help_lines = in_diff and diff_help_lines or explorer_help_lines
+
+        vim.api.nvim_buf_clear_namespace(bufnr, help_ns, 0, -1)
+        vim.api.nvim_buf_set_extmark(bufnr, help_ns, target_line, 0, {
+          virt_lines = help_lines,
+          virt_lines_above = false,
+        })
+      end
+
+      -- tree.render をラップして、render 後に必ずヘルプを表示
+      local orig_render = tree.render
+      tree.render = function(self, ...)
+        local result = orig_render(self, ...)
+        vim.schedule(update_help_line)
+        return result
+      end
+
+      -- WinEnter でヘルプ内容を切り替え（diffview <-> explorer）
+      vim.api.nvim_create_autocmd("WinEnter", {
+        callback = function()
+          if not vim.api.nvim_buf_is_valid(explorer.bufnr) then return end
+          vim.schedule(update_help_line)
+        end,
+      })
+
+      -- スクロール時にヘルプ位置を更新
+      vim.api.nvim_create_autocmd("WinScrolled", {
+        buffer = explorer.bufnr,
+        callback = function()
+          vim.schedule(update_help_line)
+        end,
+      })
+
+      -- キーマップ追加
+      local map_opts = { buffer = explorer.bufnr, noremap = true, silent = true, nowait = true }
+      vim.keymap.set("n", "cc", "<cmd>Git commit<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit" }))
+      vim.keymap.set("n", "ca", "<cmd>Git commit --amend<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit --amend" }))
       local last_node_id = nil
       local debounce_timer = nil
       local debounce_ms = 400
@@ -414,7 +486,6 @@ return {
           end, debounce_ms)
         end,
       })
-      local map_opts = { buffer = explorer.bufnr, noremap = true, silent = true, nowait = true }
       vim.keymap.set("n", "h", function()
         local node = tree:get_node()
         if node and node:has_children() and node:is_expanded() then
@@ -467,67 +538,35 @@ return {
       end, vim.tbl_extend("force", map_opts, { desc = "Toggle directory or select file" }))
     end
 
-    -- ヘルプライン用の namespace
-    local ns = vim.api.nvim_create_namespace("codediff_help")
-    local last_help_line = {} -- { [bufnr] = target_line } for skipping redundant updates
-    local help_lines = {
-      { { "[-]", "Special" }, { " stage  ", "Normal" }, { "[S]", "Special" }, { " all  ", "Normal" }, { "[U]", "Special" }, { " unstage", "Normal" } },
-      { { "[X]", "Special" }, { " restore  ", "Normal" }, { "[i]", "Special" }, { " tree/list", "Normal" } },
-      { { "[R]", "Special" }, { " refresh  ", "Normal" }, { "[cc]", "Special" }, { " commit", "Normal" } },
-    }
-
-    -- 可視範囲の最下部にヘルプを表示
-    local function update_help_line(bufnr, winid)
-      if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_win_is_valid(winid) then return end
-
-      local last_visible = vim.fn.line("w$", winid)
-      local line_count = vim.api.nvim_buf_line_count(bufnr)
-      local target_line = math.min(last_visible, line_count) - 1
-
-      -- Skip update if position hasn't changed
-      if last_help_line[bufnr] == target_line then
-        return
-      end
-      last_help_line[bufnr] = target_line
-
-      vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-      vim.api.nvim_buf_set_extmark(bufnr, ns, target_line, 0, {
-        virt_lines = help_lines,
-        virt_lines_above = false,
-      })
-    end
-
-    local help_initialized = {}
-
+    -- diffviewバッファ用のキーマップ
+    local diffview_initialized = {}
     vim.api.nvim_create_autocmd("BufEnter", {
       pattern = "*",
       callback = function(ev)
-        if vim.bo[ev.buf].filetype ~= "codediff-explorer" then return end
+        if diffview_initialized[ev.buf] then return end
 
-        local winid = vim.fn.bufwinid(ev.buf)
-        if winid ~= -1 then
-          update_help_line(ev.buf, winid)
-        end
+        -- セッション情報からdiffviewバッファかどうか判定
+        local ok, session_mod = pcall(require, "codediff.ui.lifecycle.session")
+        if not ok then return end
+        local active_diffs = session_mod.get_active_diffs()
+        local session = active_diffs[vim.api.nvim_get_current_tabpage()]
+        if not session then return end
+        if ev.buf ~= session.original_bufnr and ev.buf ~= session.modified_bufnr then return end
 
-        -- 初期化は一度だけ
-        if not help_initialized[ev.buf] then
-          local map_opts = { buffer = ev.buf, noremap = true, silent = true, nowait = true }
-          vim.keymap.set("n", "cc", "<cmd>Git commit<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit" }))
-          vim.keymap.set("n", "ca", "<cmd>Git commit --amend<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit --amend" }))
+        local map_opts = { buffer = ev.buf, noremap = true, silent = true, nowait = true }
+        vim.keymap.set({ "n", "v" }, "gs", ":Gitsigns stage_hunk<CR>", vim.tbl_extend("force", map_opts, { desc = "Stage hunk" }))
+        vim.keymap.set({ "n", "v" }, "gr", ":Gitsigns reset_hunk<CR>", vim.tbl_extend("force", map_opts, { desc = "Reset hunk" }))
+        vim.keymap.set("n", "h", function()
+          local ok2, session_mod2 = pcall(require, "codediff.ui.lifecycle.session")
+          if not ok2 then return end
+          local active_diffs2 = session_mod2.get_active_diffs()
+          local session2 = active_diffs2[vim.api.nvim_get_current_tabpage()]
+          if session2 and session2.explorer and session2.explorer.winid and vim.api.nvim_win_is_valid(session2.explorer.winid) then
+            vim.api.nvim_set_current_win(session2.explorer.winid)
+          end
+        end, vim.tbl_extend("force", map_opts, { desc = "Focus sidebar" }))
 
-          -- スクロール・カーソル移動時にヘルプ位置を更新
-          vim.api.nvim_create_autocmd({ "CursorMoved", "WinScrolled" }, {
-            buffer = ev.buf,
-            callback = function()
-              local win = vim.fn.bufwinid(ev.buf)
-              if win ~= -1 then
-                update_help_line(ev.buf, win)
-              end
-            end,
-          })
-
-          help_initialized[ev.buf] = true
-        end
+        diffview_initialized[ev.buf] = true
       end,
     })
   end,
