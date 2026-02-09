@@ -312,6 +312,15 @@ setup_tmux_plugins() {
     fi
   fi
 
+  # tmux-thumbs: build Rust binary if cargo is available
+  local thumbs_plugin="$HOME/.tmux/plugins/tmux-thumbs"
+  if [[ -d "$thumbs_plugin" ]] && command_exists cargo; then
+    if [[ ! -x "$thumbs_plugin/target/release/thumbs" ]]; then
+      log_info "Building tmux-thumbs..."
+      (cd "$thumbs_plugin" && cargo build --release) >/dev/null 2>&1 || true
+    fi
+  fi
+
   log_success "tmux plugins installed"
 }
 
