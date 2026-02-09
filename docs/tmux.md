@@ -124,6 +124,7 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | COPY | 赤 `#f7768e` | Copy Mode 中 |
 | SYNC | ティール `#73daca` | Pane 同期中 |
 | PREFIX | 黄 `#e0af68` | Prefix 入力後 |
+| ZOOM | 紫 `#bb9af7` | Pane ズーム中（`ZOOM 1/3` 形式でペイン番号/総数を表示） |
 | NORMAL | 青 `#7aa2f7` | 通常 |
 
 ### Window タブ
@@ -292,7 +293,9 @@ scripts/
 ├── tmux-claude-focus.sh      # 通知自動消去
 ├── tmux-session-color.sh     # Per-session アクセントカラー（apply / refresh / fzf-sessions）
 ├── tmux-popup-ghq.sh         # ghq プロジェクト切り替え（popup 用）
-└── tmux-sync-toggle.sh       # SYNC モード切替（which-key から呼び出し）
+├── tmux-sync-toggle.sh       # SYNC モード切替（which-key から呼び出し）
+├── tmux-zoom-toggle.sh       # ZOOM モード切替（which-key から呼び出し）
+└── tmux-thumbs-wrapper.sh    # tmux-thumbs カスタムラッパー（Rust ラッパー問題回避）
 ```
 
 ## プラグイン (TPM)
@@ -310,8 +313,10 @@ Resurrect 設定:
 - Neovim セッション復元は resession.nvim が担当（tmux-resurrect の `@resurrect-strategy-nvim` は使用しない）
 
 tmux-thumbs 設定:
-- `prefix + t` (変更予定) でヒント表示
-- 選択した文字列は `pbcopy` でクリップボードにコピー
+- `prefix + e` でヒント表示
+- 小文字ヒント (a, b, c...): 選択した文字列を `pbcopy` でクリップボードにコピー
+- 大文字ヒント (A, B, C...): URL はブラウザで開き、ファイルパスはエディタ (`$EDITOR` or nvim) で開く
+- カスタムラッパー (`tmux-thumbs-wrapper.sh`) を使用。tmux-thumbs 本体の Rust ラッパー (`swapper.rs`) が detached window + swap-pane 方式でキーボード入力を受け付けない問題の回避策として、新しいウィンドウで直接 thumbs を実行する方式に変更
 
 tmux-which-key 設定:
 - 設定ファイル: `plugins/tmux-which-key/config.yaml`（dotfiles で管理）
