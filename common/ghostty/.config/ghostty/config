@@ -43,6 +43,12 @@ keybind = cmd+shift+enter=new_split:auto
 keybind = cmd+shift+m=toggle_split_zoom
 keybind = cmd+shift+w=close_surface
 
+# Disable fullscreen toggle
+keybind = cmd+enter=unbind
+
+# Shift+Enter for Claude Code newline
+keybind = shift+enter=text:\x1b\r
+
 # Clipboard & Utils
 keybind = cmd+c=copy_to_clipboard
 keybind = cmd+v=paste_from_clipboard
