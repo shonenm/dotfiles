@@ -31,6 +31,9 @@ return {
       staged = {}, -- { [path] = count }
     }
 
+    -- Highlight cache for selected items (avoid repeated nvim_get_hl/nvim_set_hl calls)
+    local hl_cache = {}
+
     local function parse_hunk_counts(output)
       local counts = {}
       local current_file = nil
@@ -140,9 +143,16 @@ return {
           end
           local base_hl_name = default or "Normal"
           local combined_name = "CodeDiffExplorerSel_" .. base_hl_name:gsub("[^%w]", "_")
+
+          -- Use cached highlight if available
+          if hl_cache[combined_name] then
+            return combined_name
+          end
+
           local base_hl = vim.api.nvim_get_hl(0, { name = base_hl_name, link = false })
           local fg = base_hl.fg
           vim.api.nvim_set_hl(0, combined_name, { fg = fg, bg = selected_bg })
+          hl_cache[combined_name] = true
           return combined_name
         end
 
@@ -459,6 +469,7 @@ return {
 
     -- ヘルプライン用の namespace
     local ns = vim.api.nvim_create_namespace("codediff_help")
+    local last_help_line = {} -- { [bufnr] = target_line } for skipping redundant updates
     local help_lines = {
       { { "[-]", "Special" }, { " stage  ", "Normal" }, { "[S]", "Special" }, { " all  ", "Normal" }, { "[U]", "Special" }, { " unstage", "Normal" } },
       { { "[X]", "Special" }, { " restore  ", "Normal" }, { "[i]", "Special" }, { " tree/list", "Normal" } },
@@ -468,12 +479,18 @@ return {
     -- 可視範囲の最下部にヘルプを表示
     local function update_help_line(bufnr, winid)
       if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_win_is_valid(winid) then return end
-      vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
 
       local last_visible = vim.fn.line("w$", winid)
       local line_count = vim.api.nvim_buf_line_count(bufnr)
       local target_line = math.min(last_visible, line_count) - 1
 
+      -- Skip update if position hasn't changed
+      if last_help_line[bufnr] == target_line then
+        return
+      end
+      last_help_line[bufnr] = target_line
+
+      vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
       vim.api.nvim_buf_set_extmark(bufnr, ns, target_line, 0, {
         virt_lines = help_lines,
         virt_lines_above = false,
