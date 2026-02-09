@@ -25,6 +25,218 @@ return {
     local refresh_mod = require("codediff.ui.explorer.refresh")
     local config_mod = require("codediff.config")
 
+    -- Hunk count cache and functions
+    local hunk_cache = {
+      unstaged = {}, -- { [path] = count }
+      staged = {}, -- { [path] = count }
+    }
+
+    local function parse_hunk_counts(output)
+      local counts = {}
+      local current_file = nil
+      for line in output:gmatch("[^\n]+") do
+        -- Match "diff --git <prefix>/<path> <prefix>/<path>" with any single-char prefix (a/b or i/w)
+        local file = line:match("^diff %-%-git %a/.+ %a/(.+)$")
+        if file then
+          current_file = file
+          counts[current_file] = 0
+        elseif current_file and line:match("^@@") then
+          counts[current_file] = counts[current_file] + 1
+        end
+      end
+      return counts
+    end
+
+    local function fetch_hunk_counts(git_root, callback)
+      local pending = 2
+      local results = { unstaged = {}, staged = {} }
+
+      local function on_complete()
+        pending = pending - 1
+        if pending == 0 then
+          callback(results)
+        end
+      end
+
+      -- unstaged
+      vim.system({ "git", "diff", "-U0", "--no-color" }, { cwd = git_root, text = true }, function(obj)
+        if obj.code == 0 and obj.stdout then
+          results.unstaged = parse_hunk_counts(obj.stdout)
+        end
+        on_complete()
+      end)
+
+      -- staged
+      vim.system({ "git", "diff", "-U0", "--no-color", "--cached" }, { cwd = git_root, text = true }, function(obj)
+        if obj.code == 0 and obj.stdout then
+          results.staged = parse_hunk_counts(obj.stdout)
+        end
+        on_complete()
+      end)
+    end
+
+    -- Monkey-patch nodes.prepare_node to show hunk counts
+    local nodes_mod = require("codediff.ui.explorer.nodes")
+    nodes_mod.prepare_node = function(node, max_width, selected_path, selected_group)
+      local NuiLine = require("nui.line")
+      local line = NuiLine()
+      local data = node.data or {}
+      local explorer_config = config_mod.options.explorer or {}
+      local use_indent_markers = explorer_config.indent_markers ~= false
+
+      local INDENT_MARKERS = {
+        edge = "│",
+        item = "├",
+        last = "└",
+        none = " ",
+      }
+
+      local function build_indent_markers(indent_state)
+        if not indent_state or #indent_state == 0 then
+          return ""
+        end
+        if not use_indent_markers then
+          return string.rep("  ", #indent_state)
+        end
+        local indent_parts = {}
+        for i = 1, #indent_state - 1 do
+          if indent_state[i] then
+            indent_parts[#indent_parts + 1] = INDENT_MARKERS.none .. " "
+          else
+            indent_parts[#indent_parts + 1] = INDENT_MARKERS.edge .. " "
+          end
+        end
+        if indent_state[#indent_state] then
+          indent_parts[#indent_parts + 1] = INDENT_MARKERS.last .. " "
+        else
+          indent_parts[#indent_parts + 1] = INDENT_MARKERS.item .. " "
+        end
+        return table.concat(indent_parts)
+      end
+
+      if data.type == "group" then
+        line:append(" ", "Directory")
+        line:append(node.text, "Directory")
+      elseif data.type == "directory" then
+        local indent = build_indent_markers(data.indent_state)
+        local folder_icon, folder_color = nodes_mod.get_folder_icon(node:is_expanded())
+        if #indent > 0 then
+          line:append(indent, use_indent_markers and "NeoTreeIndentMarker" or "Normal")
+        end
+        line:append(folder_icon .. " ", folder_color or "Directory")
+        line:append(data.name, "Directory")
+      else
+        local is_selected = data.path and data.path == selected_path and data.group == selected_group
+
+        local selected_bg = nil
+        if is_selected then
+          local sel_hl = vim.api.nvim_get_hl(0, { name = "CodeDiffExplorerSelected", link = false })
+          selected_bg = sel_hl.bg
+        end
+
+        local function get_hl(default)
+          if not is_selected then
+            return default or "Normal"
+          end
+          local base_hl_name = default or "Normal"
+          local combined_name = "CodeDiffExplorerSel_" .. base_hl_name:gsub("[^%w]", "_")
+          local base_hl = vim.api.nvim_get_hl(0, { name = base_hl_name, link = false })
+          local fg = base_hl.fg
+          vim.api.nvim_set_hl(0, combined_name, { fg = fg, bg = selected_bg })
+          return combined_name
+        end
+
+        local view_mode = explorer_config.view_mode or "list"
+
+        local indent
+        if view_mode == "tree" and data.indent_state then
+          indent = build_indent_markers(data.indent_state)
+          if #indent > 0 then
+            line:append(indent, get_hl(use_indent_markers and "NeoTreeIndentMarker" or "Normal"))
+          end
+        else
+          indent = string.rep("  ", node:get_depth() - 1)
+          line:append(indent, get_hl("Normal"))
+        end
+
+        local icon_part = ""
+        if data.icon then
+          icon_part = data.icon .. " "
+          line:append(icon_part, get_hl(data.icon_color))
+        end
+
+        local status_symbol = data.status_symbol or ""
+
+        local full_path = data.path or node.text
+        local filename = full_path:match("([^/]+)$") or full_path
+        local directory = (view_mode == "tree") and "" or full_path:sub(1, -(#filename + 1))
+
+        -- Get hunk count for this file
+        local hunk_count = 0
+        local group = data.group or "unstaged"
+        local cache_key = (group == "staged") and "staged" or "unstaged"
+        if hunk_cache[cache_key] and hunk_cache[cache_key][full_path] then
+          hunk_count = hunk_cache[cache_key][full_path]
+        end
+        local hunk_str = (hunk_count > 0) and tostring(hunk_count) or ""
+
+        local used_width = vim.fn.strdisplaywidth(indent) + vim.fn.strdisplaywidth(icon_part)
+        -- Reserve space for: hunk_count + space + status + padding
+        local hunk_reserve = (hunk_str ~= "") and (vim.fn.strdisplaywidth(hunk_str) + 1) or 0
+        local status_reserve = vim.fn.strdisplaywidth(status_symbol) + 3 + hunk_reserve
+        local available_for_content = max_width - used_width - status_reserve
+
+        local filename_len = vim.fn.strdisplaywidth(filename)
+        local directory_len = vim.fn.strdisplaywidth(directory)
+        local space_len = (directory_len > 0) and 1 or 0
+
+        if filename_len + space_len + directory_len > available_for_content then
+          local available_for_dir = available_for_content - filename_len - space_len
+          if available_for_dir > 3 then
+            local ellipsis = "..."
+            local chars_to_keep = available_for_dir - vim.fn.strdisplaywidth(ellipsis)
+            local byte_pos = 0
+            local accumulated_width = 0
+            for char in vim.gsplit(directory, "") do
+              local char_width = vim.fn.strdisplaywidth(char)
+              if accumulated_width + char_width > chars_to_keep then
+                break
+              end
+              accumulated_width = accumulated_width + char_width
+              byte_pos = byte_pos + #char
+            end
+            directory = directory:sub(1, byte_pos) .. ellipsis
+          else
+            directory = ""
+            space_len = 0
+          end
+        end
+
+        line:append(filename, get_hl("Normal"))
+        if #directory > 0 then
+          line:append(" ", get_hl("Normal"))
+          line:append(directory, get_hl("ExplorerDirectorySmall"))
+        end
+
+        local content_len = vim.fn.strdisplaywidth(filename) + space_len + vim.fn.strdisplaywidth(directory)
+        local padding_needed = available_for_content - content_len + 2
+        if padding_needed > 0 then
+          line:append(string.rep(" ", padding_needed), get_hl("Normal"))
+        end
+
+        -- Append hunk count before status symbol
+        if hunk_str ~= "" then
+          line:append(hunk_str, get_hl("Comment"))
+          line:append(" ", get_hl("Normal"))
+        end
+
+        line:append(status_symbol, get_hl(data.status_color))
+        line:append(" ", get_hl("Normal"))
+      end
+
+      return line
+    end
+
     -- Fixed collect_collapsed_state (uses dir_path for unique key)
     local function collect_collapsed_state(tree)
       local collapsed = {}
@@ -133,6 +345,23 @@ return {
         end)
       end
 
+      -- Fetch hunk counts in parallel with status
+      local function fetch_and_render()
+        if explorer.git_root and not explorer.base_revision then
+          -- Only for working tree diff (not revision comparisons)
+          fetch_hunk_counts(explorer.git_root, function(counts)
+            vim.schedule(function()
+              hunk_cache.unstaged = counts.unstaged
+              hunk_cache.staged = counts.staged
+              -- Re-render to show hunk counts
+              if vim.api.nvim_win_is_valid(explorer.winid) then
+                explorer.tree:render()
+              end
+            end)
+          end)
+        end
+      end
+
       if not explorer.git_root then
         local dir_mod = require("codediff.core.dir")
         local diff = dir_mod.diff_directories(explorer.dir1, explorer.dir2)
@@ -143,6 +372,7 @@ return {
         git.get_diff_revision(explorer.base_revision, explorer.git_root, process_result)
       else
         git.get_status(explorer.git_root, process_result)
+        fetch_and_render()
       end
     end
 
