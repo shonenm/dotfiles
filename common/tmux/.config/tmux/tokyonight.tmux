@@ -16,8 +16,8 @@ set -g message-command-style "fg=#1a1b26,bg=#bb9af7,bold"
 
 # Pane border (dynamic color based on mode)
 set -g pane-border-style "fg=#3b4261"
-# copy mode: 赤, sync: ティール, zoom: 紫, 通常: 青
-set -g pane-active-border-style "#{?pane_in_mode,fg=#f7768e,#{?pane_synchronized,fg=#73daca,#{?window_zoomed_flag,fg=#bb9af7,fg=#7aa2f7}}}"
+# reload: オレンジ, thumbs: エメラルド, copy: 赤, sync: ティール, zoom: 紫, 通常: 青
+set -g pane-active-border-style "#{?#{==:#{@reload_mode},1},fg=#ff9e64,#{?#{==:#{window_name},[thumbs]},fg=#41a6b5,#{?pane_in_mode,fg=#f7768e,#{?pane_synchronized,fg=#73daca,#{?window_zoomed_flag,fg=#bb9af7,fg=#7aa2f7}}}}}"
 
 # Status bar (transparent)
 set -g status "on"
@@ -36,9 +36,9 @@ set -g status-left "#[fg=#1a1b26,bg=#f7768e,bold]  #S #[fg=#f7768e,bg=default]�
 
 # Right: System stats + Mode indicator + Git branch, Date, Time, Hostname
 # Layout (left→right): [SYSSTAT] [MODE] [GIT] [DATE] [HOST]
-# Mode priority: OFF > COPY > SYNC > PREFIX > ZOOM > NORMAL
+# Mode priority: OFF > RELOAD > THUMBS > COPY > SYNC > PREFIX > ZOOM > NORMAL
 set -g status-right "#[fg=#292e42,bg=default]#(~/dotfiles/scripts/tmux-cpu.sh)#[fg=#545c7e,bg=#292e42]|#(~/dotfiles/scripts/tmux-ram.sh)#(~/dotfiles/scripts/tmux-gpu.sh)#(~/dotfiles/scripts/tmux-storage.sh)#[fg=#292e42,bg=default] \
-#{?#{==:#{client_key_table},off},#[fg=#545c7e]#[fg=#1a1b26 bg=#545c7e bold]  OFF #[fg=#545c7e bg=default],#{?pane_in_mode,#[fg=#f7768e]#[fg=#1a1b26 bg=#f7768e bold] COPY #[fg=#f7768e bg=default],#{?pane_synchronized,#[fg=#73daca]#[fg=#1a1b26 bg=#73daca bold] SYNC #[fg=#73daca bg=default],#{?client_prefix,#[fg=#e0af68]#[fg=#1a1b26 bg=#e0af68 bold] PREFIX #[fg=#e0af68 bg=default],#{?window_zoomed_flag,#[fg=#bb9af7]#[fg=#1a1b26 bg=#bb9af7 bold]  ZOOM #P/#{window_panes} #[fg=#bb9af7 bg=default],#[fg=#7aa2f7]#[fg=#1a1b26 bg=#7aa2f7] NORMAL #[fg=#7aa2f7 bg=default]}}}}}\
+#{?#{==:#{client_key_table},off},#[fg=#545c7e]#[fg=#1a1b26 bg=#545c7e bold]  OFF #[fg=#545c7e bg=default],#{?#{==:#{@reload_mode},1},#[fg=#ff9e64]#[fg=#1a1b26 bg=#ff9e64 bold]  RELOAD #[fg=#ff9e64 bg=default],#{?#{==:#{window_name},[thumbs]},#[fg=#41a6b5]#[fg=#1a1b26 bg=#41a6b5 bold] 󰆤 THUMBS #[fg=#41a6b5 bg=default],#{?pane_in_mode,#[fg=#f7768e]#[fg=#1a1b26 bg=#f7768e bold] COPY #[fg=#f7768e bg=default],#{?pane_synchronized,#[fg=#73daca]#[fg=#1a1b26 bg=#73daca bold] SYNC #[fg=#73daca bg=default],#{?client_prefix,#[fg=#ffea00]#[fg=#1a1b26 bg=#ffea00 bold] PREFIX #[fg=#ffea00 bg=default],#{?window_zoomed_flag,#[fg=#bb9af7]#[fg=#1a1b26 bg=#bb9af7 bold]  ZOOM #P/#{window_panes} #[fg=#bb9af7 bg=default],#[fg=#7aa2f7]#[fg=#1a1b26 bg=#7aa2f7] NORMAL #[fg=#7aa2f7 bg=default]}}}}}}}\
 #[fg=#9ece6a,bg=default]#[fg=#1a1b26,bg=#9ece6a]  #(cd #{pane_current_path}; git branch --show-current 2>/dev/null || echo '-') #[fg=#9ece6a,bg=default]\
 #[fg=#7aa2f7,bg=default]#[fg=#1a1b26,bg=#7aa2f7]  %m/%d %H:%M #[fg=#7aa2f7,bg=default]\
 #[fg=#7dcfff,bg=default]#[fg=#1a1b26,bg=#7dcfff,bold]  #h #[fg=#7dcfff,bg=default]"
