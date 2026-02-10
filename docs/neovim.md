@@ -291,6 +291,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── lint.lua               # CSpell リンター設定 (HINT severity, mise で自動インストール)
 ├── lualine.lua            # ステータスライン強化 (リポジトリ全体diff, Copilot, LSP名)
 ├── multicursor.lua        # マルチカーソル (vim-visual-multi)
+├── noice.lua              # メッセージ表示最適化 (種類別ルーティング)
 ├── scroll.lua             # スムーズスクロール (snacks.scroll)
 ├── neotest.lua            # テストランナー設定 (4アダプター, monorepo対応)
 ├── overseer.lua           # タスクランナー設定 (タスク出力表示強化)
