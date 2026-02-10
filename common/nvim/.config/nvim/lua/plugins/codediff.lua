@@ -191,9 +191,9 @@ return {
         local hunk_str = (hunk_count > 0) and tostring(hunk_count) or ""
 
         local used_width = vim.fn.strdisplaywidth(indent) + vim.fn.strdisplaywidth(icon_part)
-        -- Reserve space for: hunk_count + space + status + padding
+        -- Reserve space for: hunk_count + space + status_symbol + trailing space
         local hunk_reserve = (hunk_str ~= "") and (vim.fn.strdisplaywidth(hunk_str) + 1) or 0
-        local status_reserve = vim.fn.strdisplaywidth(status_symbol) + 3 + hunk_reserve
+        local status_reserve = vim.fn.strdisplaywidth(status_symbol) + 1 + hunk_reserve
         local available_for_content = max_width - used_width - status_reserve
 
         local filename_len = vim.fn.strdisplaywidth(filename)
@@ -219,6 +219,27 @@ return {
           else
             directory = ""
             space_len = 0
+            -- Truncate filename if it still exceeds available space
+            if filename_len > available_for_content then
+              local ellipsis = "..."
+              local ellipsis_width = vim.fn.strdisplaywidth(ellipsis)
+              local chars_to_keep = available_for_content - ellipsis_width
+              if chars_to_keep > 0 then
+                local byte_pos = 0
+                local accumulated_width = 0
+                for char in vim.gsplit(filename, "") do
+                  local char_width = vim.fn.strdisplaywidth(char)
+                  if accumulated_width + char_width > chars_to_keep then
+                    break
+                  end
+                  accumulated_width = accumulated_width + char_width
+                  byte_pos = byte_pos + #char
+                end
+                filename = filename:sub(1, byte_pos) .. ellipsis
+              else
+                filename = ellipsis
+              end
+            end
           end
         end
 
@@ -229,7 +250,7 @@ return {
         end
 
         local content_len = vim.fn.strdisplaywidth(filename) + space_len + vim.fn.strdisplaywidth(directory)
-        local padding_needed = available_for_content - content_len + 2
+        local padding_needed = available_for_content - content_len
         if padding_needed > 0 then
           line:append(string.rep(" ", padding_needed), get_hl("Normal"))
         end
