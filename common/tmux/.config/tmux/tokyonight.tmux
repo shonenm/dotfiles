@@ -34,14 +34,11 @@ set -g status-right-style NONE
 # Left: Session name (桃色 #f7768e、左端は角丸なし)
 set -g status-left "#[fg=#1a1b26,bg=#f7768e,bold]  #S #[fg=#f7768e,bg=default] "
 
-# Right: System stats + Mode indicator + Git branch, Date, Time, Hostname
-# Layout (left→right): [SYSSTAT] [MODE] [GIT] [DATE] [HOST]
-# Mode priority: OFF > RELOAD > THUMBS > COPY > SYNC > PREFIX > ZOOM > NORMAL
-set -g status-right "#[fg=#292e42,bg=default]#(~/dotfiles/scripts/tmux-cpu.sh)#[fg=#545c7e,bg=#292e42]|#(~/dotfiles/scripts/tmux-ram.sh)#(~/dotfiles/scripts/tmux-gpu.sh)#(~/dotfiles/scripts/tmux-storage.sh)#[fg=#292e42,bg=default] \
-#{?#{==:#{client_key_table},off},#[fg=#545c7e]#[fg=#1a1b26 bg=#545c7e bold]  OFF #[fg=#545c7e bg=default],#{?#{==:#{@reload_mode},1},#[fg=#ff9e64]#[fg=#1a1b26 bg=#ff9e64 bold]  RELOAD #[fg=#ff9e64 bg=default],#{?#{==:#{window_name},[thumbs]},#[fg=#41a6b5]#[fg=#1a1b26 bg=#41a6b5 bold] 󰆤 THUMBS #[fg=#41a6b5 bg=default],#{?pane_in_mode,#[fg=#f7768e]#[fg=#1a1b26 bg=#f7768e bold] COPY #[fg=#f7768e bg=default],#{?pane_synchronized,#[fg=#73daca]#[fg=#1a1b26 bg=#73daca bold] SYNC #[fg=#73daca bg=default],#{?client_prefix,#[fg=#ffea00]#[fg=#1a1b26 bg=#ffea00 bold] PREFIX #[fg=#ffea00 bg=default],#{?window_zoomed_flag,#[fg=#bb9af7]#[fg=#1a1b26 bg=#bb9af7 bold]  ZOOM #P/#{window_panes} #[fg=#bb9af7 bg=default],#[fg=#7aa2f7]#[fg=#1a1b26 bg=#7aa2f7] NORMAL #[fg=#7aa2f7 bg=default]}}}}}}}\
-#[fg=#9ece6a,bg=default]#[fg=#1a1b26,bg=#9ece6a]  #(cd #{pane_current_path}; git branch --show-current 2>/dev/null || echo '-') #[fg=#9ece6a,bg=default]\
-#[fg=#7aa2f7,bg=default]#[fg=#1a1b26,bg=#7aa2f7]  %m/%d %H:%M #[fg=#7aa2f7,bg=default]\
-#[fg=#7dcfff,bg=default]#[fg=#1a1b26,bg=#7dcfff,bold]  #h #[fg=#7dcfff,bg=default]"
+# Right: Prefix押下時はヘルプ、それ以外は通常表示
+# 通常表示: [SYSSTAT] [MODE] [GIT] [DATE] [HOST]
+# Mode priority: OFF > RELOAD > THUMBS > COPY > SYNC > ZOOM > NORMAL
+# Note: カンマは #, でエスケープ（tmux conditional format内で必要）
+set -g status-right "#{?client_prefix,#[fg=#ffea00 bg=default]#[fg=#1a1b26 bg=#ffea00 bold]  #[fg=#ffea00 bg=default] - split  | vsplit  g git  f sessions  v copy  Space menu  ? keys,#[fg=#292e42#,bg=default]#(~/dotfiles/scripts/tmux-cpu.sh)#[fg=#545c7e#,bg=#292e42]|#(~/dotfiles/scripts/tmux-ram.sh)#(~/dotfiles/scripts/tmux-gpu.sh)#(~/dotfiles/scripts/tmux-storage.sh)#[fg=#292e42#,bg=default] #{?#{==:#{client_key_table},off},#[fg=#545c7e]#[fg=#1a1b26 bg=#545c7e bold]  OFF #[fg=#545c7e bg=default],#{?#{==:#{@reload_mode},1},#[fg=#ff9e64]#[fg=#1a1b26 bg=#ff9e64 bold]  RELOAD #[fg=#ff9e64 bg=default],#{?#{==:#{window_name},[thumbs]},#[fg=#41a6b5]#[fg=#1a1b26 bg=#41a6b5 bold] 󰆤 THUMBS #[fg=#41a6b5 bg=default],#{?pane_in_mode,#[fg=#f7768e]#[fg=#1a1b26 bg=#f7768e bold] COPY #[fg=#f7768e bg=default],#{?pane_synchronized,#[fg=#73daca]#[fg=#1a1b26 bg=#73daca bold] SYNC #[fg=#73daca bg=default],#{?window_zoomed_flag,#[fg=#bb9af7]#[fg=#1a1b26 bg=#bb9af7 bold]  ZOOM #P/#{window_panes} #[fg=#bb9af7 bg=default],#[fg=#7aa2f7]#[fg=#1a1b26 bg=#7aa2f7] NORMAL #[fg=#7aa2f7 bg=default]}}}}}}#[fg=#9ece6a#,bg=default]#[fg=#1a1b26#,bg=#9ece6a]  #(cd #{pane_current_path}; git branch --show-current 2>/dev/null || echo '-') #[fg=#9ece6a#,bg=default]#[fg=#7aa2f7#,bg=default]#[fg=#1a1b26#,bg=#7aa2f7]  %m/%d %H:%M #[fg=#7aa2f7#,bg=default]#[fg=#7dcfff#,bg=default]#[fg=#1a1b26#,bg=#7dcfff#,bold]  #h #[fg=#7dcfff#,bg=default]}"
 
 # Window status (Powerline style)
 setw -g window-status-activity-style "underscore,fg=#a9b1d6,bg=default"
