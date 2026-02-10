@@ -414,6 +414,187 @@ return {
       return result
     end
 
+    -- Phase 2: auto_refresh throttle adjustment (200ms → 400ms)
+    -- Wrap enable() to use custom throttle timer
+    local auto_refresh_mod = require("codediff.ui.auto_refresh")
+    local CUSTOM_THROTTLE_MS = 400 -- Increased from 200ms
+    local custom_timers = {} -- Track our custom timers
+
+    local orig_enable = auto_refresh_mod.enable
+    auto_refresh_mod.enable = function(bufnr)
+      -- Call original to set up autocmds
+      orig_enable(bufnr)
+
+      -- Override the autocmds with our custom throttle
+      local buf_augroup = "codediff_auto_refresh_" .. bufnr
+      pcall(vim.api.nvim_del_augroup_by_name, buf_augroup)
+
+      local group = vim.api.nvim_create_augroup(buf_augroup, { clear = true })
+
+      local function trigger_with_custom_throttle()
+        if custom_timers[bufnr] then
+          vim.fn.timer_stop(custom_timers[bufnr])
+        end
+        custom_timers[bufnr] = vim.fn.timer_start(CUSTOM_THROTTLE_MS, function()
+          custom_timers[bufnr] = nil
+          auto_refresh_mod.trigger(bufnr)
+        end)
+      end
+
+      vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "TextChangedP" }, {
+        group = group,
+        buffer = bufnr,
+        callback = trigger_with_custom_throttle,
+      })
+
+      vim.api.nvim_create_autocmd({ "FileChangedShellPost", "FocusGained" }, {
+        group = group,
+        buffer = bufnr,
+        callback = trigger_with_custom_throttle,
+      })
+
+      vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+        group = group,
+        buffer = bufnr,
+        callback = function()
+          if custom_timers[bufnr] then
+            vim.fn.timer_stop(custom_timers[bufnr])
+            custom_timers[bufnr] = nil
+          end
+          auto_refresh_mod.disable(bufnr)
+        end,
+      })
+    end
+
+    -- Phase 2: Diff result cache (skip recomputation for unchanged files)
+    local diff_cache = {}
+    local MAX_CACHE_SIZE = 20
+    local cache_keys = {} -- Track insertion order for LRU eviction
+
+    local function make_cache_key(original_path, modified_path, original_rev, modified_rev)
+      return string.format("%s:%s:%s:%s",
+        original_path or "",
+        modified_path or "",
+        original_rev or "WORKING",
+        modified_rev or "WORKING")
+    end
+
+    local function get_cached_diff(key, original_tick, modified_tick)
+      local entry = diff_cache[key]
+      if entry and entry.original_tick == original_tick and entry.modified_tick == modified_tick then
+        return entry.diff_result
+      end
+      return nil
+    end
+
+    local function set_cached_diff(key, diff_result, original_tick, modified_tick)
+      -- LRU eviction
+      if #cache_keys >= MAX_CACHE_SIZE then
+        local oldest_key = table.remove(cache_keys, 1)
+        diff_cache[oldest_key] = nil
+      end
+      -- Remove existing key if present (for reordering)
+      for i, k in ipairs(cache_keys) do
+        if k == key then
+          table.remove(cache_keys, i)
+          break
+        end
+      end
+      table.insert(cache_keys, key)
+      diff_cache[key] = {
+        diff_result = diff_result,
+        original_tick = original_tick,
+        modified_tick = modified_tick,
+      }
+    end
+
+    -- Wrap render.compute_and_render to use cached diff when available
+    local render_mod = require("codediff.ui.view.render")
+    local core_mod = require("codediff.ui.core")
+    local semantic_mod = require("codediff.ui.semantic_tokens")
+    local orig_compute_and_render = render_mod.compute_and_render
+
+    render_mod.compute_and_render = function(original_buf, modified_buf, original_lines, modified_lines, original_is_virtual, modified_is_virtual, original_win, modified_win, auto_scroll_to_first_hunk)
+      -- Try to find cache key from buffer names
+      local original_name = vim.api.nvim_buf_get_name(original_buf)
+      local modified_name = vim.api.nvim_buf_get_name(modified_buf)
+
+      -- Extract path and revision from virtual file names (format: codediff://<git_root>//<rev>//<path>)
+      local function parse_virtual_name(name)
+        local rev, path = name:match("codediff://[^/]+//([^/]+)//(.+)$")
+        if rev and path then
+          return path, rev
+        end
+        -- For real files, use the path as-is
+        return name, "WORKING"
+      end
+
+      local original_path, original_rev = parse_virtual_name(original_name)
+      local modified_path, modified_rev = parse_virtual_name(modified_name)
+      local key = make_cache_key(original_path, modified_path, original_rev, modified_rev)
+
+      local original_tick = vim.api.nvim_buf_get_changedtick(original_buf)
+      local modified_tick = vim.api.nvim_buf_get_changedtick(modified_buf)
+
+      -- Check cache
+      local cached_diff = get_cached_diff(key, original_tick, modified_tick)
+      if cached_diff then
+        -- Cache hit: skip diff computation, just re-render with cached result
+        core_mod.render_diff(original_buf, modified_buf, original_lines, modified_lines, cached_diff)
+
+        -- Apply semantic tokens for virtual buffers
+        if original_is_virtual then
+          semantic_mod.apply_semantic_tokens(original_buf, modified_buf)
+        end
+        if modified_is_virtual then
+          semantic_mod.apply_semantic_tokens(modified_buf, original_buf)
+        end
+
+        -- Setup scrollbind (copied from original)
+        if original_win and modified_win and vim.api.nvim_win_is_valid(original_win) and vim.api.nvim_win_is_valid(modified_win) then
+          local saved_cursor = nil
+          if not auto_scroll_to_first_hunk then
+            saved_cursor = vim.api.nvim_win_get_cursor(modified_win)
+          end
+
+          vim.wo[original_win].scrollbind = false
+          vim.wo[modified_win].scrollbind = false
+          vim.api.nvim_win_set_cursor(original_win, { 1, 0 })
+          vim.api.nvim_win_set_cursor(modified_win, { 1, 0 })
+          vim.wo[original_win].scrollbind = true
+          vim.wo[modified_win].scrollbind = true
+          vim.wo[original_win].wrap = false
+          vim.wo[modified_win].wrap = false
+
+          if auto_scroll_to_first_hunk and #cached_diff.changes > 0 then
+            local first_change = cached_diff.changes[1]
+            local target_line = first_change.original.start_line
+            pcall(vim.api.nvim_win_set_cursor, original_win, { target_line, 0 })
+            pcall(vim.api.nvim_win_set_cursor, modified_win, { target_line, 0 })
+            if vim.api.nvim_win_is_valid(modified_win) then
+              vim.api.nvim_set_current_win(modified_win)
+              vim.cmd("normal! zz")
+            end
+          elseif saved_cursor then
+            pcall(vim.api.nvim_win_set_cursor, modified_win, saved_cursor)
+            pcall(vim.api.nvim_win_set_cursor, original_win, { saved_cursor[1], 0 })
+          end
+        end
+
+        return cached_diff
+      end
+
+      -- Cache miss: compute diff normally
+      local lines_diff = orig_compute_and_render(original_buf, modified_buf, original_lines, modified_lines, original_is_virtual, modified_is_virtual, original_win, modified_win, auto_scroll_to_first_hunk)
+
+      -- Store in cache
+      if lines_diff then
+        set_cached_diff(key, lines_diff, original_tick, modified_tick)
+      end
+
+      return lines_diff
+    end
+
     -- Auto-select file on cursor move (j/k updates diff with debounce)
     local keymaps = require("codediff.ui.explorer.keymaps")
     local orig_setup = keymaps.setup
@@ -421,9 +602,20 @@ return {
       orig_setup(explorer)
       local tree = explorer.tree
 
-      -- on_file_selectをラップしてフォーカス復元
+      -- on_file_selectをラップしてフォーカス復元 + 大ファイル警告
       local orig_on_file_select = explorer.on_file_select
+      local large_file_warned = {} -- Track warned files to avoid repeated warnings
       explorer.on_file_select = function(file_data)
+        -- Large file warning (>1500 lines)
+        if file_data and file_data.path and not large_file_warned[file_data.path] then
+          local full_path = explorer.git_root and (explorer.git_root .. "/" .. file_data.path) or file_data.path
+          local ok, stat = pcall(vim.uv.fs_stat, full_path)
+          if ok and stat and stat.size > 75000 then -- ~1500 lines assuming 50 bytes/line
+            vim.notify("Large file: diff may be slow", vim.log.levels.WARN, { title = "CodeDiff" })
+            large_file_warned[file_data.path] = true
+          end
+        end
+
         local saved_win = explorer.winid
 
         -- CodeDiffVirtualFileLoadedでフォーカス復元（非同期パス用）
@@ -524,7 +716,7 @@ return {
       vim.keymap.set("n", "ca", "<cmd>Git commit --amend<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit --amend" }))
       local last_node_id = nil
       local debounce_timer = nil
-      local debounce_ms = 400
+      local debounce_ms = 600 -- Increased from 400ms to reduce calculations during continuous navigation
       local is_toggling = false
 
       vim.api.nvim_create_autocmd("CursorMoved", {
