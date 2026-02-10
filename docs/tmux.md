@@ -119,12 +119,16 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 
 ### モード表示
 
+優先度: OFF > RELOAD > THUMBS > COPY > SYNC > PREFIX > ZOOM > NORMAL
+
 | モード | 色 | 条件 |
 |--------|-----|------|
-| OFF | オレンジ `#ff9e64` | ネストセッション（外側無効） |
+| OFF | グレー `#545c7e` | ネストセッション（外側無効） |
+| RELOAD | オレンジ `#ff9e64` | 設定リロード中 |
+| THUMBS | エメラルド `#41a6b5` | tmux-thumbs 操作中 |
 | COPY | 赤 `#f7768e` | Copy Mode 中 |
 | SYNC | ティール `#73daca` | Pane 同期中 |
-| PREFIX | 黄 `#e0af68` | Prefix 入力後 |
+| PREFIX | 黄 `#ffea00` | Prefix 入力後 |
 | ZOOM | 紫 `#bb9af7` | Pane ズーム中（`ZOOM 1/3` 形式でペイン番号/総数を表示） |
 | NORMAL | 青 `#7aa2f7` | 通常 |
 
@@ -146,9 +150,13 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 
 | 条件 | 枠色 |
 |------|------|
+| OFF | グレー `#545c7e` |
+| RELOAD | オレンジ `#ff9e64` |
+| THUMBS | エメラルド `#41a6b5` |
 | Copy Mode | 赤 `#f7768e` |
 | SYNC | ティール `#73daca` |
-| Prefix | 黄 `#e0af68` |
+| PREFIX | 黄 `#ffea00` |
+| ZOOM | 紫 `#bb9af7` |
 | 通常 | 青 `#7aa2f7` |
 
 ### 透過設定
@@ -187,7 +195,7 @@ SSH 先の remote tmux を local tmux 内で使う場合、`F12` で外側 tmux 
 
 OFF 中の視覚的変化:
 - ステータスバーがグレーアウト（`fg=#545c7e, bg=#1a1b26`）
-- モード表示が `OFF`（オレンジ `#ff9e64`）
+- モード表示が `OFF`（グレー `#545c7e`）
 - Window タブがグレー一色
 
 参考: [samoshkin/tmux-config](https://github.com/samoshkin/tmux-config)
