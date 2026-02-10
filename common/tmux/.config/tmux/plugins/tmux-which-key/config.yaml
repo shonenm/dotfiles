@@ -26,6 +26,9 @@ macros:
   - name: popup-lazygit
     commands:
       - "display-popup -E -w 80% -h 80% -d #{pane_current_path} lazygit"
+  - name: popup-keifu
+    commands:
+      - "display-popup -E -w 80% -h 80% -d #{pane_current_path} keifu"
   - name: popup-ghdash
     commands:
       - "display-popup -E -w 85% -h 85% -d #{pane_current_path} gh\\ dash"
@@ -59,6 +62,9 @@ items:
   - name: Lazygit
     key: g
     macro: popup-lazygit
+  - name: Keifu
+    key: k
+    macro: popup-keifu
   - name: gh-dash
     key: G
     macro: popup-ghdash
@@ -171,6 +177,9 @@ items:
       - name: Lazygit
         key: g
         macro: popup-lazygit
+      - name: Keifu
+        key: k
+        macro: popup-keifu
       - name: gh-dash
         key: G
         macro: popup-ghdash
