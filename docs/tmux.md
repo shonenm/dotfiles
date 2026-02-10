@@ -137,7 +137,7 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 Prefix (`Ctrl+Space`) 押下時、ステータスバー右側全体がキーバインドヘルプに切り替わる。
 
 ```
-  - split  | vsplit  g git  f sessions  v copy  Space menu  ? keys
+  -| split  g git  G gh  k keifu  j scratch  f sess  F proj  v copy  r reload  ? keys  Space menu
 ```
 
 | キー | 動作 |
@@ -145,10 +145,15 @@ Prefix (`Ctrl+Space`) 押下時、ステータスバー右側全体がキーバ�
 | `-` | 垂直分割 |
 | `\|` | 水平分割 |
 | `g` | lazygit popup |
+| `G` | gh-dash popup |
+| `k` | keifu popup（Git コミットグラフ） |
+| `j` | Scratchpad シェル |
 | `f` | セッション切り替え |
+| `F` | ghq プロジェクト切り替え |
 | `v` | Copy Mode |
-| `Space` | which-key メニュー |
+| `r` | 設定リロード |
 | `?` | キーバインド一覧 |
+| `Space` | which-key メニュー |
 
 次のキー入力で通常表示に戻る。
 

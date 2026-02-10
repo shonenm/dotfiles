@@ -21,7 +21,7 @@ KEY_ICON=$(printf '\xef\x84\x9c')   # U+F11C - keyboard
 EC='#,'
 
 # ヘルプ表示（prefix押下時）- カンマなしなのでエスケープ不要
-HELP="#[fg=#ffea00 bg=default]${LEFT}#[fg=#1a1b26 bg=#ffea00 bold] ${KEY_ICON} #[fg=#ffea00 bg=default]${RIGHT} - split  | vsplit  g git  f sessions  v copy  Space menu  ? keys"
+HELP="#[fg=#ffea00 bg=default]${LEFT}#[fg=#1a1b26 bg=#ffea00 bold] ${KEY_ICON} #[fg=#ffea00 bg=default]${RIGHT} -| split  g git  G gh  k keifu  j scratch  f sess  F proj  v copy  r reload  ? keys  Space menu"
 
 # 通常表示の各パーツ
 # スタイル指定 #[...] 内のカンマを #, でエスケープ（ネストされた #{?...} のカンマはそのまま）
