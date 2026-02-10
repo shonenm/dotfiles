@@ -9,9 +9,10 @@
 
 ### Phase 1: 設定レベル
 
-1. **debounce値の調整** (400ms → 600ms)
-   - `keymaps.setup`内の`debounce_ms`を600msに増加
-   - 連続でj/k操作した際の差分計算回数を約25%削減
+1. **debounce値の調整** (400ms → 750ms)
+   - `keymaps.setup`内の`debounce_ms`を750msに増加
+   - 連続でj/k操作した際の差分計算を大幅に削減
+   - Enterキーで即座に反映（debounceをスキップ）
 
 2. **大ファイル警告**
    - `on_file_select`ラッパー内でファイルサイズをチェック

@@ -716,7 +716,7 @@ return {
       vim.keymap.set("n", "ca", "<cmd>Git commit --amend<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit --amend" }))
       local last_node_id = nil
       local debounce_timer = nil
-      local debounce_ms = 600 -- Increased from 400ms to reduce calculations during continuous navigation
+      local debounce_ms = 750 -- Increased from 400ms; use Enter for immediate refresh
       local is_toggling = false
 
       vim.api.nvim_create_autocmd("CursorMoved", {
@@ -785,8 +785,13 @@ return {
           tree:render()
           vim.schedule(function() is_toggling = false end)
         else
-          -- ファイルノードの場合は通常の選択動作
+          -- ファイルノードの場合は即座に選択（debounceをスキップ）
           if node and node.data then
+            if debounce_timer then
+              debounce_timer:stop()
+              debounce_timer = nil
+            end
+            last_node_id = node:get_id() -- Prevent duplicate trigger from CursorMoved
             explorer.on_file_select(node.data)
           end
         end
