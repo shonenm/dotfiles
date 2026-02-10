@@ -569,6 +569,230 @@ return {
         diffview_initialized[ev.buf] = true
       end,
     })
+
+    -- Monkey-patch M.update to use noautocmd for virtual file loading
+    -- This prevents BufEnter autocmds from external plugins (e.g., package-info.nvim)
+    -- from triggering errors when loading virtual file buffers
+    local view_mod = require("codediff.ui.view")
+    local lifecycle = require("codediff.ui.lifecycle")
+    local virtual_file = require("codediff.core.virtual_file")
+    local auto_refresh = require("codediff.ui.auto_refresh")
+    local helpers = require("codediff.ui.view.helpers")
+    local render = require("codediff.ui.view.render")
+    local view_keymaps = require("codediff.ui.view.keymaps")
+    local conflict_window = require("codediff.ui.view.conflict_window")
+
+    view_mod.update = function(tabpage, session_config, auto_scroll_to_first_hunk)
+      local saved_current_win = vim.api.nvim_get_current_win()
+      local session = lifecycle.get_session(tabpage)
+      if not session then
+        vim.notify("No diff session found for tabpage", vim.log.levels.ERROR)
+        return false
+      end
+
+      local old_original_buf, old_modified_buf = lifecycle.get_buffers(tabpage)
+      local original_win, modified_win = lifecycle.get_windows(tabpage)
+
+      if not old_original_buf or not old_modified_buf or not original_win or not modified_win then
+        vim.notify("Invalid diff session state", vim.log.levels.ERROR)
+        return false
+      end
+
+      auto_refresh.disable(old_original_buf)
+      auto_refresh.disable(old_modified_buf)
+      lifecycle.clear_highlights(old_original_buf)
+      lifecycle.clear_highlights(old_modified_buf)
+      lifecycle.update_diff_result(tabpage, nil)
+
+      local old_result_bufnr, old_result_win = lifecycle.get_result(tabpage)
+      if not session_config.conflict and old_result_win and vim.api.nvim_win_is_valid(old_result_win) then
+        vim.api.nvim_win_close(old_result_win, false)
+        lifecycle.set_result(tabpage, nil, nil)
+      end
+
+      local original_is_virtual = helpers.is_virtual_revision(session_config.original_revision)
+      local modified_is_virtual = helpers.is_virtual_revision(session_config.modified_revision)
+      local original_info = helpers.prepare_buffer(original_is_virtual, session_config.git_root, session_config.original_revision, session_config.original_path)
+      local modified_info = helpers.prepare_buffer(modified_is_virtual, session_config.git_root, session_config.modified_revision, session_config.modified_path)
+
+      local wait_state = {
+        original = original_is_virtual and original_info.needs_edit,
+        modified = modified_is_virtual and modified_info.needs_edit,
+      }
+
+      local render_everything = function()
+        if not vim.api.nvim_win_is_valid(original_win) or not vim.api.nvim_win_is_valid(modified_win) then
+          return
+        end
+        if not vim.api.nvim_buf_is_valid(original_info.bufnr) or not vim.api.nvim_buf_is_valid(modified_info.bufnr) then
+          return
+        end
+
+        local original_lines = vim.api.nvim_buf_get_lines(original_info.bufnr, 0, -1, false)
+        local modified_lines = vim.api.nvim_buf_get_lines(modified_info.bufnr, 0, -1, false)
+        local should_auto_scroll = auto_scroll_to_first_hunk == true
+        local lines_diff
+
+        if session_config.conflict then
+          local git = require("codediff.core.git")
+          git.get_file_content(":1", session_config.git_root, session_config.original_path, function(err, base_lines)
+            if err then base_lines = {} end
+            vim.schedule(function()
+              local conflict_diffs = render.compute_and_render_conflict(original_info.bufnr, modified_info.bufnr, base_lines, original_lines, modified_lines, original_win, modified_win, should_auto_scroll)
+              if conflict_diffs then
+                lifecycle.update_buffers(tabpage, original_info.bufnr, modified_info.bufnr)
+                lifecycle.update_git_root(tabpage, session_config.git_root)
+                lifecycle.update_revisions(tabpage, session_config.original_revision, session_config.modified_revision)
+                lifecycle.update_diff_result(tabpage, conflict_diffs.base_to_modified_diff)
+                lifecycle.update_changedtick(tabpage, vim.api.nvim_buf_get_changedtick(original_info.bufnr), vim.api.nvim_buf_get_changedtick(modified_info.bufnr))
+                render.setup_auto_refresh(original_info.bufnr, modified_info.bufnr, true, true)
+                local is_explorer_mode = session.mode == "explorer"
+                local success = conflict_window.setup_conflict_result_window(tabpage, session_config, original_win, modified_win, base_lines, conflict_diffs, true)
+                if success then
+                  view_keymaps.setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, is_explorer_mode)
+                  local conflict = require("codediff.ui.conflict")
+                  conflict.setup_keymaps(tabpage)
+                end
+              end
+            end)
+          end)
+        else
+          lines_diff = render.compute_and_render(original_info.bufnr, modified_info.bufnr, original_lines, modified_lines, original_is_virtual, modified_is_virtual, original_win, modified_win, should_auto_scroll)
+          if lines_diff then
+            lifecycle.update_buffers(tabpage, original_info.bufnr, modified_info.bufnr)
+            lifecycle.update_git_root(tabpage, session_config.git_root)
+            lifecycle.update_revisions(tabpage, session_config.original_revision, session_config.modified_revision)
+            lifecycle.update_diff_result(tabpage, lines_diff)
+            lifecycle.update_changedtick(tabpage, vim.api.nvim_buf_get_changedtick(original_info.bufnr), vim.api.nvim_buf_get_changedtick(modified_info.bufnr))
+            render.setup_auto_refresh(original_info.bufnr, modified_info.bufnr, original_is_virtual, modified_is_virtual)
+            local is_explorer_mode = session.mode == "explorer"
+            view_keymaps.setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, is_explorer_mode)
+            if saved_current_win and vim.api.nvim_win_is_valid(saved_current_win) then
+              vim.api.nvim_set_current_win(saved_current_win)
+            end
+          end
+        end
+      end
+
+      local autocmd_group = nil
+      if wait_state.original or wait_state.modified then
+        autocmd_group = vim.api.nvim_create_augroup("CodeDiffVirtualFileUpdate_" .. tabpage, { clear = true })
+        vim.api.nvim_create_autocmd("User", {
+          group = autocmd_group,
+          pattern = "CodeDiffVirtualFileLoaded",
+          callback = function(event)
+            if not event.data or not event.data.buf then return end
+            local loaded_buf = event.data.buf
+            if wait_state.original and loaded_buf == original_info.bufnr then
+              wait_state.original = false
+            end
+            if wait_state.modified and loaded_buf == modified_info.bufnr then
+              wait_state.modified = false
+            end
+            if not wait_state.original and not wait_state.modified then
+              vim.schedule(render_everything)
+              vim.api.nvim_del_augroup_by_id(autocmd_group)
+            end
+          end,
+        })
+      end
+
+      -- Load buffers with noautocmd to prevent external plugin errors
+      if vim.api.nvim_win_is_valid(original_win) then
+        if original_info.needs_edit then
+          if original_is_virtual then
+            if original_info.bufnr and vim.api.nvim_buf_is_valid(original_info.bufnr) then
+              vim.api.nvim_win_set_buf(original_win, original_info.bufnr)
+              virtual_file.refresh_buffer(original_info.bufnr)
+            else
+              vim.cmd("noautocmd call nvim_set_current_win(" .. original_win .. ")")
+              vim.cmd("noautocmd edit! " .. vim.fn.fnameescape(original_info.target))
+              original_info.bufnr = vim.api.nvim_get_current_buf()
+            end
+          else
+            local bufnr = vim.fn.bufadd(original_info.target)
+            vim.fn.bufload(bufnr)
+            original_info.bufnr = bufnr
+            vim.api.nvim_win_set_buf(original_win, original_info.bufnr)
+          end
+        else
+          if vim.api.nvim_buf_is_valid(original_info.bufnr) then
+            vim.api.nvim_win_set_buf(original_win, original_info.bufnr)
+            if not original_is_virtual then
+              vim.api.nvim_buf_call(original_info.bufnr, function()
+                vim.cmd("checktime")
+              end)
+            end
+          else
+            if original_is_virtual then
+              vim.cmd("noautocmd call nvim_set_current_win(" .. original_win .. ")")
+              vim.cmd("noautocmd edit! " .. vim.fn.fnameescape(original_info.target))
+              original_info.bufnr = vim.api.nvim_get_current_buf()
+            else
+              local bufnr = vim.fn.bufadd(original_info.target)
+              vim.fn.bufload(bufnr)
+              original_info.bufnr = bufnr
+              vim.api.nvim_win_set_buf(original_win, original_info.bufnr)
+            end
+          end
+        end
+      end
+
+      if vim.api.nvim_win_is_valid(modified_win) then
+        if modified_info.needs_edit then
+          if modified_is_virtual then
+            if modified_info.bufnr and vim.api.nvim_buf_is_valid(modified_info.bufnr) then
+              vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
+              virtual_file.refresh_buffer(modified_info.bufnr)
+            else
+              vim.cmd("noautocmd call nvim_set_current_win(" .. modified_win .. ")")
+              vim.cmd("noautocmd edit! " .. vim.fn.fnameescape(modified_info.target))
+              modified_info.bufnr = vim.api.nvim_get_current_buf()
+            end
+          else
+            local bufnr = vim.fn.bufadd(modified_info.target)
+            vim.fn.bufload(bufnr)
+            modified_info.bufnr = bufnr
+            vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
+          end
+        else
+          if vim.api.nvim_buf_is_valid(modified_info.bufnr) then
+            vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
+            if not modified_is_virtual then
+              vim.api.nvim_buf_call(modified_info.bufnr, function()
+                vim.cmd("checktime")
+              end)
+            end
+          else
+            if modified_is_virtual then
+              vim.cmd("noautocmd call nvim_set_current_win(" .. modified_win .. ")")
+              vim.cmd("noautocmd edit! " .. vim.fn.fnameescape(modified_info.target))
+              modified_info.bufnr = vim.api.nvim_get_current_buf()
+            else
+              local bufnr = vim.fn.bufadd(modified_info.target)
+              vim.fn.bufload(bufnr)
+              modified_info.bufnr = bufnr
+              vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
+            end
+          end
+        end
+      end
+
+      lifecycle.update_paths(tabpage, session_config.original_path, session_config.modified_path)
+
+      if lifecycle.is_original_virtual(tabpage) and old_original_buf ~= original_info.bufnr and old_original_buf ~= modified_info.bufnr then
+        pcall(vim.api.nvim_buf_delete, old_original_buf, { force = true })
+      end
+      if lifecycle.is_modified_virtual(tabpage) and old_modified_buf ~= modified_info.bufnr and old_modified_buf ~= original_info.bufnr then
+        pcall(vim.api.nvim_buf_delete, old_modified_buf, { force = true })
+      end
+
+      if not autocmd_group then
+        vim.schedule(render_everything)
+      end
+
+      return true
+    end
   end,
   },
 }
