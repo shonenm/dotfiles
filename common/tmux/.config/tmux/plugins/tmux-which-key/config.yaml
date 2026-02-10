@@ -28,7 +28,7 @@ macros:
       - "display-popup -E -w 80% -h 80% -d #{pane_current_path} lazygit"
   - name: popup-keifu
     commands:
-      - "display-popup -E -w 80% -h 80% -d #{pane_current_path} keifu"
+      - "display-popup -E -w 80% -h 80% -d #{pane_current_path} 'zsh -lc keifu'"
   - name: popup-ghdash
     commands:
       - "display-popup -E -w 85% -h 85% -d #{pane_current_path} gh\\ dash"
