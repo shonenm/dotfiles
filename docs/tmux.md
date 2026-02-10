@@ -120,7 +120,7 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 
 ### モード表示
 
-優先度: OFF > RELOAD > THUMBS > COPY > SYNC > PREFIX > ZOOM > NORMAL
+優先度: OFF > RELOAD > THUMBS > COPY > SYNC > ZOOM > NORMAL
 
 | モード | 色 | 条件 |
 |--------|-----|------|
@@ -129,9 +129,28 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | THUMBS | エメラルド `#41a6b5` | tmux-thumbs 操作中 |
 | COPY | 赤 `#f7768e` | Copy Mode 中 |
 | SYNC | ティール `#73daca` | Pane 同期中 |
-| PREFIX | 黄 `#ffea00` | Prefix 入力後 |
 | ZOOM | 紫 `#bb9af7` | Pane ズーム中（`ZOOM 1/3` 形式でペイン番号/総数を表示） |
 | NORMAL | 青 `#7aa2f7` | 通常 |
+
+### Prefix ヘルプ表示
+
+Prefix (`Ctrl+Space`) 押下時、ステータスバー右側全体がキーバインドヘルプに切り替わる。
+
+```
+  - split  | vsplit  g git  f sessions  v copy  Space menu  ? keys
+```
+
+| キー | 動作 |
+|------|------|
+| `-` | 垂直分割 |
+| `\|` | 水平分割 |
+| `g` | lazygit popup |
+| `f` | セッション切り替え |
+| `v` | Copy Mode |
+| `Space` | which-key メニュー |
+| `?` | キーバインド一覧 |
+
+次のキー入力で通常表示に戻る。
 
 ### Window タブ
 
