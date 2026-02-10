@@ -188,6 +188,11 @@ TOOL_cargoupdate_method="cargo"
 TOOL_cargoupdate_cargo_crate="cargo-update"
 TOOL_cargoupdate_depends_on="rust"
 
+TOOL_keifu_check_cmd="keifu"
+TOOL_keifu_method="cargo"
+TOOL_keifu_cargo_crate="keifu"
+TOOL_keifu_depends_on="rust"
+
 TOOL_yazi_check_cmd="yazi"
 TOOL_yazi_method="github_release"
 TOOL_yazi_github_repo="sxyazi/yazi"
@@ -323,7 +328,7 @@ LINUX_TOOL_ORDER=(
   # APT-only (skipped on Alpine)
   gh neovim eza bat postgresql
   # Cargo tools (depend on rust)
-  tokei tealdeer procs sd dust bottom rip2 lsd quay gitabsorb cargoupdate
+  tokei tealdeer procs sd dust bottom rip2 lsd quay gitabsorb cargoupdate keifu
   # Python tools (depend on uv)
   pgcli
 )

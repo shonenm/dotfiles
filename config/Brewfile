@@ -4,6 +4,7 @@
 # --- Taps ---
 tap "dotenvx/brew"
 tap "FelixKratz/formulae"
+tap "trasta298/tap"
 
 # --- Shell & Terminal ---
 brew "tmux"
@@ -16,6 +17,7 @@ brew "stow"
 # --- Development ---
 brew "neovim"
 brew "lazygit"
+brew "trasta298/tap/keifu"
 brew "lazydocker"
 brew "git-delta"
 brew "gh"

@@ -139,6 +139,7 @@ command -v xh &>/dev/null && alias http="xh"
 | `topgrade` | topgrade | 一括パッケージマネージャ更新 |
 | `grex` | grex | 例文から正規表現を生成 |
 | `quay` | quay-tui | TUIポートマネージャー（ローカルプロセス・SSHフォワード・Dockerコンテナ） |
+| `keifu` | keifu | Git コミットグラフ TUI（ブランチ構造の可視化に特化） |
 | `cargo-install-update` | cargo-update | cargo install パッケージの一括アップデート (`cargo install-update -a`) |
 | `pgcli` | pgcli | PostgreSQL インタラクティブクライアント（オートコンプリート・シンタックスハイライト） |
 | `dblab` | dblab | TUI データベースクライアント（スキーマブラウジング・クエリ実行） |
