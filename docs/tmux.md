@@ -84,6 +84,7 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | `y` | コピー（OSC52 経由でクリップボードへ） |
 | `Enter` / `Esc` | キャンセル |
 | `Ctrl+u` / `Ctrl+d` | 4 行スクロール |
+| `u` / `d` | 半ページスクロール（倍速移動） |
 | マウスドラッグ | 自動コピー → OSC52（Copy Mode 終了） |
 
 ## ステータスバー
