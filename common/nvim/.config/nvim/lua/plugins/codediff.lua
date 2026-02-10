@@ -391,11 +391,11 @@ return {
     local explorer_help_lines = {
       { { "[-]", "Special" }, { " stage  ", "Normal" }, { "[S]", "Special" }, { " all  ", "Normal" }, { "[U]", "Special" }, { " unstage", "Normal" } },
       { { "[X]", "Special" }, { " restore  ", "Normal" }, { "[i]", "Special" }, { " tree/list", "Normal" } },
-      { { "[R]", "Special" }, { " refresh  ", "Normal" }, { "[cc]", "Special" }, { " commit", "Normal" } },
+      { { "[R]", "Special" }, { " refresh  ", "Normal" }, { "[cc]", "Special" }, { " commit  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
     local diff_help_lines = {
       { { "[", "Special" }, { "]c", "Normal" }, { "/", "Special" }, { "[c", "Normal" }, { "]", "Special" }, { " hunk  ", "Normal" }, { "[gs]", "Special" }, { " stage  ", "Normal" }, { "[gr]", "Special" }, { " reset", "Normal" } },
-      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[h]", "Special" }, { " sidebar", "Normal" } },
+      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[h]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
 
     -- Auto-select file on cursor move (j/k updates diff with debounce)
@@ -411,21 +411,23 @@ return {
         local winid = explorer.winid
         if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_win_is_valid(winid) then return end
 
-        local last_visible = vim.fn.line("w$", winid)
+        local win_height = vim.api.nvim_win_get_height(winid)
         local line_count = vim.api.nvim_buf_line_count(bufnr)
-        local target_line = math.min(last_visible, line_count) - 1
+        local first_visible = vim.fn.line("w0", winid)
+        local help_height = #explorer_help_lines -- both help tables have similar height
+        -- ウィンドウ下部にヘルプを固定（最低限の領域確保）
+        local max_target = first_visible + win_height - help_height - 2
+        local target_line = math.min(max_target, line_count - 1)
         if target_line < 0 then target_line = 0 end
 
         -- diffview にフォーカスがあるか判定
-        local ok, session_mod = pcall(require, "codediff.ui.lifecycle.session")
         local in_diff = false
-        if ok then
-          local active_diffs = session_mod.get_active_diffs()
-          local session = active_diffs[vim.api.nvim_get_current_tabpage()]
-          if session then
-            local cur_buf = vim.api.nvim_get_current_buf()
-            in_diff = cur_buf == session.original_bufnr or cur_buf == session.modified_bufnr
-          end
+        local lifecycle_mod = require("codediff.ui.lifecycle")
+        local tabpage = vim.api.nvim_get_current_tabpage()
+        local original_bufnr, modified_bufnr = lifecycle_mod.get_buffers(tabpage)
+        if original_bufnr and modified_bufnr then
+          local cur_buf = vim.api.nvim_get_current_buf()
+          in_diff = cur_buf == original_bufnr or cur_buf == modified_bufnr
         end
         local help_lines = in_diff and diff_help_lines or explorer_help_lines
 
@@ -462,6 +464,9 @@ return {
 
       -- キーマップ追加
       local map_opts = { buffer = explorer.bufnr, noremap = true, silent = true, nowait = true }
+      vim.keymap.set("n", "q", function()
+        vim.cmd("tabclose")
+      end, vim.tbl_extend("force", map_opts, { desc = "Close CodeDiff" }))
       vim.keymap.set("n", "cc", "<cmd>Git commit<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit" }))
       vim.keymap.set("n", "ca", "<cmd>Git commit --amend<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit --amend" }))
       local last_node_id = nil
