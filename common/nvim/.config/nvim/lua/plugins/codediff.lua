@@ -416,7 +416,7 @@ return {
     }
     local diff_help_lines = {
       { { "[", "Special" }, { "]c", "Normal" }, { "/", "Special" }, { "[c", "Normal" }, { "]", "Special" }, { " hunk  ", "Normal" }, { "[gs]", "Special" }, { " stage  ", "Normal" }, { "[gr]", "Special" }, { " reset", "Normal" } },
-      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[h]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
 
     -- view.updateをラップしてeventignoreを設定
@@ -790,6 +790,10 @@ return {
           vim.schedule(update_help_line) -- diff用ヘルプに切り替え
         end
       end, vim.tbl_extend("force", map_opts, { desc = "Expand directory or focus diff view" }))
+      vim.keymap.set("n", "<Tab>", function()
+        vim.cmd("2wincmd l")
+        vim.schedule(update_help_line)
+      end, vim.tbl_extend("force", map_opts, { desc = "Focus diff view" }))
       vim.keymap.set("n", "<CR>", function()
         local node = tree:get_node()
         if node and node:has_children() then
@@ -837,7 +841,7 @@ return {
         local map_opts = { buffer = ev.buf, noremap = true, silent = true, nowait = true }
         vim.keymap.set({ "n", "v" }, "gs", ":Gitsigns stage_hunk<CR>", vim.tbl_extend("force", map_opts, { desc = "Stage hunk" }))
         vim.keymap.set({ "n", "v" }, "gr", ":Gitsigns reset_hunk<CR>", vim.tbl_extend("force", map_opts, { desc = "Reset hunk" }))
-        vim.keymap.set("n", "h", function()
+        vim.keymap.set("n", "<Tab>", function()
           local ok2, session_mod2 = pcall(require, "codediff.ui.lifecycle.session")
           if not ok2 then return end
           local active_diffs2 = session_mod2.get_active_diffs()
