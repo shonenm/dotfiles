@@ -620,6 +620,66 @@ return {
       return lines_diff
     end
 
+    -- Stage/Reset後にdiffビューを自動更新する関数
+    -- is_stage: true=gs(stage), false=gr(reset)
+    local function refresh_diff_view(is_stage)
+      vim.defer_fn(function()
+        local session_mod = require("codediff.ui.lifecycle.session")
+        local tabpage = vim.api.nvim_get_current_tabpage()
+        local active_diffs = session_mod.get_active_diffs()
+        local session = active_diffs[tabpage]
+        if not session then return end
+
+        local explorer = session.explorer
+        if not explorer then return end
+        if not session.original_path or not session.modified_path then return end
+
+        -- diffキャッシュの該当エントリを無効化
+        local file_path = explorer.current_file_path
+        if file_path then
+          local keys_to_remove = {}
+          for _, key in ipairs(cache_keys) do
+            if key:find(file_path, 1, true) then
+              keys_to_remove[#keys_to_remove + 1] = key
+            end
+          end
+          for _, key in ipairs(keys_to_remove) do
+            diff_cache[key] = nil
+            for i, k in ipairs(cache_keys) do
+              if k == key then
+                table.remove(cache_keys, i)
+                break
+              end
+            end
+          end
+        end
+
+        -- original_revision を決定
+        -- gs: ステージ後は必ず ":0" と比較（staged content が存在する）
+        -- gr: 参照側は変わらないのでセッションの値をそのまま使用
+        local original_revision = session.original_revision
+        if is_stage and session.modified_revision == nil then
+          -- unstaged view (modified = working tree) の場合のみ ":0" に切替
+          original_revision = ":0"
+        end
+
+        local session_config = {
+          mode = "explorer",
+          git_root = session.git_root,
+          original_path = session.original_path,
+          modified_path = session.modified_path,
+          original_revision = original_revision,
+          modified_revision = session.modified_revision,
+        }
+        view_mod.update(tabpage, session_config, false)
+
+        -- explorerツリーも明示的に更新（fs_eventより速い）
+        if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
+          refresh_mod.refresh(explorer)
+        end
+      end, 150)
+    end
+
     -- Auto-select file on cursor move (j/k updates diff with debounce)
     local keymaps = require("codediff.ui.explorer.keymaps")
     local orig_setup = keymaps.setup
@@ -852,8 +912,14 @@ return {
         if ev.buf ~= session.original_bufnr and ev.buf ~= session.modified_bufnr then return end
 
         local map_opts = { buffer = ev.buf, noremap = true, silent = true, nowait = true }
-        vim.keymap.set({ "n", "v" }, "gs", ":Gitsigns stage_hunk<CR>", vim.tbl_extend("force", map_opts, { desc = "Stage hunk" }))
-        vim.keymap.set({ "n", "v" }, "gr", ":Gitsigns reset_hunk<CR>", vim.tbl_extend("force", map_opts, { desc = "Reset hunk" }))
+        vim.keymap.set({ "n", "v" }, "gs", function()
+          vim.cmd("Gitsigns stage_hunk")
+          refresh_diff_view(true)
+        end, vim.tbl_extend("force", map_opts, { desc = "Stage hunk" }))
+        vim.keymap.set({ "n", "v" }, "gr", function()
+          vim.cmd("Gitsigns reset_hunk")
+          refresh_diff_view(false)
+        end, vim.tbl_extend("force", map_opts, { desc = "Reset hunk" }))
         vim.keymap.set("n", "<Tab>", function()
           local ok2, session_mod2 = pcall(require, "codediff.ui.lifecycle.session")
           if not ok2 then return end
