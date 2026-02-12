@@ -402,6 +402,19 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | `R`     | エクスプローラー更新          |
 | `q`     | CodeDiff を閉じる             |
 
+**コンフリクト解消操作** (git-conflict.nvim):
+
+| キー  | 動作                     |
+| ----- | ------------------------ |
+| `co`  | Choose ours（自分の変更）|
+| `ct`  | Choose theirs（相手の変更）|
+| `cb`  | Choose both（両方採用）  |
+| `c0`  | Choose none（両方削除）  |
+| `]x`  | 次のコンフリクトへ       |
+| `[x`  | 前のコンフリクトへ       |
+
+コンフリクトがあるファイルを diffview で表示中、ヘルプラインにこれらのキーマップが表示される。
+
 **ファイル一覧の表示形式:**
 ```
 ├─  codediff.lua  src/plugins/    3 M
