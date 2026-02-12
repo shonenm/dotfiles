@@ -418,6 +418,10 @@ return {
       { { "[", "Special" }, { "]c", "Normal" }, { "/", "Special" }, { "[c", "Normal" }, { "]", "Special" }, { " hunk  ", "Normal" }, { "[gs]", "Special" }, { " stage  ", "Normal" }, { "[gr]", "Special" }, { " reset", "Normal" } },
       { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
+    local diff_staged_help_lines = {
+      { { "[", "Special" }, { "]c", "Normal" }, { "/", "Special" }, { "[c", "Normal" }, { "]", "Special" }, { " hunk  ", "Normal" }, { "[gu]", "Special" }, { " unstage  ", "Normal" }, { "[gr]", "Special" }, { " reset", "Normal" } },
+      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+    }
     local conflict_help_lines = {
       { { "[co]", "Special" }, { " ours  ", "Normal" }, { "[ct]", "Special" }, { " theirs  ", "Normal" }, { "[cb]", "Special" }, { " both  ", "Normal" }, { "[c0]", "Special" }, { " none", "Normal" } },
       { { "[", "Special" }, { "]x", "Normal" }, { "/", "Special" }, { "[x", "Normal" }, { "]", "Special" }, { " conflict  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
@@ -762,7 +766,19 @@ return {
             end
           end
         end
-        local help_lines = in_conflict and conflict_help_lines or (in_diff and diff_help_lines or explorer_help_lines)
+        local help_lines
+        if in_conflict then
+          help_lines = conflict_help_lines
+        elseif in_diff then
+          local in_staged = false
+          local session_check = require("codediff.ui.lifecycle.session").get_active_diffs()[tabpage]
+          if session_check and session_check.modified_revision == ":0" then
+            in_staged = true
+          end
+          help_lines = in_staged and diff_staged_help_lines or diff_help_lines
+        else
+          help_lines = explorer_help_lines
+        end
 
         vim.api.nvim_buf_clear_namespace(bufnr, help_ns, 0, -1)
         vim.api.nvim_buf_set_extmark(bufnr, help_ns, target_line, 0, {
@@ -896,6 +912,96 @@ return {
       end, vim.tbl_extend("force", map_opts, { desc = "Toggle directory or select file" }))
     end
 
+    -- staged viewでカーソル位置のhunkをunstageする関数
+    local function unstage_hunk()
+      local ok, session_mod = pcall(require, "codediff.ui.lifecycle.session")
+      if not ok then return end
+      local active_diffs = session_mod.get_active_diffs()
+      local session = active_diffs[vim.api.nvim_get_current_tabpage()]
+      if not session then return end
+
+      if session.modified_revision ~= ":0" then
+        vim.notify("Not in staged diff view", vim.log.levels.WARN)
+        return
+      end
+
+      local git_root = session.git_root
+      local explorer = session.explorer
+      local file_path = explorer and explorer.current_file_path
+      if not file_path then return end
+
+      local cur_buf = vim.api.nvim_get_current_buf()
+      local is_modified = cur_buf == session.modified_bufnr
+      local is_original = cur_buf == session.original_bufnr
+      if not is_modified and not is_original then return end
+
+      local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+
+      vim.system(
+        { "git", "diff", "--cached", "-U0", "--no-color", "--", file_path },
+        { cwd = git_root, text = true },
+        function(obj)
+          if obj.code ~= 0 or not obj.stdout or obj.stdout == "" then
+            vim.schedule(function() vim.notify("No staged diff", vim.log.levels.WARN) end)
+            return
+          end
+
+          local lines = vim.split(obj.stdout, "\n")
+          local header_lines, hunks, current_hunk = {}, {}, nil
+
+          for _, line in ipairs(lines) do
+            local os_str, oc, ns, nc = line:match("^@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@")
+            if os_str then
+              if current_hunk then hunks[#hunks + 1] = current_hunk end
+              current_hunk = {
+                header = line, body = {},
+                old_start = tonumber(os_str), old_count = tonumber(oc ~= "" and oc or "1"),
+                new_start = tonumber(ns), new_count = tonumber(nc ~= "" and nc or "1"),
+              }
+            elseif current_hunk then
+              current_hunk.body[#current_hunk.body + 1] = line
+            else
+              header_lines[#header_lines + 1] = line
+            end
+          end
+          if current_hunk then hunks[#hunks + 1] = current_hunk end
+
+          local matched = nil
+          for _, h in ipairs(hunks) do
+            local s = is_modified and h.new_start or h.old_start
+            local c = is_modified and h.new_count or h.old_count
+            if c == 0 then
+              if cursor_line == s or cursor_line == s + 1 then matched = h; break end
+            elseif cursor_line >= s and cursor_line <= s + c - 1 then
+              matched = h; break
+            end
+          end
+
+          if not matched then
+            vim.schedule(function() vim.notify("No hunk at cursor", vim.log.levels.INFO) end)
+            return
+          end
+
+          local patch = table.concat(header_lines, "\n") .. "\n" .. matched.header .. "\n" .. table.concat(matched.body, "\n")
+          if not patch:match("\n$") then patch = patch .. "\n" end
+
+          vim.system(
+            { "git", "apply", "--reverse", "--cached", "--unidiff-zero", "-" },
+            { cwd = git_root, text = true, stdin = patch },
+            function(apply_obj)
+              vim.schedule(function()
+                if apply_obj.code ~= 0 then
+                  vim.notify("Unstage failed: " .. (apply_obj.stderr or ""), vim.log.levels.ERROR)
+                  return
+                end
+                refresh_diff_view(false)
+              end)
+            end
+          )
+        end
+      )
+    end
+
     -- diffviewバッファ用のキーマップ
     local diffview_initialized = {}
     vim.api.nvim_create_autocmd("BufEnter", {
@@ -920,6 +1026,9 @@ return {
           vim.cmd("Gitsigns reset_hunk")
           refresh_diff_view(false)
         end, vim.tbl_extend("force", map_opts, { desc = "Reset hunk" }))
+        vim.keymap.set({ "n", "v" }, "gu", function()
+          unstage_hunk()
+        end, vim.tbl_extend("force", map_opts, { desc = "Unstage hunk" }))
         vim.keymap.set("n", "<Tab>", function()
           local ok2, session_mod2 = pcall(require, "codediff.ui.lifecycle.session")
           if not ok2 then return end
