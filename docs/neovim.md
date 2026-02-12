@@ -34,7 +34,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | rainbow-delimiters.nvim     | ブラケットペアカラー化                  |
 | dropbar.nvim                | VS Code風ブレッドクラムナビゲーション（cwd相対パス表示） |
 | tiny-inline-diagnostic.nvim | インライン診断表示（ERROR/WARN/INFO のみ） |
-| snacks.scroll               | スムーズスクロール（C-d/C-u/C-b/C-f）   |
+| snacks.scroll               | スムーズスクロール（無効化：長押し時に重い問題） |
 
 ### エディタ機能
 
@@ -292,7 +292,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── lualine.lua            # ステータスライン強化 (リポジトリ全体diff, Copilot, LSP名)
 ├── multicursor.lua        # マルチカーソル (vim-visual-multi)
 ├── noice.lua              # メッセージ表示最適化 (種類別ルーティング)
-├── scroll.lua             # スムーズスクロール (snacks.scroll)
+├── scroll.lua             # スクロール設定（snacks.scroll 無効化）
 ├── neotest.lua            # テストランナー設定 (4アダプター, monorepo対応)
 ├── overseer.lua           # タスクランナー設定 (タスク出力表示強化)
 ├── package-info.lua       # package.json バージョン表示 (pnpm)
@@ -316,10 +316,10 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 
 | キー   | 動作                              |
 | ------ | --------------------------------- |
-| `C-d`  | 半画面スムーズスクロール（下）    |
-| `C-u`  | 半画面スムーズスクロール（上）    |
-| `C-f`  | 1画面スムーズスクロール（下）     |
-| `C-b`  | 1画面スムーズスクロール（上）     |
+| `C-d`  | 1/4画面スクロール（下）           |
+| `C-u`  | 1/4画面スクロール（上）           |
+| `C-f`  | 1画面スクロール（下）             |
+| `C-b`  | 1画面スクロール（上）             |
 
 ### Insert モード (Emacs スタイル)
 
