@@ -491,7 +491,9 @@ DBUI 内での操作:
 ## 自動化
 
 - TypeScript/JavaScript 保存時に import 自動整理 (`source.organizeImports`、同期実行で conform.nvim との競合を回避)
-- 外部ファイル変更の自動リロード (`checktime`)
+- 外部ファイル変更の自動リロード (`checktime` + `fs_event` によるバックグラウンド監視)
+  - `FocusGained` / `BufEnter` / `CursorHold` 時にチェック
+  - tmux 別ペイン等で外部変更があった場合、フォーカスしなくても即時反映
 - 空の `[No Name]` バッファを非表示時に自動削除 (`BufHidden`)
 - Lazy popup のフォーカス喪失時に自動 close (`BufLeave`)
 - snacks.nvim picker で frecency（頻度+新しさ）ベースのファイルソート
