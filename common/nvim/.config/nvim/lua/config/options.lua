@@ -24,6 +24,16 @@ vim.opt.scrolloff = 8
 vim.opt.sidescrolloff = 8
 vim.opt.wrap = true
 
+-- C-u/C-d scroll 1/4 of window height (updated dynamically)
+local function update_scroll()
+  local height = vim.api.nvim_win_get_height(0)
+  vim.wo.scroll = math.max(1, math.floor(height / 4))
+end
+vim.api.nvim_create_autocmd({ "WinEnter", "WinResized" }, {
+  callback = update_scroll,
+})
+update_scroll()
+
 -- Cursor visibility (mode-specific cursor shape)
 vim.opt.guicursor = table.concat({
   "n-c:block-Cursor/lCursor",
