@@ -418,6 +418,10 @@ return {
       { { "[", "Special" }, { "]c", "Normal" }, { "/", "Special" }, { "[c", "Normal" }, { "]", "Special" }, { " hunk  ", "Normal" }, { "[gs]", "Special" }, { " stage  ", "Normal" }, { "[gr]", "Special" }, { " reset", "Normal" } },
       { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
+    local conflict_help_lines = {
+      { { "[co]", "Special" }, { " ours  ", "Normal" }, { "[ct]", "Special" }, { " theirs  ", "Normal" }, { "[cb]", "Special" }, { " both  ", "Normal" }, { "[c0]", "Special" }, { " none", "Normal" } },
+      { { "[", "Special" }, { "]x", "Normal" }, { "/", "Special" }, { "[x", "Normal" }, { "]", "Special" }, { " conflict  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+    }
 
     -- view.updateをラップしてeventignoreを設定
     -- オリジナルのview.updateを使いつつ、BufEnter/WinEnterのみを一時的に抑制
@@ -680,16 +684,25 @@ return {
         local target_line = math.min(max_target, line_count - 1)
         if target_line < 0 then target_line = 0 end
 
-        -- diffview にフォーカスがあるか判定
+        -- diffview にフォーカスがあるか判定 + コンフリクト状態チェック
         local in_diff = false
+        local in_conflict = false
         local lifecycle_mod = require("codediff.ui.lifecycle")
         local tabpage = vim.api.nvim_get_current_tabpage()
         local original_bufnr, modified_bufnr = lifecycle_mod.get_buffers(tabpage)
         if original_bufnr and modified_bufnr then
           local cur_buf = vim.api.nvim_get_current_buf()
           in_diff = cur_buf == original_bufnr or cur_buf == modified_bufnr
+          -- コンフリクト状態をチェック（git-conflict.nvim）
+          if in_diff then
+            local ok, git_conflict = pcall(require, "git-conflict")
+            if ok and git_conflict.conflict_count then
+              local count = git_conflict.conflict_count(cur_buf)
+              in_conflict = count and count > 0
+            end
+          end
         end
-        local help_lines = in_diff and diff_help_lines or explorer_help_lines
+        local help_lines = in_conflict and conflict_help_lines or (in_diff and diff_help_lines or explorer_help_lines)
 
         vim.api.nvim_buf_clear_namespace(bufnr, help_ns, 0, -1)
         vim.api.nvim_buf_set_extmark(bufnr, help_ns, target_line, 0, {
