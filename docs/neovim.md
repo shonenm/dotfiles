@@ -304,7 +304,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── solidity.lua           # Solidity 開発支援 (LSP, treesitter, forge fmt)
 ├── tiny-inline-diagnostic.lua # インライン診断表示 (virtual_text 置換)
 ├── tmux-navigator.lua     # tmux 連携設定
-├── typescript-enhanced.lua # vtsls 設定 (import, inlay hints)
+├── typescript-enhanced.lua # vtsls 設定 (import preferences)
 └── dropbar.lua            # ブレッドクラムナビゲーション
 ```
 
@@ -531,15 +531,6 @@ LazyVim デフォルトをベースに以下をカスタマイズ:
 - LSP サーバー名は copilot を除外し、アクティブな言語サーバーのみ表示（例: `vtsls`, `basedpyright`）
 - リポジトリ全体の変更ファイル数・追加行・削除行を常時表示（30秒ごと + 保存時・フォーカス復帰時に更新）
 
-## TypeScript Inlay Hints
+## Inlay Hints
 
-vtsls で TypeScript/JavaScript の inlay hints を設定済み:
-
-- **パラメータ名**: リテラル引数にパラメータ名を表示
-- **パラメータ型**: 関数パラメータの型を表示
-- **変数型**: 変数の推論された型を表示
-- **プロパティ宣言型**: プロパティの型を表示
-- **関数戻り値型**: 関数の戻り値型を表示
-- **enum メンバー値**: enum の値を表示
-
-トグル: `<leader>uh`
+LSP inlay hints はグローバルで無効化済み（`vim.g.lazyvim_inlay_hints = false`）。
