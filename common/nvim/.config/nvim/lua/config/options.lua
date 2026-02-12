@@ -60,6 +60,9 @@ vim.opt.undoreload = 10000
 -- Auto reload files changed outside of Neovim
 vim.opt.autoread = true
 
+-- Disable inlay hints (LSP)
+vim.g.lazyvim_inlay_hints = false
+
 -- Folding
 vim.opt.foldcolumn = "1"
 vim.opt.foldlevel = 99
