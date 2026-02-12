@@ -8,10 +8,73 @@
 -- Disable built-in spell check for markdown etc. (Japanese text gets flagged as SpellBad)
 vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
--- Auto reload files when changed externally
+-- Auto reload files when changed externally (on focus)
 vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
   callback = function()
     vim.cmd("checktime")
+  end,
+})
+
+-- File watcher for background changes (e.g., tmux other pane, external tools)
+-- Uses fs_event to detect changes even when nvim is not focused
+local file_watchers = {}
+
+local function watch_file(bufnr)
+  local path = vim.api.nvim_buf_get_name(bufnr)
+  if path == "" or file_watchers[bufnr] then
+    return
+  end
+
+  local handle = vim.uv.new_fs_event()
+  if not handle then
+    return
+  end
+
+  local function on_change(err)
+    if err then
+      return
+    end
+    -- Stop to avoid multiple triggers
+    handle:stop()
+    vim.schedule(function()
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        pcall(vim.cmd, "checktime " .. bufnr)
+      end
+    end)
+    -- Restart watching after debounce
+    vim.defer_fn(function()
+      if vim.api.nvim_buf_is_valid(bufnr) and file_watchers[bufnr] then
+        pcall(function()
+          handle:start(path, {}, on_change)
+        end)
+      end
+    end, 100)
+  end
+
+  handle:start(path, {}, on_change)
+  file_watchers[bufnr] = handle
+end
+
+local function unwatch_file(bufnr)
+  local handle = file_watchers[bufnr]
+  if handle then
+    handle:stop()
+    handle:close()
+    file_watchers[bufnr] = nil
+  end
+end
+
+vim.api.nvim_create_autocmd("BufReadPost", {
+  group = vim.api.nvim_create_augroup("file_watcher", { clear = true }),
+  callback = function(ev)
+    watch_file(ev.buf)
+  end,
+})
+
+vim.api.nvim_create_autocmd("BufDelete", {
+  group = "file_watcher",
+  callback = function(ev)
+    unwatch_file(ev.buf)
   end,
 })
 
