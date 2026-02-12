@@ -408,13 +408,14 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | ------- | ------------------------------------------ |
 | `gs`    | Hunk stage（diff ビュー自動更新）          |
 | `gr`    | Hunk reset（diff ビュー自動更新）          |
+| `gu`    | Hunk unstage（staged view のみ）           |
 | `]c`    | 次の hunk へ                               |
 | `[c`    | 前の hunk へ                               |
 | `do`    | diff obtain (get)                          |
 | `dp`    | diff put                                   |
 | `<Tab>` | Explorer に戻る                            |
 
-`gs`/`gr` は gitsigns コマンド実行後に diff キャッシュを無効化し、仮想バッファ・実ファイルバッファ・diff 計算結果を自動再読み込みする。ビジュアルモードでの範囲選択にも対応。
+`gs`/`gr` は gitsigns コマンド実行後に diff キャッシュを無効化し、仮想バッファ・実ファイルバッファ・diff 計算結果を自動再読み込みする。ビジュアルモードでの範囲選択にも対応。`gu` は staged diff view（HEAD vs `:0`）でカーソル位置のハンクを `git apply --reverse --cached` で個別 unstage する。
 
 **コンフリクト解消操作** (git-conflict.nvim):
 
