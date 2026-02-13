@@ -837,6 +837,17 @@ return {
       end, vim.tbl_extend("force", map_opts, { desc = "Close CodeDiff" }))
       vim.keymap.set("n", "cc", "<cmd>Git commit<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit" }))
       vim.keymap.set("n", "ca", "<cmd>Git commit --amend<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit --amend" }))
+      -- Override X to trigger refresh after restore/delete
+      -- (git restore/clean only modify working tree, not .git/, so fs_event watcher doesn't fire)
+      local actions_mod = require("codediff.ui.explorer.actions")
+      vim.keymap.set("n", "X", function()
+        actions_mod.restore_entry(explorer, explorer.tree)
+        vim.defer_fn(function()
+          if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
+            refresh_mod.refresh(explorer)
+          end
+        end, 300)
+      end, vim.tbl_extend("force", map_opts, { desc = "Restore/discard changes" }))
       local last_node_id = nil
       local debounce_timer = nil
       local debounce_ms = 750 -- Increased from 400ms; use Enter for immediate refresh
