@@ -417,6 +417,8 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 
 `gs`/`gr` は gitsigns コマンド実行後に diff キャッシュを無効化し、仮想バッファ・実ファイルバッファ・diff 計算結果を自動再読み込みする。ビジュアルモードでの範囲選択にも対応。`gu` は staged diff view（HEAD vs `:0`）でカーソル位置のハンクを `git apply --reverse --cached` で個別 unstage する。
 
+stage/restore/reset 等で全ての変更が解消されると（unstaged・staged・conflicts がすべて空）、CodeDiff タブは自動的に閉じる。revision 比較・ファイル履歴では発動しない。
+
 **コンフリクト解消操作** (git-conflict.nvim):
 
 | キー  | 動作                     |
