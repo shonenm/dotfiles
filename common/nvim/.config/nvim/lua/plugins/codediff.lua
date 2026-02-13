@@ -758,10 +758,11 @@ return {
           local cur_buf = vim.api.nvim_get_current_buf()
           in_diff = cur_buf == original_bufnr or cur_buf == modified_bufnr
           -- コンフリクト状態をチェック（git-conflict.nvim）
+          -- modified_bufnr を使用（実ファイルにコンフリクトがある）
           if in_diff then
             local ok, git_conflict = pcall(require, "git-conflict")
             if ok and git_conflict.conflict_count then
-              local count = git_conflict.conflict_count(cur_buf)
+              local count = git_conflict.conflict_count(modified_bufnr)
               in_conflict = count and count > 0
             end
           end
