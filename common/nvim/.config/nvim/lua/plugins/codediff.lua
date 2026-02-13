@@ -334,6 +334,18 @@ return {
             return
           end
 
+          -- Auto-close tab when no changed files remain (working tree diff only)
+          if not explorer.base_revision
+            and #status_result.unstaged == 0
+            and #status_result.staged == 0
+            and (not status_result.conflicts or #status_result.conflicts == 0)
+          then
+            if #vim.api.nvim_list_tabpages() > 1 then
+              vim.cmd("tabclose")
+            end
+            return
+          end
+
           local tree_module = require("codediff.ui.explorer.tree")
           local root_nodes = tree_module.create_tree_data(status_result, explorer.git_root, explorer.base_revision, not explorer.git_root)
 
