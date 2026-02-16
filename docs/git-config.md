@@ -609,6 +609,64 @@ repo my-project
 
 **Note**: No need to configure `core.excludesfile`. Git automatically reads `~/.config/git/ignore`.
 
+## gf (Git Flow CLI)
+
+Issue → PR サイクルを自動化するシンプルな CLI。個人開発における Issue-driven 開発を最小限のオーバーヘッドで実現。
+
+### コマンド
+
+| コマンド | 動作 |
+|----------|------|
+| `gf start <title>` | Issue 作成 + ブランチ作成・チェックアウト |
+| `gf pr` | 現在のブランチから PR 作成（Closes #N で Issue 自動クローズ） |
+| `gf done` | squash merge + ブランチ削除 + main に戻る |
+
+### 使用例
+
+```bash
+# 1. 作業開始
+gf start "Add logout button"
+# → Issue #42 作成
+# → ブランチ 42-add-logout-button 作成・チェックアウト
+
+# 2. 開発・コミット
+# ... 変更を加える ...
+git add -A && git commit -m "Add logout button"
+
+# 3. PR 作成
+gf pr
+# → PR 作成（タイトル: Issue タイトル、本文: Closes #42）
+
+# 4. マージ・クリーンアップ
+gf done
+# → squash merge → ブランチ削除 → main にチェックアウト
+```
+
+### 動作詳細
+
+**`gf start`:**
+- 自動で main/master に戻り `git pull --rebase`
+- Issue 作成後、ブランチ名を `<issue番号>-<slugified-title>` で生成
+
+**`gf pr`:**
+- ブランチ名から Issue 番号を抽出
+- 未 push なら自動で `git push -u origin <branch>`
+- Issue タイトルを PR タイトルに使用
+
+**`gf done`:**
+- デフォルトブランチを自動検出（main/master 両対応）
+- squash merge で履歴をクリーンに保つ
+
+### 依存
+
+- `gh` CLI（GitHub CLI）
+
+### 例外（直接 main にコミット OK）
+
+- typo 修正
+- 設定値の微調整
+- lockfile の更新
+
 ## Related Documentation
 
 - [1Password Integration](./1password-integration.md) - Detailed 1Password CLI configuration
