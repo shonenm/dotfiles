@@ -1,3 +1,8 @@
+# =====================================================
+# Non-interactive safe section
+# (PATH, environment variables - needed by scripts)
+# =====================================================
+
 # --- Shell ---
 # Ensure $SHELL is set correctly when running zsh
 [[ "$SHELL" != */zsh ]] && export SHELL=$(which zsh)
@@ -12,12 +17,6 @@ export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 # Atuin
 [[ -d "$HOME/.atuin/bin" ]] && export PATH="$HOME/.atuin/bin:$PATH"
-
-# Mise
-command -v mise &>/dev/null && eval "$(mise activate zsh)"
-
-# Direnv
-command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
 
 # Cargo
 [[ -d "$HOME/.cargo/bin" ]] && export PATH="$HOME/.cargo/bin:$PATH"
@@ -58,6 +57,18 @@ export FORGIT_STASH_FZF_OPTS='
   --bind="alt-d:reload(git stash drop $(cut -d: -f1 <<<{}) 1>/dev/null && git stash list)"
   --header="enter:show | alt-p:pop | alt-a:apply | alt-d:drop | ctrl-y:copy ref"
 '
+
+# =====================================================
+# Interactive-only section
+# (aliases, completions, prompts, hooks)
+# =====================================================
+[[ -o interactive ]] || return
+
+# --- Mise (interactive shell hooks) ---
+command -v mise &>/dev/null && eval "$(mise activate zsh)"
+
+# --- Direnv (interactive shell hooks) ---
+command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
 
 # --- Completion Init (cached: full rebuild once per 24h) ---
 autoload -Uz compinit
