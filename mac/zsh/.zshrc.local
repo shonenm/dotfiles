@@ -1,5 +1,8 @@
 # Mac-specific zsh configuration
 
+# Skip for non-interactive shells
+[[ -o interactive ]] || return
+
 # --- Mac Tools Init ---
 command -v sheldon &>/dev/null && eval "$(sheldon source)"
 command -v atuin &>/dev/null && eval "$(atuin init zsh)"

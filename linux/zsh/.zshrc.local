@@ -2,9 +2,13 @@
 
 # --- TERM fallback for SSH connections ---
 # When connecting via SSH with unsupported TERM (e.g., xterm-ghostty)
+# Note: This runs before interactive check as it's needed for non-interactive SSH
 if [[ -n "$SSH_CONNECTION" ]] && ! infocmp "$TERM" &>/dev/null; then
   export TERM=xterm-256color
 fi
+
+# Skip for non-interactive shells
+[[ -o interactive ]] || return
 
 # --- Linux Tools Init ---
 command -v sheldon &>/dev/null && eval "$(sheldon source)"
