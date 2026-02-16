@@ -241,18 +241,9 @@ get_webhook() {
     WORKSPACE=""
     WORKSPACE_MAP_FILE="/tmp/claude_workspace_map.json"
     if [[ -f "$WORKSPACE_MAP_FILE" ]]; then
-      # 環境キーを生成
-      if [[ -n "${TMUX:-}" ]]; then
-        MAP_ENV_KEY="tmux_$(tmux display-message -p '#S_#I' 2>/dev/null)"
-      elif [[ -n "${VSCODE_PID:-}" ]]; then
-        MAP_ENV_KEY="vscode_${VSCODE_PID}"
-      else
-        MAP_ENV_KEY=""
-      fi
-
-      if [[ -n "$MAP_ENV_KEY" ]]; then
-        WORKSPACE=$(jq -r --arg key "$MAP_ENV_KEY" '.[$key].workspace // empty' "$WORKSPACE_MAP_FILE" 2>/dev/null)
-      fi
+      MAP_ENV_KEY=$(git -C "$CWD" rev-parse --show-toplevel 2>/dev/null)
+      [[ -z "$MAP_ENV_KEY" ]] && MAP_ENV_KEY="$CWD"
+      WORKSPACE=$(jq -r --arg key "$MAP_ENV_KEY" '.[$key].workspace // empty' "$WORKSPACE_MAP_FILE" 2>/dev/null)
     fi
 
     # tmux情報の取得（tmux内の場合のみ）

@@ -12,17 +12,14 @@ if [[ -z "$WORKSPACE" ]]; then
   exit 1
 fi
 
-# Generate environment key based on current context
+# Generate environment key based on git workspace
 generate_env_key() {
-  if [[ -n "${TMUX:-}" ]]; then
-    echo "tmux_$(tmux display-message -p '#S_#I' 2>/dev/null)"
-  elif [[ -n "${VSCODE_PID:-}" ]]; then
-    echo "vscode_${VSCODE_PID}"
+  local toplevel
+  toplevel=$(git rev-parse --show-toplevel 2>/dev/null)
+  if [[ -n "$toplevel" ]]; then
+    echo "$toplevel"
   else
-    # Fallback: use TTY
-    local tty_name
-    tty_name=$(tty 2>/dev/null | sed 's/\/dev\///' | tr '/' '_' || echo "unknown")
-    echo "tty_${tty_name}"
+    pwd
   fi
 }
 
