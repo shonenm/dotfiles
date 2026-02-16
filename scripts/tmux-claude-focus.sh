@@ -29,7 +29,7 @@ start_clear_timer() {
   if [[ -f "$FOCUS_STATE_FILE" ]]; then
     local prev_pid
     prev_pid=$(cut -d: -f4 "$FOCUS_STATE_FILE" 2>/dev/null)
-    [[ -n "$prev_pid" ]] && kill "$prev_pid" 2>/dev/null || true
+    [[ -n "$prev_pid" ]] && { kill "$prev_pid" 2>/dev/null; wait "$prev_pid" 2>/dev/null; } || true
   fi
 
   local now
@@ -41,6 +41,7 @@ start_clear_timer() {
     clear_tmux_window "$session" "$window_index"
   ) &
   local timer_pid=$!
+  disown $timer_pid
 
   echo "${session}:${window_index}:${now}:${timer_pid}" > "$FOCUS_STATE_FILE"
 }
@@ -83,7 +84,7 @@ if [[ -f "$FOCUS_STATE_FILE" ]]; then
   [[ "$prev_session" == "$SESSION" && "$prev_window" == "$WINDOW_INDEX" ]] && exit 0
 
   # 前回のタイマーをキャンセル
-  [[ -n "$prev_pid" ]] && kill "$prev_pid" 2>/dev/null || true
+  [[ -n "$prev_pid" ]] && { kill "$prev_pid" 2>/dev/null; wait "$prev_pid" 2>/dev/null; } || true
 
   # 滞在時間を計算
   now=$(date +%s)
