@@ -95,6 +95,9 @@ Displays diff state from remote.
 Displays file count, added lines, and deleted lines for current changes (`git diff HEAD`).
 Custom module using `scripts/starship-git-diff.sh`.
 
+- `detect_folders = [".git"]` で git repo 判定（プロセス生成なし、fs チェックのみ）
+- スクリプト内でパイプラインを使わず `$(git diff)` + while read で処理（タイムアウト時の孤児プロセス防止）
+
 ### Command Duration
 
 ```
@@ -158,9 +161,18 @@ Color changes based on previous command's exit code.
 ~/.config/starship.toml  ← dotfiles/common/starship/.config/starship.toml
 ```
 
+### Global Settings
+
+| 設定 | 値 | 備考 |
+|------|-----|------|
+| `command_timeout` | 1000ms | デフォルト 500ms → 1000ms。遅い git repo でのタイムアウト頻発を防止 |
+
 ### Structure
 
 ```toml
+# Global settings
+command_timeout = 1000
+
 # Format definition
 format = """
 $os\
