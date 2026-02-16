@@ -201,15 +201,10 @@ _claude_context() {
   # 手動マッピングからworkspaceを取得
   local map_file="/tmp/claude_workspace_map.json"
   if [[ -f "$map_file" ]]; then
-    local env_key=""
-    if [[ -n "$TMUX" ]]; then
-      env_key="tmux_${tmux_session}_${tmux_window}"
-    elif [[ -n "$VSCODE_PID" ]]; then
-      env_key="vscode_${VSCODE_PID}"
-    fi
-    if [[ -n "$env_key" ]]; then
-      workspace=$(jq -r --arg key "$env_key" '.[$key].workspace // ""' "$map_file" 2>/dev/null)
-    fi
+    local env_key
+    env_key=$(git rev-parse --show-toplevel 2>/dev/null)
+    [[ -z "$env_key" ]] && env_key="$PWD"
+    workspace=$(jq -r --arg key "$env_key" '.[$key].workspace // ""' "$map_file" 2>/dev/null)
   fi
 
   echo "{\"project\":\"$project\",\"device\":\"$device\",\"workspace\":\"$workspace\",\"tmux_session\":\"$tmux_session\",\"tmux_window\":\"$tmux_window\"}"

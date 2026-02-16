@@ -12,14 +12,11 @@ A system that visualizes Claude Code events (completion, approval pending, input
 
 ## Workspace-Based Architecture
 
-This system uses **workspace-based** notification management. Rather than trying to auto-detect which aerospace window you're running in (which is unreliable, especially with tmux's client/server model), you manually register your environment to a workspace using the `/beacon` command.
+This system uses **workspace-based** notification management. Rather than trying to auto-detect which aerospace window you're running in, you manually register your git repository to a workspace using the `/beacon` command.
 
 ### Why Manual Registration?
 
-CLI applications fundamentally cannot reliably determine which aerospace workspace they're running in because:
-- tmux uses a client/server model where multiple terminals can attach to the same session
-- Window IDs from aerospace are not directly accessible from within tmux/terminals
-- VS Code integrated terminals have their own process model
+Aerospace workspace numbers are not accessible from CLI applications — there is no reliable API to determine which workspace a terminal window belongs to.
 
 ### File Structure
 
@@ -62,7 +59,7 @@ Example:
 This saves a mapping in `/tmp/claude_workspace_map.json`:
 ```json
 {
-  "tmux_MAIN_1": {
+  "/Users/matsushimakouta/dotfiles": {
     "workspace": "3",
     "registered_at": "1768789301"
   }
@@ -71,14 +68,13 @@ This saves a mapping in `/tmp/claude_workspace_map.json`:
 
 ### How It Works
 
-1. **Environment Key**: Generated from tmux session/window (`tmux_SESSION_WINDOW`) or VS Code PID (`vscode_PID`)
+1. **Environment Key**: Generated from git repository root (`git rev-parse --show-toplevel`), with `pwd` as fallback for non-git directories
 2. **Priority**: Manual mapping is required for notifications to work correctly
 3. **Persistence**: Mapping persists until system restart (stored in /tmp)
 
 ### When to Use
 
-- When starting Claude in a new tmux window
-- When running Claude in VS Code integrated terminal
+- When starting Claude in a new git repository for the first time
 - Anytime you want notifications to appear on the correct workspace
 
 ## Supported Environments
@@ -296,7 +292,7 @@ claude-status.sh cleanup          # Delete items not updated for 1+ hours
 
 ### scripts/beacon.sh
 
-Manually registers the current environment (tmux window / VS Code) to an Aerospace workspace.
+Manually registers the current git repository to an Aerospace workspace.
 
 ```bash
 beacon.sh <workspace_number>
@@ -586,7 +582,7 @@ In Claude Code, use the `/beacon` command to manually map the current environmen
 Or run the script directly:
 
 ```bash
-# Register current tmux window to workspace 3
+# Register current git repository to workspace 3
 ~/dotfiles/scripts/beacon.sh 3
 
 # Check current mappings
