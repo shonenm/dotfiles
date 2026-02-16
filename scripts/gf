@@ -1,0 +1,103 @@
+#!/bin/bash
+# gf (git-flow) - Issue → PR サイクルを自動化するCLI
+set -euo pipefail
+
+# Colors for output
+readonly GREEN='\033[0;32m'
+readonly RED='\033[0;31m'
+readonly NC='\033[0m' # No Color
+
+success() { echo -e "${GREEN}✓${NC} $*"; }
+error() { echo -e "${RED}✗${NC} $*" >&2; exit 1; }
+
+# Check gh CLI is installed
+command -v gh &>/dev/null || error "gh CLI is not installed. Run: brew install gh"
+
+# Check we're in a git repository
+git rev-parse --git-dir &>/dev/null || error "Not in a git repository"
+
+case "${1:-}" in
+  start)
+    title="${*:2}"
+    [[ -z "$title" ]] && error "Usage: gf start <title>"
+
+    # Ensure we're on main/master and up to date
+    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+    current_branch=$(git branch --show-current)
+
+    if [[ "$current_branch" != "$default_branch" ]]; then
+      echo "Switching to $default_branch..."
+      git checkout "$default_branch"
+    fi
+
+    echo "Pulling latest changes..."
+    git pull --rebase
+
+    # Create Issue
+    issue_url=$(gh issue create --title "$title" --body "")
+    issue_num=$(echo "$issue_url" | grep -oE '[0-9]+$')
+
+    # Generate branch name (slugify title)
+    slug=$(echo "$title" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-' | head -c 50)
+    branch="${issue_num}-${slug}"
+
+    # Create and checkout branch
+    git checkout -b "$branch"
+
+    success "Created issue #$issue_num: $issue_url"
+    success "Switched to branch: $branch"
+    ;;
+
+  pr)
+    branch=$(git branch --show-current)
+    issue_num=$(echo "$branch" | grep -oE '^[0-9]+')
+    [[ -z "$issue_num" ]] && error "Branch name must start with issue number (e.g., 42-feature-name)"
+
+    # Ensure branch is pushed
+    if ! git ls-remote --exit-code --heads origin "$branch" &>/dev/null; then
+      echo "Pushing branch to origin..."
+      git push -u origin "$branch"
+    fi
+
+    # Get Issue title
+    title=$(gh issue view "$issue_num" --json title -q '.title')
+
+    # Create PR
+    pr_url=$(gh pr create --title "$title" --body "Closes #$issue_num")
+    success "Created PR: $pr_url"
+    ;;
+
+  done)
+    branch=$(git branch --show-current)
+    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+
+    [[ "$branch" == "$default_branch" ]] && { echo "Already on $default_branch"; exit 0; }
+
+    # Squash merge and delete branch
+    gh pr merge --squash --delete-branch
+
+    # Return to default branch and pull
+    git checkout "$default_branch"
+    git pull
+
+    success "Merged and cleaned up"
+    ;;
+
+  *)
+    cat <<EOF
+gf - Git Flow CLI for Issue → PR cycle
+
+Usage:
+  gf start <title>  Create Issue + branch, checkout
+  gf pr             Create PR from current branch
+  gf done           Squash merge PR, cleanup, return to main
+
+Examples:
+  gf start "Add logout button"
+  # ... make changes, commit ...
+  gf pr
+  # ... review PR ...
+  gf done
+EOF
+    ;;
+esac
