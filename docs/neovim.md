@@ -123,6 +123,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | solidity (custom)      | Solidity 開発支援 (LSP + treesitter + forge fmt) |
 | package-info.nvim      | package.json バージョン表示 (pnpm 対応) |
 | typst-preview.nvim     | Typst ブラウザプレビュー    |
+| fancy-cat (external)   | ターミナル内 PDF ビューア (Kitty graphics, hot-reload) |
 
 ### ターミナル・外部連携
 
@@ -299,6 +300,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── neotest.lua            # テストランナー設定 (4アダプター, monorepo対応)
 ├── overseer.lua           # タスクランナー設定 (タスク出力表示強化)
 ├── package-info.lua       # package.json バージョン表示 (pnpm)
+├── pdf.lua                # PDF ビューア (fancy-cat, tmux detach trick)
 ├── python-tools.lua       # Python ツール (Ruff + Mypy + basedpyright extraPaths)
 ├── rainbow-delimiters.lua # ブラケットペアカラー化
 ├── remote.lua             # リモート/コンテナ開発 (remote-nvim)
@@ -307,7 +309,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── solidity.lua           # Solidity 開発支援 (LSP, treesitter, forge fmt)
 ├── tiny-inline-diagnostic.lua # インライン診断表示 (virtual_text 置換)
 ├── tmux-navigator.lua     # tmux 連携設定
-├── typst.lua              # Typst LSP 設定 (Tinymist: exportPdf=onSave)
+├── typst.lua              # Typst LSP 設定 (Tinymist: exportPdf=onType)
 ├── typescript-enhanced.lua # vtsls 設定 (import preferences)
 └── dropbar.lua            # ブレッドクラムナビゲーション
 ```
@@ -483,12 +485,17 @@ DBUI 内での操作:
 
 詳細: [docs/database.md](database.md)
 
-### Typst
+### Typst / PDF
 
-| キー         | 動作                     |
-| ------------ | ------------------------ |
-| `<leader>cp` | Typst プレビュートグル   |
-| `<leader>cP` | メインファイルピン       |
+| キー         | 動作                                       |
+| ------------ | ------------------------------------------ |
+| `<leader>cp` | PDF プレビュー (fancy-cat, Typst ファイル用) |
+| `<leader>cP` | メインファイルピン                         |
+
+- Typst ファイルで `<leader>cp` → 対応する PDF を fancy-cat で開く
+- tmux 内: `tmux detach -E` で一時的に tmux を離脱し Ghostty の生ターミナルで fancy-cat を実行（Kitty graphics protocol 対応）、終了後に自動 reattach
+- tmux 外: fancy-cat を直接起動
+- fancy-cat 未インストール時は `open` (macOS) / `xdg-open` (Linux) にフォールバック
 
 ### パッケージ管理 (package.json)
 
