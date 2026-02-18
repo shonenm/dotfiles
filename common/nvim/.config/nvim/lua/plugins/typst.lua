@@ -5,7 +5,7 @@ return {
       servers = {
         tinymist = {
           settings = {
-            exportPdf = "onSave",
+            exportPdf = "onType",
             formatterMode = "typstyle",
           },
         },
