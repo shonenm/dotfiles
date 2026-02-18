@@ -20,6 +20,7 @@ brew "imagemagick"
 # --- Development ---
 brew "neovim"
 brew "typst"
+brew "fancy-cat"    # ターミナル内PDFビューア（Kitty graphics protocol）
 brew "lazygit"
 brew "trasta298/tap/keifu"
 brew "lazydocker"
