@@ -93,7 +93,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | ----------------- | ------------------------------------------- |
 | gitsigns.nvim     | Git 差分表示・hunk 操作・インライン blame   |
 | vim-fugitive      | Git コマンド統合                            |
-| codediff.nvim     | サイドバイサイド diff・履歴・stage・commit  |
+| codediff.nvim     | サイドバイサイド diff・履歴・stage・commit・マルチrepo |
 | git-conflict.nvim | コンフリクト解決支援                        |
 | telescope-repo    | リポジトリ/サブモジュール切替               |
 
@@ -140,9 +140,9 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 
 ### メディア
 
-| プラグイン | 役割                                            |
-| ---------- | ----------------------------------------------- |
-| image.nvim | ターミナル内画像表示（Kitty Graphics Protocol） |
+| プラグイン         | 役割                                                    |
+| ------------------ | ------------------------------------------------------- |
+| snacks.nvim (image)| ターミナル内画像表示（Kitty Graphics Protocol、SSH対応）|
 
 ### テスト
 
@@ -262,6 +262,7 @@ neotest は overseer.nvim と統合済み。テスト実行時の出力が overs
 | catppuccin       | tokyonight を使用         |
 | neotest-golang   | macOS で SIGKILL 発生     |
 | persistence.nvim | resession.nvim に置き換え |
+| image.nvim       | snacks.nvim image に置き換え |
 
 ## カスタム設定ファイル
 
@@ -286,7 +287,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── graphql.lua            # GraphQL LSP + treesitter
 ├── hlchunk.lua            # インデントガイド設定
 ├── hlslens.lua            # 検索マッチ表示設定
-├── image.lua              # 画像表示設定
+├── image.lua              # 画像表示設定（snacks.nvim image、SSH対応）
 ├── kulala.lua             # HTTP クライアント設定
 ├── lint.lua               # CSpell リンター設定 (HINT severity, mise で自動インストール)
 ├── lualine.lua            # ステータスライン強化 (リポジトリ全体diff, Copilot, LSP名)
@@ -382,7 +383,7 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | ------------ | -------------------------------- |
 | `<leader>gs` | Git status                       |
 | `<leader>gb` | Git blame                        |
-| `<leader>gd` | CodeDiff 開く                    |
+| `<leader>gd` | CodeDiff 開く（マルチrepo自動検出） |
 | `<leader>gf` | ファイル履歴                     |
 | `<leader>gF` | コミット履歴                     |
 | `<leader>gH` | GH Dash（GitHub Dashboard）      |
@@ -400,6 +401,8 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | `cc`    | Git commit (fugitive)         |
 | `ca`    | Git commit --amend            |
 | `R`     | エクスプローラー更新          |
+| `]r`    | 次のリポジトリタブへ          |
+| `[r`    | 前のリポジトリタブへ          |
 | `q`     | CodeDiff を閉じる             |
 
 **Diff ビュー内操作:**
@@ -416,6 +419,8 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | `<Tab>` | Explorer に戻る                            |
 
 `gs`/`gr` は gitsigns コマンド実行後に diff キャッシュを無効化し、仮想バッファ・実ファイルバッファ・diff 計算結果を自動再読み込みする。ビジュアルモードでの範囲選択にも対応。`gu` は staged diff view（HEAD vs `:0`）でカーソル位置のハンクを `git apply --reverse --cached` で個別 unstage する。
+
+`<leader>gd` はワークスペース内の全 git リポジトリ（parent・submodule・独立 clone）を自動探索し、変更のあるリポジトリごとに CodeDiff タブを開く。複数タブがある場合、ヘルプラインにリポジトリ一覧が表示され、`]r`/`[r` でタブ間を移動できる。
 
 stage/restore/reset 等で全ての変更が解消されると（unstaged・staged・conflicts がすべて空）、CodeDiff タブは自動的に閉じる。revision 比較・ファイル履歴では発動しない。
 
