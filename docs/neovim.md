@@ -122,6 +122,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | clangd_extensions.nvim | C/C++ 開発支援 (clangd) |
 | solidity (custom)      | Solidity 開発支援 (LSP + treesitter + forge fmt) |
 | package-info.nvim      | package.json バージョン表示 (pnpm 対応) |
+| typst-preview.nvim     | Typst ブラウザプレビュー    |
 
 ### ターミナル・外部連携
 
@@ -202,6 +203,7 @@ neotest は overseer.nvim と統合済み。テスト実行時の出力が overs
 | `lang.docker`        | Dockerfile/docker-compose LSP  |
 | `lang.git`           | git filetype treesitter        |
 | `lang.markdown`      | Markdown 強化                  |
+| `lang.typst`         | Typst (Tinymist LSP + typst-preview + typstyle) |
 
 ### フォーマッター・リンター
 
@@ -305,6 +307,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── solidity.lua           # Solidity 開発支援 (LSP, treesitter, forge fmt)
 ├── tiny-inline-diagnostic.lua # インライン診断表示 (virtual_text 置換)
 ├── tmux-navigator.lua     # tmux 連携設定
+├── typst.lua              # Typst LSP 設定 (Tinymist: exportPdf=onSave)
 ├── typescript-enhanced.lua # vtsls 設定 (import preferences)
 └── dropbar.lua            # ブレッドクラムナビゲーション
 ```
@@ -479,6 +482,13 @@ DBUI 内での操作:
 - `R`: リフレッシュ
 
 詳細: [docs/database.md](database.md)
+
+### Typst
+
+| キー         | 動作                     |
+| ------------ | ------------------------ |
+| `<leader>cp` | Typst プレビュートグル   |
+| `<leader>cP` | メインファイルピン       |
 
 ### パッケージ管理 (package.json)
 
