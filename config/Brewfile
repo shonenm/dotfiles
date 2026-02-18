@@ -19,6 +19,7 @@ brew "imagemagick"
 
 # --- Development ---
 brew "neovim"
+brew "typst"
 brew "lazygit"
 brew "trasta298/tap/keifu"
 brew "lazydocker"
