@@ -468,6 +468,35 @@ install_gh_extensions() {
   fi
 }
 
+install_fancy_cat() {
+  if command_exists fancy-cat; then
+    log_success "fancy-cat already installed"
+    return
+  fi
+
+  # fancy-cat は Zig プロジェクトのため、ビルドに Zig が必要
+  local zig_cmd=""
+  if command_exists zig; then
+    zig_cmd="zig"
+  else
+    log_warn "fancy-cat: zig not found, skipping (install zig to enable: mise use -g zig)"
+    return
+  fi
+
+  log_info "Building fancy-cat from source..."
+  local build_dir="/tmp/fancy-cat-build"
+  rm -rf "$build_dir"
+  git clone --recursive https://github.com/freref/fancy-cat.git "$build_dir"
+  (
+    cd "$build_dir"
+    $zig_cmd build --release=small
+  )
+  mkdir -p "$HOME/.local/bin"
+  mv "$build_dir/zig-out/bin/fancy-cat" "$HOME/.local/bin/"
+  rm -rf "$build_dir"
+  log_success "fancy-cat installed to ~/.local/bin"
+}
+
 # --- Main Execution ---
 
 check_requirements
@@ -476,6 +505,7 @@ install_modern_tools
 install_npm_packages
 link_ai_scripts
 install_gh_extensions
+install_fancy_cat
 install_1password_cli
 check_1password
 set_default_shell
