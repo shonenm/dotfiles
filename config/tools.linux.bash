@@ -277,6 +277,13 @@ TOOL_grex_archive_pattern='grex-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
 TOOL_grex_binary_path='grex'
 TOOL_grex_arch_map='x86_64:x86_64 aarch64:aarch64'
 
+TOOL_typst_check_cmd="typst"
+TOOL_typst_method="github_release"
+TOOL_typst_github_repo="typst/typst"
+TOOL_typst_archive_pattern='typst-${ARCH}-unknown-linux-musl.tar.xz'
+TOOL_typst_binary_path='typst-${ARCH}-unknown-linux-musl/typst'
+TOOL_typst_arch_map='x86_64:x86_64 aarch64:aarch64'
+
 TOOL_dblab_check_cmd="dblab"
 TOOL_dblab_method="github_release"
 TOOL_dblab_github_repo="danvergara/dblab"
@@ -323,7 +330,7 @@ LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
   starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
-  fzf fastfetch delta lazygit ghq dops yazi dblab
+  fzf fastfetch delta lazygit ghq dops yazi dblab typst
   just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex
   # APT-only (skipped on Alpine)
   gh neovim eza bat postgresql
