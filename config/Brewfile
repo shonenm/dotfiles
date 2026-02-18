@@ -14,6 +14,9 @@ brew "atuin"
 brew "zoxide"
 brew "stow"
 
+# --- Image Processing ---
+brew "imagemagick"
+
 # --- Development ---
 brew "neovim"
 brew "lazygit"

@@ -7,6 +7,12 @@ if [[ -n "$SSH_CONNECTION" ]] && ! infocmp "$TERM" &>/dev/null; then
   export TERM=xterm-256color
 fi
 
+# snacks.nvim: force Ghostty detection over SSH+tmux
+# tmux masks $TERM_PROGRAM so snacks.nvim cannot auto-detect Ghostty
+if [[ -n "$SSH_CONNECTION" ]]; then
+  export SNACKS_GHOSTTY=true
+fi
+
 # Skip for non-interactive shells
 [[ -o interactive ]] || return
 
