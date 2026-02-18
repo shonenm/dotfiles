@@ -6,7 +6,7 @@ return {
   dependencies = { "MunifTanjim/nui.nvim" },
   cmd = { "CodeDiff" },
   keys = {
-    { "<leader>gd", "<cmd>CodeDiff<cr>", desc = "CodeDiff Open" },
+    { "<leader>gd", desc = "CodeDiff Open" },  -- lazy-load trigger; actual mapping set in config()
     { "<leader>gf", "<cmd>CodeDiff history %<cr>", desc = "File History" },
     { "<leader>gF", "<cmd>CodeDiff history<cr>", desc = "Commit History" },
   },
@@ -696,6 +696,9 @@ return {
       end, 150)
     end
 
+    -- Forward declarations for multi-repo navigation (defined in multi-repo section below)
+    local goto_next_repo_tab, goto_prev_repo_tab, get_repo_tab_info, set_tab_label
+
     -- Auto-select file on cursor move (j/k updates diff with debounce)
     local keymaps = require("codediff.ui.explorer.keymaps")
     local orig_setup = keymaps.setup
@@ -793,6 +796,29 @@ return {
           help_lines = explorer_help_lines
         end
 
+        -- Add repo navigation line when multiple repo tabs exist
+        local repo_info = get_repo_tab_info and get_repo_tab_info()
+        if repo_info and repo_info.total > 1 then
+          -- Build repo list: highlight current, dim others
+          local repo_line = {}
+          for i, info in ipairs(repo_info.repos) do
+            if i > 1 then
+              repo_line[#repo_line + 1] = { "  ", "Normal" }
+            end
+            if info.current then
+              repo_line[#repo_line + 1] = { info.name, "Title" }
+            else
+              repo_line[#repo_line + 1] = { info.name, "Comment" }
+            end
+          end
+          -- Copy base help_lines and append repo line
+          help_lines = vim.deepcopy(help_lines)
+          help_lines[#help_lines + 1] = repo_line
+          help_lines[#help_lines + 1] = {
+            { "[", "Special" }, { "]r", "Normal" }, { "/", "Special" }, { "[r", "Normal" }, { "]", "Special" }, { " repo", "Normal" },
+          }
+        end
+
         vim.api.nvim_buf_clear_namespace(bufnr, help_ns, 0, -1)
         vim.api.nvim_buf_set_extmark(bufnr, help_ns, target_line, 0, {
           virt_lines = help_lines,
@@ -808,9 +834,9 @@ return {
         return result
       end
 
-      -- WinEnter/BufEnter でヘルプ内容を切り替え（diffview <-> explorer）
-      -- BufEnterも併用することでより確実にヘルプを更新
-      vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter" }, {
+      -- WinEnter/BufEnter/TabEnter でヘルプ内容を切り替え
+      -- TabEnter: マルチrepoタブ切替時にrepo一覧を更新
+      vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter", "TabEnter" }, {
         callback = function()
           if not vim.api.nvim_buf_is_valid(explorer.bufnr) then return end
           if not vim.api.nvim_win_is_valid(explorer.winid) then return end
@@ -832,6 +858,12 @@ return {
 
       -- キーマップ追加
       local map_opts = { buffer = explorer.bufnr, noremap = true, silent = true, nowait = true }
+      vim.keymap.set("n", "]r", function()
+        if goto_next_repo_tab then goto_next_repo_tab() end
+      end, vim.tbl_extend("force", map_opts, { desc = "Next repo tab" }))
+      vim.keymap.set("n", "[r", function()
+        if goto_prev_repo_tab then goto_prev_repo_tab() end
+      end, vim.tbl_extend("force", map_opts, { desc = "Prev repo tab" }))
       vim.keymap.set("n", "q", function()
         vim.cmd("tabclose")
       end, vim.tbl_extend("force", map_opts, { desc = "Close CodeDiff" }))
@@ -1062,10 +1094,315 @@ return {
             vim.api.nvim_set_current_win(session2.explorer.winid)
           end
         end, vim.tbl_extend("force", map_opts, { desc = "Focus sidebar" }))
+        vim.keymap.set("n", "]r", function()
+          if goto_next_repo_tab then goto_next_repo_tab() end
+        end, vim.tbl_extend("force", map_opts, { desc = "Next repo tab" }))
+        vim.keymap.set("n", "[r", function()
+          if goto_prev_repo_tab then goto_prev_repo_tab() end
+        end, vim.tbl_extend("force", map_opts, { desc = "Prev repo tab" }))
 
         diffview_initialized[ev.buf] = true
       end,
     })
+
+    -- =====================================================================
+    -- Multi-repo CodeDiff: open all repos with changes in separate tabs
+    -- =====================================================================
+
+    --- Get info about all repo tabs (for help line display and navigation)
+    ---@return { total: number, current_index: number, repos: { name: string, current: boolean }[] }|nil
+    get_repo_tab_info = function()
+      local tabs = vim.api.nvim_list_tabpages()
+      local current_tab = vim.api.nvim_get_current_tabpage()
+      local repos = {}
+      for _, tab in ipairs(tabs) do
+        local ok, name = pcall(vim.api.nvim_tabpage_get_var, tab, "codediff_repo_name")
+        if ok then
+          repos[#repos + 1] = { name = name, current = tab == current_tab, tabpage = tab }
+        end
+      end
+      if #repos <= 1 then return nil end
+      local current_index = 0
+      for i, r in ipairs(repos) do
+        if r.current then current_index = i end
+      end
+      return { total = #repos, current_index = current_index, repos = repos }
+    end
+
+    --- Navigate to next repo tab
+    goto_next_repo_tab = function()
+      local info = get_repo_tab_info()
+      if not info then return end
+      local next_index = (info.current_index % info.total) + 1
+      vim.api.nvim_set_current_tabpage(info.repos[next_index].tabpage)
+    end
+
+    --- Navigate to previous repo tab
+    goto_prev_repo_tab = function()
+      local info = get_repo_tab_info()
+      if not info then return end
+      local prev_index = ((info.current_index - 2) % info.total) + 1
+      vim.api.nvim_set_current_tabpage(info.repos[prev_index].tabpage)
+    end
+
+    --- Discover all git repos in workspace (parent + submodules + independent clones)
+    ---@param workspace_root string Absolute path to workspace root
+    ---@param callback fun(repo_roots: string[]) Called with deduplicated list of repo roots
+    local function discover_repos(workspace_root, callback)
+      local repos = {}
+      local pending = 3
+
+      local function on_complete()
+        pending = pending - 1
+        if pending == 0 then
+          callback(vim.tbl_keys(repos))
+        end
+      end
+
+      -- 1. Parent repo
+      vim.system(
+        { "git", "rev-parse", "--show-toplevel" },
+        { cwd = workspace_root, text = true },
+        function(obj)
+          if obj.code == 0 and obj.stdout then
+            repos[vim.trim(obj.stdout)] = true
+          end
+          on_complete()
+        end
+      )
+
+      -- 2. Submodules
+      vim.system(
+        { "git", "submodule", "foreach", "--recursive", "--quiet", "echo $toplevel/$sm_path" },
+        { cwd = workspace_root, text = true },
+        function(obj)
+          if obj.code == 0 and obj.stdout then
+            for line in obj.stdout:gmatch("[^\n]+") do
+              local path = vim.trim(line)
+              if path ~= "" then
+                repos[path] = true
+              end
+            end
+          end
+          on_complete()
+        end
+      )
+
+      -- 3. Independent clones (find .git directories, depth-limited)
+      vim.system(
+        { "find", workspace_root, "-maxdepth", "4", "-name", ".git", "-type", "d" },
+        { text = true },
+        function(obj)
+          if obj.code == 0 and obj.stdout then
+            for line in obj.stdout:gmatch("[^\n]+") do
+              local git_dir = vim.trim(line)
+              if git_dir ~= "" then
+                repos[vim.fn.fnamemodify(git_dir, ":h")] = true
+              end
+            end
+          end
+          on_complete()
+        end
+      )
+    end
+
+    --- Check if a repo has any changes
+    ---@param repo_root string
+    ---@param callback fun(has_changes: boolean)
+    local function check_repo_has_changes(repo_root, callback)
+      vim.system(
+        { "git", "status", "--porcelain" },
+        { cwd = repo_root, text = true },
+        function(obj)
+          callback(obj.code == 0 and obj.stdout ~= nil and vim.trim(obj.stdout) ~= "")
+        end
+      )
+    end
+
+    --- Open CodeDiff for a specific repo root (replicates commands.lua handle_explorer pattern)
+    ---@param repo_root string
+    ---@param callback fun()? Called after tab is created
+    local function open_codediff_for_repo(repo_root, callback)
+      local git = require("codediff.core.git")
+
+      git.get_status(repo_root, function(err, status_result)
+        if err then
+          vim.schedule(function()
+            if callback then callback() end
+          end)
+          return
+        end
+
+        local has_conflicts = status_result.conflicts and #status_result.conflicts > 0
+        if #status_result.unstaged == 0 and #status_result.staged == 0 and not has_conflicts then
+          vim.schedule(function()
+            if callback then callback() end
+          end)
+          return
+        end
+
+        vim.schedule(function()
+          local view = require("codediff.ui.view")
+
+          ---@type SessionConfig
+          local session_config = {
+            mode = "explorer",
+            git_root = repo_root,
+            original_path = "",
+            modified_path = "",
+            original_revision = nil,
+            modified_revision = nil,
+            explorer_data = {
+              status_result = status_result,
+            },
+          }
+
+          view.create(session_config, "")
+          vim.cmd("tcd " .. vim.fn.fnameescape(repo_root))
+
+          -- Set tab label immediately after tab creation (before vim.schedule'd help line render)
+          local tabpage = vim.api.nvim_get_current_tabpage()
+          set_tab_label(tabpage, repo_root)
+
+          if callback then callback() end
+        end)
+      end)
+    end
+
+    -- Tab labeling for multi-repo CodeDiff
+    local custom_tabline_active = false
+    local saved_tabline = nil
+
+    ---@param tabpage number
+    ---@param repo_root string
+    set_tab_label = function(tabpage, repo_root)
+      local name = vim.fn.fnamemodify(repo_root, ":t")
+      vim.api.nvim_tabpage_set_var(tabpage, "codediff_repo_name", name)
+    end
+
+    local function codediff_tabline()
+      local tabs = vim.api.nvim_list_tabpages()
+      local current_tab = vim.api.nvim_get_current_tabpage()
+      local parts = {}
+
+      for i, tab in ipairs(tabs) do
+        local hl = tab == current_tab and "%#TabLineSel#" or "%#TabLine#"
+        local label
+        local ok, repo_name = pcall(vim.api.nvim_tabpage_get_var, tab, "codediff_repo_name")
+        if ok and repo_name then
+          label = "  " .. repo_name .. " "
+        else
+          label = " " .. i .. " "
+        end
+        parts[#parts + 1] = hl .. "%" .. i .. "T" .. label
+      end
+
+      parts[#parts + 1] = "%#TabLineFill#%T"
+      return table.concat(parts)
+    end
+
+    _G._codediff_tabline = codediff_tabline
+
+    local function activate_custom_tabline()
+      if not custom_tabline_active then
+        saved_tabline = vim.o.tabline
+        vim.o.tabline = "%!v:lua._codediff_tabline()"
+        custom_tabline_active = true
+      end
+    end
+
+    local function maybe_restore_tabline()
+      if not custom_tabline_active then return end
+      for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+        local ok = pcall(vim.api.nvim_tabpage_get_var, tab, "codediff_repo_name")
+        if ok then return end
+      end
+      vim.o.tabline = saved_tabline or ""
+      custom_tabline_active = false
+    end
+
+    vim.api.nvim_create_autocmd("TabClosed", {
+      callback = function()
+        vim.schedule(maybe_restore_tabline)
+      end,
+    })
+
+    --- Open CodeDiff tabs for all repos with changes in the workspace
+    local function open_all_repos_with_changes()
+      local current_file = vim.api.nvim_buf_get_name(0)
+      local workspace_dir = current_file ~= "" and vim.fn.fnamemodify(current_file, ":h") or vim.fn.getcwd()
+
+      vim.system(
+        { "git", "rev-parse", "--show-toplevel" },
+        { cwd = workspace_dir, text = true },
+        function(obj)
+          local workspace_root = obj.code == 0 and obj.stdout and vim.trim(obj.stdout) or vim.fn.getcwd()
+
+          discover_repos(workspace_root, function(repo_roots)
+            if #repo_roots == 0 then
+              vim.schedule(function()
+                vim.notify("No git repositories found", vim.log.levels.INFO)
+              end)
+              return
+            end
+
+            -- Check all repos for changes in parallel
+            local repos_with_changes = {}
+            local check_pending = #repo_roots
+
+            for _, root in ipairs(repo_roots) do
+              check_repo_has_changes(root, function(has_changes)
+                if has_changes then
+                  repos_with_changes[#repos_with_changes + 1] = root
+                end
+                check_pending = check_pending - 1
+                if check_pending == 0 then
+                  vim.schedule(function()
+                    if #repos_with_changes == 0 then
+                      vim.notify("No repositories with changes", vim.log.levels.INFO)
+                      return
+                    end
+
+                    -- Sort: parent repo first, then alphabetically
+                    table.sort(repos_with_changes, function(a, b)
+                      if a == workspace_root then return true end
+                      if b == workspace_root then return false end
+                      return a < b
+                    end)
+
+                    -- Open tabs sequentially to avoid race conditions
+                    local opened_count = 0
+                    local function open_next(index)
+                      if index > #repos_with_changes then
+                        if opened_count > 1 then
+                          activate_custom_tabline()
+                        end
+                        vim.notify(
+                          string.format("CodeDiff: %d repo%s", opened_count, opened_count > 1 and "s" or ""),
+                          vim.log.levels.INFO
+                        )
+                        return
+                      end
+
+                      open_codediff_for_repo(repos_with_changes[index], function()
+                        opened_count = opened_count + 1
+                        vim.schedule(function()
+                          open_next(index + 1)
+                        end)
+                      end)
+                    end
+
+                    open_next(1)
+                  end)
+                end
+              end)
+            end
+          end)
+        end
+      )
+    end
+
+    vim.keymap.set("n", "<leader>gd", open_all_repos_with_changes, { desc = "CodeDiff Open" })
   end,
   },
 }
