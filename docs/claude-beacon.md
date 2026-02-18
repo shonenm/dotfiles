@@ -581,6 +581,30 @@ In Claude Code, use the `/beacon` command to manually map the current environmen
 
 Or run the script directly:
 
+### Git Commit (Claude Code)
+
+The `/commit` skill creates commits with proper message formatting:
+
+```bash
+/commit                      # Session changes only
+/commit all                  # All uncommitted changes
+/commit src/                 # Session changes in src/ only
+/commit all src/             # All changes in src/
+/commit file.ts utils.ts     # Specific files (session)
+/commit all common/nvim/     # All changes in directory
+```
+
+Commit message format: `prefix(scope): description`
+
+| Prefix | Usage |
+|--------|-------|
+| `feat` | New feature |
+| `imprv` | Enhancement |
+| `fix` | Bug fix |
+| `rfac` | Refactoring |
+| `docs` | Documentation |
+| `chore` | Build/CI/misc |
+
 ```bash
 # Register current git repository to workspace 3
 ~/dotfiles/scripts/beacon.sh 3
@@ -683,12 +707,11 @@ dotfiles/
 │       └── claude.sh               # SketchyBar plugin (workspace-based)
 ├── common/tmux/.config/tmux/
 │   └── claude-hooks.tmux           # tmux hooks configuration
+├── common/claude/.claude/skills/   # Claude Code skills (stow managed)
+│   ├── beacon/skill.md             # /beacon workspace registration
+│   ├── commit/skill.md             # /commit git commit (all, <path> support)
+│   └── update-md/skill.md          # /update-md documentation update
 ├── templates/
-│   ├── claude-skills/
-│   │   ├── beacon/
-│   │   │   └── SKILL.md            # /beacon skill template
-│   │   └── commit/
-│   │       └── SKILL.md            # /commit skill template
 │   └── com.user.claude-status-watch.plist  # launchd template
 └── docs/
     └── claude-beacon.md            # This documentation
@@ -697,8 +720,10 @@ dotfiles/
 ## Related Configuration
 
 - `~/.claude/settings.json` - Claude Code hooks configuration
-- `~/.claude/skills/beacon/` - Generated skill for workspace registration
-- `~/.claude/skills/commit/` - Generated skill for git commit
+- `~/.claude/skills/` → `~/dotfiles/common/claude/.claude/skills/` (stow symlink)
+  - `beacon/` - Workspace registration skill
+  - `commit/` - Git commit skill (supports `all` and `<path>` arguments)
+  - `update-md/` - Documentation update skill
 - `~/.local/share/ai-notify/` - Webhook cache
 - `/tmp/claude_status/` - State files
 - `/tmp/claude_workspace_map.json` - Workspace mappings

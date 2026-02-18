@@ -29,7 +29,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | snacks.nvim              | ユーティリティ集（ファイルピッカー等） |
 | hlchunk.nvim                | インデントガイド・チャンクハイライト    |
 | nvim-hlslens                | 検索マッチ数・位置表示                  |
-| nvim-scrollbar              | スクロールバー・診断/Git マーカー       |
+| nvim-scrollbar              | スクロールバー・診断/Git マーカー（高視認性設定） |
 | treesitter-context          | 関数/クラスコンテキスト表示             |
 | rainbow-delimiters.nvim     | ブラケットペアカラー化                  |
 | dropbar.nvim                | VS Code風ブレッドクラムナビゲーション（cwd相対パス表示） |
