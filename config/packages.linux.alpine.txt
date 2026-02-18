@@ -20,3 +20,4 @@ fastfetch
 tealdeer
 dust
 bottom
+imagemagick

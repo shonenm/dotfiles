@@ -11,3 +11,4 @@ ripgrep
 fd-find
 rsync
 luarocks
+imagemagick
