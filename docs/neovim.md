@@ -35,6 +35,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | dropbar.nvim                | VS Code風ブレッドクラムナビゲーション（cwd相対パス表示） |
 | tiny-inline-diagnostic.nvim | インライン診断表示（ERROR/WARN/INFO のみ） |
 | snacks.scroll               | スムーズスクロール（無効化：長押し時に重い問題） |
+| wrapped.nvim                | Neovim 使用統計ダッシュボード                    |
 
 ### エディタ機能
 
@@ -311,7 +312,8 @@ common/nvim/.config/nvim/lua/plugins/
 ├── tmux-navigator.lua     # tmux 連携設定
 ├── typst.lua              # Typst LSP 設定 (Tinymist: exportPdf=onType)
 ├── typescript-enhanced.lua # vtsls 設定 (import preferences)
-└── dropbar.lua            # ブレッドクラムナビゲーション
+├── dropbar.lua            # ブレッドクラムナビゲーション
+└── wrapped.lua            # Neovim 使用統計ダッシュボード
 ```
 
 ## キーバインド
