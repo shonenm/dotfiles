@@ -11,6 +11,7 @@ upstream で修正され次第、該当パッチを削除する。
 | codediff.nvim | 同名ディレクトリの折りたたみ状態共有 | active | 2026-02-06 | [詳細](./codediff-directory-collapse.md) |
 | codediff.nvim | 外部プラグインとの競合エラー | active | 2026-02-10 | [詳細](./codediff-eventignore-wrapper.md) |
 | codediff.nvim | パフォーマンス最適化 | active | 2026-02-10 | [詳細](./codediff-performance.md) |
+| codediff.nvim | Conflict view 3-way ↔ inline toggle | active | 2026-02-23 | [詳細](./codediff-conflict-inline-toggle.md) |
 
 ## パッチ追加時のテンプレート
 

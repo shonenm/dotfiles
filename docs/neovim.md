@@ -441,8 +441,11 @@ stage/restore/reset 等で全ての変更が解消されると（unstaged・stag
 | `c0`  | Choose none（両方削除）  |
 | `]x`  | 次のコンフリクトへ       |
 | `[x`  | 前のコンフリクトへ       |
+| `cv`  | 3-way ↔ inline 切替     |
 
 コンフリクトがあるファイルを diffview で表示中、ヘルプラインにこれらのキーマップが表示される。
+
+`cv` で 3-way ビュー（theirs | ours | result）と inline ビュー（1 ペインに conflict マーカー付き）を切り替え可能。inline ビューでは git-conflict.nvim がマーカーを検出・ハイライトし、`co`/`ct`/`cb`/`c0` で個別解決できる。inline モード中に explorer で別ファイルを選択すると自動的に 3-way に復帰する。
 
 **ファイル一覧の表示形式:**
 ```
