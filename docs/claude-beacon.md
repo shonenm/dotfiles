@@ -711,6 +711,11 @@ dotfiles/
 │   ├── beacon/skill.md             # /beacon workspace registration
 │   ├── commit/skill.md             # /commit git commit (all, <path> support)
 │   └── update-md/skill.md          # /update-md documentation update
+├── common/claude/.claude/rules/    # Global rules (stow managed)
+│   ├── problem-solving.md          # Root cause first, research best practices
+│   ├── implementation.md           # Scope control, no over-engineering
+│   ├── communication.md            # Japanese responses, no emoji
+│   └── autonomy.md                 # Confirm before running scripts/push
 ├── templates/
 │   └── com.user.claude-status-watch.plist  # launchd template
 └── docs/
@@ -724,6 +729,11 @@ dotfiles/
   - `beacon/` - Workspace registration skill
   - `commit/` - Git commit skill (supports `all` and `<path>` arguments)
   - `update-md/` - Documentation update skill
+- `~/.claude/rules/` → `~/dotfiles/common/claude/.claude/rules/` (stow symlink)
+  - `problem-solving.md` - Root cause analysis, best practices research
+  - `implementation.md` - Scope control, no over-engineering
+  - `communication.md` - Japanese responses, no emoji
+  - `autonomy.md` - Confirm before running scripts/push
 - `~/.local/share/ai-notify/` - Webhook cache
 - `/tmp/claude_status/` - State files
 - `/tmp/claude_workspace_map.json` - Workspace mappings
