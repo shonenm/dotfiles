@@ -4,7 +4,13 @@ description: 自律的反復開発ループを開始します。完了条件を�
 user-invocable: true
 disable-model-invocation: true
 arguments: "<prompt>"
+allowed-tools: Bash, Read, Write, Edit, MultiEdit, Glob, Grep, Task, WebFetch, WebSearch
 hooks:
+  PreToolUse:
+    - matcher: "AskUserQuestion|EnterPlanMode"
+      hooks:
+        - type: command
+          command: "echo '{\"decision\":\"block\",\"reason\":\"Ralph autonomous mode. Do not ask questions — make your own judgment and proceed.\"}' && exit 2"
   Stop:
     - hooks:
         - type: command
