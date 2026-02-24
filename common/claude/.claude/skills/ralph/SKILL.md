@@ -3,7 +3,7 @@ name: ralph
 description: 自律的反復開発ループを開始します。完了条件を満たすまで Claude が自動的に作業を繰り返します。
 user-invocable: true
 disable-model-invocation: true
-arguments: "<prompt> [--max-iterations N] [--promise TEXT]"
+arguments: "<prompt>"
 hooks:
   Stop:
     - hooks:
