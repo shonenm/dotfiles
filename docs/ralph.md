@@ -21,6 +21,14 @@ Ralph implements a self-driving development loop where Claude continues working 
 [SKILL.md] Create state file + start task
   |
   v
+Claude tries to use a tool
+  |
+  v
+[PreToolUse Hook]
+  +-- AskUserQuestion/EnterPlanMode -> block (exit 2)
+  +-- Other tools -> allow
+  |
+  v
 Claude works (Write/Edit)
   |                  |
   v                  v
@@ -73,6 +81,17 @@ Deletes the state file and stops the loop.
 Splits tasks and delegates to `ralph-worker` sub-agents running in isolated worktrees.
 
 ## How It Works
+
+### PreToolUse Hook (skill frontmatter inline)
+
+Blocks interactive tools that would break the autonomous loop:
+
+| Matcher | Action | Reason |
+|---------|--------|--------|
+| `AskUserQuestion` | `exit 2` (deny) | Prevents Claude from asking questions mid-loop |
+| `EnterPlanMode` | `exit 2` (deny) | Prevents Claude from entering plan mode |
+
+Defined inline in SKILL.md frontmatter (no external script). The `exit 2` convention causes Claude Code to deny the tool call and feed the JSON reason back to the model, prompting it to proceed autonomously.
 
 ### Stop Hook (`ralph-stop-hook.sh`)
 
@@ -139,6 +158,7 @@ dotfiles/
 
 - Hooks are defined in skill frontmatter (active only during skill execution, no `settings.json` changes needed)
 - `stop_hook_active` checked first: prevents infinite loops when Ralph state file is absent
+- Zero interaction via PreToolUse hook: `AskUserQuestion`/`EnterPlanMode` denied at hook level, guaranteeing no human interaction during loop
 - Backpressure via PostToolUse hook: deterministic quality gate, not a "please" in CLAUDE.md
 - Parallel execution via `isolation: worktree`: leverages official primitive, no manual worktree management
 - State files in `/tmp/ralph_<session_id>.json`: session-scoped, auto-cleaned on completion
