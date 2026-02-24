@@ -707,10 +707,18 @@ dotfiles/
 │       └── claude.sh               # SketchyBar plugin (workspace-based)
 ├── common/tmux/.config/tmux/
 │   └── claude-hooks.tmux           # tmux hooks configuration
+├── common/claude/.claude/hooks/    # Claude Code hooks (stow managed)
+│   ├── ralph-stop-hook.sh          # Ralph loop control (Stop hook)
+│   └── ralph-backpressure.sh       # Ralph type check/lint (PostToolUse hook)
 ├── common/claude/.claude/skills/   # Claude Code skills (stow managed)
-│   ├── beacon/skill.md             # /beacon workspace registration
-│   ├── commit/skill.md             # /commit git commit (all, <path> support)
-│   └── update-md/skill.md          # /update-md documentation update
+│   ├── beacon/SKILL.md             # /beacon workspace registration
+│   ├── commit/SKILL.md             # /commit git commit (all, <path> support)
+│   ├── update-md/SKILL.md          # /update-md documentation update
+│   ├── ralph/SKILL.md              # /ralph autonomous development loop
+│   ├── ralph-cancel/SKILL.md       # /ralph-cancel loop cancellation
+│   └── ralph-parallel/SKILL.md     # /ralph-parallel parallel execution
+├── common/claude/.claude/agents/   # Claude Code agents (stow managed)
+│   └── ralph-worker/ralph-worker.md  # Worktree-isolated worker agent
 ├── common/claude/.claude/rules/    # Global rules (stow managed)
 │   ├── problem-solving.md          # Root cause first, research best practices
 │   ├── implementation.md           # Scope control, no over-engineering
@@ -725,10 +733,18 @@ dotfiles/
 ## Related Configuration
 
 - `~/.claude/settings.json` - Claude Code hooks configuration
+- `~/.claude/hooks/` → `~/dotfiles/common/claude/.claude/hooks/` (stow symlink)
+  - `ralph-stop-hook.sh` - Ralph loop control
+  - `ralph-backpressure.sh` - Ralph type check/lint backpressure
 - `~/.claude/skills/` → `~/dotfiles/common/claude/.claude/skills/` (stow symlink)
   - `beacon/` - Workspace registration skill
   - `commit/` - Git commit skill (supports `all` and `<path>` arguments)
   - `update-md/` - Documentation update skill
+  - `ralph/` - Autonomous development loop
+  - `ralph-cancel/` - Loop cancellation
+  - `ralph-parallel/` - Parallel task execution
+- `~/.claude/agents/` → `~/dotfiles/common/claude/.claude/agents/` (stow symlink)
+  - `ralph-worker/` - Worktree-isolated worker agent
 - `~/.claude/rules/` → `~/dotfiles/common/claude/.claude/rules/` (stow symlink)
   - `problem-solving.md` - Root cause analysis, best practices research
   - `implementation.md` - Scope control, no over-engineering
