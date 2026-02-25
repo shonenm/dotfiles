@@ -98,6 +98,92 @@ claude mcp add --scope user tmux -- npx -y tmux-mcp
 4. 「tmux ペインのテスト結果を見て修正して」と指示
 5. Claude Code が diff を提示 → Neovim 内で accept/reject
 
+### Neovim 遠隔デバッグ（tmux 経由）
+
+Claude Code は Neovim の画面を直接見ることができない。tmux コマンドで Neovim を遠隔操作し、内部状態をファイルにダンプすることで、プラグインの不具合やレイアウト問題を調査できる。
+
+前提: Claude Code と Neovim が同一 tmux セッション内の別ペインで動作していること。
+
+#### ペイン特定
+
+```bash
+# Neovim が動いているペインを確認
+tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index} #{pane_current_command} #{pane_width}x#{pane_height}'
+# 例: 0:1.1 nvim 422x56
+```
+
+以降の例では Neovim ペインを `0:1.1` とする。
+
+#### 画面キャプチャ
+
+```bash
+# 現在の表示内容を取得
+tmux capture-pane -t 0:1.1 -p
+
+# 先頭/末尾のみ
+tmux capture-pane -t 0:1.1 -p | head -20
+tmux capture-pane -t 0:1.1 -p | tail -5
+```
+
+#### キー送信
+
+```bash
+# Normal モードのコマンド
+tmux send-keys -t 0:1.1 ':tabonly | enew | only' Enter
+
+# Leader キー（スペースの場合）
+tmux send-keys -t 0:1.1 ' gd'
+
+# INSERT モードから抜ける
+tmux send-keys -t 0:1.1 Escape
+```
+
+注意: INSERT モードや入力待ち状態だとキーが意図通り処理されない。先に `Escape` を送ること。
+
+#### 内部状態ダンプ
+
+Neovim の `:lua` コマンドでウィンドウ/バッファ/タブの状態をファイルに書き出し、Claude Code 側で読む。
+
+```bash
+# 全タブとウィンドウ数の一覧
+tmux send-keys -t 0:1.1 ':lua local tabs=vim.api.nvim_list_tabpages(); local lines={"tabs="..#tabs}; for i,t in ipairs(tabs) do local wins=vim.api.nvim_tabpage_list_wins(t); local cur=vim.api.nvim_get_current_tabpage()==t and " *" or ""; table.insert(lines, string.format("  [%d] id=%d wins=%d%s", i, t, #wins, cur)) end; vim.fn.writefile(lines, "/tmp/nvim_state.log")' Enter
+cat /tmp/nvim_state.log
+
+# 現在のタブのウィンドウ詳細（filetype, buffer name, サイズ）
+tmux send-keys -t 0:1.1 ':lua local t=vim.api.nvim_get_current_tabpage(); local wins=vim.api.nvim_tabpage_list_wins(t); local lines={}; for i,w in ipairs(wins) do local b=vim.api.nvim_win_get_buf(w); table.insert(lines, string.format("w%d buf=%d ft=%s %dx%d %s", i, b, vim.bo[b].filetype, vim.api.nvim_win_get_width(w), vim.api.nvim_win_get_height(w), vim.api.nvim_buf_get_name(b))) end; vim.fn.writefile(lines, "/tmp/nvim_state.log")' Enter
+cat /tmp/nvim_state.log
+```
+
+#### モンキーパッチによるトレース
+
+プラグイン関数の呼び出しをトレースするには、config 内でラッパー関数を差し込み、引数やコールスタックをファイルに書き出す。
+
+```lua
+-- config() 内に追記
+local target_mod = require("some.plugin.module")
+local orig_fn = target_mod.some_function
+target_mod.some_function = function(...)
+  local info = debug.getinfo(2, "Sl")
+  local f = io.open("/tmp/trace.log", "a")
+  if f then
+    f:write(string.format("[%s] some_function called from %s:%s\n",
+      os.date("%H:%M:%S"), info.short_src, tostring(info.currentline)))
+    f:close()
+  end
+  return orig_fn(...)
+end
+```
+
+注意: `vim.fn.writefile` は async コールバック内で使えない場合がある。`io.open` を使うこと。
+
+#### 典型的なデバッグフロー
+
+1. `tmux capture-pane` で現象を確認（レイアウト崩れ、不要なウィンドウ等）
+2. `:lua` ダンプでウィンドウ構成・filetype・buffer name を特定
+3. 必要に応じてモンキーパッチでトレースを仕込み、nvim を再起動
+4. `tmux send-keys` で操作を再現し、トレースログとキャプチャで原因を特定
+5. 修正後、デバッグコードを除去
+
 ## 既存機能との関係
 
 | 機能 | 関係 |
