@@ -67,6 +67,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | copilot.lua      | GitHub Copilot（インライン補完）      |
 | CopilotChat.nvim | Copilot Chat（対話型コードレビュー等）|
 | avante.nvim      | Claude AI 統合（対話型コーディング）  |
+| claudecode.nvim  | Claude Code CLI 連携（ACP protocol）  |
 
 ### LSP・構文解析
 
@@ -275,6 +276,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── alpha.lua              # スタートスクリーン設定
 ├── avante.lua             # Claude AI 統合 (avante.nvim)
 ├── buffer.lua             # バッファ管理 (mini.bufremove)
+├── claudecode.lua         # Claude Code CLI 連携 (ACP protocol, snacks terminal)
 ├── colorscheme.lua        # カラースキーム設定
 ├── copilot.lua            # Copilot 設定
 ├── dadbod.lua             # データベース (DBUI + pgcli/dblab toggleterm)
@@ -383,6 +385,9 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | `<leader>aa` | Avante: AI に質問    |
 | `<leader>ae` | Avante: コード編集   |
 | `<leader>ar` | Avante: リフレッシュ |
+| `<C-,>`      | Claude Code トグル   |
+| `<leader>Cs` | Claude Code に送信 (visual) |
+| `<leader>Cb` | バッファを Claude Code に追加 |
 
 ### Git / GitHub
 
