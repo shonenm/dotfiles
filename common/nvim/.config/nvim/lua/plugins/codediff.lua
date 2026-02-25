@@ -25,6 +25,49 @@ return {
     local refresh_mod = require("codediff.ui.explorer.refresh")
     local config_mod = require("codediff.config")
 
+    -- Monkey-patch: Fix conflict file auto-load causing unexpected horizontal split
+    -- When the first file in the status list is a conflict, codediff tries to load
+    -- a 3-way merge view which creates an unwanted horizontal split. Instead,
+    -- redirect the initial auto-load to the first non-conflict file.
+    local render_mod = require("codediff.ui.explorer.render")
+    local orig_render_create = render_mod.create
+    render_mod.create = function(status_result, git_root, tabpage, width, base_revision, target_revision, opts)
+      local explorer = orig_render_create(status_result, git_root, tabpage, width, base_revision, target_revision, opts)
+      if not explorer then return explorer end
+
+      -- Determine the best non-conflict file to auto-load
+      local autoload_file, autoload_group
+      if status_result then
+        if status_result.unstaged and #status_result.unstaged > 0 then
+          autoload_file, autoload_group = status_result.unstaged[1], "unstaged"
+        elseif status_result.staged and #status_result.staged > 0 then
+          autoload_file, autoload_group = status_result.staged[1], "staged"
+        end
+      end
+
+      -- Wrap on_file_select to intercept the initial auto-load only
+      local orig_on_file_select = explorer.on_file_select
+      local initial_done = false
+      explorer.on_file_select = function(file_data)
+        if not initial_done then
+          initial_done = true
+          if file_data and file_data.group == "conflicts" and autoload_file then
+            orig_on_file_select({
+              path = autoload_file.path,
+              old_path = autoload_file.old_path,
+              status = autoload_file.status,
+              git_root = git_root,
+              group = autoload_group,
+            })
+            return
+          end
+        end
+        orig_on_file_select(file_data)
+      end
+
+      return explorer
+    end
+
     -- Hunk count cache and functions
     local hunk_cache = {
       unstaged = {}, -- { [path] = count }
@@ -1265,12 +1308,19 @@ return {
             },
           }
 
+          -- Close snacks explorer before creating CodeDiff tab.
+          -- snacks.nvim replicates its managed layout into new tabs created
+          -- by vim.cmd("tabnew"), causing unwanted horizontal splits.
+          local Snacks = require("snacks")
+          local snacks_explorers = Snacks.picker.get({ source = "explorer", tab = false })
+          for _, p in ipairs(snacks_explorers) do
+            p:close()
+          end
+
           view.create(session_config, "")
           vim.cmd("tcd " .. vim.fn.fnameescape(repo_root))
 
-          -- Set tab label immediately after tab creation (before vim.schedule'd help line render)
-          local tabpage = vim.api.nvim_get_current_tabpage()
-          set_tab_label(tabpage, repo_root)
+          set_tab_label(vim.api.nvim_get_current_tabpage(), repo_root)
 
           if callback then callback() end
         end)
@@ -1338,13 +1388,14 @@ return {
     --- Open CodeDiff tabs for all repos with changes in the workspace
     local function open_all_repos_with_changes()
       local current_file = vim.api.nvim_buf_get_name(0)
-      local workspace_dir = current_file ~= "" and vim.fn.fnamemodify(current_file, ":h") or vim.fn.getcwd()
+      local cwd = vim.fn.getcwd()
+      local workspace_dir = current_file ~= "" and vim.fn.fnamemodify(current_file, ":h") or cwd
 
       vim.system(
         { "git", "rev-parse", "--show-toplevel" },
         { cwd = workspace_dir, text = true },
         function(obj)
-          local workspace_root = obj.code == 0 and obj.stdout and vim.trim(obj.stdout) or vim.fn.getcwd()
+          local workspace_root = obj.code == 0 and obj.stdout and vim.trim(obj.stdout) or cwd
 
           discover_repos(workspace_root, function(repo_roots)
             if #repo_roots == 0 then
