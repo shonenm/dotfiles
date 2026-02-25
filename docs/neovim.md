@@ -192,7 +192,7 @@ neotest は overseer.nvim と統合済み。テスト実行時の出力が overs
 
 | Extra                | 対象                           |
 | -------------------- | ------------------------------ |
-| `lang.typescript`    | TypeScript/JavaScript LSP      |
+| `lang.typescript`    | TypeScript/JavaScript (tsgo で LSP 上書き) |
 | `lang.json`          | JSON LSP + SchemaStore         |
 | `lang.tailwind`      | Tailwind CSS 補完・カラー表示  |
 | `lang.python`        | Python LSP (basedpyright)      |
@@ -311,7 +311,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── tiny-inline-diagnostic.lua # インライン診断表示 (virtual_text 置換)
 ├── tmux-navigator.lua     # tmux 連携設定
 ├── typst.lua              # Typst LSP 設定 (Tinymist: exportPdf=onType)
-├── typescript-enhanced.lua # vtsls 設定 (import preferences)
+├── typescript-enhanced.lua # tsgo (TypeScript 7 native LSP) + vtsls 無効化
 ├── dropbar.lua            # ブレッドクラムナビゲーション
 └── wrapped.lua            # Neovim 使用統計ダッシュボード
 ```
@@ -572,7 +572,7 @@ LazyVim デフォルトをベースに以下をカスタマイズ:
 | `lualine_y` | **LSP サーバー名**, encoding（非utf-8時のみ）, fileformat（非unix時のみ）, progress, location |
 
 - Copilot ステータスは ok=緑, pending=黄, error=赤 のアイコン表示（未ロード時は非表示）
-- LSP サーバー名は copilot を除外し、アクティブな言語サーバーのみ表示（例: `vtsls`, `basedpyright`）
+- LSP サーバー名は copilot を除外し、アクティブな言語サーバーのみ表示（例: `tsgo`, `basedpyright`）
 - リポジトリ全体の変更ファイル数・追加行・削除行を常時表示（30秒ごと + 保存時・フォーカス復帰時に更新）
 
 ## Inlay Hints
