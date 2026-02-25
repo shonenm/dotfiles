@@ -436,11 +436,7 @@ return {
     }
     local conflict_help_lines = {
       { { "[co]", "Special" }, { " ours  ", "Normal" }, { "[ct]", "Special" }, { " theirs  ", "Normal" }, { "[cb]", "Special" }, { " both  ", "Normal" }, { "[c0]", "Special" }, { " none", "Normal" } },
-      { { "[", "Special" }, { "]x", "Normal" }, { "/", "Special" }, { "[x", "Normal" }, { "]", "Special" }, { " conflict  ", "Normal" }, { "[cv]", "Special" }, { " inline  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
-    }
-    local inline_conflict_help_lines = {
-      { { "[co]", "Special" }, { " ours  ", "Normal" }, { "[ct]", "Special" }, { " theirs  ", "Normal" }, { "[cb]", "Special" }, { " both  ", "Normal" }, { "[c0]", "Special" }, { " none", "Normal" } },
-      { { "[", "Special" }, { "]x", "Normal" }, { "/", "Special" }, { "[x", "Normal" }, { "]", "Special" }, { " conflict  ", "Normal" }, { "[cv]", "Special" }, { " 3-way  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+      { { "[", "Special" }, { "]x", "Normal" }, { "/", "Special" }, { "[x", "Normal" }, { "]", "Special" }, { " conflict  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
 
     -- view.updateをラップしてeventignoreを設定
@@ -457,180 +453,6 @@ return {
 
       if not ok then error(result) end
       return result
-    end
-
-    -- =====================================================================
-    -- Conflict view toggle: 3-way ↔ inline
-    -- =====================================================================
-    local toggle_conflict_view -- forward declaration
-
-    local function switch_to_inline(tabpage)
-      local session_mod = require("codediff.ui.lifecycle.session")
-      local active_diffs = session_mod.get_active_diffs()
-      local session = active_diffs[tabpage]
-      if not session then return end
-
-      local original_win = session.original_win
-      local modified_win = session.modified_win
-      local result_win = session.result_win
-      if not original_win or not modified_win then return end
-      if not vim.api.nvim_win_is_valid(original_win) or not vim.api.nvim_win_is_valid(modified_win) then return end
-
-      local abs_path = session.git_root .. "/" .. session.original_path
-
-      -- Suppress cleanup autocmds during window closure
-      local eventignore_save = vim.o.eventignore
-      vim.o.eventignore = "WinClosed,BufEnter,WinEnter"
-
-      -- Remove all codediff_restore markers BEFORE closing windows
-      -- count_diff_windows() will return 0, bypassing the count==1 cleanup trigger
-      vim.w[original_win].codediff_restore = nil
-      vim.w[modified_win].codediff_restore = nil
-      if result_win and vim.api.nvim_win_is_valid(result_win) then
-        vim.w[result_win].codediff_restore = nil
-      end
-
-      -- Close original window (theirs :3)
-      vim.api.nvim_win_close(original_win, true)
-
-      -- Close result window (bottom, BASE)
-      if result_win and vim.api.nvim_win_is_valid(result_win) then
-        vim.api.nvim_win_close(result_win, true)
-      end
-
-      -- Restore eventignore before :edit so BufReadPost etc. fire normally
-      vim.o.eventignore = eventignore_save
-
-      -- Load real file (with conflict markers) into the remaining window
-      vim.api.nvim_set_current_win(modified_win)
-      local old_shortmess = vim.o.shortmess
-      vim.o.shortmess = old_shortmess .. "A"
-      pcall(vim.cmd, "silent edit " .. vim.fn.fnameescape(abs_path))
-      vim.o.shortmess = old_shortmess
-
-      -- Mark session as inline mode
-      session._inline_mode = true
-      local inline_bufnr = vim.api.nvim_win_get_buf(modified_win)
-
-      -- Set keymaps on the inline buffer
-      local map_opts = { buffer = inline_bufnr, noremap = true, silent = true, nowait = true }
-      vim.keymap.set("n", "cv", function()
-        toggle_conflict_view()
-      end, vim.tbl_extend("force", map_opts, { desc = "Toggle 3-way/inline conflict view" }))
-      vim.keymap.set("n", "q", function()
-        vim.cmd("tabclose")
-      end, vim.tbl_extend("force", map_opts, { desc = "Close CodeDiff" }))
-      vim.keymap.set("n", "<Tab>", function()
-        if session.explorer and session.explorer.winid and vim.api.nvim_win_is_valid(session.explorer.winid) then
-          vim.api.nvim_set_current_win(session.explorer.winid)
-        end
-      end, vim.tbl_extend("force", map_opts, { desc = "Focus sidebar" }))
-      vim.keymap.set("n", "]r", function()
-        if goto_next_repo_tab then goto_next_repo_tab() end
-      end, vim.tbl_extend("force", map_opts, { desc = "Next repo tab" }))
-      vim.keymap.set("n", "[r", function()
-        if goto_prev_repo_tab then goto_prev_repo_tab() end
-      end, vim.tbl_extend("force", map_opts, { desc = "Prev repo tab" }))
-
-      -- Trigger git-conflict.nvim to detect and highlight markers
-      pcall(vim.cmd, "GitConflictRefresh")
-    end
-
-    local function restore_three_way(tabpage)
-      local session_mod = require("codediff.ui.lifecycle.session")
-      local active_diffs = session_mod.get_active_diffs()
-      local session = active_diffs[tabpage]
-      if not session or not session._inline_mode then return end
-
-      local modified_win = session.modified_win
-      if not modified_win or not vim.api.nvim_win_is_valid(modified_win) then return end
-
-      -- Suppress cleanup autocmds
-      local eventignore_save = vim.o.eventignore
-      vim.o.eventignore = "WinClosed,BufEnter,WinEnter"
-
-      -- Create a new split for original (theirs) on the left
-      vim.api.nvim_set_current_win(modified_win)
-      vim.cmd("leftabove vsplit")
-      local new_original_win = vim.api.nvim_get_current_win()
-
-      -- Set codediff_restore markers on both windows
-      vim.w[new_original_win].codediff_restore = 1
-      vim.w[modified_win].codediff_restore = 1
-
-      -- Update session window IDs and clear inline mode
-      session.original_win = new_original_win
-      session.modified_win = modified_win
-      session._inline_mode = nil
-
-      -- Restore eventignore
-      vim.o.eventignore = eventignore_save
-
-      -- Build session_config for view.update
-      local session_config = {
-        mode = session.mode,
-        git_root = session.git_root,
-        original_path = session.original_path,
-        modified_path = session.modified_path,
-        original_revision = session.original_revision,
-        modified_revision = session.modified_revision,
-        conflict = true,
-      }
-
-      -- view.update loads virtual buffers, creates result window, and sets keymaps
-      view_mod.update(tabpage, session_config, true)
-
-      -- Adjust window widths after async rendering completes
-      vim.defer_fn(function()
-        if not session.explorer or not session.explorer.winid then return end
-        if not vim.api.nvim_win_is_valid(session.explorer.winid) then return end
-        local explorer_config = config_mod.options.explorer or {}
-        local total_width = vim.o.columns
-        local explorer_width = explorer_config.width or 40
-        local remaining_width = total_width - explorer_width
-        local diff_width = math.floor(remaining_width / 2)
-        if vim.api.nvim_win_is_valid(new_original_win) then
-          pcall(vim.api.nvim_win_set_width, new_original_win, diff_width)
-        end
-        if vim.api.nvim_win_is_valid(modified_win) then
-          pcall(vim.api.nvim_win_set_width, modified_win, diff_width)
-        end
-      end, 300)
-    end
-
-    toggle_conflict_view = function()
-      local tabpage = vim.api.nvim_get_current_tabpage()
-      local session_mod = require("codediff.ui.lifecycle.session")
-      local active_diffs = session_mod.get_active_diffs()
-      local session = active_diffs[tabpage]
-      if not session then return end
-
-      if session._inline_mode then
-        restore_three_way(tabpage)
-      else
-        switch_to_inline(tabpage)
-      end
-    end
-
-    -- Monkey-patch conflict.setup_keymaps to add cv toggle keymap
-    local conflict_mod = require("codediff.ui.conflict")
-    local orig_setup_conflict_keymaps = conflict_mod.setup_keymaps
-    conflict_mod.setup_keymaps = function(tabpage)
-      orig_setup_conflict_keymaps(tabpage)
-
-      local lifecycle_mod = require("codediff.ui.lifecycle")
-      local session = lifecycle_mod.get_session(tabpage)
-      if not session then return end
-
-      local buffers = { session.original_bufnr, session.modified_bufnr, session.result_bufnr }
-      local base_opts = { noremap = true, silent = true, nowait = true }
-      for _, bufnr in ipairs(buffers) do
-        if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
-          vim.keymap.set("n", "cv", function()
-            toggle_conflict_view()
-          end, vim.tbl_extend("force", base_opts, { buffer = bufnr, desc = "Toggle 3-way/inline conflict view" }))
-        end
-      end
     end
 
     -- Phase 2: auto_refresh throttle adjustment (200ms → 400ms)
@@ -888,13 +710,6 @@ return {
       local orig_on_file_select = explorer.on_file_select
       local large_file_warned = {} -- Track warned files to avoid repeated warnings
       explorer.on_file_select = function(file_data)
-        -- Restore 3-way view if in inline conflict mode before switching files
-        local tabpage_fs = vim.api.nvim_get_current_tabpage()
-        local session_fs = require("codediff.ui.lifecycle.session").get_active_diffs()[tabpage_fs]
-        if session_fs and session_fs._inline_mode then
-          restore_three_way(tabpage_fs)
-        end
-
         -- Large file warning (>1500 lines)
         if file_data and file_data.path and not large_file_warned[file_data.path] then
           local full_path = explorer.git_root and (explorer.git_root .. "/" .. file_data.path) or file_data.path
@@ -968,17 +783,12 @@ return {
           end
         end
         local help_lines
-        local session_hl = require("codediff.ui.lifecycle.session").get_active_diffs()[tabpage]
-        if session_hl and session_hl._inline_mode then
-          -- In inline mode: show inline help when in the inline buffer, explorer help otherwise
-          local cur_win = vim.api.nvim_get_current_win()
-          local is_in_explorer = session_hl.explorer and session_hl.explorer.winid == cur_win
-          help_lines = is_in_explorer and explorer_help_lines or inline_conflict_help_lines
-        elseif in_conflict then
+        if in_conflict then
           help_lines = conflict_help_lines
         elseif in_diff then
           local in_staged = false
-          if session_hl and session_hl.modified_revision == ":0" then
+          local session_check = require("codediff.ui.lifecycle.session").get_active_diffs()[tabpage]
+          if session_check and session_check.modified_revision == ":0" then
             in_staged = true
           end
           help_lines = in_staged and diff_staged_help_lines or diff_help_lines
