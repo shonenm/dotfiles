@@ -1,25 +1,11 @@
--- TypeScript: vtsls import preferences (VSCode parity)
+-- TypeScript: tsgo (TypeScript 7 native LSP)
 return {
   {
     "neovim/nvim-lspconfig",
     opts = {
       servers = {
-        vtsls = {
-          settings = {
-            typescript = {
-              preferences = {
-                importModuleSpecifier = "non-relative",
-              },
-              updateImportsOnFileMove = { enabled = "always" },
-            },
-            javascript = {
-              preferences = {
-                importModuleSpecifier = "non-relative",
-              },
-              updateImportsOnFileMove = { enabled = "always" },
-            },
-          },
-        },
+        vtsls = false,
+        tsgo = {},
       },
     },
   },
