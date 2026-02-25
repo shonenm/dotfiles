@@ -931,11 +931,19 @@ return {
           tree:render()
           vim.schedule(function() is_toggling = false end)
         else
+          if debounce_timer then
+            debounce_timer:stop()
+            debounce_timer = nil
+          end
           vim.cmd("2wincmd l")
           vim.schedule(update_help_line) -- diff用ヘルプに切り替え
         end
       end, vim.tbl_extend("force", map_opts, { desc = "Expand directory or focus diff view" }))
       vim.keymap.set("n", "<Tab>", function()
+        if debounce_timer then
+          debounce_timer:stop()
+          debounce_timer = nil
+        end
         vim.cmd("2wincmd l")
         vim.schedule(update_help_line)
       end, vim.tbl_extend("force", map_opts, { desc = "Focus diff view" }))
