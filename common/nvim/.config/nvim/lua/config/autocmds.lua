@@ -129,7 +129,7 @@ vim.api.nvim_create_autocmd("BufHidden", {
 vim.api.nvim_create_autocmd("BufWritePre", {
   pattern = { "*.ts", "*.tsx", "*.js", "*.jsx" },
   callback = function(args)
-    local clients = vim.lsp.get_clients({ bufnr = args.buf, name = "vtsls" })
+    local clients = vim.lsp.get_clients({ bufnr = args.buf, name = "tsgo" })
     if #clients == 0 then
       return
     end
