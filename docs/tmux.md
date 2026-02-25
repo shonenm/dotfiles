@@ -61,6 +61,7 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 |------|------|--------|
 | `g` | lazygit（カレントパスで起動） | 80% × 80% |
 | `k` | keifu（Git コミットグラフ TUI） | 80% × 80% |
+| `Q` | quay（TUI ポートマネージャー） | 80% × 80% |
 | `G` | gh-dash（GitHub Dashboard） | 85% × 85% |
 | `P` | pgcli（PostgreSQL クライアント） | 80% × 80% |
 | `j` | Scratchpad シェル（永続 `scratch` セッション、トグル） | 80% × 80% |
