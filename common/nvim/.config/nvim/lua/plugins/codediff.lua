@@ -81,8 +81,8 @@ return {
     -- Monkey-patch nodes.prepare_node to show hunk counts
     local nodes_mod = require("codediff.ui.explorer.nodes")
     nodes_mod.prepare_node = function(node, max_width, selected_path, selected_group)
-      local NuiLine = require("nui.line")
-      local line = NuiLine()
+      local Line = require("codediff.ui.lib.line")
+      local line = Line()
       local data = node.data or {}
       local explorer_config = config_mod.options.explorer or {}
       local use_indent_markers = explorer_config.indent_markers ~= false
@@ -956,7 +956,7 @@ return {
           vim.schedule(function() is_toggling = false end)
         else
           -- ファイルノードの場合は即座に選択（debounceをスキップ）
-          if node and node.data then
+          if node and node.data and node.data.path then
             if debounce_timer then
               debounce_timer:stop()
               debounce_timer = nil
