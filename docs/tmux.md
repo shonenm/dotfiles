@@ -48,6 +48,7 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | `H/J/K/L` | Pane リサイズ（5 セル、リピート可） |
 | `n / p` | 次/前 Window（リピート可、1 秒） |
 | `C-l / C-h` | 次/前 Window（prefix 付き、プラグイン上書き） |
+| `W` | Pane 入れ替え（番号指定、`prefix q` で確認） |
 | `t` | Pane タイトル設定 |
 | `T` | Window リネーム |
 | `X` | Window 削除（確認あり） |
