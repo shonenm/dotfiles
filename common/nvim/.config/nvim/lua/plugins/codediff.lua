@@ -368,7 +368,6 @@ return {
 
       local current_node = explorer.tree:get_node()
       local current_path = current_node and current_node.data and current_node.data.path
-      local collapsed_state = collect_collapsed_state(explorer.tree)
 
       local function process_result(err, status_result)
         vim.schedule(function()
@@ -395,6 +394,11 @@ return {
           for _, node in ipairs(root_nodes) do
             node:expand()
           end
+
+          -- Collect collapsed state from current tree right before replacing nodes.
+          -- Must be inside vim.schedule to capture user's latest expand/collapse changes
+          -- that occurred during the async git status fetch.
+          local collapsed_state = collect_collapsed_state(explorer.tree)
 
           explorer.tree:set_nodes(root_nodes)
 
@@ -752,6 +756,10 @@ return {
       -- on_file_selectをラップしてフォーカス復元 + 大ファイル警告
       local orig_on_file_select = explorer.on_file_select
       local large_file_warned = {} -- Track warned files to avoid repeated warnings
+      -- Focus management: generation counter invalidates stale callbacks when user
+      -- explicitly navigates (l/Tab/CR). focus_target controls post-load navigation.
+      local focus_restore_gen = 0
+      local focus_target = nil -- nil = restore to explorer, "diff" = navigate to diff view
       explorer.on_file_select = function(file_data)
         -- Large file warning (>1500 lines)
         if file_data and file_data.path and not large_file_warned[file_data.path] then
@@ -764,6 +772,9 @@ return {
         end
 
         local saved_win = explorer.winid
+        local my_gen = focus_restore_gen
+        local my_target = focus_target
+        focus_target = nil -- Reset for future calls
 
         -- CodeDiffVirtualFileLoadedでフォーカス復元（非同期パス用）
         local group = vim.api.nvim_create_augroup("CodeDiffFocusRestore", { clear = true })
@@ -773,7 +784,10 @@ return {
           once = true,
           callback = function()
             vim.schedule(function()
-              if vim.api.nvim_win_is_valid(saved_win) then
+              if focus_restore_gen ~= my_gen then return end
+              if my_target == "diff" then
+                vim.cmd("2wincmd l")
+              elseif vim.api.nvim_win_is_valid(saved_win) then
                 vim.api.nvim_set_current_win(saved_win)
               end
             end)
@@ -783,7 +797,10 @@ return {
         -- 同期パス用フォールバック
         vim.defer_fn(function()
           pcall(vim.api.nvim_del_augroup_by_id, group)
-          if vim.api.nvim_win_is_valid(saved_win) and vim.api.nvim_get_current_win() ~= saved_win then
+          if focus_restore_gen ~= my_gen then return end
+          if my_target == "diff" then
+            vim.cmd("2wincmd l")
+          elseif vim.api.nvim_win_is_valid(saved_win) and vim.api.nvim_get_current_win() ~= saved_win then
             vim.api.nvim_set_current_win(saved_win)
           end
         end, 200)
@@ -978,6 +995,7 @@ return {
             debounce_timer:stop()
             debounce_timer = nil
           end
+          focus_restore_gen = focus_restore_gen + 1
           vim.cmd("2wincmd l")
           vim.schedule(update_help_line) -- diff用ヘルプに切り替え
         end
@@ -987,6 +1005,7 @@ return {
           debounce_timer:stop()
           debounce_timer = nil
         end
+        focus_restore_gen = focus_restore_gen + 1
         vim.cmd("2wincmd l")
         vim.schedule(update_help_line)
       end, vim.tbl_extend("force", map_opts, { desc = "Focus diff view" }))
@@ -1006,13 +1025,15 @@ return {
           tree:render()
           vim.schedule(function() is_toggling = false end)
         else
-          -- ファイルノードの場合は即座に選択（debounceをスキップ）
+          -- ファイルノードの場合は即座に選択してdiffビューの右側にフォーカス
           if node and node.data and node.data.path then
             if debounce_timer then
               debounce_timer:stop()
               debounce_timer = nil
             end
             last_node_id = node:get_id() -- Prevent duplicate trigger from CursorMoved
+            focus_restore_gen = focus_restore_gen + 1
+            focus_target = "diff"
             explorer.on_file_select(node.data)
           end
         end
