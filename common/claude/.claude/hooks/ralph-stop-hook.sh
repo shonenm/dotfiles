@@ -47,6 +47,12 @@ if [[ "$phase" != "implementation" ]] && [[ "$phase" != "verification" ]]; then
   exit 0
 fi
 
+# archive: cleanup 前に状態ファイルを保存
+archive() {
+  local archive_file="/tmp/ralph_archive_$(date +%Y%m%d_%H%M%S).json"
+  cp "$state_file" "$archive_file"
+}
+
 # cleanup: 状態ファイルとマニフェストを削除
 cleanup() {
   rm -f "$state_file"
@@ -72,6 +78,7 @@ progress_info() {
 # 判定 3: last_assistant_message に completion_token を含む → cleanup → exit 0
 last_message="$(echo "$input" | jq -r '.last_assistant_message // ""')"
 if [[ -n "$last_message" ]] && echo "$last_message" | grep -qF "$completion_token"; then
+  archive
   cleanup
   exit 0
 fi
@@ -81,6 +88,7 @@ if [[ "$iteration" -ge "$max_iterations" ]]; then
   state="$(echo "$state" | jq --arg reason "Max iterations ($max_iterations) reached" \
     '.errors += [$reason]')"
   update_state "$state"
+  archive
   cleanup
   exit 0
 fi
@@ -114,6 +122,7 @@ if [[ "$stall_count" -ge 4 ]]; then
   # 4エントリ = 3回連続同一 (初回+3回)
   state="$(echo "$state" | jq '.errors += ["No progress detected for 3 consecutive iterations"]')"
   update_state "$state"
+  archive
   cleanup
   exit 0
 fi
