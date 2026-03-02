@@ -9,6 +9,7 @@ Ralph v2 splits the workflow into two independent commands:
 - `/ralph-plan` -- Interactive planning session: requirements, acceptance criteria, design, task decomposition. Outputs a state file.
 - `/ralph` -- Autonomous implementation loop: reads the state file, executes tasks, verifies ACs. Zero user interaction.
 - `/ralph-cancel` -- Emergency stop with state archiving.
+- `/ralph-resume` -- Resume from archive: load completed state, add new tasks, regenerate state file.
 
 ### Key Components
 
@@ -41,7 +42,19 @@ Phase 2: Design + tasks       [State file exists?]            |
                                 |
                               [Verification phase] Run all ACs
                                 |
-                              RALPH_COMPLETE
+                              RALPH_COMPLETE + archive state file
+                                |
+                                v
+                     /ralph-resume "Add feature"
+                                |
+                                v
+                     [Load latest archive]
+                     [Show completed tasks/ACs]
+                     [Define new tasks interactively or from prompt]
+                     [Generate new state file with done tasks preserved]
+                                |
+                                v
+                     "Run /ralph to start"
 ```
 
 ## Usage
@@ -66,6 +79,16 @@ Phase 2: Design + tasks       [State file exists?]            |
 |----------|---------|-------------|
 | `<prompt>` | (optional) | Task description (skip-plan mode) |
 | `--max-iterations N` | 25 | Maximum loop iterations |
+
+### Resume (Continue After Completion)
+
+```
+/ralph-resume                              # Interactive: review archive, define new tasks
+/ralph-resume "Add error handling"         # Auto-generate tasks from prompt
+/ralph-resume "Improve tests" --max-iterations 10
+```
+
+Loads the latest archive, preserves completed tasks, adds new tasks, and generates a new state file.
 
 ### Cancel Loop
 
@@ -182,6 +205,7 @@ dotfiles/
 |   |   +-- ralph/SKILL.md             # /ralph autonomous loop
 |   |   +-- ralph-plan/SKILL.md        # /ralph-plan interactive planning
 |   |   +-- ralph-cancel/SKILL.md      # /ralph-cancel with archive
+|   |   +-- ralph-resume/SKILL.md     # /ralph-resume from archive
 |   |   +-- ralph-parallel/SKILL.md    # /ralph-parallel orchestrator
 |   +-- agents/
 |       +-- ralph-worker/ralph-worker.md  # Worktree-isolated worker
@@ -190,6 +214,7 @@ dotfiles/
 |   |   +-- ralph/SKILL.md
 |   |   +-- ralph-plan/SKILL.md
 |   |   +-- ralph-cancel/SKILL.md
+|   |   +-- ralph-resume/SKILL.md
 |   |   +-- ralph-parallel/SKILL.md
 |   +-- claude-agents/
 |       +-- ralph-worker/ralph-worker.md
@@ -214,7 +239,7 @@ dotfiles/
 - Phase-aware Stop hook: only blocks during `implementation`/`verification` phases
 - Stall detection via `stall_hashes` array in state file (replaces simple counter)
 - Error recording in state file `errors` array before cleanup
-- State archiving on cancel: `/tmp/ralph_archive_<timestamp>.json` for post-mortem analysis
+- State archiving on all exit paths: completion, max_iterations, stall, and cancel all create `/tmp/ralph_archive_<timestamp>.json` for resume and post-mortem analysis
 - Atomic state updates: `jq > tmp && mv tmp state_file` pattern
 - Fail-open hooks: `jq` missing -> `exit 0` (don't break non-Ralph sessions)
 - Hooks in skill frontmatter: active only during skill execution, no global side effects
@@ -241,5 +266,6 @@ dotfiles/
 6. Stall detection: Intentionally stall, verify loop stops after 3 consecutive no-progress
 7. Cancel: `/ralph-cancel` -- verify archive creation and cleanup
 8. Parallel: `/ralph-parallel` -- verify up to 4 workers in separate worktrees
-9. Session context: New session, verify project info in additionalContext
-10. Linux: verify jq + git only dependencies
+9. Resume: `/ralph-resume "Add error handling"` after completion -- verify archive loaded, done tasks preserved, new tasks added
+10. Session context: New session, verify project info in additionalContext
+11. Linux: verify jq + git only dependencies
