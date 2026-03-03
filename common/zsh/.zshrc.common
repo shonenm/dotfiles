@@ -191,6 +191,21 @@ if command -v ghq &>/dev/null && command -v fzf &>/dev/null; then
   }
 fi
 
+# --- Claude Code fallback wrapper ---
+# Anthropic API障害時にOpenRouter経由で動作させる
+# 切替: claude-fallback.sh on/off
+claude() {
+  if [[ -f "$HOME/.local/share/claude-fallback/active" ]]; then
+    local fallback_env="$HOME/.local/share/claude-fallback/env"
+    source "$fallback_env"
+    ANTHROPIC_BASE_URL="https://openrouter.ai/api" \
+    ANTHROPIC_API_KEY="$OPENROUTER_API_KEY" \
+    command claude "$@"
+  else
+    command claude "$@"
+  fi
+}
+
 # --- Local bin ---
 [[ -f "$HOME/.local/bin/env" ]] && . "$HOME/.local/bin/env"
 
