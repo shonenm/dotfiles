@@ -134,12 +134,6 @@ jq '.task_graph |= map(if .id == "T-N" then .status = "done" else . end)' \
   "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
 ```
 
-2. atomic commit を作成:
-
-```bash
-git add -A && git commit -m "ralph: T-N <タスク名>"
-```
-
 ### 5. 検証フェーズ
 
 全タスク完了後 (または skip-plan でタスク実装完了後):
