@@ -129,7 +129,7 @@ stow_package() {
   # dry-runでコンフリクトを検出
   local conflicts
   conflicts=$(stow -n -d "$pkg_dir" -t "$HOME" "$pkg_name" 2>&1 | \
-    grep "existing target" | sed 's/.*existing target is neither a link nor a directory: //' || true)
+    grep "existing target" | sed 's/.*over existing target //' | sed 's/ since.*//' || true)
 
   # コンフリクトファイルをバックアップ
   if [[ -n "$conflicts" ]]; then
@@ -385,6 +385,13 @@ generate_ai_cli_configs() {
       log_warn "    ✗ $tool webhook not available"
     fi
   done
+
+  # LiteLLM proxy setup (environment preparation only, not activated)
+  if "$DOTFILES_DIR/scripts/litellm-proxy.sh" setup 2>/dev/null; then
+    log_success "  LiteLLM proxy environment ready (run 'litellm-proxy.sh enable' to activate)"
+  else
+    log_warn "  LiteLLM proxy setup skipped (API keys not available)"
+  fi
 }
 
 # --- Main ---
