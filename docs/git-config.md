@@ -667,6 +667,38 @@ gf done
 - 設定値の微調整
 - lockfile の更新
 
+## gh-dash (GitHub Dashboard TUI)
+
+[gh-dash](https://github.com/dlvhdr/gh-dash) は GitHub CLI の拡張で、PR/Issue をターミナル上でブラウズできる TUI ダッシュボード。
+
+### キーバインド
+
+#### PR
+
+| キー | 動作 |
+|------|------|
+| `w` | プレビュー表示の ON/OFF (builtin) |
+| `e` | PR description の全文展開 (builtin) |
+| `d` | delta 経由で diff を全画面表示 (builtin) |
+| `v` | `gh pr view` で PR 詳細を全画面表示 |
+| `b` | ブラウザで PR を開く |
+| `c` | PR をチェックアウトして Neovim の CodeDiff で開く |
+
+#### Issue
+
+| キー | 動作 |
+|------|------|
+| `v` | `gh issue view` で Issue 詳細を全画面表示 |
+| `b` | ブラウザで Issue を開く |
+
+### 設定
+
+| 項目 | 値 | 説明 |
+|------|-----|------|
+| `preview.width` | 80 | サイドバープレビューの幅 |
+| `preview.open` | true | 起動時にプレビューを表示 |
+| `pager.diff` | delta | diff 表示に delta を使用 |
+
 ## Related Documentation
 
 - [1Password Integration](./1password-integration.md) - Detailed 1Password CLI configuration
