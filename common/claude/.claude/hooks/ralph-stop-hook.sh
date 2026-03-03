@@ -75,9 +75,22 @@ progress_info() {
   printf "Tasks: %d/%d done, Pending ACs: %d" "$done_tasks" "$total_tasks" "$pending_ac"
 }
 
-# 判定 3: last_assistant_message に completion_token を含む → cleanup → exit 0
+# 判定 3: last_assistant_message に completion_token を含む
+# ただし全 AC が verified でなければ block (AC が空の場合は通過)
 last_message="$(echo "$input" | jq -r '.last_assistant_message // ""')"
 if [[ -n "$last_message" ]] && echo "$last_message" | grep -qF "$completion_token"; then
+  total_ac="$(echo "$state" | jq '[.acceptance_criteria[]?] | length')"
+  unverified_ac="$(echo "$state" | jq '[.acceptance_criteria[]? | select(.verified != true)] | length')"
+  if [[ "$total_ac" -gt 0 ]] && [[ "$unverified_ac" -gt 0 ]]; then
+    # AC 未検証 → completion_token を無視して block
+    unverified_list="$(echo "$state" | jq -r '[.acceptance_criteria[]? | select(.verified != true) | .id] | join(", ")')"
+    iteration=$((iteration + 1))
+    state="$(echo "$state" | jq --argjson iter "$iteration" '.iteration = $iter')"
+    update_state "$state"
+    printf '{"decision":"block","reason":"RALPH_COMPLETE rejected: unverified ACs: %s. Verify all ACs before completing. Iteration %d/%d."}\n' \
+      "$unverified_list" "$iteration" "$max_iterations"
+    exit 0
+  fi
   archive
   cleanup
   exit 0
