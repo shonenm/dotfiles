@@ -695,7 +695,7 @@ gf done
 
 | 項目 | 値 | 説明 |
 |------|-----|------|
-| `preview.width` | 80 | サイドバープレビューの幅 |
+| `preview.width` | 100 | サイドバープレビューの幅 |
 | `preview.open` | true | 起動時にプレビューを表示 |
 | `pager.diff` | delta | diff 表示に delta を使用 |
 

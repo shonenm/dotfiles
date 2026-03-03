@@ -50,7 +50,7 @@ defaults:
   view: prs
   preview:
     open: true
-    width: 80
+    width: 100
   refetchIntervalMinutes: 30
 
 pager:
