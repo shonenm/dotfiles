@@ -386,11 +386,11 @@ generate_ai_cli_configs() {
     fi
   done
 
-  # LiteLLM proxy setup (environment preparation only, not activated)
-  if "$DOTFILES_DIR/scripts/litellm-proxy.sh" setup 2>/dev/null; then
-    log_success "  LiteLLM proxy environment ready (run 'litellm-proxy.sh enable' to activate)"
+  # Claude fallback setup (cache OpenRouter API key)
+  if "$DOTFILES_DIR/scripts/claude-fallback.sh" setup 2>/dev/null; then
+    log_success "  Claude fallback ready (run 'claude-fallback.sh on' during outages)"
   else
-    log_warn "  LiteLLM proxy setup skipped (API keys not available)"
+    log_warn "  Claude fallback setup skipped (API keys not available)"
   fi
 }
 
