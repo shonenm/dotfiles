@@ -281,9 +281,11 @@ get_webhook() {
     permission) ICON="🔐"; TITLE="承認待ち"; COLOR="#ffc107"; MENTION="<!here>" ;;
     idle)       ICON="⏳"; TITLE="入力待ち"; COLOR="#17a2b8"; MENTION="<!here>" ;;
     error)      ICON="❌"; TITLE="エラー発生"; COLOR="#dc3545"; MENTION="<!here>" ;;
+    fallback)   ICON="⚠️"; TITLE="APIフォールバック中"; COLOR="#ff6b35"; MENTION="<!here>" ;;
 
     # 後で確認でOK（メンションなし → 静かにログ）
-    complete) ICON="✅"; TITLE="完了"; COLOR="#28a745"; MENTION="" ;;
+    complete)   ICON="✅"; TITLE="完了"; COLOR="#28a745"; MENTION="" ;;
+    recovered)  ICON="✅"; TITLE="API復旧"; COLOR="#28a745"; MENTION="" ;;
     *)          ICON="📢"; TITLE="通知"; COLOR="#6c757d"; MENTION="" ;;
   esac
 

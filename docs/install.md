@@ -77,6 +77,8 @@ Claude / Codex / Gemini の設定ファイルを生成:
 
 1Password から Webhook URL を取得してキャッシュ。
 
+Claude Code API フォールバック用の OpenRouter API キーキャッシュも実行。詳細: [Claude Code API Fallback](./claude-fallback.md)
+
 ## 完了後
 
 ```bash
