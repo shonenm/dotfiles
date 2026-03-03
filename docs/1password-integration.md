@@ -19,6 +19,7 @@ dotfilesのセットアップと日常利用で1Passwordをシークレット管
 | GitHub Token | `op://Personal/GitHub/token` |
 | Git Name | `op://Personal/Git Config/name` |
 | Git Email | `op://Personal/Git Config/email` |
+| OpenRouter API Key | `op://Personal/OpenRouter API/credential` |
 
 ## セットアップ
 
