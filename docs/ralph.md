@@ -149,10 +149,12 @@ Global hook registered in `settings.json`. Runs at session start, returns `addit
 
 Blocks interactive tools that would break the autonomous loop:
 
-| Matcher | Action | Reason |
-|---------|--------|--------|
-| `AskUserQuestion` | `exit 2` (deny) | Prevents questions mid-loop |
-| `EnterPlanMode` | `exit 2` (deny) | Prevents plan mode entry |
+| Skill | Matcher | Action | Reason |
+|-------|---------|--------|--------|
+| `/ralph` | `AskUserQuestion\|EnterPlanMode` | `exit 2` (deny) | Prevents questions mid-loop |
+| `/ralph-plan` | `Bash` | `ralph-plan-guard.sh` | Blocks Bash after Phase 3 completion |
+
+`/ralph-plan` also uses `allowed-tools` to exclude Write/Edit/MultiEdit, preventing any code modifications during the planning session.
 
 ### Stop Hook (`ralph-stop-hook.sh`)
 
@@ -201,6 +203,7 @@ dotfiles/
 |   |   +-- ralph-stop-hook.sh         # Stop hook (manifest-based, phase-aware)
 |   |   +-- ralph-backpressure.sh      # PostToolUse hook (tsc/eslint/prettier/test/ruff)
 |   |   +-- ralph-session-context.sh   # SessionStart hook (project context)
+|   |   +-- ralph-plan-guard.sh       # PreToolUse hook (block Bash after Phase 3)
 |   +-- skills/
 |   |   +-- ralph/SKILL.md             # /ralph autonomous loop
 |   |   +-- ralph-plan/SKILL.md        # /ralph-plan interactive planning
@@ -244,6 +247,7 @@ dotfiles/
 - Fail-open hooks: `jq` missing -> `exit 0` (don't break non-Ralph sessions)
 - Hooks in skill frontmatter: active only during skill execution, no global side effects
 - Zero interaction via PreToolUse hook: `AskUserQuestion`/`EnterPlanMode` denied at hook level
+- 3-layer defense for `/ralph-plan`: `allowed-tools` (hide Write/Edit/MultiEdit), PreToolUse hook (block Bash after Phase 3), prompt reinforcement
 - Backpressure auto-fix: eslint/prettier/ruff fix before reporting remaining errors
 - Parallel execution max 4 workers: resource constraint
 - SessionStart context hook: global in `settings.json`, provides project awareness to all sessions
@@ -255,6 +259,7 @@ dotfiles/
 | Backpressure (PostToolUse) | 15s |
 | Stop (shell) | 15s |
 | Session Context (SessionStart) | 10s |
+| Plan Guard (PreToolUse: Bash) | 5s |
 
 ## Verification
 
