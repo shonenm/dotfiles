@@ -5,13 +5,6 @@ user-invocable: true
 disable-model-invocation: true
 arguments: "<task-description>"
 allowed-tools: Bash, Read, Glob, Grep, Task, WebFetch, WebSearch, AskUserQuestion
-hooks:
-  PreToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: "bash -c '$HOME/.claude/hooks/ralph-plan-guard.sh'"
-          timeout: 5
 ---
 
 # Ralph Plan - インタラクティブ計画セッション
@@ -190,7 +183,6 @@ echo "$STATE_FILE" > /tmp/ralph_session_manifest
 --- GATE: Phase 3 完了 (最終) ---
 状態ファイル生成後、以下のメッセージのみ出力してこのスキルを終了する。
 実装作業（コードの変更・ファイルの作成編集）は絶対に行わない。
-Phase 3 完了後は Bash 実行も hook によりブロックされる。
 
 ```
 [ralph-plan 完了] 状態ファイルを生成しました: <STATE_FILE>
