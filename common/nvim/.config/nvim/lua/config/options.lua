@@ -5,6 +5,21 @@
 -- Clipboard
 vim.opt.clipboard = "unnamedplus"
 
+-- OSC 52: copy only (READ応答がtmux経由で壊れるため paste は内部レジスタを使用)
+if vim.env.SSH_CONNECTION or vim.env.SSH_TTY then
+  vim.g.clipboard = {
+    name = "OSC 52",
+    copy = {
+      ["+"] = require("vim.ui.clipboard.osc52").copy("+"),
+      ["*"] = require("vim.ui.clipboard.osc52").copy("*"),
+    },
+    paste = {
+      ["+"] = function() return { vim.fn.getreg("", true, true), vim.fn.getregtype("") } end,
+      ["*"] = function() return { vim.fn.getreg("", true, true), vim.fn.getregtype("") } end,
+    },
+  }
+end
+
 -- Line numbers
 vim.opt.relativenumber = true
 

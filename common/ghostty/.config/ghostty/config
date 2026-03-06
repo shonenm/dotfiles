@@ -50,7 +50,7 @@ keybind = cmd+enter=unbind
 keybind = shift+enter=text:\x1b\r
 
 # Clipboard & Utils
-clipboard-read = allow
+clipboard-read = deny
 clipboard-write = allow
 keybind = cmd+c=copy_to_clipboard
 keybind = cmd+v=paste_from_clipboard
