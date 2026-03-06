@@ -5,6 +5,7 @@ pnpm = "latest"
 deno = "latest"
 "npm:cspell" = "latest"
 go = "latest"
+cloudflared = "latest"
 
 [tasks.update]
 description = "Update all package managers and tools"
