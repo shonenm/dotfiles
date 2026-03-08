@@ -26,10 +26,7 @@ keybindings:
   prs:
     - key: c
       command: >
-        tmux new-window -c "{{.RepoPath}}" '
-          gh pr checkout {{.PrNumber}} &&
-          nvim -c ":CodeDiff {{.BaseRefName}}...{{.HeadRefName}}"
-        '
+        cd "{{.RepoPath}}" && wt checkout {{.PrNumber}}
     - key: b
       command: >
         gh pr view {{.PrNumber}} --repo {{.RepoName}} --web

@@ -1,0 +1,276 @@
+#!/bin/bash
+# wt - git worktree + tmux window 統合管理CLI
+set -euo pipefail
+
+readonly GREEN='\033[0;32m'
+readonly RED='\033[0;31m'
+readonly CYAN='\033[0;36m'
+readonly DIM='\033[2m'
+readonly NC='\033[0m'
+
+success() { echo -e "${GREEN}ok${NC} $*"; }
+error() { echo -e "${RED}error${NC} $*" >&2; exit 1; }
+info() { echo -e "${CYAN}info${NC} $*"; }
+
+command -v git &>/dev/null || error "git is not installed"
+git rev-parse --git-dir &>/dev/null || error "Not in a git repository"
+
+# --- Helper functions ---
+
+# メインworktreeのパスを取得 (git worktree list の最初のエントリ)
+main_worktree() {
+  git worktree list --porcelain | head -1 | sed 's/^worktree //'
+}
+
+# リポジトリ名を取得
+repo_name() {
+  basename "$(main_worktree)"
+}
+
+# ブランチ名からworktreeパスを生成
+# feat/login -> repo--wt--feat--login
+wt_path() {
+  local branch="$1"
+  local main_path
+  main_path="$(main_worktree)"
+  local slug="${branch//\//-}"
+  echo "${main_path}--wt--${slug}"
+}
+
+# ブランチ名からtmuxウィンドウ名を生成
+# feat/login -> repo#feat/login
+win_name() {
+  local branch="$1"
+  echo "$(repo_name)#${branch}"
+}
+
+# tmuxウィンドウが存在するか確認
+tmux_window_exists() {
+  local name="$1"
+  tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qxF "$name"
+}
+
+# tmuxウィンドウに切替
+tmux_select_window() {
+  local name="$1"
+  tmux select-window -t "$name"
+}
+
+# メインworktreeからignore対象ファイルをコピー
+copy_ignored_files() {
+  local src="$1"
+  local dst="$2"
+
+  local entries
+  entries="$(git -C "$src" ls-files --others --ignored --exclude-standard --directory --no-empty-directory)" || return 0
+
+  [[ -z "$entries" ]] && return 0
+
+  info "Copying ignored files from main worktree..."
+  while IFS= read -r entry; do
+    [[ -z "$entry" ]] && continue
+    local src_path="$src/$entry"
+    local dst_path="$dst/$entry"
+    [[ -e "$src_path" ]] || continue
+
+    if [[ "$(uname)" == "Darwin" ]]; then
+      cp -ac "$src_path" "$dst_path" 2>/dev/null || cp -a "$src_path" "$dst_path"
+    else
+      cp -a --reflink=auto "$src_path" "$dst_path" 2>/dev/null || cp -a "$src_path" "$dst_path"
+    fi
+  done <<< "$entries"
+  success "Copied ignored files"
+}
+
+# --- Subcommands ---
+
+cmd_new() {
+  local branch="${1:-}"
+  local base="${2:-}"
+  [[ -z "$branch" ]] && error "Usage: wt new <branch> [base]"
+
+  local path win
+  path="$(wt_path "$branch")"
+  win="$(win_name "$branch")"
+
+  # 既存チェック: worktreeが存在するか
+  local wt_exists=false
+  if git worktree list | grep -q "$(printf '%s' "$path" | sed 's/[][\\.^$*+?{}()|]/\\&/g')"; then
+    wt_exists=true
+  fi
+
+  # 既存チェック: tmuxウィンドウが存在するか
+  if [[ "$wt_exists" == true ]] && tmux_window_exists "$win"; then
+    info "Switching to existing window: $win"
+    tmux_select_window "$win"
+    return
+  fi
+
+  # worktreeが存在しない場合は作成
+  if [[ "$wt_exists" == false ]]; then
+    # ブランチがリモートまたはローカルに既存か確認
+    if git show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null; then
+      git worktree add "$path" "$branch"
+    elif git show-ref --verify --quiet "refs/remotes/origin/$branch" 2>/dev/null; then
+      git worktree add "$path" "$branch"
+    else
+      # 新規ブランチ作成
+      if [[ -n "$base" ]]; then
+        git worktree add -b "$branch" "$path" "$base"
+      else
+        git worktree add -b "$branch" "$path"
+      fi
+    fi
+
+    # メインworktreeからignore対象ファイルをコピー
+    copy_ignored_files "$(main_worktree)" "$path"
+  fi
+
+  # tmuxウィンドウ作成
+  if [[ -n "${TMUX:-}" ]]; then
+    tmux new-window -n "$win" -c "$path"
+    success "Created window: $win"
+  else
+    info "Worktree ready: $path"
+    info "Not in tmux session, skipping window creation"
+  fi
+}
+
+cmd_checkout() {
+  local pr_number="${1:-}"
+  [[ -z "$pr_number" ]] && error "Usage: wt checkout <pr-number>"
+
+  command -v gh &>/dev/null || error "gh CLI is not installed"
+
+  # PR情報を取得
+  local pr_json
+  pr_json="$(gh pr view "$pr_number" --json headRefName,baseRefName)" || error "Failed to get PR #$pr_number"
+
+  local branch base
+  branch="$(echo "$pr_json" | jq -r '.headRefName')"
+  base="$(echo "$pr_json" | jq -r '.baseRefName')"
+
+  info "PR #$pr_number: $branch (base: $base)"
+
+  # リモートからブランチをfetch
+  git fetch origin "$branch"
+
+  # worktree作成 (既存ならウィンドウ切替のみ)
+  cmd_new "$branch"
+}
+
+cmd_list() {
+  local main_path
+  main_path="$(main_worktree)"
+  local repo
+  repo="$(repo_name)"
+
+  local found=false
+  while IFS= read -r line; do
+    local wt_dir branch_info
+    wt_dir="$(echo "$line" | awk '{print $1}')"
+    branch_info="$(echo "$line" | sed 's/.*\[//' | sed 's/\]//')"
+
+    # --wt-- パターンのworktreeのみ
+    [[ "$wt_dir" == *--wt--* ]] || continue
+    found=true
+
+    local win="${repo}#${branch_info}"
+    local win_status=""
+    if tmux_window_exists "$win"; then
+      win_status="[tmux]"
+    fi
+
+    printf "  %-40s %-20s %s\n" "$branch_info" "$wt_dir" "$win_status"
+  done < <(git worktree list)
+
+  if [[ "$found" == false ]]; then
+    info "No worktrees found"
+  fi
+}
+
+cmd_delete() {
+  local branch="${1:-}"
+  [[ -z "$branch" ]] && error "Usage: wt delete <branch>"
+
+  local path win
+  path="$(wt_path "$branch")"
+  win="$(win_name "$branch")"
+
+  # tmuxウィンドウを閉じる
+  if tmux_window_exists "$win"; then
+    tmux kill-window -t "$win"
+    info "Closed window: $win"
+  fi
+
+  # worktree削除 (--forceは使わない)
+  if git worktree list | grep -q "$(printf '%s' "$path" | sed 's/[][\\.^$*+?{}()|]/\\&/g')"; then
+    git worktree remove "$path" || error "Failed to remove worktree (uncommitted changes?)"
+    success "Removed worktree: $path"
+  else
+    info "Worktree not found: $path"
+  fi
+}
+
+cmd_clean() {
+  local main_path
+  main_path="$(main_worktree)"
+  local repo
+  repo="$(repo_name)"
+
+  local found=false
+  while IFS= read -r line; do
+    local wt_dir branch_info
+    wt_dir="$(echo "$line" | awk '{print $1}')"
+    branch_info="$(echo "$line" | sed 's/.*\[//' | sed 's/\]//')"
+
+    [[ "$wt_dir" == *--wt--* ]] || continue
+    found=true
+
+    local win="${repo}#${branch_info}"
+
+    # tmuxウィンドウを閉じる
+    if tmux_window_exists "$win"; then
+      tmux kill-window -t "$win"
+      info "Closed window: $win"
+    fi
+
+    # worktree削除
+    git worktree remove "$wt_dir" 2>/dev/null && success "Removed: $wt_dir" || echo -e "${RED}error${NC} Failed to remove: $wt_dir (uncommitted changes?)"
+  done < <(git worktree list)
+
+  git worktree prune
+  if [[ "$found" == false ]]; then
+    info "No worktrees to clean"
+  else
+    success "Worktree prune complete"
+  fi
+}
+
+# --- Main ---
+
+case "${1:-}" in
+  new)      cmd_new "${2:-}" "${3:-}" ;;
+  checkout) cmd_checkout "${2:-}" ;;
+  list)     cmd_list ;;
+  delete)   cmd_delete "${2:-}" ;;
+  clean)    cmd_clean ;;
+  help|*)
+    cat <<EOF
+wt - git worktree + tmux window manager
+
+Usage:
+  wt new <branch> [base]     Create worktree + tmux window
+  wt checkout <pr-number>    Checkout PR into worktree
+  wt list                    List worktrees
+  wt delete <branch>         Remove worktree + tmux window
+  wt clean                   Remove all worktrees
+
+Examples:
+  wt new fix-bug
+  wt new feat/login main
+  wt checkout 42
+  wt delete fix-bug
+EOF
+    ;;
+esac
