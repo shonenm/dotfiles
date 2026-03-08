@@ -37,3 +37,27 @@ map("i", "<C-p>", "<Up>", { desc = "Previous line" })
 map("i", "<C-n>", "<Down>", { desc = "Next line" })
 map("i", "<C-d>", "<Del>", { desc = "Delete char" })
 map("i", "<C-k>", "<C-o>D", { desc = "Kill to end of line" })
+
+-- Horizontal scroll (nowrap時に有効、差分ビュー等で使用)
+-- scrollbind時は現ウィンドウをスクロール後、他のscrollbindウィンドウにleftcolを同期
+local function scroll_horizontal(cmd)
+  vim.cmd("normal! " .. cmd)
+  local cur_win = vim.api.nvim_get_current_win()
+  if not vim.wo[cur_win].scrollbind then
+    return
+  end
+  local leftcol = vim.fn.winsaveview().leftcol
+  for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if w ~= cur_win and vim.wo[w].scrollbind then
+      vim.api.nvim_win_call(w, function()
+        vim.fn.winrestview({ leftcol = leftcol })
+      end)
+    end
+  end
+end
+map("n", "<C-S-u>", function()
+  scroll_horizontal("zH")
+end, { desc = "Scroll half screen left" })
+map("n", "<C-S-d>", function()
+  scroll_horizontal("zL")
+end, { desc = "Scroll half screen right" })
