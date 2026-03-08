@@ -19,6 +19,79 @@ return {
   config = function(_, opts)
     require("codediff").setup(opts)
 
+    -- Phase 3: Performance patches (generation-based caching)
+    -- See: docs/patches/codediff-performance.md
+    local mutable_generation = 0
+    local mutable_cache = {} -- { [cache_key] = { generation = N, lines = {...} } }
+    local hunk_generation = -1 -- for Patch 4 (hunk_counts skip)
+
+    local function invalidate_mutable_cache()
+      mutable_generation = mutable_generation + 1
+    end
+
+    -- Patch 1: mutable revision (:0 etc.) の generation-based キャッシュ
+    local git_mod = require("codediff.core.git")
+    local orig_get_file_content = git_mod.get_file_content
+    git_mod.get_file_content = function(revision, git_root, rel_path, callback)
+      local is_mutable = revision:match("^:[0-3]$")
+      if not is_mutable then
+        return orig_get_file_content(revision, git_root, rel_path, callback)
+      end
+      local cache_key = git_root .. ":::" .. revision .. ":::" .. rel_path
+      local entry = mutable_cache[cache_key]
+      if entry and entry.generation == mutable_generation then
+        callback(nil, entry.lines)
+        return
+      end
+      orig_get_file_content(revision, git_root, rel_path, function(err, lines)
+        if not err and lines then
+          mutable_cache[cache_key] = { generation = mutable_generation, lines = lines }
+        end
+        callback(err, lines)
+      end)
+    end
+
+    -- Patch 2: resolve_revision の結果キャッシュ
+    local resolve_cache = {} -- { [git_root::revision] = commit_hash }
+
+    local function invalidate_resolve_cache()
+      resolve_cache = {}
+    end
+
+    local orig_resolve_revision = git_mod.resolve_revision
+    git_mod.resolve_revision = function(revision, git_root, callback)
+      local cache_key = git_root .. "::" .. revision
+      local cached = resolve_cache[cache_key]
+      if cached then
+        callback(nil, cached)
+        return
+      end
+      orig_resolve_revision(revision, git_root, function(err, commit_hash)
+        if not err and commit_hash then
+          resolve_cache[cache_key] = commit_hash
+        end
+        callback(err, commit_hash)
+      end)
+    end
+
+    -- Wrap staging actions to invalidate mutable cache
+    local actions_mod_wrap = require("codediff.ui.explorer.actions")
+    local orig_toggle_stage_entry = actions_mod_wrap.toggle_stage_entry
+    actions_mod_wrap.toggle_stage_entry = function(expl, tree)
+      invalidate_mutable_cache()
+      return orig_toggle_stage_entry(expl, tree)
+    end
+    local orig_stage_all = actions_mod_wrap.stage_all
+    actions_mod_wrap.stage_all = function(expl)
+      invalidate_mutable_cache()
+      return orig_stage_all(expl)
+    end
+    local orig_unstage_all = actions_mod_wrap.unstage_all
+    actions_mod_wrap.unstage_all = function(expl)
+      invalidate_mutable_cache()
+      return orig_unstage_all(expl)
+    end
+
     -- Runtime monkey-patch: Fix collapsed state key to use dir_path for unique identification
     -- This avoids modifying source files which would block Lazy.nvim updates
     -- See: docs/patches/codediff-directory-collapse.md
@@ -438,7 +511,8 @@ return {
       -- Fetch hunk counts in parallel with status
       local function fetch_and_render()
         if explorer.git_root and not explorer.base_revision then
-          -- Only for working tree diff (not revision comparisons)
+          if hunk_generation == mutable_generation then return end
+          hunk_generation = mutable_generation
           fetch_hunk_counts(explorer.git_root, function(counts)
             vim.schedule(function()
               hunk_cache.unstaged = counts.unstaged
@@ -686,7 +760,7 @@ return {
     -- Stage/Reset後にdiffビューを自動更新する関数
     -- is_stage: true=gs(stage), false=gr(reset)
     local function refresh_diff_view(is_stage)
-      vim.defer_fn(function()
+      vim.schedule(function()
         local session_mod = require("codediff.ui.lifecycle.session")
         local tabpage = vim.api.nvim_get_current_tabpage()
         local active_diffs = session_mod.get_active_diffs()
@@ -740,7 +814,7 @@ return {
         if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
           refresh_mod.refresh(explorer)
         end
-      end, 150)
+      end)
     end
 
     -- Forward declarations for multi-repo navigation (defined in multi-repo section below)
@@ -927,13 +1001,20 @@ return {
       vim.keymap.set("n", "q", function()
         vim.cmd("tabclose")
       end, vim.tbl_extend("force", map_opts, { desc = "Close CodeDiff" }))
-      vim.keymap.set("n", "cc", "<cmd>Git commit<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit" }))
-      vim.keymap.set("n", "ca", "<cmd>Git commit --amend<cr>", vim.tbl_extend("force", map_opts, { desc = "Git commit --amend" }))
+      vim.keymap.set("n", "cc", function()
+        invalidate_resolve_cache()
+        vim.cmd("Git commit")
+      end, vim.tbl_extend("force", map_opts, { desc = "Git commit" }))
+      vim.keymap.set("n", "ca", function()
+        invalidate_resolve_cache()
+        vim.cmd("Git commit --amend")
+      end, vim.tbl_extend("force", map_opts, { desc = "Git commit --amend" }))
       -- Override X to trigger refresh after restore/delete
       -- (git restore/clean only modify working tree, not .git/, so fs_event watcher doesn't fire)
       local actions_mod = require("codediff.ui.explorer.actions")
       vim.keymap.set("n", "X", function()
         actions_mod.restore_entry(explorer, explorer.tree)
+        invalidate_mutable_cache()
         vim.defer_fn(function()
           if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
             refresh_mod.refresh(explorer)
@@ -1122,6 +1203,7 @@ return {
                   vim.notify("Unstage failed: " .. (apply_obj.stderr or ""), vim.log.levels.ERROR)
                   return
                 end
+                invalidate_mutable_cache()
                 refresh_diff_view(false)
               end)
             end
@@ -1148,10 +1230,12 @@ return {
         local map_opts = { buffer = ev.buf, noremap = true, silent = true, nowait = true }
         vim.keymap.set({ "n", "v" }, "gs", function()
           vim.cmd("Gitsigns stage_hunk")
+          invalidate_mutable_cache()
           refresh_diff_view(true)
         end, vim.tbl_extend("force", map_opts, { desc = "Stage hunk" }))
         vim.keymap.set({ "n", "v" }, "gr", function()
           vim.cmd("Gitsigns reset_hunk")
+          invalidate_mutable_cache()
           refresh_diff_view(false)
         end, vim.tbl_extend("force", map_opts, { desc = "Reset hunk" }))
         vim.keymap.set({ "n", "v" }, "gu", function()
