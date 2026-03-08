@@ -459,12 +459,20 @@ install_gh_extensions() {
     return
   fi
 
+  if ! gh auth status &>/dev/null; then
+    log_warn "gh CLI not authenticated, skipping gh extensions"
+    return
+  fi
+
   if gh extension list | grep -q "dlvhdr/gh-dash"; then
     log_success "gh-dash already installed"
   else
     log_info "Installing gh-dash extension..."
-    gh extension install dlvhdr/gh-dash
-    log_success "gh-dash installed"
+    if gh extension install dlvhdr/gh-dash; then
+      log_success "gh-dash installed"
+    else
+      log_error "Failed to install gh-dash"
+    fi
   fi
 }
 
