@@ -13,6 +13,7 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | Focus events | ON | Neovim autoread 等に必要 |
 | History limit | 50000 | スクロールバック行数 |
 | Passthrough | ON | Kitty graphics protocol（image.nvim 等） |
+| Extended keys | ON | CSI u モード（`C-S-u` 等の修飾キーを Neovim に送信） |
 | Base index | 1 | Window/Pane 番号が 1 から開始 |
 | Escape time | 0 | ESC 遅延なし（Neovim 対応） |
 | Renumber | ON | Window 削除時に自動採番 |
