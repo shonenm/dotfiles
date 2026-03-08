@@ -39,6 +39,40 @@
 | 差分キャッシュ | ファイル切替時の再計算スキップ |
 | 大ファイル警告 | ユーザーへの事前通知 |
 
+### Phase 3: git操作キャッシュ
+
+根本原因: mutable revision (`:0`) のキャッシュバイパスにより `git show :0:<path>` がファイル選択のたびに実行、`git rev-parse --verify HEAD` も毎回実行されていた。
+
+1. **mutable revision の generation-based キャッシュ** (Patch 1)
+   - `git.get_file_content` をラップし、`:0` 等のmutable revisionにもキャッシュを適用
+   - `mutable_generation` カウンタで無効化を制御
+   - staging操作 (`gs`/`gr`/`gu`/`-`/`S`/`U`/`X`) 時のみインクリメント
+
+2. **resolve_revision の結果キャッシュ** (Patch 2)
+   - `git.resolve_revision` をラップし、`git rev-parse --verify HEAD` の結果をキャッシュ
+   - `cc`/`ca` (commit) 時のみ無効化
+
+3. **refresh_diff_view の150ms delay削除** (Patch 3)
+   - `vim.defer_fn(..., 150)` → `vim.schedule` に変更
+   - gitsignsのstage_hunkは同期的にgit indexを更新するため待機不要
+
+4. **hunk_counts の generation-based スキップ** (Patch 4)
+   - `fetch_and_render()` に `mutable_generation` チェックを追加
+   - staging操作がない限り `git diff -U0` x2 をスキップ
+
+## 効果
+
+| 最適化項目 | 効果 |
+|------------|------|
+| debounce増加 | 連続ナビゲーション時の計算回数削減 |
+| auto_refresh throttle | 編集中の計算頻度削減 |
+| 差分キャッシュ | ファイル切替時の再計算スキップ |
+| 大ファイル警告 | ユーザーへの事前通知 |
+| mutable revision cache | ファイル選択時の `git show` スキップ |
+| resolve_revision cache | ファイル選択時の `git rev-parse` スキップ |
+| 150ms delay削除 | staging操作後の体感遅延除去 |
+| hunk_counts skip | staging以外のrefreshで `git diff -U0` x2 スキップ |
+
 ## 削除条件
 
 - codediff.nvim upstreamでパフォーマンス改善（extmarkバッチ処理、UTF-16変換キャッシュ等）が実装されたら削除を検討
