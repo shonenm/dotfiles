@@ -284,12 +284,12 @@ TOOL_typst_archive_pattern='typst-${ARCH}-unknown-linux-musl.tar.xz'
 TOOL_typst_binary_path='typst-${ARCH}-unknown-linux-musl/typst'
 TOOL_typst_arch_map='x86_64:x86_64 aarch64:aarch64'
 
-TOOL_dblab_check_cmd="dblab"
-TOOL_dblab_method="github_release"
-TOOL_dblab_github_repo="danvergara/dblab"
-TOOL_dblab_archive_pattern='dblab_${VERSION_NOTAG}_linux_${ARCH}.tar.gz'
-TOOL_dblab_binary_path='dblab'
-TOOL_dblab_arch_map='x86_64:amd64 aarch64:arm64'
+TOOL_rainfrog_check_cmd="rainfrog"
+TOOL_rainfrog_method="github_release"
+TOOL_rainfrog_github_repo="achristmascarl/rainfrog"
+TOOL_rainfrog_archive_pattern='rainfrog-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
+TOOL_rainfrog_binary_path='rainfrog'
+TOOL_rainfrog_arch_map='x86_64:x86_64 aarch64:aarch64'
 
 # ════════════════════════════════════════
 # APT repo installs (Debian/Ubuntu only)
@@ -330,7 +330,7 @@ LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
   starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
-  fzf fastfetch delta lazygit ghq dops yazi dblab typst
+  fzf fastfetch delta lazygit ghq dops yazi rainfrog typst
   just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex
   # APT-only (skipped on Alpine)
   gh neovim eza bat postgresql

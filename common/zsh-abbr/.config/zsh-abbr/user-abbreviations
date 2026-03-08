@@ -79,7 +79,7 @@ abbr dcl="docker compose logs -f"
 
 # Database
 abbr pg="pgcli"
-abbr dbl="dblab"
+abbr rf="rainfrog"
 
 # Just (task runner)
 abbr j="just"

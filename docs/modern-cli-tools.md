@@ -41,7 +41,7 @@ brew bundle --file=~/dotfiles/config/Brewfile
 
 各ツールのインストール方法:
 - **apt/apk**: eza, bat, ripgrep, fd, postgresql-client 等
-- **GitHub release**: direnv, just, watchexec, hyperfine, gitleaks, xh, ouch, glow, viddy, doggo, topgrade, grex, dblab 等
+- **GitHub release**: direnv, just, watchexec, hyperfine, gitleaks, xh, ouch, glow, viddy, doggo, topgrade, grex, rainfrog 等
 - **cargo**: tealdeer, procs, sd, du-dust, bottom, rm-improved, git-absorb, cargo-update 等
 - **uv tool**: pgcli
 
@@ -142,7 +142,7 @@ command -v xh &>/dev/null && alias http="xh"
 | `keifu` | keifu | Git コミットグラフ TUI（ブランチ構造の可視化に特化） |
 | `cargo-install-update` | cargo-update | cargo install パッケージの一括アップデート (`cargo install-update -a`) |
 | `pgcli` | pgcli | PostgreSQL インタラクティブクライアント（オートコンプリート・シンタックスハイライト） |
-| `dblab` | dblab | TUI データベースクライアント（スキーマブラウジング・クエリ実行） |
+| `rainfrog` | rainfrog | TUI データベースクライアント（Rust製、Vimキーバインド対応） |
 | `psql` | postgresql@17 | PostgreSQL クライアントツール群（pg_dump, pg_restore 等） |
 
 ## fd 設定
