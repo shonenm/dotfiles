@@ -55,7 +55,7 @@ return {
     },
   },
 
-  -- toggleterm.nvim: pgcli/dblab integration
+  -- toggleterm.nvim: pgcli/rainfrog integration
   {
     "akinsho/toggleterm.nvim",
     keys = {
@@ -90,8 +90,8 @@ return {
         function()
           local Terminal = require("toggleterm.terminal").Terminal
           local db_url = vim.env.DATABASE_URL or "postgresql://postgres:postgres@localhost:5432/postgres"
-          local dblab = Terminal:new({
-            cmd = "dblab --url " .. db_url,
+          local rainfrog = Terminal:new({
+            cmd = "rainfrog --url " .. db_url,
             direction = "float",
             float_opts = {
               border = "rounded",
@@ -107,9 +107,9 @@ return {
               vim.api.nvim_buf_set_keymap(term.bufnr, "t", "<Esc>", "<Esc>", { noremap = true, silent = true })
             end,
           })
-          dblab:toggle()
+          rainfrog:toggle()
         end,
-        desc = "dblab",
+        desc = "rainfrog",
       },
     },
   },
