@@ -27,6 +27,17 @@ get_sketchybar_display() {
     fi
 }
 
+# モニターラベルを取得（メイン/サブ1/サブ2...）
+get_monitor_label() {
+    local monitor=$1
+    if [ "$monitor" -eq 1 ]; then
+        echo "メイン"
+    else
+        local sub_index=$((monitor - 1))
+        echo "サブ${sub_index}"
+    fi
+}
+
 # Get current mode color
 HIGHLIGHT_COLOR=$(get_mode_color)
 
@@ -55,9 +66,10 @@ PREV_STATE=""
 if [ "$CURRENT_STATE" != "$PREV_STATE" ]; then
     echo "$CURRENT_STATE" > "$STATE_FILE"
 
-    # Remove old workspace items and brackets
+    # Remove old workspace items, brackets, and monitor labels
     sketchybar --remove '/space\..*/' 2>/dev/null
     sketchybar --remove '/workspaces.*/' 2>/dev/null
+    sketchybar --remove '/monitor_label_.*/' 2>/dev/null
 
     # Create workspace items per monitor
     for monitor in $(seq 1 $MONITOR_COUNT); do
@@ -68,6 +80,23 @@ if [ "$CURRENT_STATE" != "$PREV_STATE" ]; then
         SKETCHYBAR_DISPLAY=$(get_sketchybar_display $monitor)
 
         SPACE_ITEMS=()
+
+        # モニターラベル（マルチモニター時のみ）
+        if [ "$MONITOR_COUNT" -gt 1 ]; then
+            MONITOR_LABEL=$(get_monitor_label $monitor)
+            sketchybar --add item "monitor_label_$monitor" left \
+                --set "monitor_label_$monitor" \
+                display=$SKETCHYBAR_DISPLAY \
+                icon.drawing=off \
+                label="$MONITOR_LABEL" \
+                label.font="Hack Nerd Font:Bold:10.0" \
+                label.color=0x88ffffff \
+                label.padding_left=8 \
+                label.padding_right=6 \
+                background.drawing=off
+            SPACE_ITEMS+=("monitor_label_$monitor")
+        fi
+
         for sid in $MONITOR_WS; do
             SPACE_ITEMS+=("space.$sid")
 
@@ -127,14 +156,17 @@ if [ "$CURRENT_STATE" != "$PREV_STATE" ]; then
     done
 fi
 
-# Update highlight for focused workspace and bracket colors (all monitors)
+# Update highlight for visible workspaces on each monitor (not just focused)
 for monitor in $(seq 1 $MONITOR_COUNT); do
     # Update bracket border color
     sketchybar --set "workspaces_$monitor" background.border_color=$HIGHLIGHT_COLOR 2>/dev/null
 
+    # 各モニターの表示中ワークスペースを取得（フォーカスの有無に関係なく）
+    VISIBLE_WS=$(aerospace list-workspaces --monitor $monitor --visible 2>/dev/null)
+
     MONITOR_WS=$(aerospace list-workspaces --monitor $monitor --empty no 2>/dev/null)
     for sid in $MONITOR_WS; do
-        if [ "$sid" = "$FOCUSED_WS" ]; then
+        if [ "$sid" = "$VISIBLE_WS" ]; then
             sketchybar --set "space.$sid" \
                 background.color=$HIGHLIGHT_COLOR \
                 background.drawing=on
