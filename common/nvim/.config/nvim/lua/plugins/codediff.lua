@@ -576,6 +576,55 @@ return {
       return result
     end
 
+    -- CodeDiffタブでsnacks explorerの自動起動を抑制する。
+    -- render.luaがgit statusのディレクトリエントリ(例: "dir/" with status "??")に対して
+    -- bufadd/bufloadを実行すると、snacks.explorerのBufEnter autocmd(replace_netrw)が
+    -- isdirectory()==1で発火し、新しいexplorer pickerを作成してレイアウトが複製される。
+    -- vim.schedule内の非同期実行のためeventignoreでは防御不可。snacks側にAPIが存在しない
+    -- ため、autocmdコールバックをラップしてCodeDiffタブをスキップする。
+    local codediff_tabs = {}
+    local snacks_explorer_patched = false
+
+    local function patch_snacks_explorer_autocmd()
+      if snacks_explorer_patched then return end
+      local aucmds = vim.api.nvim_get_autocmds({ group = "snacks.explorer", event = "BufEnter" })
+      for _, au in ipairs(aucmds) do
+        if au.callback then
+          local orig_cb = au.callback
+          vim.api.nvim_del_autocmd(au.id)
+          vim.api.nvim_create_autocmd("BufEnter", {
+            group = au.group,
+            callback = function(ev)
+              if codediff_tabs[vim.api.nvim_get_current_tabpage()] then
+                return
+              end
+              return orig_cb(ev)
+            end,
+          })
+        end
+      end
+      snacks_explorer_patched = true
+    end
+
+    local orig_view_create = view_mod.create
+    view_mod.create = function(session_config, filetype, on_ready)
+      patch_snacks_explorer_autocmd()
+      local ok, result = pcall(orig_view_create, session_config, filetype, on_ready)
+      codediff_tabs[vim.api.nvim_get_current_tabpage()] = true
+      if not ok then error(result) end
+      return result
+    end
+
+    -- CodeDiffタブが閉じられたらトラッキングから除去
+    vim.api.nvim_create_autocmd("TabClosed", {
+      callback = function(ev)
+        local tab = tonumber(ev.match)
+        if tab then
+          codediff_tabs[tab] = nil
+        end
+      end,
+    })
+
     -- Phase 2: auto_refresh throttle adjustment (200ms → 400ms)
     -- Wrap enable() to use custom throttle timer
     local auto_refresh_mod = require("codediff.ui.auto_refresh")
