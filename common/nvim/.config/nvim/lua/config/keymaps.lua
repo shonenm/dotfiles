@@ -61,3 +61,20 @@ end, { desc = "Scroll half screen left" })
 map("n", "<C-S-d>", function()
   scroll_horizontal("zL")
 end, { desc = "Scroll half screen right" })
+
+-- Copy diagnostic message to clipboard
+map("n", "<leader>cy", function()
+  local diagnostics = vim.diagnostic.get(0, { lnum = vim.api.nvim_win_get_cursor(0)[1] - 1 })
+  if #diagnostics == 0 then
+    vim.notify("No diagnostics on this line", vim.log.levels.WARN)
+    return
+  end
+  local lines = {}
+  for _, d in ipairs(diagnostics) do
+    local prefix = d.source and d.code and ("[" .. d.source .. "] " .. d.code .. ": ") or ""
+    table.insert(lines, prefix .. d.message)
+  end
+  local msg = table.concat(lines, "\n")
+  vim.fn.setreg("+", msg)
+  vim.notify("Diagnostic copied", vim.log.levels.INFO)
+end, { desc = "Copy diagnostic message" })
