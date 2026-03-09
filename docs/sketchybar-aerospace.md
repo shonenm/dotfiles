@@ -89,14 +89,27 @@ Keybinding help is displayed on the right:
 ┌─────────────────────────┐
 │ [1]  [2]  [T]  [C]     │
 │      ↑                  │
-│   Focused              │
+│   Visible               │
 └─────────────────────────┘
 ```
 
 - Shows **only non-empty workspaces** (empty ones hidden)
-- Focused workspace is **highlighted with mode color**
+- **Visible workspace on each monitor** is highlighted with mode color (not just the focused one)
 - **Click to switch workspaces**
 - **Badge shows notification count** when notifications exist
+
+### Multi-Monitor Display
+
+When multiple monitors are connected, each monitor's workspace list shows a monitor label:
+
+```
+Main monitor:  [メイン  1  2  T]
+Sub monitor:   [サブ1   C  F]
+```
+
+- Monitor 1 = "メイン", Monitor 2 = "サブ1", Monitor 3 = "サブ2", ...
+- Single monitor: no label displayed
+- Each monitor independently highlights its visible workspace
 
 ### Notification Badges
 
@@ -198,7 +211,7 @@ Press `alt+shift+/` to show a popup of all workspaces:
     ├── aerospace.sh      # Workspace focus
     ├── show_layout.sh    # Layout popup
     ├── claude.sh         # Notification badges
-    ├── accent_color.sh   # Color definitions
+    ├── colors.sh         # Color definitions
     ├── icon_map.sh       # App icon mapping
     ├── toggle_bar.sh     # Bar visibility toggle
     └── pomodoro.sh       # Pomodoro timer display

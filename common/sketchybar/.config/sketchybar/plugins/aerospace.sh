@@ -1,12 +1,24 @@
 #!/bin/bash
 
-source "$CONFIG_DIR/plugins/accent_color.sh"
+source "$CONFIG_DIR/plugins/colors.sh"
 
-# Highlight focused workspace with system accent color
-if [ "$1" = "$FOCUSED_WORKSPACE" ]; then
-    sketchybar --set $NAME background.color=$ACCENT_COLOR \
-                           label.color=0xffffffff
+# 全モニターの表示中ワークスペースを取得（フォーカスの有無に関係なく）
+VISIBLE_WORKSPACES=$(aerospace list-workspaces --monitor all --visible 2>/dev/null)
+
+HIGHLIGHT=false
+for ws in $VISIBLE_WORKSPACES; do
+    if [ "$1" = "$ws" ]; then
+        HIGHLIGHT=true
+        break
+    fi
+done
+
+if [ "$HIGHLIGHT" = "true" ]; then
+    sketchybar --set $NAME \
+        background.color=$(get_mode_color) \
+        background.drawing=on
 else
-    sketchybar --set $NAME background.color=0x00000000 \
-                           label.color=0xffffffff
+    sketchybar --set $NAME \
+        background.color=0x00000000 \
+        background.drawing=off
 fi
