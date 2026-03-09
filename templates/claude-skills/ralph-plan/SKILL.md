@@ -124,15 +124,23 @@ arguments: "<task-description>"
 
 ### Phase 3: 状態ファイル生成
 
-ユーザーが設計とタスクグラフを承認したら、以下のコマンドで状態ファイルを生成する:
+ユーザーが設計とタスクグラフを承認したら、状態ファイルを生成する。
+
+手順:
+
+1. Bash で SESSION_HASH を計算し STATE_FILE パスを決定する:
 
 ```bash
 SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
 STATE_FILE="/tmp/ralph_${SESSION_HASH}.json"
+echo "$STATE_FILE"
+```
 
-# jq で状態ファイルを生成 (ACとタスクグラフは動的に構築)
-# ... (Phase 1/2 の結果を JSON に変換)
+2. Write ツールで STATE_FILE パスに状態ファイル (JSON) を直接書き出す。シェルを経由しないため、日本語テキストやシェル特殊文字 (`!`, `|`, `"` 等) を安全に含められる。
 
+3. Bash でマニフェストに STATE_FILE パスを書き込む:
+
+```bash
 echo "$STATE_FILE" > /tmp/ralph_session_manifest
 ```
 

@@ -153,7 +153,7 @@ Blocks interactive tools that would break the autonomous loop:
 |---------|--------|--------|
 | `AskUserQuestion\|EnterPlanMode` | `exit 2` (deny) | Prevents questions mid-loop |
 
-`/ralph-plan` uses `allowed-tools` to exclude Write/Edit/MultiEdit, preventing any code modifications during the planning session.
+`/ralph-plan` uses `allowed-tools` to exclude Edit/MultiEdit, preventing code modifications during the planning session. Write is permitted only for Phase 3 state file generation (avoids shell escaping issues with jq).
 
 ### Stop Hook (`ralph-stop-hook.sh`)
 
@@ -245,7 +245,7 @@ dotfiles/
 - Fail-open hooks: `jq` missing -> `exit 0` (don't break non-Ralph sessions)
 - Hooks in skill frontmatter: active only during skill execution, no global side effects
 - Zero interaction via PreToolUse hook: `AskUserQuestion`/`EnterPlanMode` denied at hook level
-- `/ralph-plan` defense: `allowed-tools` (hide Write/Edit/MultiEdit) + prompt reinforcement. PreToolUse hook は skill frontmatter hooks がグローバルに読み込まれる制約により不採用
+- `/ralph-plan` defense: `allowed-tools` (hide Edit/MultiEdit, Write は Phase 3 状態ファイル生成のみ許可) + prompt reinforcement. PreToolUse hook は skill frontmatter hooks がグローバルに読み込まれる制約により不採用
 - Backpressure auto-fix: eslint/prettier/ruff fix before reporting remaining errors
 - Parallel execution max 4 workers: resource constraint
 - SessionStart context hook: global in `settings.json`, provides project awareness to all sessions
