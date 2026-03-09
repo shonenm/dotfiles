@@ -11,12 +11,13 @@ disable-model-invocation: true
 
 ## 手順
 
-1. マニフェストから状態ファイルを特定し、アーカイブを保存してから削除する:
+1. セッション固有の active ファイルから状態ファイルを特定し、アーカイブを保存してから削除する:
 
 ```bash
-MANIFEST="/tmp/ralph_session_manifest"
-if [ -f "$MANIFEST" ]; then
-  STATE_FILE="$(cat "$MANIFEST")"
+SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
+ACTIVE_FILE="/tmp/ralph_active_${SESSION_HASH}"
+if [ -f "$ACTIVE_FILE" ]; then
+  STATE_FILE="$(cat "$ACTIVE_FILE")"
   if [ -f "$STATE_FILE" ]; then
     # アーカイブを保存
     ARCHIVE="/tmp/ralph_archive_$(date +%Y%m%d_%H%M%S).json"
@@ -24,7 +25,7 @@ if [ -f "$MANIFEST" ]; then
     rm -f "$STATE_FILE"
     echo "State file archived to: $ARCHIVE"
   fi
-  rm -f "$MANIFEST"
+  rm -f "$ACTIVE_FILE"
   echo "Ralph loop cancelled."
 else
   echo "No active Ralph loop found."
@@ -32,5 +33,5 @@ fi
 ```
 
 2. 結果をユーザーに報告:
-   - マニフェストが存在して削除できた場合: "Ralph loop cancelled. Archive: <archive_path>"
-   - マニフェストが存在しなかった場合: "No active Ralph loop found."
+   - active ファイルが存在して削除できた場合: "Ralph loop cancelled. Archive: <archive_path>"
+   - active ファイルが存在しなかった場合: "No active Ralph loop found."

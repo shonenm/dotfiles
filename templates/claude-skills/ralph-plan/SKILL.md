@@ -120,6 +120,8 @@ arguments: "<task-description>"
 - 対象ファイル
 - 依存するタスク
 
+注意: task_graph にコミットタスクを含めない。ユーザーが明示的にコミットを要求した場合のみ含める。
+
 ユーザーのフィードバックを受けて修正し、承認を得る。
 
 ### Phase 3: 状態ファイル生成
@@ -141,7 +143,7 @@ echo "$STATE_FILE"
 3. Bash でマニフェストに STATE_FILE パスを書き込む:
 
 ```bash
-echo "$STATE_FILE" > /tmp/ralph_session_manifest
+echo "$STATE_FILE" > /tmp/ralph_latest_state
 ```
 
 状態ファイルのスキーマ:

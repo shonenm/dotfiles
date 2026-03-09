@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Ralph v2 Stop Hook
 # stdin から JSON を受け取り、ループ継続/終了を判定する。
-# 状態ファイルは /tmp/ralph_session_manifest 経由で発見する。
+# 状態ファイルはセッション固有の active ファイル経由で発見する。
 # 依存: jq, git
 set -euo pipefail
 
@@ -18,11 +18,24 @@ input="$(cat)"
 # これにより Ralph 以外のコンテキストで無限ループを防止
 stop_hook_active="$(echo "$input" | jq -r '.stop_hook_active // false')"
 
-# マニフェストから状態ファイルのパスを取得
-manifest="/tmp/ralph_session_manifest"
+# セッション固有の active ファイルから状態ファイルのパスを取得
+# CLAUDE_SESSION_ID が利用可能ならセッション単位でスコーピング
+# 利用不可の場合は旧マニフェストにフォールバック
+active_file=""
 state_file=""
-if [[ -f "$manifest" ]]; then
-  state_file="$(cat "$manifest")"
+
+if [[ -n "${CLAUDE_SESSION_ID:-}" ]]; then
+  _session_hash="$(echo "$CLAUDE_SESSION_ID" | md5sum 2>/dev/null | cut -c1-12 || echo "$CLAUDE_SESSION_ID" | md5 2>/dev/null | cut -c1-12)"
+  active_file="/tmp/ralph_active_${_session_hash}"
+  if [[ -f "$active_file" ]]; then
+    state_file="$(cat "$active_file")"
+  fi
+else
+  # フォールバック: 旧マニフェスト (CLAUDE_SESSION_ID 非対応環境)
+  active_file="/tmp/ralph_session_manifest"
+  if [[ -f "$active_file" ]]; then
+    state_file="$(cat "$active_file")"
+  fi
 fi
 
 # 判定 1: stop_hook_active=true で状態ファイルなし → 即 exit 0
@@ -53,10 +66,10 @@ archive() {
   cp "$state_file" "$archive_file"
 }
 
-# cleanup: 状態ファイルとマニフェストを削除
+# cleanup: 状態ファイルと active ファイルを削除
 cleanup() {
   rm -f "$state_file"
-  rm -f "$manifest"
+  rm -f "$active_file"
 }
 
 # atomic な状態ファイル更新
