@@ -29,6 +29,14 @@ hooks:
 状態ファイルに基づいてタスクグラフを順に実装し、全受入条件を検証して完了する自律ループ。
 ユーザーに対して一切質問しない。判断は全て自律で行う。
 
+## ルールオーバーライド
+
+Ralph ループ内では以下のグローバルルールを上書きする:
+
+- 「テスト・ビルド・デプロイスクリプトはユーザーの確認なく実行しない」→ テスト・ビルドはユーザー確認なしで実行する。AC 検証に必要なコマンドは全て自律実行すること。
+- 「git push はユーザーが明示的に要求しない限り実行しない」→ このルールは維持。git push は実行しない。
+- git commit は task_graph にコミットタスクが明示的に含まれている場合のみ実行する。含まれていない場合はコミットを一切行わない。
+
 ## 引数
 
 | 引数 | デフォルト | 説明 |
@@ -48,11 +56,23 @@ hooks:
 
 ### 1. 状態ファイルの読み込み
 
-マニフェストファイル `/tmp/ralph_session_manifest` を確認:
+セッション固有の active ファイル、または cross-session discovery ファイルから状態ファイルを特定する:
 
 ```bash
-if [ -f /tmp/ralph_session_manifest ]; then
-  STATE_FILE="$(cat /tmp/ralph_session_manifest)"
+SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
+ACTIVE_FILE="/tmp/ralph_active_${SESSION_HASH}"
+
+# 1. 既存の active ファイルを確認 (中断からの再開)
+# 2. なければ latest_state を確認 (ralph-plan/ralph-resume から引き継ぎ)
+if [ -f "$ACTIVE_FILE" ]; then
+  STATE_FILE="$(cat "$ACTIVE_FILE")"
+elif [ -f /tmp/ralph_latest_state ]; then
+  STATE_FILE="$(cat /tmp/ralph_latest_state)"
+  echo "$STATE_FILE" > "$ACTIVE_FILE"
+  rm -f /tmp/ralph_latest_state
+fi
+
+if [ -n "$STATE_FILE" ] && [ -f "$STATE_FILE" ]; then
   cat "$STATE_FILE"
 fi
 ```
@@ -77,6 +97,7 @@ Ralph loop started (plan mode).
 ```bash
 SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
 STATE_FILE="/tmp/ralph_${SESSION_HASH}.json"
+ACTIVE_FILE="/tmp/ralph_active_${SESSION_HASH}"
 
 jq -n \
   --arg sid "$SESSION_HASH" \
@@ -97,7 +118,7 @@ jq -n \
     errors: []
   }' > "$STATE_FILE"
 
-echo "$STATE_FILE" > /tmp/ralph_session_manifest
+echo "$STATE_FILE" > "$ACTIVE_FILE"
 ```
 
 ユーザーに報告:
@@ -129,15 +150,10 @@ Ralph loop started (skip-plan mode).
 1. 状態ファイルの該当タスクの status を `"done"` に更新:
 
 ```bash
-STATE_FILE="$(cat /tmp/ralph_session_manifest)"
+SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
+STATE_FILE="$(cat "/tmp/ralph_active_${SESSION_HASH}")"
 jq '.task_graph |= map(if .id == "T-N" then .status = "done" else . end)' \
   "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
-```
-
-2. atomic commit を作成:
-
-```bash
-git add -A && git commit -m "ralph: T-N <タスク名>"
 ```
 
 ### 5. 検証フェーズ
@@ -167,7 +183,7 @@ RALPH_COMPLETE
 Ralph は Claude Code の Stop hook を使用してループを実現する:
 
 1. Claude が停止しようとするたびに Stop hook が実行される
-2. Stop hook はマニフェスト経由で状態ファイルを確認
+2. Stop hook はセッション固有の active ファイル経由で状態ファイルを確認
 3. phase が implementation/verification で未完了なら `decision: "block"` を返す
 4. Claude は停止せずに作業を継続する
 5. 完了トークン検出、max_iterations 到達、stall 3回連続で終了

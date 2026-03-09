@@ -19,6 +19,7 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task, WebFetch, WebSearch, AskUser
 2. Phase 2 の承認は「Phase 3（状態ファイル生成）に進んでよい」という意味であり、「実装を開始してよい」ではない。Phase 2 承認後は必ず Phase 3 を実行すること。Phase 3 をスキップして実装に進むことは禁止。
 3. Phase 3 で状態ファイルを生成したら、このスキルは終了する。実装作業は一切行わない。コードの変更、ファイルの作成・編集は禁止。実装は別セッションで `/ralph` を実行して行う。
 4. Edit/MultiEdit ツールはこのスキルでは使用不可。Write ツールは Phase 3 の状態ファイル生成にのみ使用可。コード変更は一切行えない。
+5. task_graph にコミットタスクを含めない。ユーザーが明示的にコミットを要求した場合のみ含める。
 
 ## 引数
 
@@ -160,10 +161,10 @@ echo "$STATE_FILE"
 
 2. Write ツールで STATE_FILE パスに状態ファイル (JSON) を直接書き出す。シェルを経由しないため、日本語テキストやシェル特殊文字 (`!`, `|`, `"` 等) を安全に含められる。
 
-3. Bash でマニフェストに STATE_FILE パスを書き込む:
+3. Bash で discovery ファイルに STATE_FILE パスを書き込む:
 
 ```bash
-echo "$STATE_FILE" > /tmp/ralph_session_manifest
+echo "$STATE_FILE" > /tmp/ralph_latest_state
 ```
 
 状態ファイルのスキーマ:

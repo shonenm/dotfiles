@@ -76,6 +76,8 @@ cat "$ARCHIVE" | jq .
 - 必要に応じて追加の受入条件も定義する
 - ユーザーが承認したら Step 4 へ進む
 
+注意: task_graph にコミットタスクを含めない。ユーザーが明示的にコミットを要求した場合のみ含める。
+
 ### Step 4: 状態ファイルの生成
 
 アーカイブの内容と新規タスクを統合して新しい状態ファイルを生成する。
@@ -99,7 +101,7 @@ STATE_FILE="/tmp/ralph_${SESSION_HASH}.json"
 # - context_report を保持
 # - phase, iteration, stall_hashes, errors をリセット
 
-echo "$STATE_FILE" > /tmp/ralph_session_manifest
+echo "$STATE_FILE" > /tmp/ralph_latest_state
 ```
 
 ### Step 5: ユーザーへの案内
