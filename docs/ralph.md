@@ -16,7 +16,7 @@ Ralph v2 splits the workflow into two independent commands:
 - Skills (`.claude/skills/`) -- User-invocable entry points
 - Hooks (`settings.json` / skill frontmatter) -- Deterministic backpressure (CLAUDE.md is a "request", Hooks are "enforcement")
 - Agents (`.claude/agents/`) + `isolation: worktree` -- Parallel execution isolation
-- Manifest (`/tmp/ralph_session_manifest`) -- State file discovery
+- Manifest -- Session-scoped state file discovery (`/tmp/ralph_active_<hash>` per session, `/tmp/ralph_latest_state` for cross-session)
 
 ## Architecture
 
@@ -24,14 +24,14 @@ Ralph v2 splits the workflow into two independent commands:
 /ralph-plan "Add auth"          /ralph                      /ralph "Fix bug"
   |                               |                           |
   v                               v                           v
-[Interactive dialog]            [Read manifest]             [Skip-plan mode]
+[Interactive dialog]            [Read active/latest]        [Skip-plan mode]
 Phase 0: Context gathering      |                           Generate minimal
 Phase 1: Requirements + AC      v                           state file
 Phase 2: Design + tasks       [State file exists?]            |
   |                            Yes -> plan mode               v
   v                            No  -> error                [Same loop as plan]
 [Generate state file]            |
-[Write manifest]                 v
+[Write latest_state]             v
   |                           [Implementation loop]
   v                             |
 "Run /ralph to start"         [PreToolUse] Block AskUserQuestion/EnterPlanMode
@@ -132,7 +132,9 @@ Orchestrates up to 4 concurrent `ralph-worker` sub-agents in isolated worktrees.
 }
 ```
 
-Discovered via manifest: `/tmp/ralph_session_manifest` (contains path to state file).
+Discovery:
+- `/tmp/ralph_latest_state` -- Cross-session discovery (written by `/ralph-plan` and `/ralph-resume`, consumed by `/ralph`)
+- `/tmp/ralph_active_<session_hash>` -- Session-scoped active marker (used by Stop hook and `/ralph-cancel`)
 
 ## How It Works
 
@@ -157,15 +159,16 @@ Blocks interactive tools that would break the autonomous loop:
 
 ### Stop Hook (`ralph-stop-hook.sh`)
 
-Manifest-based state discovery. Phase-aware blocking. Decision logic (in priority order):
+Session-scoped state discovery via `CLAUDE_SESSION_ID`. Phase-aware blocking. Decision logic (in priority order):
 
-1. `stop_hook_active=true` + no manifest/state file -> `exit 0` (prevents infinite loop)
-2. No state file -> `exit 0` (not a Ralph session)
-3. Phase not `implementation`/`verification` -> `exit 0` (pass through)
-4. Completion token detected in `last_assistant_message` -> cleanup manifest + state -> `exit 0`
-5. `iteration >= max_iterations` -> record error -> cleanup -> `exit 0`
-6. Stall detection: `git diff --stat | md5` tracked in `stall_hashes` array. 3 consecutive same hash -> record error -> cleanup -> `exit 0`
-7. Otherwise -> increment iteration, update state, return `decision: "block"` with progress info (tasks done/total, pending ACs)
+1. Compute session hash from `CLAUDE_SESSION_ID`, check `/tmp/ralph_active_<hash>`. No active file -> `exit 0` (not a Ralph session)
+2. `stop_hook_active=true` + no state file -> `exit 0` (prevents infinite loop)
+3. No state file -> `exit 0` (not a Ralph session)
+4. Phase not `implementation`/`verification` -> `exit 0` (pass through)
+5. Completion token detected in `last_assistant_message` -> cleanup active file + state -> `exit 0`
+6. `iteration >= max_iterations` -> record error -> cleanup -> `exit 0`
+7. Stall detection: `git diff --stat | md5` tracked in `stall_hashes` array. 3 consecutive same hash -> record error -> cleanup -> `exit 0`
+8. Otherwise -> increment iteration, update state, return `decision: "block"` with progress info (tasks done/total, pending ACs)
 
 ### Backpressure Hook (`ralph-backpressure.sh`)
 
@@ -199,7 +202,7 @@ Notes: ...
 dotfiles/
 +-- common/claude/.claude/
 |   +-- hooks/
-|   |   +-- ralph-stop-hook.sh         # Stop hook (manifest-based, phase-aware)
+|   |   +-- ralph-stop-hook.sh         # Stop hook (session-scoped, phase-aware)
 |   |   +-- ralph-backpressure.sh      # PostToolUse hook (tsc/eslint/prettier/test/ruff)
 |   |   +-- ralph-session-context.sh   # SessionStart hook (project context)
 |   +-- skills/
@@ -236,18 +239,19 @@ dotfiles/
 
 - Plan/execute split: `/ralph-plan` is interactive, `/ralph` is autonomous. Completely independent commands
 - Skip-plan mode: `/ralph "task"` auto-generates minimal state file for backward compatibility
-- Manifest-based discovery: `/tmp/ralph_session_manifest` decouples state file naming from session ID
+- Session-scoped manifest: `/tmp/ralph_active_<hash>` per session prevents cross-session interference. `/tmp/ralph_latest_state` for cross-session discovery (ralph-plan -> ralph handoff)
 - Phase-aware Stop hook: only blocks during `implementation`/`verification` phases
 - Stall detection via `stall_hashes` array in state file (replaces simple counter)
 - Error recording in state file `errors` array before cleanup
 - State archiving on all exit paths: completion, max_iterations, stall, and cancel all create `/tmp/ralph_archive_<timestamp>.json` for resume and post-mortem analysis
 - Atomic state updates: `jq > tmp && mv tmp state_file` pattern
 - Fail-open hooks: `jq` missing -> `exit 0` (don't break non-Ralph sessions)
-- Hooks in skill frontmatter: active only during skill execution, no global side effects
+- Hooks in skill frontmatter: loaded globally (known constraint), session-scoped via `CLAUDE_SESSION_ID` in Stop hook
 - Zero interaction via PreToolUse hook: `AskUserQuestion`/`EnterPlanMode` denied at hook level
 - `/ralph-plan` defense: `allowed-tools` (hide Edit/MultiEdit, Write は Phase 3 状態ファイル生成のみ許可) + prompt reinforcement. PreToolUse hook は skill frontmatter hooks がグローバルに読み込まれる制約により不採用
 - Backpressure auto-fix: eslint/prettier/ruff fix before reporting remaining errors
 - Parallel execution max 4 workers: resource constraint
+- No auto-commit: ralph does not commit unless task_graph explicitly includes a commit task. ralph-plan/ralph-resume do not generate commit tasks unless the user explicitly requests it
 - SessionStart context hook: global in `settings.json`, provides project awareness to all sessions
 
 ## Hook Timeouts
