@@ -13,6 +13,7 @@ brew "sheldon"
 brew "atuin"
 brew "zoxide"
 brew "stow"
+brew "aerc"
 
 # --- Image Processing ---
 brew "imagemagick"
