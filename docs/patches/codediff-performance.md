@@ -56,9 +56,26 @@
    - `vim.defer_fn(..., 150)` → `vim.schedule` に変更
    - gitsignsのstage_hunkは同期的にgit indexを更新するため待機不要
 
-4. **hunk_counts の generation-based スキップ** (Patch 4)
-   - `fetch_and_render()` に `mutable_generation` チェックを追加
-   - staging操作がない限り `git diff -U0` x2 をスキップ
+4. **hunk_counts のフォールバック参照** (Patch 4)
+   - `prepare_node` でハンクカウント参照時、主グループのキャッシュが miss した場合に反対側グループ (staged↔unstaged) もフォールバック参照
+   - optimistic stage/unstage 直後のキャッシュキー不一致による表示消失を防止
+   - 注: 当初 `mutable_generation` による generation-based スキップを実装していたが、ファイル編集後にカウントが更新されない問題があったため削除。既存の debounce/throttle で実行頻度は十分制御されている
+
+### Phase 4: Optimistic stage/unstage
+
+根本原因: Explorer での stage/unstage 操作時、git コマンド完了 → fs_event 検知 → debounce → `git status` → ツリー再構築という直列フローにより UI 更新に体感 1 秒以上かかっていた。
+
+1. **Optimistic UI 更新**
+   - `toggle_stage_entry` / `stage_all` / `unstage_all` のラッパーを書き換え
+   - `explorer.status_result` をインメモリで即座に更新（ファイルエントリを staged/unstaged 間で移動）
+   - `create_tree_data()` でツリーを再構築し即座に `render()`（git コマンド不要）
+
+2. **バックグラウンド git 実行**
+   - `git add` / `git reset HEAD` は非同期でバックグラウンド発火
+   - auto-refresh（fs_event + debounce）が後から実状態と整合
+
+3. **explorer init モジュール同期**
+   - `codediff.ui.explorer.init` がモジュールロード時に関数を静的コピーするため、パッチ後の関数を明示的に同期
 
 ## 効果
 
@@ -71,7 +88,8 @@
 | mutable revision cache | ファイル選択時の `git show` スキップ |
 | resolve_revision cache | ファイル選択時の `git rev-parse` スキップ |
 | 150ms delay削除 | staging操作後の体感遅延除去 |
-| hunk_counts skip | staging以外のrefreshで `git diff -U0` x2 スキップ |
+| hunk_counts fallback | グループ移動直後のハンクカウント表示消失防止 |
+| optimistic stage/unstage | Explorer の stage/unstage 操作で即座に UI 更新 |
 
 ## 削除条件
 
