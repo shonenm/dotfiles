@@ -70,10 +70,10 @@ TPM と tmux-which-key、tmux-thumbs を自動セットアップ:
 
 Claude / Codex / Gemini の設定ファイルを生成:
 
-- `~/.claude/settings.json`
-- `~/.claude/skills/` (beacon, commit 等のスキル)
-- `~/.codex/config.toml`
-- `~/.gemini/settings.json`
+- `~/.claude/settings.json` (テンプレートから `__HOME__` を置換して生成)
+- `~/.claude/skills/` (Stow symlink がある場合はスキップ、なければ `common/claude/.claude/skills/` からコピー)
+- `~/.codex/config.toml` (テンプレートから生成)
+- `~/.gemini/settings.json` (テンプレートから生成)
 
 1Password から Webhook URL を取得してキャッシュ。
 
