@@ -74,23 +74,8 @@ return {
       end)
     end
 
-    -- Wrap staging actions to invalidate mutable cache
+    -- Optimistic stage/unstage wrappers (defined after helper functions below)
     local actions_mod_wrap = require("codediff.ui.explorer.actions")
-    local orig_toggle_stage_entry = actions_mod_wrap.toggle_stage_entry
-    actions_mod_wrap.toggle_stage_entry = function(expl, tree)
-      invalidate_mutable_cache()
-      return orig_toggle_stage_entry(expl, tree)
-    end
-    local orig_stage_all = actions_mod_wrap.stage_all
-    actions_mod_wrap.stage_all = function(expl)
-      invalidate_mutable_cache()
-      return orig_stage_all(expl)
-    end
-    local orig_unstage_all = actions_mod_wrap.unstage_all
-    actions_mod_wrap.unstage_all = function(expl)
-      invalidate_mutable_cache()
-      return orig_unstage_all(expl)
-    end
 
     -- Runtime monkey-patch: Fix collapsed state key to use dir_path for unique identification
     -- This avoids modifying source files which would block Lazy.nvim updates
@@ -301,8 +286,11 @@ return {
         local hunk_count = 0
         local group = data.group or "unstaged"
         local cache_key = (group == "staged") and "staged" or "unstaged"
+        local alt_key = (cache_key == "staged") and "unstaged" or "staged"
         if hunk_cache[cache_key] and hunk_cache[cache_key][full_path] then
           hunk_count = hunk_cache[cache_key][full_path]
+        elseif hunk_cache[alt_key] and hunk_cache[alt_key][full_path] then
+          hunk_count = hunk_cache[alt_key][full_path]
         end
         local hunk_str = (hunk_count > 0) and tostring(hunk_count) or ""
 
@@ -432,6 +420,194 @@ return {
       end
     end
 
+    -- Optimistic stage/unstage: UI updates immediately, git command runs in background.
+    -- Auto-refresh (fs_event + debounce) reconciles with real git status afterward.
+    local function optimistic_move_file(status_result, path, from_group, to_group)
+      local source = status_result[from_group]
+      local target = status_result[to_group]
+      if not source or not target then return end
+      for i, file in ipairs(source) do
+        if file.path == path then
+          table.remove(source, i)
+          table.insert(target, file)
+          return
+        end
+      end
+    end
+
+    local function optimistic_move_directory(status_result, dir_path, from_group, to_group)
+      local source = status_result[from_group]
+      local target = status_result[to_group]
+      if not source or not target then return end
+      local prefix = dir_path .. "/"
+      local i = 1
+      while i <= #source do
+        if source[i].path == dir_path or source[i].path:sub(1, #prefix) == prefix then
+          table.insert(target, table.remove(source, i))
+        else
+          i = i + 1
+        end
+      end
+    end
+
+    local function optimistic_stage_all(status_result)
+      if status_result.unstaged then
+        for _, file in ipairs(status_result.unstaged) do
+          table.insert(status_result.staged, file)
+        end
+        status_result.unstaged = {}
+      end
+      if status_result.conflicts then
+        for _, file in ipairs(status_result.conflicts) do
+          table.insert(status_result.staged, file)
+        end
+        status_result.conflicts = {}
+      end
+    end
+
+    local function optimistic_unstage_all(status_result)
+      if status_result.staged then
+        for _, file in ipairs(status_result.staged) do
+          table.insert(status_result.unstaged, file)
+        end
+        status_result.staged = {}
+      end
+    end
+
+    local function rebuild_tree_from_status(explorer)
+      if not explorer.status_result then return end
+      if explorer.is_hidden then return end
+      if not vim.api.nvim_win_is_valid(explorer.winid) then return end
+
+      if not explorer.base_revision
+        and #explorer.status_result.unstaged == 0
+        and #explorer.status_result.staged == 0
+        and (not explorer.status_result.conflicts or #explorer.status_result.conflicts == 0)
+      then
+        if #vim.api.nvim_list_tabpages() > 1 then
+          vim.cmd("tabclose")
+        end
+        return
+      end
+
+      local cursor = vim.api.nvim_win_get_cursor(explorer.winid)
+      local tree_module = require("codediff.ui.explorer.tree")
+      local root_nodes = tree_module.create_tree_data(
+        explorer.status_result, explorer.git_root, explorer.base_revision, not explorer.git_root
+      )
+
+      for _, node in ipairs(root_nodes) do
+        node:expand()
+      end
+
+      local collapsed_state = collect_collapsed_state(explorer.tree)
+      explorer.tree:set_nodes(root_nodes)
+
+      local explorer_config = config_mod.options.explorer or {}
+      if explorer_config.view_mode == "tree" then
+        local function expand_all_dirs(parent_node)
+          if not parent_node:has_children() then return end
+          for _, child_id in ipairs(parent_node:get_child_ids()) do
+            local child = explorer.tree:get_node(child_id)
+            if child and child.data and child.data.type == "directory" then
+              child:expand()
+              expand_all_dirs(child)
+            end
+          end
+        end
+        for _, node in ipairs(root_nodes) do
+          expand_all_dirs(node)
+        end
+      end
+
+      restore_collapsed_state(explorer.tree, collapsed_state, root_nodes)
+      explorer.tree:render()
+
+      local line_count = vim.api.nvim_buf_line_count(explorer.bufnr)
+      if line_count > 0 then
+        local new_line = math.min(cursor[1], line_count)
+        pcall(vim.api.nvim_win_set_cursor, explorer.winid, { math.max(1, new_line), cursor[2] })
+      end
+    end
+
+    actions_mod_wrap.toggle_stage_entry = function(expl, tree)
+      if not expl or not expl.git_root then return end
+
+      local node = tree:get_node()
+      if not node or not node.data or node.data.type == "group" then return end
+
+      local entry_type = node.data.type
+      local group = node.data.group
+      if group ~= "staged" and group ~= "unstaged" and group ~= "conflicts" then return end
+
+      local target_group = (group == "staged") and "unstaged" or "staged"
+      invalidate_mutable_cache()
+
+      if entry_type == "directory" then
+        local dir_path = node.data.dir_path
+        if not dir_path then return end
+        if group == "staged" then
+          git_mod.unstage_file(expl.git_root, dir_path, function(err)
+            if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+          end)
+        else
+          git_mod.stage_file(expl.git_root, dir_path, function(err)
+            if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+          end)
+        end
+        if expl.status_result then
+          optimistic_move_directory(expl.status_result, dir_path, group, target_group)
+          rebuild_tree_from_status(expl)
+        end
+      else
+        local path = node.data.path
+        if not path then return end
+        if group == "staged" then
+          git_mod.unstage_file(expl.git_root, path, function(err)
+            if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+          end)
+        else
+          git_mod.stage_file(expl.git_root, path, function(err)
+            if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+          end)
+        end
+        if expl.status_result then
+          optimistic_move_file(expl.status_result, path, group, target_group)
+          rebuild_tree_from_status(expl)
+        end
+      end
+    end
+
+    actions_mod_wrap.stage_all = function(expl)
+      if not expl or not expl.git_root then return end
+      invalidate_mutable_cache()
+      git_mod.stage_all(expl.git_root, function(err)
+        if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+      end)
+      if expl.status_result then
+        optimistic_stage_all(expl.status_result)
+        rebuild_tree_from_status(expl)
+      end
+    end
+
+    actions_mod_wrap.unstage_all = function(expl)
+      if not expl or not expl.git_root then return end
+      invalidate_mutable_cache()
+      git_mod.unstage_all(expl.git_root, function(err)
+        if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+      end)
+      if expl.status_result then
+        optimistic_unstage_all(expl.status_result)
+        rebuild_tree_from_status(expl)
+      end
+    end
+
+    -- Sync patched functions to explorer init module (which copies at load time)
+    local explorer_init = require("codediff.ui.explorer")
+    explorer_init.toggle_stage_entry = actions_mod_wrap.toggle_stage_entry
+    explorer_init.stage_all = actions_mod_wrap.stage_all
+    explorer_init.unstage_all = actions_mod_wrap.unstage_all
+
     -- Replace M.refresh with fixed version (captures fixed local functions)
     refresh_mod.refresh = function(explorer)
       local git = require("codediff.core.git")
@@ -511,8 +687,6 @@ return {
       -- Fetch hunk counts in parallel with status
       local function fetch_and_render()
         if explorer.git_root and not explorer.base_revision then
-          if hunk_generation == mutable_generation then return end
-          hunk_generation = mutable_generation
           fetch_hunk_counts(explorer.git_root, function(counts)
             vim.schedule(function()
               hunk_cache.unstaged = counts.unstaged
