@@ -159,7 +159,7 @@ STATE_FILE="/tmp/ralph_${SESSION_HASH}.json"
 echo "$STATE_FILE"
 ```
 
-2. Write ツールで STATE_FILE パスに状態ファイル (JSON) を直接書き出す。シェルを経由しないため、日本語テキストやシェル特殊文字 (`!`, `|`, `"` 等) を安全に含められる。
+2. Write ツールで STATE_FILE パスに状態ファイル (JSON) を直接書き出す。シェルを経由しないため、日本語テキストやシェル特殊文字を安全に含められる。
 
 3. Bash で discovery ファイルに STATE_FILE パスを書き込む:
 
