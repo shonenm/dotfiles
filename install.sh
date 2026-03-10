@@ -346,19 +346,37 @@ generate_ai_cli_configs() {
     log_success "  Generated ~/.claude/settings.json"
   fi
 
-  # Claude Code skills
-  if [[ -d "$templates_dir/claude-skills" ]]; then
+  # Claude Code skills (from common/claude, skip if Stow symlinks exist)
+  local skills_src="$DOTFILES_DIR/common/claude/.claude/skills"
+  if [[ -d "$skills_src" ]]; then
     mkdir -p "$HOME/.claude/skills"
-    for skill_dir in "$templates_dir/claude-skills"/*/; do
+    for skill_dir in "$skills_src"/*/; do
       [[ -d "$skill_dir" ]] || continue
       local skill_name
       skill_name=$(basename "$skill_dir")
-      mkdir -p "$HOME/.claude/skills/$skill_name"
+      local target_dir="$HOME/.claude/skills/$skill_name"
+      # Stow がディレクトリ自体をシンボリックリンクにしている場合はスキップ
+      if [[ -L "$target_dir" ]]; then
+        log_success "  Skill already linked: $skill_name"
+        continue
+      fi
+      mkdir -p "$target_dir"
+      local all_linked=true
       for file in "$skill_dir"*; do
         [[ -f "$file" ]] || continue
-        sed "s|__HOME__|$HOME|g" "$file" > "$HOME/.claude/skills/$skill_name/$(basename "$file")"
+        local target_file="$target_dir/$(basename "$file")"
+        # Stow がファイル単位でシンボリックリンクにしている場合はスキップ
+        if [[ -L "$target_file" ]]; then
+          continue
+        fi
+        all_linked=false
+        cp "$file" "$target_file"
       done
-      log_success "  Generated skill: $skill_name"
+      if [[ "$all_linked" == "true" ]]; then
+        log_success "  Skill already linked: $skill_name"
+      else
+        log_success "  Generated skill: $skill_name"
+      fi
     done
   fi
 
