@@ -23,27 +23,6 @@ macros:
     commands:
       - source-file ~/.config/tmux/tmux.conf
       - display-message -d 800 "Config Reloaded!"
-  - name: popup-lazygit
-    commands:
-      - "display-popup -E -w 80% -h 80% -d #{pane_current_path} lazygit"
-  - name: popup-keifu
-    commands:
-      - "display-popup -E -w 80% -h 80% -d #{pane_current_path} 'zsh -lc keifu'"
-  - name: popup-ghdash
-    commands:
-      - "display-popup -E -w 85% -h 85% -d #{pane_current_path} gh\\ dash"
-  - name: popup-pgcli
-    commands:
-      - "display-popup -E -w 80% -h 80% -d #{pane_current_path} pgcli"
-  - name: popup-scratch
-    commands:
-      - "display-popup -E -w 80% -h 80% -d #{pane_current_path} tmux\\ new-session\\ -A\\ -s\\ scratch"
-  - name: popup-sessions
-    commands:
-      - "display-popup -E -w 60% -h 60% ~/dotfiles/scripts/tmux-session-color.sh\\ fzf-sessions"
-  - name: popup-projects
-    commands:
-      - "display-popup -E -w 60% -h 60% ~/dotfiles/scripts/tmux-popup-ghq.sh"
   - name: sync-toggle
     commands:
       - "run-shell ~/dotfiles/scripts/tmux-sync-toggle.sh"
@@ -58,25 +37,6 @@ items:
   - name: Split vertical
     key: "-"
     command: "splitw -v -c #{pane_current_path}"
-  - separator: true
-  - name: Lazygit
-    key: g
-    macro: popup-lazygit
-  - name: Keifu
-    key: k
-    macro: popup-keifu
-  - name: gh-dash
-    key: G
-    macro: popup-ghdash
-  - name: Scratchpad
-    key: j
-    macro: popup-scratch
-  - name: Sessions
-    key: f
-    macro: popup-sessions
-  - name: Projects
-    key: F
-    macro: popup-projects
   - separator: true
   - name: Copy mode
     key: v
@@ -156,10 +116,10 @@ items:
     menu:
       - name: Sessions
         key: f
-        macro: popup-sessions
+        command: popup-sessions
       - name: Projects
         key: F
-        macro: popup-projects
+        command: popup-projects
       - name: Choose tree
         key: s
         command: choose-tree -Zs
@@ -174,28 +134,9 @@ items:
   - name: +Popup
     key: o
     menu:
-      - name: Lazygit
-        key: g
-        macro: popup-lazygit
-      - name: Keifu
-        key: k
-        macro: popup-keifu
-      - name: gh-dash
-        key: G
-        macro: popup-ghdash
-      - name: pgcli
-        key: P
-        macro: popup-pgcli
-      - separator: true
-      - name: Scratchpad
-        key: j
-        macro: popup-scratch
-      - name: Sessions
-        key: f
-        macro: popup-sessions
-      - name: Projects
-        key: F
-        macro: popup-projects
+      - name: "(loading)"
+        key: "."
+        command: display-message
 
   - separator: true
   - name: Reload config
