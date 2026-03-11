@@ -613,6 +613,43 @@ Commit message format: `prefix(scope): description`
 cat /tmp/claude_workspace_map.json | jq .
 ```
 
+### News Digest (Claude Code)
+
+The `/news` skill fetches personalized news based on `~/.claude/news-profile.yaml`:
+
+```
+/news           # Past week (default)
+/news day       # Past 24 hours
+/news month     # Past month
+```
+
+Profile (`~/.claude/news-profile.yaml`):
+
+```yaml
+personal:
+  name: "Name"
+  company: "Company"
+  role: "Backend Engineer"
+  location: "Tokyo, Japan"
+
+interests:
+  technical:
+    - "Rust language"
+    - "Neovim ecosystem"
+  industry:
+    - "developer tools"
+  companies:
+    - "Anthropic"
+```
+
+Processing flow:
+1. Read profile -> generate 5-8 search queries per interest category
+2. WebSearch to collect sources -> filter by relevance
+3. WebFetch top 5-8 articles for summaries
+4. Output categorized digest (Technical / Industry / Companies / Serendipity)
+
+Constraints: WebSearch 5-10 calls, WebFetch 5-8 calls per session. Profile missing -> shows template and exits.
+
 ### Service Mode Commands
 
 Enter Service Mode with Aerospace `alt+shift+;`:
@@ -707,12 +744,14 @@ dotfiles/
 │       └── claude.sh               # SketchyBar plugin (workspace-based)
 ├── common/tmux/.config/tmux/
 │   └── claude-hooks.tmux           # tmux hooks configuration
+├── common/claude/.claude/news-profile.example.yaml  # /news profile template
 ├── common/claude/.claude/hooks/    # Claude Code hooks (stow managed)
 │   ├── ralph-stop-hook.sh          # Ralph loop control (Stop hook)
 │   └── ralph-backpressure.sh       # Ralph type check/lint (PostToolUse hook)
 ├── common/claude/.claude/skills/   # Claude Code skills (stow managed)
 │   ├── beacon/SKILL.md             # /beacon workspace registration
 │   ├── commit/SKILL.md             # /commit git commit (all, <path> support)
+│   ├── news/SKILL.md               # /news personalized news digest
 │   ├── update-md/SKILL.md          # /update-md documentation update
 │   ├── ralph/SKILL.md              # /ralph autonomous development loop
 │   ├── ralph-cancel/SKILL.md       # /ralph-cancel loop cancellation
@@ -739,6 +778,7 @@ dotfiles/
 - `~/.claude/skills/` → `~/dotfiles/common/claude/.claude/skills/` (stow symlink)
   - `beacon/` - Workspace registration skill
   - `commit/` - Git commit skill (supports `all` and `<path>` arguments)
+  - `news/` - Personalized news digest (profile-based WebSearch/WebFetch)
   - `update-md/` - Documentation update skill
   - `ralph/` - Autonomous development loop
   - `ralph-cancel/` - Loop cancellation
