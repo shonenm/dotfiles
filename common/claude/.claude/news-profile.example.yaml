@@ -1,0 +1,27 @@
+# News Profile - /news スキルで使用するパーソナライズ設定
+#
+# 使い方:
+#   1. このファイルを news-profile.yaml にコピー
+#      cp ~/.claude/news-profile.example.yaml ~/.claude/news-profile.yaml
+#   2. 自分の情報・興味を記述
+#   3. /news を実行
+
+personal:
+  name: ""
+  company: ""
+  role: ""
+  location: ""
+
+interests:
+  # 技術的な興味（言語、フレームワーク、ツール等）
+  technical:
+    - "Neovim ecosystem"
+    - "Rust language"
+  # 業界・分野の興味
+  industry:
+    - "developer tools"
+    - "cloud infrastructure"
+  # 動向を追いたい企業・プロジェクト
+  companies:
+    - "Anthropic"
+    - "Apple"
