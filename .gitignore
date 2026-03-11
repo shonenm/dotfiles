@@ -27,3 +27,6 @@ common/org.qgroundcontrol/
 # Local zsh config (machine-specific)
 mac/zsh/.zshrc.local
 linux/zsh/.zshrc.local
+
+# News profile (contains personal info)
+common/claude/.claude/news-profile.yaml
