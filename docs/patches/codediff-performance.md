@@ -9,10 +9,7 @@
 
 ### Phase 1: 設定レベル
 
-1. **debounce値の調整** (400ms → 750ms)
-   - `keymaps.setup`内の`debounce_ms`を750msに増加
-   - 連続でj/k操作した際の差分計算を大幅に削減
-   - Enterキーで即座に反映（debounceをスキップ）
+1. ~~**debounce値の調整**~~ → Phase 3.5 で CursorMoved 自動切替自体を廃止したため削除
 
 2. **大ファイル警告**
    - `on_file_select`ラッパー内でファイルサイズをチェック
@@ -61,6 +58,22 @@
    - optimistic stage/unstage 直後のキャッシュキー不一致による表示消失を防止
    - 注: 当初 `mutable_generation` による generation-based スキップを実装していたが、ファイル編集後にカウントが更新されない問題があったため削除。既存の debounce/throttle で実行頻度は十分制御されている
 
+### Phase 3.5: CursorMoved 自動 diff 切替の廃止
+
+根本原因: CursorMoved autocmd が 750ms debounce 後に `on_file_select` → `view.update()` → `compute_and_render()`（同期 C FFI、最大 5 秒）を発火し、カーソル移動中に UI がブロックされていた。optimistic stage/unstage 後のツリー再構築でもカーソル位置変動により同じフローが発火していた。
+
+1. **CursorMoved autocmd 削除**
+   - j/k でのカーソル移動では diff ビューを一切変更しない
+   - debounce_timer / debounce_ms 関連コードも削除
+
+2. **`l` キーマップ変更**
+   - 旧: diff ビューにフォーカス移動のみ（diff 切替なし）
+   - 新: フォーカス中ファイルの diff に切替 + diff ビューにフォーカス移動
+
+3. **`<CR>` キーマップ変更**
+   - 旧: 即座に diff 切替 + diff ビューにフォーカス移動
+   - 新: diff 未表示 → diff 切替（Explorer に留まる）、表示済み → diff ビューにフォーカス移動
+
 ### Phase 4: Optimistic stage/unstage
 
 根本原因: Explorer での stage/unstage 操作時、git コマンド完了 → fs_event 検知 → debounce → `git status` → ツリー再構築という直列フローにより UI 更新に体感 1 秒以上かかっていた。
@@ -81,10 +94,10 @@
 
 | 最適化項目 | 効果 |
 |------------|------|
-| debounce増加 | 連続ナビゲーション時の計算回数削減 |
 | auto_refresh throttle | 編集中の計算頻度削減 |
 | 差分キャッシュ | ファイル切替時の再計算スキップ |
 | 大ファイル警告 | ユーザーへの事前通知 |
+| CursorMoved 廃止 | カーソル移動で diff 計算が発生しない |
 | mutable revision cache | ファイル選択時の `git show` スキップ |
 | resolve_revision cache | ファイル選択時の `git rev-parse` スキップ |
 | 150ms delay削除 | staging操作後の体感遅延除去 |

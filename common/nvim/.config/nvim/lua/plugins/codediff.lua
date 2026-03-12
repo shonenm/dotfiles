@@ -1244,82 +1244,45 @@ return {
           end
         end, 300)
       end, vim.tbl_extend("force", map_opts, { desc = "Restore/discard changes" }))
-      local last_node_id = nil
-      local debounce_timer = nil
-      local debounce_ms = 750 -- Increased from 400ms; use Enter for immediate refresh
+      local last_node_id = nil -- Tracks which file's diff is currently displayed
       local is_toggling = false
-
-      vim.api.nvim_create_autocmd("CursorMoved", {
-        buffer = explorer.bufnr,
-        callback = function()
-          if is_toggling then return end
-          local node = tree:get_node()
-          if not node or not node.data then return end
-          if node.data.type == "group" or node.data.type == "directory" then return end
-          local node_id = node:get_id()
-          if node_id == last_node_id then return end
-          last_node_id = node_id
-          if debounce_timer then
-            debounce_timer:stop()
-          end
-          debounce_timer = vim.defer_fn(function()
-            explorer.on_file_select(node.data)
-          end, debounce_ms)
-        end,
-      })
       vim.keymap.set("n", "h", function()
         local node = tree:get_node()
         if node and node:has_children() and node:is_expanded() then
-          if debounce_timer then
-            debounce_timer:stop()
-            debounce_timer = nil
-          end
           is_toggling = true
           node:collapse()
           tree:render()
           vim.schedule(function()
             is_toggling = false
-            update_help_line() -- explorer用ヘルプに更新
+            update_help_line()
           end)
         end
       end, vim.tbl_extend("force", map_opts, { desc = "Collapse directory" }))
       vim.keymap.set("n", "l", function()
         local node = tree:get_node()
-        if node and node:has_children() and not node:is_expanded() then
-          if debounce_timer then
-            debounce_timer:stop()
-            debounce_timer = nil
-          end
+        if not node or not node.data then return end
+        if node:has_children() and not node:is_expanded() then
           is_toggling = true
           node:expand()
           tree:render()
           vim.schedule(function() is_toggling = false end)
-        else
-          if debounce_timer then
-            debounce_timer:stop()
-            debounce_timer = nil
-          end
+        elseif node.data.path and node.data.type ~= "group" and node.data.type ~= "directory" then
+          -- File node: switch diff view and focus diff
+          last_node_id = node:get_id()
           focus_restore_gen = focus_restore_gen + 1
-          vim.cmd("2wincmd l")
-          vim.schedule(update_help_line) -- diff用ヘルプに切り替え
+          focus_target = "diff"
+          explorer.on_file_select(node.data)
         end
-      end, vim.tbl_extend("force", map_opts, { desc = "Expand directory or focus diff view" }))
+      end, vim.tbl_extend("force", map_opts, { desc = "Select file and focus diff view" }))
       vim.keymap.set("n", "<Tab>", function()
-        if debounce_timer then
-          debounce_timer:stop()
-          debounce_timer = nil
-        end
         focus_restore_gen = focus_restore_gen + 1
         vim.cmd("2wincmd l")
         vim.schedule(update_help_line)
       end, vim.tbl_extend("force", map_opts, { desc = "Focus diff view" }))
       vim.keymap.set("n", "<CR>", function()
         local node = tree:get_node()
-        if node and node:has_children() then
-          if debounce_timer then
-            debounce_timer:stop()
-            debounce_timer = nil
-          end
+        if not node or not node.data then return end
+        if node:has_children() then
           is_toggling = true
           if node:is_expanded() then
             node:collapse()
@@ -1328,16 +1291,16 @@ return {
           end
           tree:render()
           vim.schedule(function() is_toggling = false end)
-        else
-          -- ファイルノードの場合は即座に選択してdiffビューの右側にフォーカス
-          if node and node.data and node.data.path then
-            if debounce_timer then
-              debounce_timer:stop()
-              debounce_timer = nil
-            end
-            last_node_id = node:get_id() -- Prevent duplicate trigger from CursorMoved
+        elseif node.data.path then
+          if node:get_id() == last_node_id then
+            -- Already showing this file's diff: focus diff view
             focus_restore_gen = focus_restore_gen + 1
-            focus_target = "diff"
+            vim.cmd("2wincmd l")
+            vim.schedule(update_help_line)
+          else
+            -- Switch diff view, stay in explorer
+            last_node_id = node:get_id()
+            focus_restore_gen = focus_restore_gen + 1
             explorer.on_file_select(node.data)
           end
         end
