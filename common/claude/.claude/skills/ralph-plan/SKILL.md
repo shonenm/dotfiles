@@ -155,7 +155,8 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task, WebFetch, WebSearch, AskUser
 
 ```bash
 SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
-STATE_FILE="/tmp/ralph_${SESSION_HASH}.json"
+mkdir -p /tmp/ralph/state
+STATE_FILE="/tmp/ralph/state/${SESSION_HASH}.json"
 echo "$STATE_FILE"
 ```
 
@@ -164,7 +165,7 @@ echo "$STATE_FILE"
 3. Bash で discovery ファイルに STATE_FILE パスを書き込む:
 
 ```bash
-echo "$STATE_FILE" > /tmp/ralph_latest_state
+echo "$STATE_FILE" > /tmp/ralph/state/latest
 ```
 
 状態ファイルのスキーマ:

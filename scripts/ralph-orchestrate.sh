@@ -8,9 +8,9 @@ set -euo pipefail
 # shellcheck source=wt-lib.sh
 source "$(dirname "$0")/wt-lib.sh"
 
-readonly RESULTS_DIR="/tmp/ralph_results"
-readonly WORKERS_DIR="/tmp/ralph_workers"
-readonly PROMPTS_DIR="/tmp/ralph_prompts"
+readonly RESULTS_DIR="/tmp/ralph/results"
+readonly WORKERS_DIR="/tmp/ralph/workers"
+readonly PROMPTS_DIR="/tmp/ralph/prompts"
 
 # --- Subcommands ---
 

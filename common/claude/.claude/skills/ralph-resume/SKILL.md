@@ -31,7 +31,7 @@ arguments: "<prompt>"
 最新のアーカイブファイルを特定する:
 
 ```bash
-ARCHIVE="$(ls -t /tmp/ralph_archive_*.json 2>/dev/null | head -1)"
+ARCHIVE="$(ls -t /tmp/ralph/state/archive_*.json 2>/dev/null | head -1)"
 if [ -z "$ARCHIVE" ]; then
   echo "No Ralph archive found in /tmp/"
   exit 1
@@ -93,7 +93,8 @@ cat "$ARCHIVE" | jq .
 
 ```bash
 SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
-STATE_FILE="/tmp/ralph_${SESSION_HASH}.json"
+mkdir -p /tmp/ralph/state
+STATE_FILE="/tmp/ralph/state/${SESSION_HASH}.json"
 
 # jq で状態ファイルを生成
 # - アーカイブの task_graph (done タスクを保持) + 新タスクを追加
@@ -101,7 +102,7 @@ STATE_FILE="/tmp/ralph_${SESSION_HASH}.json"
 # - context_report を保持
 # - phase, iteration, stall_hashes, errors をリセット
 
-echo "$STATE_FILE" > /tmp/ralph_latest_state
+echo "$STATE_FILE" > /tmp/ralph/state/latest
 ```
 
 ### Step 5: ユーザーへの案内
