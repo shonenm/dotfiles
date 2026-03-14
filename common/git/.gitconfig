@@ -36,6 +36,10 @@
 [merge]
     conflictstyle = zdiff3
 
+[merge "conflict-driver"]
+    name = Claude-powered conflict resolver
+    driver = conflict-driver %O %A %B %L %P
+
 # === Push ===
 [push]
     default = simple
