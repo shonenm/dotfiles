@@ -26,13 +26,13 @@ state_file=""
 
 if [[ -n "${CLAUDE_SESSION_ID:-}" ]]; then
   _session_hash="$(echo "$CLAUDE_SESSION_ID" | md5sum 2>/dev/null | cut -c1-12 || echo "$CLAUDE_SESSION_ID" | md5 2>/dev/null | cut -c1-12)"
-  active_file="/tmp/ralph_active_${_session_hash}"
+  active_file="/tmp/ralph/state/active_${_session_hash}"
   if [[ -f "$active_file" ]]; then
     state_file="$(cat "$active_file")"
   fi
 else
   # フォールバック: 旧マニフェスト (CLAUDE_SESSION_ID 非対応環境)
-  active_file="/tmp/ralph_session_manifest"
+  active_file="/tmp/ralph/state/session_manifest"
   if [[ -f "$active_file" ]]; then
     state_file="$(cat "$active_file")"
   fi
@@ -62,7 +62,8 @@ fi
 
 # archive: cleanup 前に状態ファイルを保存
 archive() {
-  local archive_file="/tmp/ralph_archive_$(date +%Y%m%d_%H%M%S).json"
+  mkdir -p /tmp/ralph/state
+  local archive_file="/tmp/ralph/state/archive_$(date +%Y%m%d_%H%M%S).json"
   cp "$state_file" "$archive_file"
 }
 
