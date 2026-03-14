@@ -6,18 +6,24 @@
 #   refresh                   — re-bake window-status-current-format for current session
 #   fzf-sessions              — ANSI-colored session list in fzf, switch on select
 
-COLORS=(
-  "#f7768e"  # red/pink
-  "#ff9e64"  # orange
-  "#e0af68"  # yellow
-  "#9ece6a"  # green
-  "#73daca"  # teal
-  "#7aa2f7"  # blue
-  "#bb9af7"  # purple
-  "#7dcfff"  # cyan
-)
+THEME=$(tmux show-option -gqv @theme-name 2>/dev/null || echo "tokyonight")
 
-DEFAULT_COLOR="#f7768e"
+case "$THEME" in
+  syntopic)
+    COLORS=(
+      "#047857" "#8B5A2B" "#22C55E" "#3B82F6"
+      "#F59E0B" "#A855F7" "#EF4444" "#64748B"
+    )
+    DEFAULT_COLOR="#047857"
+    ;;
+  *)
+    COLORS=(
+      "#f7768e" "#ff9e64" "#e0af68" "#9ece6a"
+      "#73daca" "#7aa2f7" "#bb9af7" "#7dcfff"
+    )
+    DEFAULT_COLOR="#f7768e"
+    ;;
+esac
 
 get_color() {
   local name="$1"
