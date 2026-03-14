@@ -3,7 +3,7 @@
 # Usage:
 #   tmux-claude-badge.sh window <index> [focused] <session_name>  # ウィンドウ用バッジ
 
-STATUS_DIR="/tmp/claude_status"
+STATUS_DIR="/tmp/claude/status"
 CACHE_DIR="/tmp/tmux_cache"
 CACHE_TTL=3  # キャッシュ有効期間（秒）
 BADGE_BG="#ff6600"

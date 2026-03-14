@@ -169,7 +169,7 @@ update_sketchybar_status() {
     "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$workspace" "$tmux_session" "$tmux_window_index" 2>/dev/null || true
   else
     # リモート環境 - ファイルに書き込み（Macが監視）
-    local status_dir="/tmp/claude_status"
+    local status_dir="/tmp/claude/status"
     mkdir -p "$status_dir"
     local status_file
     if [[ -n "$workspace" ]]; then
@@ -239,7 +239,7 @@ get_webhook() {
 
     # workspace取得（全環境共通）
     WORKSPACE=""
-    WORKSPACE_MAP_FILE="/tmp/claude_workspace_map.json"
+    WORKSPACE_MAP_FILE="${HOME}/.local/share/claude/workspace_map.json"
     if [[ -f "$WORKSPACE_MAP_FILE" ]]; then
       MAP_ENV_KEY=$(git -C "$CWD" rev-parse --show-toplevel 2>/dev/null)
       [[ -z "$MAP_ENV_KEY" ]] && MAP_ENV_KEY="$CWD"

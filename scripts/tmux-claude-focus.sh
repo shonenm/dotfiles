@@ -4,8 +4,8 @@
 # 5秒タイマーロジック（SketchyBarと同じ）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STATUS_DIR="/tmp/claude_status"
-FOCUS_STATE_FILE="/tmp/tmux_claude_focus"
+STATUS_DIR="/tmp/claude/status"
+FOCUS_STATE_FILE="/tmp/claude/focus"
 
 # 現在のセッション・ウィンドウ情報を取得
 SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")

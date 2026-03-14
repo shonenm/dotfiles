@@ -14,7 +14,7 @@ REMOTE_HOST="${1:-}"
 
 # 起動時: リモートの古いinotifywaitプロセスをクリーンアップ
 # SSH切断時にゾンビとして残るプロセスを防止
-ssh "$REMOTE_HOST" 'pkill -f "inotifywait.*claude_status" 2>/dev/null || true' 2>/dev/null || true
+ssh "$REMOTE_HOST" 'pkill -f "inotifywait.*claude/status" 2>/dev/null || true' 2>/dev/null || true
 
 # リモートでinotifywaitを実行し、変更時にJSONを出力
 # unbuffer: SSHの出力バッファリングを無効化
@@ -23,7 +23,7 @@ UNBUFFER="/opt/homebrew/bin/unbuffer"
 
 # 終了時にリモートプロセスをクリーンアップ
 cleanup() {
-  ssh "$REMOTE_HOST" 'pkill -f "inotifywait.*claude_status" 2>/dev/null || true' 2>/dev/null || true
+  ssh "$REMOTE_HOST" 'pkill -f "inotifywait.*claude/status" 2>/dev/null || true' 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -32,17 +32,17 @@ trap cleanup EXIT INT TERM
   INOTIFYWAIT="$HOME/.local/bin/inotifywait"
   if [ ! -x "$INOTIFYWAIT" ]; then INOTIFYWAIT="inotifywait"; fi
 
-  mkdir -p /tmp/claude_status
-  stdbuf -oL "$INOTIFYWAIT" -m -e modify,create --format "%f" /tmp/claude_status/ 2>/dev/null | while read file; do
+  mkdir -p /tmp/claude/status
+  stdbuf -oL "$INOTIFYWAIT" -m -e modify,create --format "%f" /tmp/claude/status/ 2>/dev/null | while read file; do
     case "$file" in
       workspace_*.json)
         # workspace形式: 読み取り後に削除（Macに転送済み）
-        cat "/tmp/claude_status/$file" 2>/dev/null
-        rm -f "/tmp/claude_status/$file" 2>/dev/null
+        cat "/tmp/claude/status/$file" 2>/dev/null
+        rm -f "/tmp/claude/status/$file" 2>/dev/null
         ;;
       *.json)
         # 旧形式: 読み取りのみ（互換性維持）
-        cat "/tmp/claude_status/$file" 2>/dev/null
+        cat "/tmp/claude/status/$file" 2>/dev/null
         ;;
     esac
   done

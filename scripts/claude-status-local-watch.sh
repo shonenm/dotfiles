@@ -1,11 +1,11 @@
 #!/bin/bash
 # Process notifications from local Docker containers
-# Detects /tmp/claude_status/*.json (non-workspace_*) and executes Mac-side processing
+# Detects /tmp/claude/status/*.json (non-workspace_*) and executes Mac-side processing
 # Launched by launchd WatchPaths
 
 set -euo pipefail
 
-STATUS_DIR="/tmp/claude_status"
+STATUS_DIR="/tmp/claude/status"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Create directory if it doesn't exist

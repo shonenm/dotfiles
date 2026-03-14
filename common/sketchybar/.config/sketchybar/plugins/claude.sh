@@ -4,7 +4,7 @@
 
 source "$CONFIG_DIR/plugins/colors.sh"
 
-STATUS_DIR="/tmp/claude_status"
+STATUS_DIR="/tmp/claude/status"
 FOCUS_STATE_FILE="/tmp/sketchybar_workspace_focus"
 
 # Badge colors

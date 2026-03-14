@@ -239,7 +239,7 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     #s = ['layout sticky tiling', 'mode main']
 
     # Clear all Claude Beacon badges
-    c = ['exec-and-forget rm -f /tmp/claude_status/*.json && sketchybar --trigger claude_status_change', 'mode main']
+    c = ['exec-and-forget rm -f /tmp/claude/status/*.json && sketchybar --trigger claude_status_change', 'mode main']
 
     alt-shift-h = ['join-with left', 'mode main']
     alt-shift-j = ['join-with down', 'mode main']
