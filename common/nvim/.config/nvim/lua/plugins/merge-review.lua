@@ -57,6 +57,13 @@ local function setup_merge_review(bufs)
       vim.api.nvim_set_current_win(b.win)
       vim.cmd("diffthis")
     end
+    -- 3ウィンドウの diff 確定後にスクロール位置を同期
+    vim.cmd("syncbind")
+  end
+
+  -- scrolloff を無効化 (filler line 非対称による scrollbind ずれ防止)
+  for _, b in ipairs(bufs) do
+    vim.wo[b.win].scrolloff = 0
   end
 
   -- filetype が未設定なら resolved のパスから推定して設定
