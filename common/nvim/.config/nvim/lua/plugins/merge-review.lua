@@ -95,8 +95,8 @@ local function setup_merge_review(bufs)
   end
 
   -- nomodifiable 設定 (ours/theirs)
-  vim.wo[bufs[1].win].modifiable = false
-  vim.wo[bufs[3].win].modifiable = false
+  vim.bo[bufs[1].buf].modifiable = false
+  vim.bo[bufs[3].buf].modifiable = false
 
   -- resolved にフォーカス
   vim.api.nvim_set_current_win(bufs[2].win)
