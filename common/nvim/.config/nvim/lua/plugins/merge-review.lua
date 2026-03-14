@@ -3,6 +3,7 @@
 
 local setup_done = {}
 local hunk_cache = {} -- tabpage → { hunks, resolved_win }
+local confidence_cache = {} -- tabpage → confidence string
 local pending_timer = nil
 
 local function cancel_pending()
@@ -37,7 +38,12 @@ local function update_hunk_count(tabpage, resolved_win)
   local hunks = get_diff_hunks()
   hunk_cache[tabpage] = hunks
   pcall(function()
-    vim.wo[resolved_win].winbar = " RESOLVED (" .. #hunks .. " hunks)"
+    local label = " RESOLVED (" .. #hunks .. " hunks)"
+    local conf = confidence_cache[tabpage]
+    if conf and conf ~= "" then
+      label = label .. " [" .. conf .. "]"
+    end
+    vim.wo[resolved_win].winbar = label
   end)
   return hunks
 end
@@ -66,8 +72,15 @@ local function setup_merge_review(bufs)
     vim.wo[b.win].scrolloff = 0
   end
 
-  -- filetype が未設定なら resolved のパスから推定して設定
+  -- filetype が未設定なら推定して設定
+  -- まず resolved のパスから試行、失敗なら ours のディレクトリパスから抽出
   local ft = vim.filetype.match({ filename = bufs[2].name })
+  if not ft then
+    local dir_path = bufs[1].name:match("^.+/[^/]+/(.+)/ours$")
+    if dir_path then
+      ft = vim.filetype.match({ filename = dir_path })
+    end
+  end
   if ft then
     for _, b in ipairs(bufs) do
       if vim.bo[b.buf].filetype == "" then
@@ -76,9 +89,25 @@ local function setup_merge_review(bufs)
     end
   end
 
+  -- confidence ファイルを読み取り (ours と同じディレクトリ)
+  local confidence = ""
+  local conf_path = bufs[1].name:match("^(.+)/ours$")
+  if conf_path then
+    local f = io.open(conf_path .. "/confidence", "r")
+    if f then
+      confidence = f:read("*l") or ""
+      f:close()
+    end
+  end
+  confidence_cache[tabpage] = confidence
+
   -- winbar: ラベルのみ (hunk 数は非同期で後から更新)
   vim.wo[bufs[1].win].winbar = " OURS"
-  vim.wo[bufs[2].win].winbar = " RESOLVED"
+  local resolved_label = " RESOLVED"
+  if confidence ~= "" then
+    resolved_label = resolved_label .. " [" .. confidence .. "]"
+  end
+  vim.wo[bufs[2].win].winbar = resolved_label
   vim.wo[bufs[3].win].winbar = " THEIRS"
 
   -- resolved にフォーカス
@@ -162,7 +191,7 @@ local function try_setup()
     }
   end
 
-  if not bufs[1].name:match("%.ours$") or not bufs[3].name:match("%.theirs$") then
+  if not bufs[1].name:match("/ours$") or not bufs[3].name:match("/theirs$") then
     return
   end
 
