@@ -62,7 +62,7 @@ git diff --stat $BASE...<target>           # ファイル単位の差分
 git merge --no-commit <target>
 ```
 
-コンフリクトがなければ完了報告して終了 (Step 6 へ)。
+コンフリクトがなければ完了報告して終了 (Step 8 へ)。
 
 ### 4. コンフリクト状態の保存
 
@@ -73,14 +73,88 @@ merge-save-states
 コンフリクトファイルの base/ours/theirs を `/tmp/merge_review_*` に保存する。
 既にユーザーが merge/rebase を実行してコンフリクト状態にある場合も、このステップは必須。
 
-### 5. コンフリクト解決
+### 5. Trivial コンフリクト処理
 
-- 各コンフリクトファイルについて `:1:(base) / :2:(ours) / :3:(theirs)` を参照
-- 両方の変更意図を分析して解決方針を決定
+complex な解決に入る前に、機械的に処理できるコンフリクトを先に片付ける。
+
+| 分類 | 判定条件 | 解決方法 |
+|------|----------|----------|
+| lock file | `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `Cargo.lock` 等 | コンフリクトマーカーを除去して `git add`。再生成コマンド (`npm install`, `cargo generate-lockfile` 等) の実行をユーザーに確認 |
+| import 整理 | コンフリクト範囲が import/require/use 文のみ | 両方の import をマージ |
+| whitespace | 空行・インデントのみの差分 | theirs を採用 |
+
+lock file の注意:
+- 「theirs を採用」は誤り。ours 側の依存が欠落する可能性がある
+- 正しい解消は再生成コマンドによる生成が唯一の正解
+- マーカーを除去してステージし、再生成コマンドの実行をユーザーに確認する (副作用があるため自動実行しない)
+
+### 6. コンテキスト収集 + コンフリクト解決
+
+#### 6a. BASE の計算
+
+```bash
+# 新規マージの場合 (Step 2 で計算済み)
+BASE=$(git merge-base HEAD <target>)
+
+# 既存コンフリクトの場合 (状況に応じてフォールバック)
+if git rev-parse --verify MERGE_HEAD &>/dev/null; then
+  BASE=$(git merge-base HEAD MERGE_HEAD)
+elif git rev-parse --verify REBASE_HEAD &>/dev/null; then
+  BASE=$(git merge-base HEAD REBASE_HEAD)
+elif git rev-parse --verify ORIG_HEAD &>/dev/null; then
+  BASE=$(git merge-base HEAD ORIG_HEAD)
+else
+  # --onto 等で上記が全て失敗する場合は git log --merge で対象を特定
+  BASE=""  # コンテキスト収集をスキップし、ファイル内容のみで解決
+fi
+```
+
+#### 6b. ファイルごとのコンテキスト収集 (解決前に実行)
+
+```bash
+# BASE が取得できた場合のみ
+git log --oneline $BASE..HEAD -- <file>        # ours の変更理由
+git log --oneline $BASE..<target> -- <file>    # theirs の変更理由
+```
+
+- 関連テストファイルの特定 (`*.test.*`, `*.spec.*`, `__tests__/`, `*_test.*`)
+
+#### 6c. 解決の実行
+
+- `:1:(base)` / `:2:(ours)` / `:3:(theirs)` + 変更履歴から意図を理解して解決
+- confidence level を判定:
+  - `high`: 意図が明確で機械的に解決可能
+  - `needs-review`: ロジック競合・判断が必要
+- `needs-review` 箇所に `REVIEW:` インラインコメントを挿入 (言語の構文に合わせる)
 - 解決後 `git add <file>`
 - `git commit` / `git rebase --continue` は絶対に実行しない
 
-### 6. 完了報告
+REVIEW コメント構文:
+
+| 拡張子 | 構文 |
+|--------|------|
+| `.ts`, `.js`, `.go`, `.rs`, `.java` 等 | `// REVIEW:` |
+| `.py`, `.rb`, `.sh`, `.yaml` 等 | `# REVIEW:` |
+| `.lua` | `-- REVIEW:` |
+| `.html`, `.xml`, `.vue` 等 | `<!-- REVIEW: -->` |
+
+### 7. 解決結果の検証
+
+プロジェクトタイプを検出し、静的検証を実行する (副作用のないコマンドのみ)。
+
+| 検出ファイル | 検証コマンド |
+|-------------|-------------|
+| `tsconfig.json` | `npx tsc --noEmit` |
+| `Cargo.toml` | `cargo check` |
+| `go.mod` | `go vet ./...` |
+| `pyproject.toml` | `ruff check` / `mypy` |
+| (該当なし) | `git diff --check` |
+
+自動修正の境界:
+- 自動修正する: import 文の整理、未使用 import の削除のみ
+- 自動修正しない: 型エラー、ロジックエラー、その他一切。エラー内容を Step 8 の報告に含め、human review に委ねる
+
+### 8. 完了報告 + rerere 記録
 
 rebase 中かどうかを検出し、適切な次のステップを案内:
 
@@ -88,22 +162,44 @@ rebase 中かどうかを検出し、適切な次のステップを案内:
 git rev-parse --verify REBASE_HEAD &>/dev/null  # true なら rebase 中
 ```
 
+rerere による解消パターンの記録:
+
+```bash
+git rerere  # 解消パターンの記録確認
+```
+
 以下の形式で報告する:
 
 ```
 ## マージ完了 (レビュー待ち)
 
-### 自動マージされたファイル
-- path/to/file.ts
+### Trivial 解決
+- path/to/package-lock.json (lock file: マーカー除去済み、再生成が必要)
+- path/to/imports.ts (import 整理: 両方をマージ)
 
-### コンフリクト解決ファイル
-#### path/to/conflict.ts
+### コンフリクト解決 (high confidence)
+#### path/to/file.ts
 - ours: (変更内容の説明)
 - theirs: (変更内容の説明)
 - 解決方針: (どう解決したかの説明)
 
+### コンフリクト解決 (needs-review)
+#### path/to/complex.ts
+- ours: (変更内容の説明)
+- theirs: (変更内容の説明)
+- 解決方針: (どう解決したかの説明)
+- REVIEW: コメントを挿入済み
+
+### 自動マージされたファイル
+- path/to/auto.ts
+
+### 検証結果
+- `npx tsc --noEmit`: pass
+- 未解決のエラー: (あれば詳細)
+
 ### 次のステップ
 `merge-review` を実行してレビューしてください。
+`REVIEW:` コメントが挿入されたファイルは重点的に確認してください。
 ```
 
 ## 禁止事項
