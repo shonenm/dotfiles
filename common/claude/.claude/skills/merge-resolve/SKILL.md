@@ -108,8 +108,8 @@ elif git rev-parse --verify REBASE_HEAD &>/dev/null; then
 elif git rev-parse --verify ORIG_HEAD &>/dev/null; then
   BASE=$(git merge-base HEAD ORIG_HEAD)
 else
-  # --onto 等で上記が全て失敗する場合は git log --merge で対象を特定
-  BASE=""  # コンテキスト収集をスキップし、ファイル内容のみで解決
+  # --onto 等で上記が全て失敗する場合
+  BASE=""  # コンテキスト収集をスキップ。Step 8 の報告に「変更履歴なしで解決」と記載する
 fi
 ```
 
@@ -170,6 +170,10 @@ rebase 中かどうかを検出し、適切な次のステップを案内:
 
 ```bash
 git rev-parse --verify REBASE_HEAD &>/dev/null  # true なら rebase 中
+
+# デフォルトブランチを動的に検出 (レビューコマンドで使用)
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
 ```
 
 rerere による解消パターンの記録:
@@ -213,10 +217,10 @@ git rerere forget <file>  # 誤った解消パターンを削除
 `merge-review` を実行してレビューしてください。
 `REVIEW:` コメントが挿入されたファイルは重点的に確認してください。
 
-レビュー用コマンド:
+レビュー用コマンド (デフォルトブランチは動的に検出して置換する):
 - merge の場合: `git diff HEAD MERGE_HEAD`
-- rebase の場合: `git range-diff origin/main ORIG_HEAD HEAD`
-- 共通: `git diff origin/main..HEAD`
+- rebase の場合: `git range-diff origin/<default-branch> ORIG_HEAD HEAD`
+- 共通: `git diff origin/<default-branch>..HEAD`
 
 rerere 管理:
 - 解消パターン確認: `git rerere status`
