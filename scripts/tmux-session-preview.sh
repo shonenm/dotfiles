@@ -9,10 +9,21 @@ session="$1"
 tmux has-session -t "$session" 2>/dev/null || exit 1
 
 # Colors
-COLORS=(
-  "#f7768e" "#ff9e64" "#e0af68" "#9ece6a"
-  "#73daca" "#7aa2f7" "#bb9af7" "#7dcfff"
-)
+THEME=$(tmux show-option -gqv @theme-name 2>/dev/null || echo "tokyonight")
+case "$THEME" in
+  syntopic)
+    COLORS=(
+      "#047857" "#8B5A2B" "#22C55E" "#3B82F6"
+      "#F59E0B" "#A855F7" "#EF4444" "#64748B"
+    )
+    ;;
+  *)
+    COLORS=(
+      "#f7768e" "#ff9e64" "#e0af68" "#9ece6a"
+      "#73daca" "#7aa2f7" "#bb9af7" "#7dcfff"
+    )
+    ;;
+esac
 RESET=$'\033[0m'
 DIM=$'\033[2m'
 BOLD=$'\033[1m'
