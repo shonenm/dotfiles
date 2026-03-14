@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# conflict-driver: git merge driver。rebase 中に git が自動で呼び出す。
+# コンフリクト発生時に conflict-resolve-file で解消を試みる。
+#
+# 使い方 (.gitattributes / .git/config):
+#   conflict-driver %O %A %B %L %P
+set -uo pipefail
+
+BASE="$1"
+OURS="$2"
+THEIRS="$3"
+MARKER_SIZE="$4"
+PATH_NAME="$5"
+
+# shellcheck disable=SC2329
+cleanup() {
+  rm -f "$OURS.orig"
+}
+trap cleanup EXIT
+
+# 1. git merge-file 実行前の純粋な ours を退避
+cp "$OURS" "$OURS.orig"
+
+# 2. git merge-file 実行
+echo "conflict-driver: attempting git merge-file for $PATH_NAME" >&2
+git merge-file --marker-size="$MARKER_SIZE" "$OURS" "$BASE" "$THEIRS"
+merge_status=$?
+
+# 3. 成功なら即終了
+if [[ $merge_status -eq 0 ]]; then
+  echo "conflict-driver: merge-file succeeded for $PATH_NAME" >&2
+  exit 0
+fi
+
+# 4. 失敗: 退避から復元 (コンフリクトマーカー付き内容を捨てる)
+echo "conflict-driver: merge-file failed, invoking claude for $PATH_NAME" >&2
+cp "$OURS.orig" "$OURS"
+
+# 5-7. セッションディレクトリ準備
+SHA=$(git rev-parse --short HEAD)
+SAVE_DIR="/tmp/conflict_session/$SHA/$PATH_NAME"
+mkdir -p "$SAVE_DIR"
+
+# 8-10. 3状態を保存
+cp "$BASE" "$SAVE_DIR/base"
+cp "$OURS" "$SAVE_DIR/ours"
+cp "$THEIRS" "$SAVE_DIR/theirs"
+
+# 11. operation type 記録
+echo "rebase" > /tmp/conflict_session/type
+
+# 12. conflict-resolve-file で解消を試みる
+if conflict-resolve-file \
+  --base "$SAVE_DIR/base" \
+  --ours "$SAVE_DIR/ours" \
+  --theirs "$SAVE_DIR/theirs" \
+  --path "$PATH_NAME" \
+  --save-dir "$SAVE_DIR"; then
+
+  # 13. 成功: 解消結果を git に返す
+  cp "$SAVE_DIR/ours" "$OURS"
+
+  if validate-resolved; then
+    echo "conflict-driver: validation passed for $PATH_NAME" >&2
+    exit 0
+  else
+    echo "conflict-driver: validation failed for $PATH_NAME" >&2
+    exit 1
+  fi
+else
+  # 14. 失敗
+  echo "conflict-driver: conflict-resolve-file failed for $PATH_NAME" >&2
+  exit 1
+fi
