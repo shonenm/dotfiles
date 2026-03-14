@@ -106,7 +106,7 @@ Archives state file to `/tmp/ralph_archive_<timestamp>.json` before cleanup.
 /ralph-parallel "Add login page, Add signup page"  # Comma-separated
 ```
 
-Orchestrates up to 4 concurrent `ralph-worker` sub-agents in isolated worktrees.
+Orchestrates up to 4 concurrent workers, each in a separate git worktree + tmux window. Workers run as independent `claude -p --model sonnet` processes, visible in tmux for direct observation and intervention. Results are written to `/tmp/ralph_results/` to avoid orchestrator context bloat. After all workers complete, `ralph-reviewer` (sonnet) reviews diffs before reporting.
 
 ## State File Schema
 
@@ -186,7 +186,7 @@ Errors returned as `additionalContext`. eslint/prettier auto-fix before reportin
 
 ### Worker Agent (`ralph-worker`)
 
-Defined with `isolation: worktree` for parallel task execution. Structured reporting format:
+Defined with `isolation: worktree` for use as Task() subagent in sequential `/ralph` runs. Structured reporting format:
 
 ```
 Status: DONE / PARTIAL / BLOCKED
@@ -195,6 +195,38 @@ Tests: ...
 Completion condition: ...
 Notes: ...
 ```
+
+### Parallel Worker Architecture
+
+`/ralph-parallel` uses a different execution model from `/ralph`:
+
+```
+Orchestrator (user session, Opus)
+  |
+  +-- ralph-orchestrate.sh init       # Clear /tmp/ralph_{results,workers,prompts}/
+  |
+  +-- ralph-orchestrate.sh launch T-1 /tmp/ralph_prompts/T-1.md --model sonnet
+  |     +-- wt_create ralph/T-1      # git worktree + tmux window via wt-lib.sh
+  |     +-- claude -p --model sonnet  # Independent process, visible in tmux
+  |     +-- exit code -> /tmp/ralph_results/T-1.status
+  |     +-- worker writes /tmp/ralph_results/T-1.md
+  |
+  +-- ralph-orchestrate.sh poll       # Wait for .status files
+  |
+  +-- Task(ralph-reviewer)            # Review diffs in worker worktrees
+  |
+  +-- ralph-orchestrate.sh cleanup-all
+```
+
+Key differences from Task() subagent model:
+- Workers are visible in tmux windows (user can observe and intervene)
+- Workers use sonnet model (cost optimization, orchestrator stays on Opus)
+- Results go to `/tmp/ralph_results/` files (not orchestrator context)
+- Worktrees managed by `wt-lib.sh` (same library as `wt` CLI command)
+
+### Reviewer Agent (`ralph-reviewer`)
+
+Read-only agent (model: sonnet) that reviews worker changes after parallel execution. Runs `git diff` in each worker worktree and checks code quality, scope compliance, and task completion. Returns APPROVE or REQUEST_CHANGES with issue list.
 
 ## File Structure
 
@@ -212,7 +244,8 @@ dotfiles/
 |   |   +-- ralph-resume/SKILL.md     # /ralph-resume from archive
 |   |   +-- ralph-parallel/SKILL.md    # /ralph-parallel orchestrator
 |   +-- agents/
-|       +-- ralph-worker/ralph-worker.md  # Worktree-isolated worker
+|       +-- ralph-worker/ralph-worker.md    # Worktree-isolated worker (Task subagent)
+|       +-- ralph-reviewer/ralph-reviewer.md # Read-only code reviewer (sonnet)
 +-- templates/
 |   +-- claude-skills/
 |   |   +-- ralph/SKILL.md
@@ -222,6 +255,9 @@ dotfiles/
 |   |   +-- ralph-parallel/SKILL.md
 |   +-- claude-agents/
 |       +-- ralph-worker/ralph-worker.md
++-- scripts/
+|   +-- wt-lib.sh                      # Worktree + tmux window management library
+|   +-- ralph-orchestrate.sh           # Parallel worker lifecycle management
 +-- docs/
     +-- ralph.md                       # This documentation
 ```
@@ -231,7 +267,8 @@ dotfiles/
 ## Dependencies
 
 - `jq` -- JSON processing in hook scripts (required, fail-open if missing)
-- `git` -- Progress detection via `git diff --stat`
+- `git` -- Progress detection via `git diff --stat`, worktree management
+- `tmux` -- Worker window management in parallel mode
 - `md5` (macOS) / `md5sum` (Linux) -- Diff hash comparison
 - Optional: `shellcheck`, `tsc`, `eslint`, `prettier`, `python`, `ruff`, `supabase` for backpressure checks
 
@@ -250,7 +287,11 @@ dotfiles/
 - Zero interaction via PreToolUse hook: `AskUserQuestion`/`EnterPlanMode` denied at hook level
 - `/ralph-plan` defense: `allowed-tools` (hide Edit/MultiEdit, Write は Phase 3 状態ファイル生成のみ許可) + prompt reinforcement. PreToolUse hook は skill frontmatter hooks がグローバルに読み込まれる制約により不採用
 - Backpressure auto-fix: eslint/prettier/ruff fix before reporting remaining errors
-- Parallel execution max 4 workers: resource constraint
+- Parallel execution max 4 workers: resource constraint. Workers run as independent `claude -p` processes in tmux windows (not Task subagents) for observability
+- `wt-lib.sh` extracted from `wt` CLI: shared library for worktree+tmux management, used by both `wt` command and `ralph-orchestrate.sh`
+- Parallel results via `/tmp/ralph_results/`: prevents orchestrator context bloat. Orchestrator reads 1-line summaries, not full worker output
+- Model mixing: orchestrator uses session model (Opus), workers and reviewer use sonnet
+- `ralph-reviewer` runs after workers complete but before worktree cleanup (needs access to diffs)
 - No auto-commit: ralph does not commit unless task_graph explicitly includes a commit task. ralph-plan/ralph-resume do not generate commit tasks unless the user explicitly requests it
 - SessionStart context hook: global in `settings.json`, provides project awareness to all sessions
 
