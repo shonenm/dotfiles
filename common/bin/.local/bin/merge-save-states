@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# merge-save-states: コンフリクト発生時に base/ours/theirs の3状態を保存する
+# git merge --no-commit 後、コンフリクト状態で呼び出す
+set -euo pipefail
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+SHORT_SHA=$(git rev-parse --short HEAD)
+REVIEW_DIR="/tmp/merge_review_${SHORT_SHA}_$(date +%s)"
+mkdir -p "$REVIEW_DIR"
+
+CONFLICT_FILES=$(git diff --name-only --diff-filter=U)
+
+if [[ -z "$CONFLICT_FILES" ]]; then
+  echo "No conflict files found."
+  exit 0
+fi
+
+echo "$CONFLICT_FILES" | while IFS= read -r file; do
+  mkdir -p "$REVIEW_DIR/$(dirname "$file")"
+
+  # base (共通祖先)
+  git show ":1:${file}" > "${REVIEW_DIR}/${file}.base" 2>/dev/null \
+    || touch "${REVIEW_DIR}/${file}.base"
+
+  # ours (現在ブランチ)
+  git show ":2:${file}" > "${REVIEW_DIR}/${file}.ours" 2>/dev/null \
+    || touch "${REVIEW_DIR}/${file}.ours"
+
+  # theirs (マージ対象ブランチ)
+  git show ":3:${file}" > "${REVIEW_DIR}/${file}.theirs" 2>/dev/null \
+    || touch "${REVIEW_DIR}/${file}.theirs"
+
+  echo "Saved: $file"
+done
+
+# パスを記録 (merge-review から参照)
+echo "$REVIEW_DIR" > /tmp/merge_review_path
+echo ""
+echo "States saved to: $REVIEW_DIR"
+echo "Run 'merge-review' after Claude resolves conflicts."

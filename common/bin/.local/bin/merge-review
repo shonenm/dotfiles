@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# merge-review: コンフリクト解決後に ours | resolved | theirs の3way diff を起動
+# 全ファイルをタブで一括表示し、レビュー後のアクションを選択できる
+set -euo pipefail
+
+REVIEW_PATH_FILE="/tmp/merge_review_path"
+
+if [[ ! -f "$REVIEW_PATH_FILE" ]]; then
+  echo "Error: /tmp/merge_review_path not found. Run 'merge-save-states' first."
+  exit 1
+fi
+
+REVIEW_DIR=$(cat "$REVIEW_PATH_FILE")
+
+if [[ ! -d "$REVIEW_DIR" ]]; then
+  echo "Error: Review directory '$REVIEW_DIR' does not exist."
+  exit 1
+fi
+
+# 保存されているファイル一覧を .ours から逆引き (サブディレクトリ対応)
+REVIEW_FILES=()
+while IFS= read -r f; do
+  REVIEW_FILES+=("$(echo "$f" | sed "s|${REVIEW_DIR}/||" | sed 's/\.ours$//')")
+done < <(find "$REVIEW_DIR" -name "*.ours" | sort)
+
+if [[ ${#REVIEW_FILES[@]} -eq 0 ]]; then
+  echo "No files to review."
+  exit 0
+fi
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+# rebase 中かどうかを検出
+IN_REBASE=false
+if git rev-parse --verify REBASE_HEAD &>/dev/null; then
+  IN_REBASE=true
+fi
+
+echo "Reviewing ${#REVIEW_FILES[@]} file(s)..."
+
+# Lua スクリプトを生成して nvim にタブ付き3way diff を構築させる
+SCRIPT=$(mktemp /tmp/merge_review_XXXXXX.lua)
+
+first=true
+for file in "${REVIEW_FILES[@]}"; do
+  OURS="${REVIEW_DIR}/${file}.ours"
+  THEIRS="${REVIEW_DIR}/${file}.theirs"
+  RESOLVED="${REPO_ROOT}/${file}"
+
+  if [[ ! -f "$RESOLVED" ]]; then
+    echo "Warning: Resolved file not found: $RESOLVED (skipping)"
+    continue
+  fi
+
+  if [[ "$first" == "true" ]]; then
+    first=false
+  else
+    echo 'vim.cmd("tabnew")' >> "$SCRIPT"
+  fi
+
+  cat >> "$SCRIPT" << EOF
+vim.cmd("edit " .. vim.fn.fnameescape("${OURS}"))
+vim.cmd("vertical diffsplit " .. vim.fn.fnameescape("${RESOLVED}"))
+vim.cmd("vertical diffsplit " .. vim.fn.fnameescape("${THEIRS}"))
+vim.cmd("1wincmd w | setlocal nomodifiable")
+vim.cmd("3wincmd w | setlocal nomodifiable")
+vim.cmd("2wincmd w")
+EOF
+done
+
+echo 'vim.cmd("tabfirst")' >> "$SCRIPT"
+
+nvim -S "$SCRIPT"
+rm -f "$SCRIPT"
+
+# レビュー後のアクション選択
+echo ""
+echo "Review complete."
+echo ""
+if [[ "$IN_REBASE" == "true" ]]; then
+  echo "  c) Continue rebase (git rebase --continue)"
+else
+  echo "  c) Commit (approve merge)"
+fi
+echo "  e) Request modifications (files remain staged)"
+echo "  a) Abort"
+echo ""
+read -p "Action [c/e/a]: " -n 1 action
+echo ""
+
+case "$action" in
+  c|C)
+    if [[ "$IN_REBASE" == "true" ]]; then
+      git rebase --continue
+    else
+      git commit
+    fi
+    ;;
+  e|E)
+    echo "Files remain staged. Modify specific files, then re-run 'merge-review'."
+    ;;
+  a|A)
+    if [[ "$IN_REBASE" == "true" ]]; then
+      abort_cmd="git rebase --abort"
+    else
+      abort_cmd="git merge --abort"
+    fi
+    read -p "Run '$abort_cmd'? [y/N]: " -n 1 confirm
+    echo ""
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+      $abort_cmd
+      echo "Aborted."
+    else
+      echo "Cancelled. Files remain staged."
+    fi
+    ;;
+  *)
+    echo "No action taken. Files remain staged."
+    ;;
+esac
