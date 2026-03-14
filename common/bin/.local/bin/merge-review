@@ -59,9 +59,15 @@ for file in "${REVIEW_FILES[@]}"; do
   fi
 
   cat >> "$SCRIPT" << EOF
+local saved_ei = vim.o.eventignore
+vim.o.eventignore = "all"
 vim.cmd("edit " .. vim.fn.fnameescape("${OURS}"))
-vim.cmd("vertical diffsplit " .. vim.fn.fnameescape("${RESOLVED}"))
-vim.cmd("vertical diffsplit " .. vim.fn.fnameescape("${THEIRS}"))
+vim.cmd("diffthis")
+vim.cmd("vertical split " .. vim.fn.fnameescape("${RESOLVED}"))
+vim.cmd("diffthis")
+vim.cmd("vertical split " .. vim.fn.fnameescape("${THEIRS}"))
+vim.cmd("diffthis")
+vim.o.eventignore = saved_ei
 vim.cmd("1wincmd w | setlocal nomodifiable")
 vim.cmd("3wincmd w | setlocal nomodifiable")
 vim.cmd("2wincmd w")
