@@ -103,13 +103,19 @@ return {
         end
       end
 
-      -- Wrap on_file_select to intercept the initial auto-load only
+      -- Wrap on_file_select to intercept conflict files
+      -- Display conflict files as inline diff (working tree with conflict markers)
+      -- so that git-conflict.nvim can detect markers and set up keymaps (co/ct/cb/c0)
       local orig_on_file_select = explorer.on_file_select
       local initial_done = false
       explorer.on_file_select = function(file_data)
+        -- Track conflict state for help display
+        explorer._in_conflict = file_data and file_data.group == "conflicts" or false
+
         if not initial_done then
           initial_done = true
           if file_data and file_data.group == "conflicts" and autoload_file then
+            explorer._in_conflict = false
             orig_on_file_select({
               path = autoload_file.path,
               old_path = autoload_file.old_path,
@@ -119,6 +125,10 @@ return {
             })
             return
           end
+        end
+        if file_data and file_data.group == "conflicts" then
+          orig_on_file_select(vim.tbl_extend("force", file_data, { group = "unstaged" }))
+          return
         end
         orig_on_file_select(file_data)
       end
@@ -1129,14 +1139,9 @@ return {
         if original_bufnr and modified_bufnr then
           local cur_buf = vim.api.nvim_get_current_buf()
           in_diff = cur_buf == original_bufnr or cur_buf == modified_bufnr
-          -- コンフリクト状態をチェック（git-conflict.nvim）
-          -- modified_bufnr を使用（実ファイルにコンフリクトがある）
-          if in_diff then
-            local ok, git_conflict = pcall(require, "git-conflict")
-            if ok and git_conflict.conflict_count then
-              local count = git_conflict.conflict_count(modified_bufnr)
-              in_conflict = count and count > 0
-            end
+          -- explorerのコンフリクト追跡フラグを使用
+          if in_diff and explorer._in_conflict then
+            in_conflict = true
           end
         end
         local help_lines
