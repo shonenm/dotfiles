@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-STATUS_DIR="/tmp/claude_status"
+STATUS_DIR="/tmp/claude/status"
 STALE_THRESHOLD=3600  # 1時間以上更新なしは削除
 
 # 状態を設定

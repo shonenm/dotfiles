@@ -225,7 +225,7 @@ _claude_context() {
   fi
 
   # 手動マッピングからworkspaceを取得
-  local map_file="/tmp/claude_workspace_map.json"
+  local map_file="${HOME}/.local/share/claude/workspace_map.json"
   if [[ -f "$map_file" ]]; then
     local env_key
     env_key=$(git rev-parse --show-toplevel 2>/dev/null)

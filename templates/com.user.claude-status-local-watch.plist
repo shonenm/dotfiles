@@ -10,7 +10,7 @@
     </array>
     <key>WatchPaths</key>
     <array>
-        <string>/tmp/claude_status</string>
+        <string>/tmp/claude/status</string>
     </array>
     <key>RunAtLoad</key>
     <true/>

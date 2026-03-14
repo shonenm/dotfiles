@@ -22,10 +22,10 @@ Aerospace workspace numbers are not accessible from CLI applications — there i
 
 ```
 # Status files
-/tmp/claude_status/workspace_${workspace}_${timestamp}.json
+/tmp/claude/status/workspace_${workspace}_${timestamp}.json
 
 # Workspace mapping
-/tmp/claude_workspace_map.json
+~/.local/share/claude/workspace_map.json
 ```
 
 ### Data Structure
@@ -56,7 +56,7 @@ Example:
 /beacon 3
 ```
 
-This saves a mapping in `/tmp/claude_workspace_map.json`:
+This saves a mapping in `~/.local/share/claude/workspace_map.json`:
 ```json
 {
   "/Users/matsushimakouta/dotfiles": {
@@ -97,7 +97,7 @@ This saves a mapping in `/tmp/claude_workspace_map.json`:
 Claude Code (hooks)
     | ai-notify.sh <tool> <event>
     | claude-status.sh set <project> <status> <workspace>
-/tmp/claude_status/workspace_*.json
+/tmp/claude/status/workspace_*.json
     | sketchybar --trigger claude_status_change
 SketchyBar badge update
 ```
@@ -107,9 +107,9 @@ SketchyBar badge update
 ```
 Claude Code (hooks) @ Container
     | ai-notify.sh (file write)
-/tmp/claude_status/*.json @ Container
-    | bind mount (docker run -v /tmp/claude_status:/tmp/claude_status)
-/tmp/claude_status/*.json @ Mac
+/tmp/claude/status/*.json @ Container
+    | bind mount (docker run -v /tmp/claude/status:/tmp/claude/status)
+/tmp/claude/status/*.json @ Mac
     | sketchybar --trigger (ai-notify.sh executes directly)
 SketchyBar badge update
 ```
@@ -119,13 +119,13 @@ SketchyBar badge update
 ```
 Claude Code (hooks) @ Remote
     | ai-notify.sh (file write)
-/tmp/claude_status/workspace_*.json @ Remote
+/tmp/claude/status/workspace_*.json @ Remote
     | inotifywait (file change detection)
     | Read content + delete file
     | Persistent SSH connection
 Mac (claude-status-watch.sh)
     | claude-status.sh set
-/tmp/claude_status/workspace_*.json @ Mac
+/tmp/claude/status/workspace_*.json @ Mac
     | sketchybar --trigger
 SketchyBar badge update
 ```
@@ -137,15 +137,15 @@ Note: Remote files are deleted after transfer to prevent stale notifications fro
 ```
 Claude Code (hooks) @ Container
     | ai-notify.sh (file write)
-/tmp/claude_status/workspace_*.json @ Container
+/tmp/claude/status/workspace_*.json @ Container
     | bind mount (configured in devcontainer.json)
-/tmp/claude_status/workspace_*.json @ Remote Host
+/tmp/claude/status/workspace_*.json @ Remote Host
     | inotifywait (file change detection)
     | Read content + delete file
     | Persistent SSH connection
 Mac (claude-status-watch.sh)
     | claude-status.sh set
-/tmp/claude_status/workspace_*.json @ Mac
+/tmp/claude/status/workspace_*.json @ Mac
     | sketchybar --trigger
 SketchyBar badge update
 ```
@@ -159,7 +159,7 @@ In Ghostty + tmux environments, badges are displayed on the tmux status bar in a
 ```
 Claude Code (hooks)
     | ai-notify.sh (records tmux_session, tmux_window_index)
-/tmp/claude_status/workspace_*.json
+/tmp/claude/status/workspace_*.json
     | tmux refresh-client -S
 tmux status bar update
     | tmux-claude-badge.sh (called from window-status-format)
@@ -298,11 +298,11 @@ Manually registers the current git repository to an Aerospace workspace.
 beacon.sh <workspace_number>
 ```
 
-Saves mapping to `/tmp/claude_workspace_map.json`. This mapping is used by `ai-notify.sh` to determine which workspace to notify.
+Saves mapping to `~/.local/share/claude/workspace_map.json`. This mapping is used by `ai-notify.sh` to determine which workspace to notify.
 
 ### scripts/claude-status-watch.sh
 
-Monitors `/tmp/claude_status/` on remote host and transfers changes to Mac.
+Monitors `/tmp/claude/status/` on remote host and transfers changes to Mac.
 
 ```bash
 claude-status-watch.sh <remote-host>
@@ -426,7 +426,7 @@ CLAUDE_PROJECT=my-project dexec my-container zsh
 **Prerequisites**:
 - Add bind mount:
   ```bash
-  docker run -v /tmp/claude_status:/tmp/claude_status ...
+  docker run -v /tmp/claude/status:/tmp/claude/status ...
   ```
 
 #### Method B: Using VS Code Dev Container
@@ -436,7 +436,7 @@ CLAUDE_PROJECT=my-project dexec my-container zsh
    ```yaml
    # docker-compose.yml
    volumes:
-     - /tmp/claude_status:/tmp/claude_status
+     - /tmp/claude/status:/tmp/claude/status
    ```
 
 2. **Set DEVCONTAINER_NAME environment variable**
@@ -516,7 +516,7 @@ claude
 **Prerequisites**:
 - Add bind mount to container:
   ```bash
-  docker run -v /tmp/claude_status:/tmp/claude_status ...
+  docker run -v /tmp/claude/status:/tmp/claude/status ...
   ```
 
 #### Connecting from VS Code Dev Container
@@ -526,7 +526,7 @@ claude
    ```json
    {
      "mounts": [
-       "source=/tmp/claude_status,target=/tmp/claude_status,type=bind"
+       "source=/tmp/claude/status,target=/tmp/claude/status,type=bind"
      ]
    }
    ```
@@ -610,7 +610,7 @@ Commit message format: `prefix(scope): description`
 ~/dotfiles/scripts/beacon.sh 3
 
 # Check current mappings
-cat /tmp/claude_workspace_map.json | jq .
+cat ~/.local/share/claude/workspace_map.json | jq .
 ```
 
 ### News Digest (Claude Code)
@@ -664,13 +664,13 @@ Enter Service Mode with Aerospace `alt+shift+;`:
 
 1. Check if workspace is registered:
    ```bash
-   cat /tmp/claude_workspace_map.json | jq .
+   cat ~/.local/share/claude/workspace_map.json | jq .
    ```
 
 2. Check status files:
    ```bash
-   ls -la /tmp/claude_status/
-   cat /tmp/claude_status/workspace_*.json
+   ls -la /tmp/claude/status/
+   cat /tmp/claude/status/workspace_*.json
    ```
 
 3. Manually trigger SketchyBar:
@@ -703,10 +703,10 @@ Enter Service Mode with Aerospace `alt+shift+;`:
 4. Check bind mount:
    ```bash
    # From inside Container
-   ls -la /tmp/claude_status/
+   ls -la /tmp/claude/status/
 
    # From Remote host
-   ls -la /tmp/claude_status/
+   ls -la /tmp/claude/status/
    ```
 
 ### Cannot Retrieve Webhook
@@ -791,5 +791,5 @@ dotfiles/
   - `communication.md` - Japanese responses, no emoji
   - `autonomy.md` - Confirm before running scripts/push
 - `~/.local/share/ai-notify/` - Webhook cache
-- `/tmp/claude_status/` - State files
-- `/tmp/claude_workspace_map.json` - Workspace mappings
+- `/tmp/claude/status/` - State files
+- `~/.local/share/claude/workspace_map.json` - Workspace mappings

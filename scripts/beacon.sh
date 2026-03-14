@@ -5,7 +5,7 @@
 set -euo pipefail
 
 WORKSPACE="${1:-}"
-MAP_FILE="/tmp/claude_workspace_map.json"
+MAP_FILE="${HOME}/.local/share/claude/workspace_map.json"
 
 if [[ -z "$WORKSPACE" ]]; then
   echo "Usage: beacon.sh <workspace_number>" >&2
@@ -26,6 +26,7 @@ generate_env_key() {
 ENV_KEY=$(generate_env_key)
 
 # Initialize map file if it doesn't exist
+mkdir -p "$(dirname "$MAP_FILE")"
 if [[ ! -f "$MAP_FILE" ]]; then
   echo "{}" > "$MAP_FILE"
 fi
