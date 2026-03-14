@@ -38,7 +38,8 @@ fi
 
 echo "Reviewing ${#REVIEW_FILES[@]} file(s)..."
 
-# Lua スクリプトを生成して nvim にタブ付き3way diff を構築させる
+# Lua スクリプトを生成: 各ファイルを3ペインのタブとして配置
+# diff 有効化・filetype 設定・キーマップは merge-review.lua プラグインが担当
 SCRIPT=$(mktemp /tmp/merge_review_XXXXXX.lua)
 
 first=true
@@ -62,15 +63,11 @@ for file in "${REVIEW_FILES[@]}"; do
 local saved_ei = vim.o.eventignore
 vim.o.eventignore = "all"
 vim.cmd("edit " .. vim.fn.fnameescape("${OURS}"))
-vim.cmd("diffthis")
+vim.bo.buflisted = false
 vim.cmd("vertical split " .. vim.fn.fnameescape("${RESOLVED}"))
-vim.cmd("diffthis")
 vim.cmd("vertical split " .. vim.fn.fnameescape("${THEIRS}"))
-vim.cmd("diffthis")
+vim.bo.buflisted = false
 vim.o.eventignore = saved_ei
-vim.cmd("1wincmd w | setlocal nomodifiable")
-vim.cmd("3wincmd w | setlocal nomodifiable")
-vim.cmd("2wincmd w")
 EOF
 done
 
