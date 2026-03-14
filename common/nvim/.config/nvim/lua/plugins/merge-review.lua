@@ -2,8 +2,18 @@
 -- merge-review コマンドで nvim がタブ付きで起動された時に自動設定される
 
 local setup_done = {}
+local hunk_cache = {} -- tabpage → { hunks, resolved_win }
+local pending_timer = nil
+
+local function cancel_pending()
+  if pending_timer then
+    vim.fn.timer_stop(pending_timer)
+    pending_timer = nil
+  end
+end
 
 -- diff hunk の位置リストを取得 (行番号の昇順)
+-- 呼び出し元が resolved ペインにフォーカスしていること
 local function get_diff_hunks()
   if not vim.wo.diff then return {} end
   local saved = vim.fn.winsaveview()
@@ -20,6 +30,22 @@ local function get_diff_hunks()
   end
   vim.fn.winrestview(saved)
   return hunks
+end
+
+-- hunk カウントを実行して winbar とキャッシュを更新
+local function update_hunk_count(tabpage, resolved_win)
+  local hunks = get_diff_hunks()
+  hunk_cache[tabpage] = hunks
+  pcall(function()
+    vim.wo[resolved_win].winbar = " RESOLVED (" .. #hunks .. " hunks)"
+  end)
+  return hunks
+end
+
+-- キャッシュ済みの hunk リストを返す。なければオンデマンドで計算
+local function get_hunks_cached(tabpage, resolved_win)
+  if hunk_cache[tabpage] then return hunk_cache[tabpage] end
+  return update_hunk_count(tabpage, resolved_win)
 end
 
 local function setup_merge_review(bufs)
@@ -43,14 +69,13 @@ local function setup_merge_review(bufs)
     end
   end
 
-  -- hunk 数を取得 (resolved ペインで計測)
-  vim.api.nvim_set_current_win(bufs[2].win)
-  local hunks = get_diff_hunks()
-
-  -- winbar: ラベルと hunk 数
+  -- winbar: ラベルのみ (hunk 数は非同期で後から更新)
   vim.wo[bufs[1].win].winbar = " OURS"
-  vim.wo[bufs[2].win].winbar = " RESOLVED (" .. #hunks .. " hunks)"
+  vim.wo[bufs[2].win].winbar = " RESOLVED"
   vim.wo[bufs[3].win].winbar = " THEIRS"
+
+  -- resolved にフォーカス
+  vim.api.nvim_set_current_win(bufs[2].win)
 
   -- 全ペイン共通キーマップ
   for _, b in ipairs(bufs) do
@@ -63,6 +88,7 @@ local function setup_merge_review(bufs)
   end
 
   -- resolved ペイン専用キーマップ
+  local resolved_win = bufs[2].win
   local resolved_buf = bufs[2].buf
   local ropts = { buffer = resolved_buf, noremap = true, silent = true }
 
@@ -76,15 +102,14 @@ local function setup_merge_review(bufs)
 
   vim.keymap.set("n", "<leader>mu", function()
     vim.cmd("diffupdate")
-    -- hunk 数を再計算して winbar 更新
-    local new_hunks = get_diff_hunks()
-    vim.wo[bufs[2].win].winbar = " RESOLVED (" .. #new_hunks .. " hunks)"
-  end, vim.tbl_extend("force", ropts, { desc = "Update diff" }))
+    hunk_cache[tabpage] = nil
+    update_hunk_count(tabpage, resolved_win)
+  end, vim.tbl_extend("force", ropts, { desc = "Update diff + hunk count" }))
 
-  -- hunk 番号ジャンプ (1-9)
+  -- hunk 番号ジャンプ (1-9, オンデマンド計算)
   for i = 1, 9 do
     vim.keymap.set("n", "<leader>m" .. i, function()
-      local h = get_diff_hunks()
+      local h = get_hunks_cached(tabpage, resolved_win)
       if i > #h then
         vim.notify("Hunk " .. i .. "/" .. #h, vim.log.levels.WARN)
         return
@@ -98,13 +123,23 @@ local function setup_merge_review(bufs)
   vim.bo[bufs[1].buf].modifiable = false
   vim.bo[bufs[3].buf].modifiable = false
 
-  -- resolved にフォーカス
-  vim.api.nvim_set_current_win(bufs[2].win)
-
   setup_done[tabpage] = true
+
+  -- 非同期 hunk カウント: 100ms 後にまだ同じタブなら計算
+  cancel_pending()
+  pending_timer = vim.fn.timer_start(100, function()
+    vim.schedule(function()
+      pending_timer = nil
+      if vim.api.nvim_get_current_tabpage() ~= tabpage then return end
+      if hunk_cache[tabpage] then return end
+      update_hunk_count(tabpage, resolved_win)
+    end)
+  end)
 end
 
 local function try_setup()
+  cancel_pending()
+
   local tabpage = vim.api.nvim_get_current_tabpage()
   if setup_done[tabpage] then return end
 
