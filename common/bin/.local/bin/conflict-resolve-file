@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# conflict-resolve-file: 単一ファイルのコンフリクトを claude -p で解消する
+set -euo pipefail
+
+# claude コマンドの存在確認
+if ! command -v claude &>/dev/null; then
+  echo "Error: claude command not found." >&2
+  exit 1
+fi
+
+# 引数パース
+BASE=""
+OURS=""
+THEIRS=""
+REPO_PATH=""
+SAVE_DIR=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --base)
+      BASE="$2"
+      shift 2
+      ;;
+    --ours)
+      OURS="$2"
+      shift 2
+      ;;
+    --theirs)
+      THEIRS="$2"
+      shift 2
+      ;;
+    --path)
+      REPO_PATH="$2"
+      shift 2
+      ;;
+    --save-dir)
+      SAVE_DIR="$2"
+      shift 2
+      ;;
+    *)
+      echo "Error: Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+# 必須引数チェック
+for arg_name in BASE OURS THEIRS REPO_PATH SAVE_DIR; do
+  if [[ -z "${!arg_name}" ]]; then
+    echo "Error: --$(echo "$arg_name" | tr '[:upper:]' '[:lower:]' | tr '_' '-') is required." >&2
+    exit 1
+  fi
+done
+
+# ファイル読み込み
+base_content=$(cat "$BASE")
+ours_content=$(cat "$OURS")
+theirs_content=$(cat "$THEIRS")
+
+# プロンプト構築
+prompt="You are resolving a merge conflict for file: ${REPO_PATH}
+
+BASE (common ancestor):
+${base_content}
+
+OURS (current branch):
+${ours_content}
+
+THEIRS (incoming branch):
+${theirs_content}
+
+Resolve this conflict by merging both changes. Output your response in the following XML format:
+
+<resolved>
+...resolved file content...
+</resolved>
+<confidence>high or needs-review</confidence>
+<review_comment>explanation of how you resolved the conflict</review_comment>
+
+Rules:
+- Preserve both sides' changes when possible
+- If changes conflict logically, make the best judgment
+- Use \"high\" confidence when the merge is straightforward
+- Use \"needs-review\" when there are logical conflicts or ambiguities
+- Add REVIEW: comments in the resolved code for needs-review sections"
+
+# claude -p で解決
+output=$(echo "$prompt" | claude -p 2>/dev/null)
+
+# XML パース: resolved (複数行)
+resolved=$(echo "$output" | sed -n '/<resolved>/,/<\/resolved>/p' | sed '1d;$d')
+if [[ -z "$resolved" ]]; then
+  echo "Error: Failed to parse <resolved> from claude output." >&2
+  exit 1
+fi
+
+# XML パース: confidence (1行)
+confidence=$(echo "$output" | sed -n 's/.*<confidence>\(.*\)<\/confidence>.*/\1/p')
+if [[ -z "$confidence" ]]; then
+  echo "Error: Failed to parse <confidence> from claude output." >&2
+  exit 1
+fi
+
+# XML パース: review_comment (1行)
+review_comment=$(echo "$output" | sed -n 's/.*<review_comment>\(.*\)<\/review_comment>.*/\1/p')
+if [[ -z "$review_comment" ]]; then
+  echo "Error: Failed to parse <review_comment> from claude output." >&2
+  exit 1
+fi
+
+# 結果書き込み
+printf '%s\n' "$resolved" > "$OURS"
+mkdir -p "$SAVE_DIR"
+printf '%s\n' "$confidence" > "${SAVE_DIR}/confidence"
+printf '%s\n' "$review_comment" > "${SAVE_DIR}/review_comment"

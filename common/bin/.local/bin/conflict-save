@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# conflict-save: コンフリクト発生時に base/ours/theirs の3状態をディレクトリ構造で保存する
+set -euo pipefail
+
+SESSION_DIR="/tmp/conflict_session"
+SHORT_SHA="$(git rev-parse --short HEAD)"
+
+# --- type 判定 ---
+GIT_DIR="$(git rev-parse --git-dir)"
+if [[ -f "${GIT_DIR}/CHERRY_PICK_HEAD" ]]; then
+  op_type="cherry-pick"
+elif [[ -f "${GIT_DIR}/REBASE_HEAD" ]]; then
+  op_type="rebase"
+elif [[ -f "${GIT_DIR}/MERGE_HEAD" ]]; then
+  op_type="merge"
+else
+  op_type="unknown"
+fi
+
+# --- 初期化 ---
+if [[ "$op_type" != "rebase" ]]; then
+  rm -rf "$SESSION_DIR"
+fi
+mkdir -p "$SESSION_DIR"
+echo "$op_type" > "${SESSION_DIR}/type"
+
+# --- コンフリクトファイル取得 ---
+CONFLICT_FILES="$(git diff --name-only --diff-filter=U)"
+
+if [[ -z "$CONFLICT_FILES" ]]; then
+  echo "No conflict files found."
+  exit 0
+fi
+
+# --- 保存 ---
+while IFS= read -r file; do
+  dest="${SESSION_DIR}/${SHORT_SHA}/${file}"
+  mkdir -p "$dest"
+
+  # base (共通祖先)
+  if ! git show ":1:${file}" > "${dest}/base" 2>/dev/null; then
+    touch "${dest}/base"
+  fi
+
+  # ours (現在ブランチ)
+  if ! git show ":2:${file}" > "${dest}/ours" 2>/dev/null; then
+    touch "${dest}/ours"
+  fi
+
+  # theirs (マージ対象ブランチ)
+  if ! git show ":3:${file}" > "${dest}/theirs" 2>/dev/null; then
+    touch "${dest}/theirs"
+  fi
+
+  echo "Saved: ${file}"
+done <<< "$CONFLICT_FILES"
+
+echo ""
+echo "States saved to: ${SESSION_DIR}/${SHORT_SHA}"

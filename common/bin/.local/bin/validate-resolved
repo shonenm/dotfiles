@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# validate-resolved: プロジェクトタイプを検出し、適切な静的検証コマンドを実行する
+set -uo pipefail
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
+if [[ -z "$repo_root" ]]; then
+  echo "Error: not in a git repository."
+  exit 1
+fi
+
+if [[ -f "$repo_root/tsconfig.json" ]]; then
+  cmd="npx tsc --noEmit"
+elif [[ -f "$repo_root/Cargo.toml" ]]; then
+  cmd="cargo check"
+elif [[ -f "$repo_root/go.mod" ]]; then
+  cmd="go vet ./..."
+elif [[ -f "$repo_root/pyproject.toml" ]]; then
+  if command -v ruff >/dev/null 2>&1; then
+    cmd="ruff check"
+  else
+    cmd="mypy ."
+  fi
+else
+  cmd="git diff --check"
+fi
+
+echo "Validating with: $cmd"
+$cmd

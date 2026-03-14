@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+# rebase-review: rebase 完了後に range-diff ベースで変更コミットのコンフリクト解決をレビューする
+set -euo pipefail
+
+# デフォルトブランチを検出
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
+
+# ORIG_HEAD の存在確認
+if ! git rev-parse --verify ORIG_HEAD &>/dev/null; then
+  echo "Error: ORIG_HEAD not found. Not in a post-rebase state."
+  exit 1
+fi
+
+# git range-diff で ! コミットを検出
+range_diff_output=$(git range-diff "origin/$DEFAULT_BRANCH" ORIG_HEAD HEAD 2>/dev/null)
+
+if [[ -z "$range_diff_output" ]]; then
+  echo "No changes detected in range-diff."
+  exit 0
+fi
+
+# ! マークの行から新 SHA (右側) を抽出
+changed_shas=()
+while IFS= read -r sha; do
+  changed_shas+=("$sha")
+done < <(echo "$range_diff_output" | grep -E '^[0-9]+:.*!.*[0-9]+: [a-f0-9]+' | sed -E 's/^[0-9]+:.*!.*[0-9]+: ([a-f0-9]+).*/\1/')
+
+if [[ ${#changed_shas[@]} -eq 0 ]]; then
+  echo "No changed commits found in range-diff."
+  exit 0
+fi
+
+SESSION_DIR="/tmp/conflict_session"
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+# 各 SHA の conflict_session ディレクトリを確認
+review_shas=()
+for sha in "${changed_shas[@]}"; do
+  if [[ -d "${SESSION_DIR}/${sha}" ]]; then
+    review_shas+=("$sha")
+  fi
+done
+
+if [[ ${#review_shas[@]} -eq 0 ]]; then
+  echo "No conflict sessions found for changed commits."
+  exit 0
+fi
+
+echo "Reviewing conflict resolutions for ${#review_shas[@]} commit(s)..."
+
+# Lua スクリプトを生成
+SCRIPT=$(mktemp /tmp/rebase_review_XXXXXX.lua)
+
+first=true
+for sha in "${review_shas[@]}"; do
+  while IFS= read -r ours_path; do
+    # file_path の抽出: /tmp/conflict_session/<sha>/ を除去し、末尾の /ours を除去
+    file_path="${ours_path#"${SESSION_DIR}/${sha}/"}"
+    file_path="${file_path%/ours}"
+
+    OURS="${SESSION_DIR}/${sha}/${file_path}/ours"
+    THEIRS="${SESSION_DIR}/${sha}/${file_path}/theirs"
+    RESOLVED="${REPO_ROOT}/${file_path}"
+
+    if [[ ! -f "$RESOLVED" ]]; then
+      echo "Warning: Resolved file not found: $RESOLVED (skipping)"
+      continue
+    fi
+
+    if [[ "$first" == "true" ]]; then
+      first=false
+    else
+      echo 'vim.cmd("tabnew")' >> "$SCRIPT"
+    fi
+
+    # パス内の ' をエスケープ (Lua 文字列リテラルに安全に埋め込む)
+    OURS_ESC=$(printf '%s' "$OURS" | sed "s/'/\\\\'/g")
+    RESOLVED_ESC=$(printf '%s' "$RESOLVED" | sed "s/'/\\\\'/g")
+    THEIRS_ESC=$(printf '%s' "$THEIRS" | sed "s/'/\\\\'/g")
+    FILE_PATH_ESC=$(printf '%s' "$file_path" | sed "s/'/\\\\'/g")
+
+    cat >> "$SCRIPT" << EOF
+local saved_ei = vim.o.eventignore
+vim.o.eventignore = "all"
+vim.cmd("edit " .. vim.fn.fnameescape('${OURS_ESC}'))
+vim.bo.buflisted = false
+local ft = vim.filetype.match({ filename = '${FILE_PATH_ESC}' })
+if ft then vim.bo.filetype = ft end
+vim.cmd("vertical split " .. vim.fn.fnameescape('${RESOLVED_ESC}'))
+vim.cmd("vertical split " .. vim.fn.fnameescape('${THEIRS_ESC}'))
+vim.bo.buflisted = false
+if ft then vim.bo.filetype = ft end
+vim.o.eventignore = saved_ei
+EOF
+  done < <(find "${SESSION_DIR}/${sha}" -name "ours" | sort)
+done
+
+# タブがひとつも生成されなかった場合
+if [[ "$first" == "true" ]]; then
+  rm -f "$SCRIPT"
+  echo "No reviewable files found."
+  exit 0
+fi
+
+echo 'vim.cmd("tabfirst")' >> "$SCRIPT"
+
+nvim -S "$SCRIPT"
+rm -f "$SCRIPT"
+
+# REVIEW: コメント残存チェック
+REVIEW_REMAINING=$(grep -rn "REVIEW:" "$REPO_ROOT" \
+  --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
+  --include="*.go" --include="*.rs" --include="*.java" \
+  --include="*.py" --include="*.rb" --include="*.sh" \
+  --include="*.lua" --include="*.vue" --include="*.html" \
+  2>/dev/null || true)
+
+if [[ -n "$REVIEW_REMAINING" ]]; then
+  echo ""
+  echo "Warning: REVIEW: comments remain:"
+  echo "$REVIEW_REMAINING"
+fi
+
+# アクション選択
+echo ""
+echo "Review complete."
+echo ""
+echo "  a) Accept - approve rebase result"
+echo "  m) Amend - amend latest commit (git commit --amend)"
+echo "  e) Exit - do nothing"
+echo ""
+read -rp "Action [a/m/e]: " -n 1 action || true
+echo ""
+
+case "$action" in
+  a|A)
+    echo "Rebase result accepted."
+    ;;
+  m|M)
+    if [[ -n "$REVIEW_REMAINING" ]]; then
+      read -rp "REVIEW: comments remain. Continue with amend? [y/N]: " -n 1 yn || true
+      echo ""
+      [[ "$yn" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
+    fi
+    git commit --amend
+    ;;
+  e|E)
+    echo "No action taken."
+    ;;
+  *)
+    echo "No action taken."
+    ;;
+esac
