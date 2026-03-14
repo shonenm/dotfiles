@@ -486,6 +486,49 @@ git add -p       # 修正をステージ
 git absorb       # 自動fixup + rebase
 ```
 
+## Merge Review ワークフロー
+
+Claude Code がマージ・コンフリクト解決を自動実行し、人間が 3way diff でレビューするワークフロー。
+
+### コマンド
+
+| コマンド | 用途 |
+|----------|------|
+| `merge-save-states` | コンフリクト発生時に base/ours/theirs を `/tmp/merge_review_*` に保存 |
+| `merge-review` | 保存済み ours/theirs と解決済みファイルを nvim 3way diff で表示 |
+
+### フロー
+
+```
+1. /merge-resolve (Claude Code skill) or 手動で merge/rebase 後に依頼
+   └─ Claude がコンフリクト解決 → merge-save-states → git add → 完了報告
+
+2. merge-review 実行
+   └─ nvim がタブ付き3way diff で全ファイルを一括表示
+
+3. レビュー後のアクション選択
+   └─ c: commit/continue  e: 修正依頼  a: abort
+```
+
+### nvim 3way diff キーマップ
+
+merge-review 起動時に自動設定される (`lua/plugins/merge-review.lua`)。
+
+| キー | 動作 | 対象ペイン |
+|------|------|-----------|
+| `]c` / `[c` | 次/前の diff hunk に移動 | 全ペイン (vim built-in) |
+| `<leader>mo` | ours (左) から取り込み | resolved (中央) |
+| `<leader>mt` | theirs (右) から取り込み | resolved (中央) |
+| `<leader>mu` | diff を再計算 | resolved (中央) |
+
+### デプロイ
+
+`install.sh` で自動デプロイされる (`common/bin/` stow パッケージ)。手動の場合:
+
+```bash
+stow -d common -t ~ bin
+```
+
 ## forgit (fzf-powered Git)
 
 [forgit](https://github.com/wfxr/forgit) は fzf を使った Git 操作のインタラクティブ強化プラグイン。sheldon 経由でインストール。
