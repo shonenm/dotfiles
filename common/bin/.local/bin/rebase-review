@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# rebase-review: rebase 完了後に range-diff ベースで変更コミットのコンフリクト解決をレビューする
-# セッションディレクトリには依存せず、git history から全情報を取得する
+# rebase-review: rebase 完了後にコンフリクト解決結果を 3-way diff でレビューする
+# merge review と同等の aggregate view: ours(ORIG_HEAD) | resolved(HEAD) | theirs(target)
 set -euo pipefail
 
 # ORIG_HEAD の存在確認
@@ -20,24 +20,19 @@ else
   echo "Using default base: $BASE_REF" >&2
 fi
 
-# git range-diff で ! コミットの元SHA・新SHAペアを抽出
-old_shas=()
-new_shas=()
-while IFS= read -r line; do
-  old_sha=$(echo "$line" | sed -E 's/^\s*[0-9]+:\s+([a-f0-9]+)\s+!.*/\1/')
-  new_sha=$(echo "$line" | sed -E 's/^.*!\s*[0-9]+:\s+([a-f0-9]+).*/\1/')
-  old_shas+=("$old_sha")
-  new_shas+=("$new_sha")
-done < <(git range-diff "$BASE_REF" ORIG_HEAD HEAD 2>/dev/null | grep -E '^\s*[0-9]+:\s+[a-f0-9]+\s+!')
+TARGET=$(git rev-parse "$BASE_REF")
+MERGE_BASE=$(git merge-base ORIG_HEAD "$TARGET")
 
-if [[ ${#old_shas[@]} -eq 0 ]]; then
-  echo "No changed commits found in range-diff."
+# 両ブランチが変更したファイル (intersection)
+both_files=$(comm -12 \
+  <(git diff --name-only "$MERGE_BASE" ORIG_HEAD | sort) \
+  <(git diff --name-only "$MERGE_BASE" "$TARGET" | sort))
+
+if [[ -z "$both_files" ]]; then
+  echo "No files modified by both branches."
   exit 0
 fi
 
-echo "Found ${#old_shas[@]} changed commit(s). Detecting affected files..."
-
-# 一時ディレクトリ
 TMPDIR=$(mktemp -d /tmp/rebase_review_XXXXXX)
 trap 'rm -rf "$TMPDIR"' EXIT
 
@@ -45,53 +40,43 @@ SCRIPT="${TMPDIR}/review.lua"
 first=true
 tab_count=0
 
-for i in "${!old_shas[@]}"; do
-  old_sha="${old_shas[$i]}"
-  new_sha="${new_shas[$i]}"
+while IFS= read -r file_path; do
+  # blob hash で比較 (内容の一致判定)
+  head_hash=$(git rev-parse "HEAD:${file_path}" 2>/dev/null || echo "none")
+  orig_hash=$(git rev-parse "ORIG_HEAD:${file_path}" 2>/dev/null || echo "none")
+  target_hash=$(git rev-parse "${TARGET}:${file_path}" 2>/dev/null || echo "none")
 
-  # 元コミットと新コミットが触ったファイルの和集合
-  all_files=$(cat \
-    <(git diff --name-only "${old_sha}^" "$old_sha" 2>/dev/null) \
-    <(git diff --name-only "${new_sha}^" "$new_sha" 2>/dev/null) \
-    | sort -u)
+  # HEAD が ours と同じ → rebase で変更なし、レビュー不要
+  [[ "$head_hash" == "$orig_hash" ]] && continue
+  # HEAD が theirs と同じ → theirs をそのまま採用、レビュー不要
+  [[ "$head_hash" == "$target_hash" ]] && continue
 
-  [[ -z "$all_files" ]] && continue
+  # 3状態を一時ファイルに書き出し
+  file_dir="${TMPDIR}/files/${file_path}"
+  mkdir -p "$file_dir"
 
-  while IFS= read -r file_path; do
-    # 元コミットと新コミットの実変更行のみを比較（コンテキスト・行番号を除外）
-    old_diff=$(git diff -U0 "${old_sha}^".."$old_sha" -- "$file_path" 2>/dev/null | grep -E '^[+-]' | grep -Ev '^(---|\+\+\+)' || true)
-    new_diff=$(git diff -U0 "${new_sha}^".."$new_sha" -- "$file_path" 2>/dev/null | grep -E '^[+-]' | grep -Ev '^(---|\+\+\+)' || true)
-    [[ "$old_diff" == "$new_diff" ]] && continue
+  ours_file="${file_dir}/ours"
+  resolved_file="${file_dir}/resolved"
+  theirs_file="${file_dir}/theirs"
 
-    # 3状態を一時ファイルに書き出し
-    file_dir="${TMPDIR}/files/${old_sha}/${file_path}"
-    mkdir -p "$file_dir"
+  git show "ORIG_HEAD:${file_path}" > "$ours_file" 2>/dev/null || echo -n > "$ours_file"
+  git show "HEAD:${file_path}" > "$resolved_file" 2>/dev/null || continue
+  git show "${TARGET}:${file_path}" > "$theirs_file" 2>/dev/null || echo -n > "$theirs_file"
 
-    ours_file="${file_dir}/ours"
-    resolved_file="${file_dir}/resolved"
-    theirs_file="${file_dir}/theirs"
+  if [[ "$first" == "true" ]]; then
+    first=false
+  else
+    echo 'vim.cmd("tabnew")' >> "$SCRIPT"
+  fi
+  tab_count=$((tab_count + 1))
 
-    # ours = rebase 先の状態 (新コミットの親)
-    git show "${new_sha}^:${file_path}" > "$ours_file" 2>/dev/null || echo -n > "$ours_file"
-    # resolved = 解決後の状態 (新コミット)
-    git show "${new_sha}:${file_path}" > "$resolved_file" 2>/dev/null || continue
-    # theirs = 元コミットの状態
-    git show "${old_sha}:${file_path}" > "$theirs_file" 2>/dev/null || echo -n > "$theirs_file"
+  # パス内の ' をエスケープ (Lua 文字列リテラルに安全に埋め込む)
+  OURS_ESC=$(printf '%s' "$ours_file" | sed "s/'/\\\\'/g")
+  RESOLVED_ESC=$(printf '%s' "$resolved_file" | sed "s/'/\\\\'/g")
+  THEIRS_ESC=$(printf '%s' "$theirs_file" | sed "s/'/\\\\'/g")
+  FILE_PATH_ESC=$(printf '%s' "$file_path" | sed "s/'/\\\\'/g")
 
-    if [[ "$first" == "true" ]]; then
-      first=false
-    else
-      echo 'vim.cmd("tabnew")' >> "$SCRIPT"
-    fi
-    tab_count=$((tab_count + 1))
-
-    # パス内の ' をエスケープ (Lua 文字列リテラルに安全に埋め込む)
-    OURS_ESC=$(printf '%s' "$ours_file" | sed "s/'/\\\\'/g")
-    RESOLVED_ESC=$(printf '%s' "$resolved_file" | sed "s/'/\\\\'/g")
-    THEIRS_ESC=$(printf '%s' "$theirs_file" | sed "s/'/\\\\'/g")
-    FILE_PATH_ESC=$(printf '%s' "$file_path" | sed "s/'/\\\\'/g")
-
-    cat >> "$SCRIPT" << EOF
+  cat >> "$SCRIPT" << EOF
 do
   local saved_ei = vim.o.eventignore
   vim.o.eventignore = "all"
@@ -104,17 +89,58 @@ do
   vim.bo.buflisted = false
   if ft then vim.bo.filetype = ft end
   vim.o.eventignore = saved_ei
+  vim.api.nvim_tabpage_set_var(0, 'review_label', '${FILE_PATH_ESC}')
 end
 EOF
-  done <<< "$all_files"
-done
+done <<< "$both_files"
 
 if [[ "$first" == "true" ]]; then
-  echo "No reviewable files found."
+  echo "No conflict resolutions to review."
   exit 0
 fi
 
-echo 'vim.cmd("tabfirst")' >> "$SCRIPT"
+cat >> "$SCRIPT" << 'LUAEOF'
+function _rebase_review_tabline()
+  local tabpages = vim.api.nvim_list_tabpages()
+  local current = vim.api.nvim_get_current_tabpage()
+  local current_idx = 0
+  local total = #tabpages
+  local entries = {}
+  for i, tp in ipairs(tabpages) do
+    if tp == current then current_idx = i end
+    local ok, label = pcall(vim.api.nvim_tabpage_get_var, tp, 'review_label')
+    entries[i] = { tp = tp, label = ok and label or tostring(i) }
+  end
+  local cols = vim.o.columns
+  local indicator = ' ' .. current_idx .. '/' .. total .. ' '
+  local avail = cols - #indicator - 4
+  local function entry_width(e) return #e.label + 2 end
+  local lo, hi = current_idx, current_idx
+  local used = entry_width(entries[current_idx])
+  while true do
+    local expanded = false
+    if lo > 1 and used + entry_width(entries[lo - 1]) <= avail then
+      lo = lo - 1; used = used + entry_width(entries[lo]); expanded = true
+    end
+    if hi < total and used + entry_width(entries[hi + 1]) <= avail then
+      hi = hi + 1; used = used + entry_width(entries[hi]); expanded = true
+    end
+    if not expanded then break end
+  end
+  local s = ''
+  if lo > 1 then s = s .. '%#TabLine# < ' end
+  for i = lo, hi do
+    local hl = (entries[i].tp == current) and '%#TabLineSel#' or '%#TabLine#'
+    s = s .. hl .. '%' .. i .. 'T ' .. entries[i].label .. ' '
+  end
+  if hi < total then s = s .. '%#TabLine# > ' end
+  s = s .. '%#TabLineFill#%T%=%#TabLine#' .. indicator
+  return s
+end
+vim.o.showtabline = 2
+vim.o.tabline = '%!v:lua._rebase_review_tabline()'
+vim.cmd('tabfirst')
+LUAEOF
 
 echo "Opening ${tab_count} file(s) for review..."
 
