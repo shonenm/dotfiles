@@ -58,7 +58,7 @@ if conflict-resolve-file \
   --save-dir "$SAVE_DIR"; then
 
   # 13. 成功: 解消結果を git に返す
-  cp "$SAVE_DIR/ours" "$OURS"
+  cp "$SAVE_DIR/resolved" "$OURS"
   echo "conflict-driver: resolved $PATH_NAME" >&2
   exit 0
 else

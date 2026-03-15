@@ -109,7 +109,7 @@ if [[ -z "$review_comment" ]]; then
 fi
 
 # 結果書き込み
-printf '%s\n' "$resolved" > "$OURS"
 mkdir -p "$SAVE_DIR"
+printf '%s\n' "$resolved" > "${SAVE_DIR}/resolved"
 printf '%s\n' "$confidence" > "${SAVE_DIR}/confidence"
 printf '%s\n' "$review_comment" > "${SAVE_DIR}/review_comment"
