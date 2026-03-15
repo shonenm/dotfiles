@@ -68,10 +68,10 @@ for sha in "${review_shas[@]}"; do
 
     OURS="${SESSION_DIR}/${sha}/${file_path}/ours"
     THEIRS="${SESSION_DIR}/${sha}/${file_path}/theirs"
-    RESOLVED="${REPO_ROOT}/${file_path}"
+    RESOLVED="${SESSION_DIR}/${sha}/${file_path}/resolved"
 
     if [[ ! -f "$RESOLVED" ]]; then
-      echo "Warning: Resolved file not found: $RESOLVED (skipping)"
+      echo "Warning: Resolved file not found for ${file_path} (skipping)"
       continue
     fi
 
