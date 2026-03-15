@@ -109,6 +109,8 @@ case "$action" in
   c|C)
     # REVIEW: コメントが残っていないか確認
     REVIEW_REMAINING=$(grep -rn "REVIEW:" "$REPO_ROOT" \
+      --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor \
+      --exclude-dir=dist --exclude-dir=build --exclude-dir=target \
       --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
       --include="*.go" --include="*.rs" --include="*.java" \
       --include="*.py" --include="*.rb" --include="*.sh" \
