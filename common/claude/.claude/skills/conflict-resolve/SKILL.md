@@ -90,22 +90,19 @@ git merge --no-commit <target>
 ### 3r. rebase 実行 (新規 rebase の場合のみ)
 
 ```bash
-# 1. .git/info/attributes に一時書き込み
+# 1. .git/info/attributes に一時書き込み (rebase 全体が完了するまで維持する)
 mkdir -p .git/info
 echo '* merge=conflict-driver' >> .git/info/attributes
 
-# 2. trap でクリーンアップ登録 (rebase 成功・失敗にかかわらず実行)
-trap 'sed -i "" "/merge=conflict-driver/d" .git/info/attributes' EXIT
-
-# 3. rebase 実行
+# 2. rebase 実行
 git rebase <target>
 ```
 
 重要な注意点:
 - conflict-driver が自動で各コミットのコンフリクトを解消する
 - conflict-driver が失敗 (exit 1) した場合、git rebase が停止する
-- 停止時は通常の手動コンフリクト解決フローに入る (Step 4 以降)
-- trap は macOS の sed を使用するため `sed -i ""` (空文字列バックアップ)
+- 停止時は手動コンフリクト解決フローに入る (Step 4 → 5 → 6 → 6r)
+- `.git/info/attributes` は rebase 全体が完了するまで削除しない (Step 8r でクリーンアップ)
 
 ### 4. コンフリクト状態の保存
 
@@ -180,7 +177,8 @@ git log --oneline $BASE..HEAD -- <file>          # ours の変更理由
   - `needs-review`: ロジック競合・判断が必要
 - `needs-review` 箇所に `REVIEW:` インラインコメントを挿入 (言語の構文に合わせる)
 - 解決後 `git add <file>`
-- `git commit` / `git rebase --continue` は絶対に実行しない
+- merge/cherry-pick モード: `git commit` は実行しない (ユーザーがレビュー後に実行)
+- rebase モード: Step 6r へ進む
 
 REVIEW コメント構文:
 
@@ -191,7 +189,25 @@ REVIEW コメント構文:
 | `.lua` | `-- REVIEW:` |
 | `.html`, `.xml`, `.vue` 等 | `<!-- REVIEW: -->` |
 
+### 6r. rebase 継続ループ (rebase モードのみ)
+
+全コンフリクトを `git add` した後、rebase を継続する。
+
+```bash
+GIT_EDITOR=true git rebase --continue
+```
+
+- 次のコミットでもコンフリクトが発生したら Step 4 に戻る
+- 全コミットが完了するまでこのループを繰り返す
+- rebase 完了後は Step 7 → Step 8r へ進む
+
+lock file の rebase 中の扱い:
+- `pnpm-lock.yaml` 等が繰り返しコンフリクトする場合、`.git/info/attributes` に `pnpm-lock.yaml merge=ours` を追加して自動解決する
+- rebase 完了後に再生成する
+
 ### 7. 解決結果の検証
+
+rebase モードでは rebase 全体が完了した後にのみ実行する (中間コミットでは実行しない)。
 
 プロジェクトタイプを検出し、静的検証を実行する (副作用のないコマンドのみ)。
 
@@ -277,6 +293,20 @@ rerere 管理:
 - rerere キャッシュに記録済み (同一パターン再発時は自動適用)
 ```
 
+### 8r. rebase 完了処理 (rebase モードのみ)
+
+rebase が全コミット完了した後に実行する。
+
+```bash
+# 1. .git/info/attributes をクリーンアップ
+sed -i '' '/merge=conflict-driver/d' .git/info/attributes
+sed -i '' '/merge=ours/d' .git/info/attributes
+
+# 2. 検証 (Step 7)
+# 3. rerere 記録
+# 4. 完了報告 (Step 8 の形式)
+```
+
 `git range-diff` の活用:
 
 rebase はコミットごとにコンフリクトを解決するため、最終 diff だけでは各コミットでの解決の根拠が失われる。`git range-diff` を使うことで「rebase 前後で各コミットに何が起きたか」を差分として確認できる。
@@ -291,6 +321,8 @@ rebase はコミットごとにコンフリクトを解決するため、最終 
 
 ## 禁止事項
 
-- `git commit` / `git rebase --continue` を実行すること
+- merge/cherry-pick モードで `git commit` を実行すること (ユーザーがレビュー後に実行)
 - `conflict-save` をスキップすること
 - コンフリクトを強引に片方で上書きすること (必ず根拠を示すこと)
+
+注意: rebase モードでは `GIT_EDITOR=true git rebase --continue` の実行は必須 (Step 6r)。
