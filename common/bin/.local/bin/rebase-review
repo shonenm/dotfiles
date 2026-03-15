@@ -92,17 +92,19 @@ for i in "${!old_shas[@]}"; do
     FILE_PATH_ESC=$(printf '%s' "$file_path" | sed "s/'/\\\\'/g")
 
     cat >> "$SCRIPT" << EOF
-local saved_ei = vim.o.eventignore
-vim.o.eventignore = "all"
-vim.cmd("edit " .. vim.fn.fnameescape('${OURS_ESC}'))
-vim.bo.buflisted = false
-local ft = vim.filetype.match({ filename = '${FILE_PATH_ESC}' })
-if ft then vim.bo.filetype = ft end
-vim.cmd("vertical split " .. vim.fn.fnameescape('${RESOLVED_ESC}'))
-vim.cmd("vertical split " .. vim.fn.fnameescape('${THEIRS_ESC}'))
-vim.bo.buflisted = false
-if ft then vim.bo.filetype = ft end
-vim.o.eventignore = saved_ei
+do
+  local saved_ei = vim.o.eventignore
+  vim.o.eventignore = "all"
+  vim.cmd("edit " .. vim.fn.fnameescape('${OURS_ESC}'))
+  vim.bo.buflisted = false
+  local ft = vim.filetype.match({ filename = '${FILE_PATH_ESC}' })
+  if ft then vim.bo.filetype = ft end
+  vim.cmd("vertical split " .. vim.fn.fnameescape('${RESOLVED_ESC}'))
+  vim.cmd("vertical split " .. vim.fn.fnameescape('${THEIRS_ESC}'))
+  vim.bo.buflisted = false
+  if ft then vim.bo.filetype = ft end
+  vim.o.eventignore = saved_ei
+end
 EOF
   done <<< "$all_files"
 done
