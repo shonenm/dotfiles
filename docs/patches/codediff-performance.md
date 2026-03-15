@@ -49,9 +49,11 @@
    - `git.resolve_revision` をラップし、`git rev-parse --verify HEAD` の結果をキャッシュ
    - `cc`/`ca` (commit) 時のみ無効化
 
-3. **refresh_diff_view の150ms delay削除** (Patch 3)
-   - `vim.defer_fn(..., 150)` → `vim.schedule` に変更
-   - gitsignsのstage_hunkは同期的にgit indexを更新するため待機不要
+3. **gs/gr のタイミング修正** (Patch 3)
+   - `vim.cmd("Gitsigns stage_hunk")` → `require("gitsigns").stage_hunk(range, {}, callback)` に変更
+   - gitsigns Lua API の callback で git 完了後にのみ `refresh_diff_view` を発火
+   - visual mode 対応（range パラメータを渡す）
+   - `mk_repeatable` ラッパーが callback 含む全引数をキャプチャするため dot-repeat も動作
 
 4. **hunk_counts のフォールバック参照** (Patch 4)
    - `prepare_node` でハンクカウント参照時、主グループのキャッシュが miss した場合に反対側グループ (staged↔unstaged) もフォールバック参照
@@ -79,7 +81,7 @@
 根本原因: Explorer での stage/unstage 操作時、git コマンド完了 → fs_event 検知 → debounce → `git status` → ツリー再構築という直列フローにより UI 更新に体感 1 秒以上かかっていた。
 
 1. **Optimistic UI 更新**
-   - `toggle_stage_entry` / `stage_all` / `unstage_all` のラッパーを書き換え
+   - `toggle_stage_entry` / `stage_all` / `unstage_all` / `toggle_stage_file` のラッパーを書き換え
    - `explorer.status_result` をインメモリで即座に更新（ファイルエントリを staged/unstaged 間で移動）
    - `create_tree_data()` でツリーを再構築し即座に `render()`（git コマンド不要）
 
@@ -89,6 +91,17 @@
 
 3. **explorer init モジュール同期**
    - `codediff.ui.explorer.init` がモジュールロード時に関数を静的コピーするため、パッチ後の関数を明示的に同期
+
+4. **toggle_stage_file パッチ**（diff view の `-` キー用）
+   - 元実装は async git のみで UI 更新なし
+   - session からexplorer を取得し optimistic_move_file + rebuild_tree_from_status を実行
+   - `explorer.current_file_group` を更新して状態整合
+   - `refresh_diff_view` で diff ビューも更新
+
+5. **二重レンダリング抑制**（optimistic guard）
+   - optimistic update 後 800ms 間は auto-refresh の tree rebuild/render をスキップ
+   - `status_result` のみ更新して実データとの整合は維持
+   - optimistic update で即座に tree 再構築した直後に fs_event トリガーの auto-refresh で同じ結果の再構築が走る問題を解消
 
 ## 効果
 
@@ -100,9 +113,11 @@
 | CursorMoved 廃止 | カーソル移動で diff 計算が発生しない |
 | mutable revision cache | ファイル選択時の `git show` スキップ |
 | resolve_revision cache | ファイル選択時の `git rev-parse` スキップ |
-| 150ms delay削除 | staging操作後の体感遅延除去 |
+| gs/gr callback化 | git完了後にのみdiff更新、staleデータでの二重計算を防止 |
 | hunk_counts fallback | グループ移動直後のハンクカウント表示消失防止 |
 | optimistic stage/unstage | Explorer の stage/unstage 操作で即座に UI 更新 |
+| toggle_stage_file patch | diff view の `-` キーでも optimistic 更新 + diff refresh |
+| optimistic guard | optimistic 更新後の auto-refresh による二重レンダリング抑制 |
 
 ## 削除条件
 
