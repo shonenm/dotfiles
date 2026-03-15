@@ -50,20 +50,24 @@ cp "$THEIRS" "$SAVE_DIR/theirs"
 # 11. operation type 記録
 echo "rebase" > "${SESSION_DIR}/type"
 
-# 12. conflict-resolve-file で解消を試みる
+# 12. コミットメッセージ取得
+COMMIT_MSG=$(git log --format='%B' -1 REBASE_HEAD 2>/dev/null || echo "")
+
+# 13. conflict-resolve-file で解消を試みる
 if conflict-resolve-file \
   --base "$SAVE_DIR/base" \
   --ours "$SAVE_DIR/ours" \
   --theirs "$SAVE_DIR/theirs" \
   --path "$PATH_NAME" \
-  --save-dir "$SAVE_DIR"; then
+  --save-dir "$SAVE_DIR" \
+  --commit-message "$COMMIT_MSG"; then
 
-  # 13. 成功: 解消結果を git に返す
+  # 14. 成功: 解消結果を git に返す
   cp "$SAVE_DIR/resolved" "$OURS"
   echo "conflict-driver: resolved $PATH_NAME" >&2
   exit 0
 else
-  # 14. 失敗
+  # 15. 失敗
   echo "conflict-driver: conflict-resolve-file failed for $PATH_NAME" >&2
   exit 1
 fi

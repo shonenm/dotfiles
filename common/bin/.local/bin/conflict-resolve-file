@@ -15,6 +15,7 @@ THEIRS=""
 REPO_PATH=""
 SAVE_DIR=""
 REVIEW_COMMENTS=""
+COMMIT_MSG=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -40,6 +41,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --review-comments)
       REVIEW_COMMENTS="$2"
+      shift 2
+      ;;
+    --commit-message)
+      COMMIT_MSG="$2"
       shift 2
       ;;
     *)
@@ -114,9 +119,18 @@ ${REVIEW_COMMENTS}
 </review_feedback>"
 fi
 
+# コミットメッセージセクション (存在する場合のみ)
+commit_msg_section=""
+if [[ -n "$COMMIT_MSG" ]]; then
+  commit_msg_section="
+COMMIT MESSAGE (the commit being applied):
+${COMMIT_MSG}
+"
+fi
+
 # プロンプト構築
 prompt="You are resolving a merge conflict for file: ${REPO_PATH}
-${commit_context}
+${commit_msg_section}${commit_context}
 BASE (common ancestor):
 ${base_content}
 
@@ -126,21 +140,42 @@ ${ours_content}
 THEIRS (incoming branch):
 ${theirs_content}
 ${review_section}
-Resolve this conflict by merging both changes. Output your response in the following XML format:
+Resolve this conflict by merging both changes. Output EXACTLY this XML format:
 
 <resolved>
-...resolved file content...
+...resolved file content here...
 </resolved>
 <confidence>high or needs-review</confidence>
 <review_comment>explanation of how you resolved the conflict</review_comment>
 
-Rules:
-- Preserve both sides' changes when possible
-- If changes conflict logically, make the best judgment
-- Use \"high\" confidence when the merge is straightforward
-- Use \"needs-review\" when there are logical conflicts or ambiguities
-- For sections that need review, add a comment using this syntax: ${review_syntax}
-- Do NOT leave any conflict markers (<<<<<<, ======, >>>>>>) in the output"
+## Rules
+
+DEFAULT CONFIDENCE IS needs-review. Use \"high\" ONLY for these mechanical cases:
+- Import/require/use statements: merging additions from both sides
+- Whitespace or formatting differences only
+- Independent additions to different sections of the file (no overlap in logic)
+- Comment-only changes
+
+Everything else is needs-review. Specifically:
+- Any function, method, class, or export that exists in one side but not the other
+- Any error handling (try-catch, validation, conditionals) added or removed
+- Any architectural pattern change (e.g., direct calls replaced with RPC/abstraction)
+- Any stub or \"not implemented\" replacement
+- Anything you are not 100% certain about
+
+## Resolution Approach
+
+1. PRESERVE FUNCTIONALITY FROM BOTH SIDES
+   - Never silently drop functions, methods, exports, or implementations
+   - If one side deletes/stubs code that the other side implements, KEEP the implementation
+
+2. CONFIG / DOCS / MANIFESTS = ADDITIVE MERGE
+   - For .md, .yaml, .toml, .json config, .env files: keep additions from BOTH sides
+
+3. When in doubt, include BOTH versions and add a REVIEW: comment explaining the conflict
+
+Add REVIEW: comments (using syntax: ${review_syntax}) for each needs-review decision.
+Do NOT leave any conflict markers (<<<<<<, ======, >>>>>>) in the output."
 
 # claude -p で解決
 output=$(echo "$prompt" | claude -p 2>/dev/null)
