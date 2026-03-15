@@ -143,11 +143,14 @@ local function apply_review_tabline()
 end
 apply_review_tabline()
 vim.cmd('tabfirst')
--- bufferline.nvim が VimEnter で tabline を上書きするため、その後に再設定する
-vim.api.nvim_create_autocmd('VimEnter', {
-  once = true,
+-- bufferline.nvim が複数イベントで tabline を上書きするため、継続的に再設定する
+vim.api.nvim_create_autocmd({'VimEnter', 'BufEnter', 'TabEnter', 'TabNew', 'TabClosed'}, {
   callback = function()
-    vim.schedule(apply_review_tabline)
+    vim.schedule(function()
+      if vim.o.tabline ~= '%!v:lua._rebase_review_tabline()' then
+        apply_review_tabline()
+      end
+    end)
   end,
 })
 LUAEOF
