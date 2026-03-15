@@ -11,7 +11,7 @@ fi
 # ベースの決定: 引数 > reflog 検出 > デフォルトブランチ
 if [[ $# -ge 1 ]]; then
   BASE_REF="$1"
-elif BASE_REF=$(git reflog -1 --format='%gs' | sed -n 's/^rebase (start): checkout \(.*\)/\1/p') && [[ -n "$BASE_REF" ]]; then
+elif BASE_REF=$(git reflog --format='%gs' | sed -n 's/^rebase (start): checkout \(.*\)/\1/p;T;q') && [[ -n "$BASE_REF" ]]; then
   echo "Detected rebase target from reflog: $BASE_REF" >&2
 else
   DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
