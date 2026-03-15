@@ -37,8 +37,9 @@ echo "conflict-driver: merge-file failed, invoking claude for $PATH_NAME" >&2
 cp "$OURS.orig" "$OURS"
 
 # 5-7. セッションディレクトリ準備
-SHA=$(git rev-parse --short HEAD)
-SAVE_DIR="/tmp/conflict_session/$SHA/$PATH_NAME"
+SHA=$(git rev-parse --short REBASE_HEAD)
+SESSION_DIR="/tmp/conflict_session/$(printf '%s' "$(git rev-parse --absolute-git-dir)" | (md5sum 2>/dev/null || md5) | cut -c1-12)"
+SAVE_DIR="${SESSION_DIR}/$SHA/$PATH_NAME"
 mkdir -p "$SAVE_DIR"
 
 # 8-10. 3状態を保存
@@ -47,7 +48,7 @@ cp "$OURS" "$SAVE_DIR/ours"
 cp "$THEIRS" "$SAVE_DIR/theirs"
 
 # 11. operation type 記録
-echo "rebase" > /tmp/conflict_session/type
+echo "rebase" > "${SESSION_DIR}/type"
 
 # 12. conflict-resolve-file で解消を試みる
 if conflict-resolve-file \

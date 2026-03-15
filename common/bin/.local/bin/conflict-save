@@ -2,9 +2,7 @@
 # conflict-save: コンフリクト発生時に base/ours/theirs の3状態をディレクトリ構造で保存する
 set -euo pipefail
 
-SESSION_DIR="/tmp/conflict_session"
-SHORT_SHA="$(git rev-parse --short HEAD)"
-
+SESSION_DIR="/tmp/conflict_session/$(printf '%s' "$(git rev-parse --absolute-git-dir)" | (md5sum 2>/dev/null || md5) | cut -c1-12)"
 # --- type 判定 ---
 GIT_DIR="$(git rev-parse --git-dir)"
 if [[ -f "${GIT_DIR}/CHERRY_PICK_HEAD" ]]; then
@@ -15,6 +13,15 @@ elif [[ -f "${GIT_DIR}/MERGE_HEAD" ]]; then
   op_type="merge"
 else
   op_type="unknown"
+fi
+
+# --- SHA 決定: rebase/cherry-pick 時は適用中の元コミット、それ以外は HEAD ---
+if [[ "$op_type" == "rebase" ]]; then
+  SHORT_SHA="$(git rev-parse --short REBASE_HEAD)"
+elif [[ "$op_type" == "cherry-pick" ]]; then
+  SHORT_SHA="$(git rev-parse --short CHERRY_PICK_HEAD)"
+else
+  SHORT_SHA="$(git rev-parse --short HEAD)"
 fi
 
 # --- 初期化 ---

@@ -110,7 +110,8 @@ git rebase <target>
 conflict-save
 ```
 
-コンフリクトファイルの base/ours/theirs を `/tmp/conflict_session/` に保存する。
+コンフリクトファイルの base/ours/theirs をセッションディレクトリに保存する。
+セッションディレクトリは worktree 単位でスコープされる (`/tmp/conflict_session/<git-dir-hash>/`)。
 既にユーザーが merge/rebase を実行してコンフリクト状態にある場合も、このステップは必須。
 
 ### 5. Trivial コンフリクト処理
