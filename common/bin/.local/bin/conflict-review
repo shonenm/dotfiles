@@ -66,14 +66,16 @@ while IFS= read -r ours_path; do
   THEIRS_ESC=$(printf '%s' "$THEIRS" | sed "s/'/\\\\'/g")
 
   cat >> "$SCRIPT" << EOF
-local saved_ei = vim.o.eventignore
-vim.o.eventignore = "all"
-vim.cmd("edit " .. vim.fn.fnameescape('${OURS_ESC}'))
-vim.bo.buflisted = false
-vim.cmd("vertical split " .. vim.fn.fnameescape('${RESOLVED_ESC}'))
-vim.cmd("vertical split " .. vim.fn.fnameescape('${THEIRS_ESC}'))
-vim.bo.buflisted = false
-vim.o.eventignore = saved_ei
+do
+  local saved_ei = vim.o.eventignore
+  vim.o.eventignore = "all"
+  vim.cmd("edit " .. vim.fn.fnameescape('${OURS_ESC}'))
+  vim.bo.buflisted = false
+  vim.cmd("vertical split " .. vim.fn.fnameescape('${RESOLVED_ESC}'))
+  vim.cmd("vertical split " .. vim.fn.fnameescape('${THEIRS_ESC}'))
+  vim.bo.buflisted = false
+  vim.o.eventignore = saved_ei
+end
 EOF
 done < <(find "$SESSION_DIR" -name "ours" -not -path "*/.*" | sort)
 
