@@ -261,7 +261,8 @@ git rerere forget <file>  # 誤った解消パターンを削除
 `REVIEW:` コメントが挿入されたファイルは重点的に確認してください。
 
 rebase 完了後のレビュー:
-- `rebase-review` を実行して、conflict-driver が解消したコミットをレビュー
+- `rebase-review <target>` を実行して、conflict-driver が解消したコミットをレビュー
+  (例: `rebase-review origin/develop`。引数省略時は reflog から自動検出)
 
 レビュー用コマンド (デフォルトブランチは動的に検出して置換する):
 - merge の場合: `git diff HEAD MERGE_HEAD`

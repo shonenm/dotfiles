@@ -2,18 +2,25 @@
 # rebase-review: rebase 完了後に range-diff ベースで変更コミットのコンフリクト解決をレビューする
 set -euo pipefail
 
-# デフォルトブランチを検出
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
-DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
-
 # ORIG_HEAD の存在確認
 if ! git rev-parse --verify ORIG_HEAD &>/dev/null; then
   echo "Error: ORIG_HEAD not found. Not in a post-rebase state."
   exit 1
 fi
 
+# ベースの決定: 引数 > reflog 検出 > デフォルトブランチ
+if [[ $# -ge 1 ]]; then
+  BASE_REF="$1"
+elif BASE_REF=$(git reflog -1 --format='%gs' | sed -n 's/^rebase (start): checkout \(.*\)/\1/p') && [[ -n "$BASE_REF" ]]; then
+  echo "Detected rebase target from reflog: $BASE_REF" >&2
+else
+  DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+  BASE_REF="origin/${DEFAULT_BRANCH:-main}"
+  echo "Using default base: $BASE_REF" >&2
+fi
+
 # git range-diff で ! コミットを検出
-range_diff_output=$(git range-diff "origin/$DEFAULT_BRANCH" ORIG_HEAD HEAD 2>/dev/null)
+range_diff_output=$(git range-diff "$BASE_REF" ORIG_HEAD HEAD 2>/dev/null)
 
 if [[ -z "$range_diff_output" ]]; then
   echo "No changes detected in range-diff."
