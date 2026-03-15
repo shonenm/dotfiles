@@ -29,6 +29,14 @@ return {
       mutable_generation = mutable_generation + 1
     end
 
+    -- Optimistic guard: suppress redundant tree rebuild from auto-refresh
+    -- after an optimistic update has already rebuilt the tree.
+    local optimistic_guard_until = 0
+
+    local function set_optimistic_guard()
+      optimistic_guard_until = vim.uv.hrtime() / 1e6 + 800
+    end
+
     -- Patch 1: mutable revision (:0 etc.) の generation-based キャッシュ
     local git_mod = require("codediff.core.git")
     local orig_get_file_content = git_mod.get_file_content
@@ -567,6 +575,7 @@ return {
         end
         if expl.status_result then
           optimistic_move_directory(expl.status_result, dir_path, group, target_group)
+          set_optimistic_guard()
           rebuild_tree_from_status(expl)
         end
       else
@@ -583,6 +592,7 @@ return {
         end
         if expl.status_result then
           optimistic_move_file(expl.status_result, path, group, target_group)
+          set_optimistic_guard()
           rebuild_tree_from_status(expl)
         end
       end
@@ -596,6 +606,7 @@ return {
       end)
       if expl.status_result then
         optimistic_stage_all(expl.status_result)
+        set_optimistic_guard()
         rebuild_tree_from_status(expl)
       end
     end
@@ -608,8 +619,48 @@ return {
       end)
       if expl.status_result then
         optimistic_unstage_all(expl.status_result)
+        set_optimistic_guard()
         rebuild_tree_from_status(expl)
       end
+    end
+
+    actions_mod_wrap.toggle_stage_file = function(git_root, file_path, group)
+      if not git_root or not file_path or not group then return false end
+      if group ~= "staged" and group ~= "unstaged" and group ~= "conflicts" then return false end
+
+      invalidate_mutable_cache()
+
+      local target_group = (group == "staged") and "unstaged" or "staged"
+
+      -- Async git command
+      if group == "staged" then
+        git_mod.unstage_file(git_root, file_path, function(err)
+          if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+        end)
+      else
+        git_mod.stage_file(git_root, file_path, function(err)
+          if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+        end)
+      end
+
+      -- Optimistic explorer update
+      local session_mod = require("codediff.ui.lifecycle.session")
+      local tabpage = vim.api.nvim_get_current_tabpage()
+      local session = session_mod.get_active_diffs()[tabpage]
+      if session and session.explorer then
+        local explorer = session.explorer
+        if explorer.status_result then
+          optimistic_move_file(explorer.status_result, file_path, group, target_group)
+          explorer.current_file_group = target_group
+          set_optimistic_guard()
+          rebuild_tree_from_status(explorer)
+        end
+      end
+
+      -- Refresh diff view
+      refresh_diff_view(group ~= "staged")
+
+      return true
     end
 
     -- Sync patched functions to explorer init module (which copies at load time)
@@ -617,6 +668,7 @@ return {
     explorer_init.toggle_stage_entry = actions_mod_wrap.toggle_stage_entry
     explorer_init.stage_all = actions_mod_wrap.stage_all
     explorer_init.unstage_all = actions_mod_wrap.unstage_all
+    explorer_init.toggle_stage_file = actions_mod_wrap.toggle_stage_file
 
     -- Replace M.refresh with fixed version (captures fixed local functions)
     refresh_mod.refresh = function(explorer)
@@ -644,6 +696,13 @@ return {
             if #vim.api.nvim_list_tabpages() > 1 then
               vim.cmd("tabclose")
             end
+            return
+          end
+
+          -- During optimistic guard period, only update status_result
+          -- and skip tree rebuild/render to avoid double-rendering flicker.
+          if vim.uv.hrtime() / 1e6 < optimistic_guard_until then
+            explorer.status_result = status_result
             return
           end
 
@@ -1420,14 +1479,34 @@ return {
 
         local map_opts = { buffer = ev.buf, noremap = true, silent = true, nowait = true }
         vim.keymap.set({ "n", "v" }, "gs", function()
-          vim.cmd("Gitsigns stage_hunk")
-          invalidate_mutable_cache()
-          refresh_diff_view(true)
+          local gitsigns = require("gitsigns")
+          local range = nil
+          local mode = vim.fn.mode()
+          if mode == "v" or mode == "V" then
+            range = { vim.fn.line("v"), vim.fn.line(".") }
+            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "nx", false)
+          end
+          gitsigns.stage_hunk(range, {}, function()
+            vim.schedule(function()
+              invalidate_mutable_cache()
+              refresh_diff_view(true)
+            end)
+          end)
         end, vim.tbl_extend("force", map_opts, { desc = "Stage hunk" }))
         vim.keymap.set({ "n", "v" }, "gr", function()
-          vim.cmd("Gitsigns reset_hunk")
-          invalidate_mutable_cache()
-          refresh_diff_view(false)
+          local gitsigns = require("gitsigns")
+          local range = nil
+          local mode = vim.fn.mode()
+          if mode == "v" or mode == "V" then
+            range = { vim.fn.line("v"), vim.fn.line(".") }
+            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "nx", false)
+          end
+          gitsigns.reset_hunk(range, {}, function()
+            vim.schedule(function()
+              invalidate_mutable_cache()
+              refresh_diff_view(false)
+            end)
+          end)
         end, vim.tbl_extend("force", map_opts, { desc = "Reset hunk" }))
         vim.keymap.set({ "n", "v" }, "gu", function()
           unstage_hunk()
