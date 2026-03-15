@@ -1,13 +1,27 @@
 #!/usr/bin/env bash
 # rebase-review: rebase 完了後にコンフリクト解決結果を 3-way diff でレビューする
 # merge review と同等の aggregate view: ours(ORIG_HEAD) | resolved(HEAD) | theirs(target)
+# レビューループ: REVIEW: コメントで Claude に再解消を依頼可能
 set -euo pipefail
 
-# ORIG_HEAD の存在確認
-if ! git rev-parse --verify ORIG_HEAD &>/dev/null; then
-  echo "Error: ORIG_HEAD not found. Not in a post-rebase state."
+# 前提チェック
+if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+  echo "Error: Not inside a git repository." >&2
   exit 1
 fi
+
+if git rev-parse --verify REBASE_HEAD &>/dev/null; then
+  echo "Error: Rebase is still in progress (REBASE_HEAD exists)." >&2
+  echo "Complete or abort the rebase first." >&2
+  exit 1
+fi
+
+if ! git rev-parse --verify ORIG_HEAD &>/dev/null; then
+  echo "Error: ORIG_HEAD not found. Not in a post-rebase state." >&2
+  exit 1
+fi
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
 
 # ベースの決定: 引数 > reflog 検出 > デフォルトブランチ
 if [[ $# -ge 1 ]]; then
@@ -21,11 +35,12 @@ else
 fi
 
 TARGET=$(git rev-parse "$BASE_REF")
-MERGE_BASE=$(git merge-base ORIG_HEAD "$TARGET")
+ORIG_HEAD=$(git rev-parse ORIG_HEAD)
+MERGE_BASE=$(git merge-base "$ORIG_HEAD" "$TARGET")
 
 # 両ブランチが変更したファイル (intersection)
 both_files=$(comm -12 \
-  <(git diff --name-only "$MERGE_BASE" ORIG_HEAD | sort) \
+  <(git diff --name-only "$MERGE_BASE" "$ORIG_HEAD" | sort) \
   <(git diff --name-only "$MERGE_BASE" "$TARGET" | sort))
 
 if [[ -z "$both_files" ]]; then
@@ -36,12 +51,9 @@ fi
 TMPDIR=$(mktemp -d /tmp/rebase_review_XXXXXX)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-SCRIPT="${TMPDIR}/review.lua"
-first=true
-tab_count=0
-
+# レビュー対象ファイル特定 (hash 比較でフィルタ)
+review_files=()
 while IFS= read -r file_path; do
-  # blob hash で比較 (内容の一致判定)
   head_hash=$(git rev-parse "HEAD:${file_path}" 2>/dev/null || echo "none")
   orig_hash=$(git rev-parse "ORIG_HEAD:${file_path}" 2>/dev/null || echo "none")
   target_hash=$(git rev-parse "${TARGET}:${file_path}" 2>/dev/null || echo "none")
@@ -51,32 +63,53 @@ while IFS= read -r file_path; do
   # HEAD が theirs と同じ → theirs をそのまま採用、レビュー不要
   [[ "$head_hash" == "$target_hash" ]] && continue
 
-  # 3状態を一時ファイルに書き出し
+  review_files+=("$file_path")
+done <<< "$both_files"
+
+if [[ ${#review_files[@]} -eq 0 ]]; then
+  echo "No conflict resolutions to review."
+  exit 0
+fi
+
+# 一時ファイル生成 (ours/theirs)
+for file_path in "${review_files[@]}"; do
   file_dir="${TMPDIR}/files/${file_path}"
   mkdir -p "$file_dir"
 
   ours_file="${file_dir}/ours"
-  resolved_file="${file_dir}/resolved"
   theirs_file="${file_dir}/theirs"
 
   git show "ORIG_HEAD:${file_path}" > "$ours_file" 2>/dev/null || echo -n > "$ours_file"
-  git show "HEAD:${file_path}" > "$resolved_file" 2>/dev/null || continue
   git show "${TARGET}:${file_path}" > "$theirs_file" 2>/dev/null || echo -n > "$theirs_file"
+done
 
-  if [[ "$first" == "true" ]]; then
-    first=false
-  else
-    echo 'vim.cmd("tabnew")' >> "$SCRIPT"
-  fi
-  tab_count=$((tab_count + 1))
+# Lua スクリプト生成関数
+generate_lua() {
+  local script="$1"
+  local first=true
+  local tab_count=0
 
-  # パス内の ' をエスケープ (Lua 文字列リテラルに安全に埋め込む)
-  OURS_ESC=$(printf '%s' "$ours_file" | sed "s/'/\\\\'/g")
-  RESOLVED_ESC=$(printf '%s' "$resolved_file" | sed "s/'/\\\\'/g")
-  THEIRS_ESC=$(printf '%s' "$theirs_file" | sed "s/'/\\\\'/g")
-  FILE_PATH_ESC=$(printf '%s' "$file_path" | sed "s/'/\\\\'/g")
+  for file_path in "${review_files[@]}"; do
+    local file_dir="${TMPDIR}/files/${file_path}"
+    local ours_file="${file_dir}/ours"
+    local resolved_file="${REPO_ROOT}/${file_path}"
+    local theirs_file="${file_dir}/theirs"
 
-  cat >> "$SCRIPT" << EOF
+    if [[ "$first" == "true" ]]; then
+      first=false
+    else
+      echo 'vim.cmd("tabnew")' >> "$script"
+    fi
+    tab_count=$((tab_count + 1))
+
+    # パス内の ' をエスケープ (Lua 文字列リテラルに安全に埋め込む)
+    local OURS_ESC RESOLVED_ESC THEIRS_ESC FILE_PATH_ESC
+    OURS_ESC=$(printf '%s' "$ours_file" | sed "s/'/\\\\'/g")
+    RESOLVED_ESC=$(printf '%s' "$resolved_file" | sed "s/'/\\\\'/g")
+    THEIRS_ESC=$(printf '%s' "$theirs_file" | sed "s/'/\\\\'/g")
+    FILE_PATH_ESC=$(printf '%s' "$file_path" | sed "s/'/\\\\'/g")
+
+    cat >> "$script" << EOF
 do
   local saved_ei = vim.o.eventignore
   vim.o.eventignore = "all"
@@ -89,14 +122,9 @@ do
   vim.api.nvim_tabpage_set_var(0, 'review_label', '${FILE_PATH_ESC}')
 end
 EOF
-done <<< "$both_files"
+  done
 
-if [[ "$first" == "true" ]]; then
-  echo "No conflict resolutions to review."
-  exit 0
-fi
-
-cat >> "$SCRIPT" << 'LUAEOF'
+  cat >> "$script" << 'LUAEOF'
 do
   local bg = vim.o.background == 'dark' and 'dark' or 'light'
   if bg == 'dark' then
@@ -164,55 +192,138 @@ vim.api.nvim_create_autocmd({'VimEnter', 'BufEnter', 'TabEnter', 'TabNew', 'TabC
 })
 LUAEOF
 
-echo "Opening ${tab_count} file(s) for review..."
+  echo "$tab_count"
+}
 
-REPO_ROOT=$(git rev-parse --show-toplevel)
-
-nvim -S "$SCRIPT"
-
-# REVIEW: コメント残存チェック
-REVIEW_REMAINING=$(grep -rn "REVIEW:" "$REPO_ROOT" \
-  --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor \
-  --exclude-dir=dist --exclude-dir=build --exclude-dir=target \
-  --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
-  --include="*.go" --include="*.rs" --include="*.java" \
-  --include="*.py" --include="*.rb" --include="*.sh" \
-  --include="*.lua" --include="*.vue" --include="*.html" \
-  2>/dev/null || true)
-
-if [[ -n "$REVIEW_REMAINING" ]]; then
-  echo ""
-  echo "Warning: REVIEW: comments remain:"
-  echo "$REVIEW_REMAINING"
-fi
-
-# アクション選択
-echo ""
-echo "Review complete."
-echo ""
-echo "  a) Accept - approve rebase result"
-echo "  m) Amend - amend latest commit (git commit --amend)"
-echo "  e) Exit - do nothing"
-echo ""
-read -rp "Action [a/m/e]: " -n 1 action || true
-echo ""
-
-case "$action" in
-  a|A)
-    echo "Rebase result accepted."
-    ;;
-  m|M)
-    if [[ -n "$REVIEW_REMAINING" ]]; then
-      read -rp "REVIEW: comments remain. Continue with amend? [y/N]: " -n 1 yn || true
-      echo ""
-      [[ "$yn" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
+# REVIEW: コメント収集 (レビュー対象ファイルのみ)
+collect_review_comments() {
+  local comments=""
+  for file_path in "${review_files[@]}"; do
+    local result
+    result=$(grep -n "REVIEW:" "${REPO_ROOT}/${file_path}" 2>/dev/null || true)
+    if [[ -n "$result" ]]; then
+      comments+="--- ${file_path} ---"$'\n'
+      comments+="${result}"$'\n'
     fi
-    git commit --amend
-    ;;
-  e|E)
-    echo "No action taken."
-    ;;
-  *)
-    echo "No action taken."
-    ;;
-esac
+  done
+  echo "$comments"
+}
+
+# Claude で再解消
+re_resolve_with_claude() {
+  local comments="$1"
+  local resolved_any=false
+
+  for file_path in "${review_files[@]}"; do
+    # このファイルに REVIEW: コメントがあるかチェック
+    local file_comments
+    file_comments=$(grep -n "REVIEW:" "${REPO_ROOT}/${file_path}" 2>/dev/null || true)
+    [[ -z "$file_comments" ]] && continue
+
+    resolved_any=true
+    echo "Re-resolving: ${file_path}" >&2
+
+    local file_dir="${TMPDIR}/files/${file_path}"
+    local base_file="${file_dir}/base"
+    local ours_file="${file_dir}/ours"
+    local theirs_file="${file_dir}/theirs"
+    local save_dir="${file_dir}/resolve"
+    mkdir -p "$save_dir"
+
+    # base を生成
+    git show "${MERGE_BASE}:${file_path}" > "$base_file" 2>/dev/null || echo -n > "$base_file"
+
+    # conflict-resolve-file で再解消
+    conflict-resolve-file \
+      --base "$base_file" \
+      --ours "$ours_file" \
+      --theirs "$theirs_file" \
+      --path "$file_path" \
+      --save-dir "$save_dir" \
+      --review-comments "$file_comments"
+
+    # 結果を実ファイルに反映
+    if [[ -f "${save_dir}/resolved" ]]; then
+      cp "${save_dir}/resolved" "${REPO_ROOT}/${file_path}"
+      echo "  Updated: ${file_path}" >&2
+    else
+      echo "  Warning: No resolved output for ${file_path}" >&2
+    fi
+  done
+
+  if [[ "$resolved_any" == "false" ]]; then
+    echo "No files with REVIEW: comments found." >&2
+    return 1
+  fi
+  return 0
+}
+
+# メインループ
+while true; do
+  SCRIPT="${TMPDIR}/review.lua"
+  : > "$SCRIPT"
+
+  tab_count=$(generate_lua "$SCRIPT")
+
+  echo "Opening ${tab_count} file(s) for review..."
+  nvim -S "$SCRIPT"
+
+  # REVIEW: コメント収集
+  REVIEW_COMMENTS=$(collect_review_comments)
+
+  if [[ -n "$REVIEW_COMMENTS" ]]; then
+    echo ""
+    echo "REVIEW: comments found:"
+    echo "$REVIEW_COMMENTS"
+  fi
+
+  # アクション選択
+  echo ""
+  echo "Review complete."
+  echo ""
+  echo "  r) Re-resolve - send REVIEW: comments to Claude for re-resolution"
+  echo "  c) Accept - approve rebase result"
+  echo "  m) Amend - amend latest commit (git commit --amend)"
+  echo "  e) Exit - do nothing"
+  echo ""
+  read -rp "Action [r/c/m/e]: " -n 1 action || true
+  echo ""
+
+  case "$action" in
+    r|R)
+      if [[ -z "$REVIEW_COMMENTS" ]]; then
+        echo "No REVIEW: comments found. Nothing to re-resolve."
+        continue
+      fi
+      echo "Sending REVIEW: comments to Claude for re-resolution..."
+      if re_resolve_with_claude "$REVIEW_COMMENTS"; then
+        echo "Re-resolution complete. Reopening for review..."
+      else
+        echo "Re-resolution failed or no files to process."
+      fi
+      # ループ先頭に戻る
+      ;;
+    c|C)
+      echo "Rebase result accepted."
+      break
+      ;;
+    m|M)
+      REVIEW_REMAINING=$(collect_review_comments)
+      if [[ -n "$REVIEW_REMAINING" ]]; then
+        read -rp "REVIEW: comments remain. Continue with amend? [y/N]: " -n 1 yn || true
+        echo ""
+        [[ "$yn" =~ ^[Yy]$ ]] || continue
+      fi
+      git commit --amend
+      break
+      ;;
+    e|E)
+      echo "No action taken."
+      break
+      ;;
+    *)
+      echo "No action taken."
+      break
+      ;;
+  esac
+done
