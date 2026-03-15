@@ -3,10 +3,10 @@
 # 全ファイルをタブで一括表示し、レビュー後のアクションを選択できる
 set -euo pipefail
 
-SESSION_DIR="/tmp/conflict_session"
+SESSION_DIR="/tmp/conflict_session/$(printf '%s' "$(git rev-parse --absolute-git-dir)" | (md5sum 2>/dev/null || md5) | cut -c1-12)"
 
 if [[ ! -d "$SESSION_DIR" ]]; then
-  echo "Error: /tmp/conflict_session not found. Run 'conflict-save' first."
+  echo "Error: No conflict session found for this worktree. Run 'conflict-save' first."
   exit 1
 fi
 
