@@ -137,9 +137,19 @@ function _rebase_review_tabline()
   s = s .. '%#TabLineFill#%T%=%#TabLine#' .. indicator
   return s
 end
-vim.o.showtabline = 2
-vim.o.tabline = '%!v:lua._rebase_review_tabline()'
+local function apply_review_tabline()
+  vim.o.showtabline = 2
+  vim.o.tabline = '%!v:lua._rebase_review_tabline()'
+end
+apply_review_tabline()
 vim.cmd('tabfirst')
+-- bufferline.nvim が VimEnter で tabline を上書きするため、その後に再設定する
+vim.api.nvim_create_autocmd('VimEnter', {
+  once = true,
+  callback = function()
+    vim.schedule(apply_review_tabline)
+  end,
+})
 LUAEOF
 
 echo "Opening ${tab_count} file(s) for review..."
