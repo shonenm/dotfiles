@@ -207,7 +207,7 @@ Orchestrator (user session, Opus)
   |
   +-- ralph-orchestrate.sh launch T-1 /tmp/ralph/prompts/T-1.md --model sonnet
   |     +-- wt_create ralph/T-1      # git worktree + tmux window via wt-lib.sh
-  |     +-- claude -p --model sonnet  # Independent process, visible in tmux
+  |     +-- split-window -h          # Left: nvim . (code review), Right: claude -p
   |     +-- exit code -> /tmp/ralph/results/T-1.status
   |     +-- worker writes /tmp/ralph/results/T-1.md
   |

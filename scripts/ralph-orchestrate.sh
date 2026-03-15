@@ -58,8 +58,10 @@ cmd_launch() {
   prompt_abs="$(cd "$(dirname "$prompt_file")" && pwd)/$(basename "$prompt_file")"
   local cmd="claude -p \"\$(cat '${prompt_abs}')\" --model ${model} 2>&1; echo \$? > '${status_file}'"
 
-  # Send command to the worker's tmux window
-  tmux send-keys -t "$window_name" "$cmd" Enter
+  # Split window: left=nvim (code review), right=claude (worker)
+  tmux split-window -h -t "$window_name" -c "$worktree_path"
+  tmux send-keys -t "${window_name}.0" "nvim ." Enter
+  tmux send-keys -t "${window_name}.1" "$cmd" Enter
 
   # Record worker metadata
   local worker_json="${WORKERS_DIR}/${task_id}.json"
