@@ -80,15 +80,11 @@ while IFS= read -r file_path; do
 do
   local saved_ei = vim.o.eventignore
   vim.o.eventignore = "all"
-  local ft = vim.filetype.match({ filename = '${FILE_PATH_ESC}' })
   vim.cmd("edit " .. vim.fn.fnameescape('${OURS_ESC}'))
   vim.bo.buflisted = false
-  if ft then vim.bo.filetype = ft end
   vim.cmd("vertical split " .. vim.fn.fnameescape('${RESOLVED_ESC}'))
-  if ft then vim.bo.filetype = ft end
   vim.cmd("vertical split " .. vim.fn.fnameescape('${THEIRS_ESC}'))
   vim.bo.buflisted = false
-  if ft then vim.bo.filetype = ft end
   vim.o.eventignore = saved_ei
   vim.api.nvim_tabpage_set_var(0, 'review_label', '${FILE_PATH_ESC}')
 end
