@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # rebase-review: rebase 完了後に range-diff ベースで変更コミットのコンフリクト解決をレビューする
+# セッションディレクトリには依存せず、git history から全情報を取得する
 set -euo pipefail
 
 # ORIG_HEAD の存在確認
@@ -19,72 +20,75 @@ else
   echo "Using default base: $BASE_REF" >&2
 fi
 
-# git range-diff で ! コミットを検出
-range_diff_output=$(git range-diff "$BASE_REF" ORIG_HEAD HEAD 2>/dev/null)
+# git range-diff で ! コミットの元SHA・新SHAペアを抽出
+old_shas=()
+new_shas=()
+while IFS= read -r line; do
+  old_sha=$(echo "$line" | sed -E 's/^\s*[0-9]+:\s+([a-f0-9]+)\s+!.*/\1/')
+  new_sha=$(echo "$line" | sed -E 's/^.*!\s*[0-9]+:\s+([a-f0-9]+).*/\1/')
+  old_shas+=("$old_sha")
+  new_shas+=("$new_sha")
+done < <(git range-diff "$BASE_REF" ORIG_HEAD HEAD 2>/dev/null | grep -E '^\s*[0-9]+:\s+[a-f0-9]+\s+!')
 
-if [[ -z "$range_diff_output" ]]; then
-  echo "No changes detected in range-diff."
-  exit 0
-fi
-
-# ! マークの行から元 SHA (左側) を抽出
-changed_shas=()
-while IFS= read -r sha; do
-  changed_shas+=("$sha")
-done < <(echo "$range_diff_output" | grep -E '^\s*[0-9]+:\s+[a-f0-9]+\s+!' | sed -E 's/^\s*[0-9]+:\s+([a-f0-9]+)\s+!.*/\1/')
-
-if [[ ${#changed_shas[@]} -eq 0 ]]; then
+if [[ ${#old_shas[@]} -eq 0 ]]; then
   echo "No changed commits found in range-diff."
   exit 0
 fi
 
-SESSION_DIR="/tmp/conflict_session/$(printf '%s' "$(git rev-parse --absolute-git-dir)" | (md5sum 2>/dev/null || md5) | cut -c1-12)"
-REPO_ROOT=$(git rev-parse --show-toplevel)
+echo "Found ${#old_shas[@]} changed commit(s). Detecting affected files..."
 
-# 各 SHA の conflict_session ディレクトリを確認
-review_shas=()
-for sha in "${changed_shas[@]}"; do
-  if [[ -d "${SESSION_DIR}/${sha}" ]]; then
-    review_shas+=("$sha")
-  fi
-done
+# 一時ディレクトリ
+TMPDIR=$(mktemp -d /tmp/rebase_review_XXXXXX)
+trap 'rm -rf "$TMPDIR"' EXIT
 
-if [[ ${#review_shas[@]} -eq 0 ]]; then
-  echo "No conflict sessions found for changed commits."
-  exit 0
-fi
-
-echo "Reviewing conflict resolutions for ${#review_shas[@]} commit(s)..."
-
-# Lua スクリプトを生成
-SCRIPT=$(mktemp /tmp/rebase_review_XXXXXX.lua)
-
+SCRIPT="${TMPDIR}/review.lua"
 first=true
-for sha in "${review_shas[@]}"; do
-  while IFS= read -r ours_path; do
-    # file_path の抽出: /tmp/conflict_session/<sha>/ を除去し、末尾の /ours を除去
-    file_path="${ours_path#"${SESSION_DIR}/${sha}/"}"
-    file_path="${file_path%/ours}"
+tab_count=0
 
-    OURS="${SESSION_DIR}/${sha}/${file_path}/ours"
-    THEIRS="${SESSION_DIR}/${sha}/${file_path}/theirs"
-    RESOLVED="${SESSION_DIR}/${sha}/${file_path}/resolved"
+for i in "${!old_shas[@]}"; do
+  old_sha="${old_shas[$i]}"
+  new_sha="${new_shas[$i]}"
 
-    if [[ ! -f "$RESOLVED" ]]; then
-      echo "Warning: Resolved file not found for ${file_path} (skipping)"
-      continue
-    fi
+  # 元コミットと新コミットが触ったファイルの和集合
+  all_files=$(cat \
+    <(git diff --name-only "${old_sha}^" "$old_sha" 2>/dev/null) \
+    <(git diff --name-only "${new_sha}^" "$new_sha" 2>/dev/null) \
+    | sort -u)
+
+  [[ -z "$all_files" ]] && continue
+
+  while IFS= read -r file_path; do
+    # 元コミットと新コミットのパッチを比較し、差分がなければスキップ
+    old_diff=$(git diff "${old_sha}^".."$old_sha" -- "$file_path" 2>/dev/null || true)
+    new_diff=$(git diff "${new_sha}^".."$new_sha" -- "$file_path" 2>/dev/null || true)
+    [[ "$old_diff" == "$new_diff" ]] && continue
+
+    # 3状態を一時ファイルに書き出し
+    file_dir="${TMPDIR}/files/${old_sha}/${file_path}"
+    mkdir -p "$file_dir"
+
+    ours_file="${file_dir}/ours"
+    resolved_file="${file_dir}/resolved"
+    theirs_file="${file_dir}/theirs"
+
+    # ours = rebase 先の状態 (新コミットの親)
+    git show "${new_sha}^:${file_path}" > "$ours_file" 2>/dev/null || echo -n > "$ours_file"
+    # resolved = 解決後の状態 (新コミット)
+    git show "${new_sha}:${file_path}" > "$resolved_file" 2>/dev/null || continue
+    # theirs = 元コミットの状態
+    git show "${old_sha}:${file_path}" > "$theirs_file" 2>/dev/null || echo -n > "$theirs_file"
 
     if [[ "$first" == "true" ]]; then
       first=false
     else
       echo 'vim.cmd("tabnew")' >> "$SCRIPT"
     fi
+    tab_count=$((tab_count + 1))
 
     # パス内の ' をエスケープ (Lua 文字列リテラルに安全に埋め込む)
-    OURS_ESC=$(printf '%s' "$OURS" | sed "s/'/\\\\'/g")
-    RESOLVED_ESC=$(printf '%s' "$RESOLVED" | sed "s/'/\\\\'/g")
-    THEIRS_ESC=$(printf '%s' "$THEIRS" | sed "s/'/\\\\'/g")
+    OURS_ESC=$(printf '%s' "$ours_file" | sed "s/'/\\\\'/g")
+    RESOLVED_ESC=$(printf '%s' "$resolved_file" | sed "s/'/\\\\'/g")
+    THEIRS_ESC=$(printf '%s' "$theirs_file" | sed "s/'/\\\\'/g")
     FILE_PATH_ESC=$(printf '%s' "$file_path" | sed "s/'/\\\\'/g")
 
     cat >> "$SCRIPT" << EOF
@@ -100,20 +104,21 @@ vim.bo.buflisted = false
 if ft then vim.bo.filetype = ft end
 vim.o.eventignore = saved_ei
 EOF
-  done < <(find "${SESSION_DIR}/${sha}" -name "ours" | sort)
+  done <<< "$all_files"
 done
 
-# タブがひとつも生成されなかった場合
 if [[ "$first" == "true" ]]; then
-  rm -f "$SCRIPT"
   echo "No reviewable files found."
   exit 0
 fi
 
 echo 'vim.cmd("tabfirst")' >> "$SCRIPT"
 
+echo "Opening ${tab_count} file(s) for review..."
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
 nvim -S "$SCRIPT"
-rm -f "$SCRIPT"
 
 # REVIEW: コメント残存チェック
 REVIEW_REMAINING=$(grep -rn "REVIEW:" "$REPO_ROOT" \
