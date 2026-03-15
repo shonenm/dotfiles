@@ -80,11 +80,12 @@ while IFS= read -r file_path; do
 do
   local saved_ei = vim.o.eventignore
   vim.o.eventignore = "all"
+  local ft = vim.filetype.match({ filename = '${FILE_PATH_ESC}' })
   vim.cmd("edit " .. vim.fn.fnameescape('${OURS_ESC}'))
   vim.bo.buflisted = false
-  local ft = vim.filetype.match({ filename = '${FILE_PATH_ESC}' })
   if ft then vim.bo.filetype = ft end
   vim.cmd("vertical split " .. vim.fn.fnameescape('${RESOLVED_ESC}'))
+  if ft then vim.bo.filetype = ft end
   vim.cmd("vertical split " .. vim.fn.fnameescape('${THEIRS_ESC}'))
   vim.bo.buflisted = false
   if ft then vim.bo.filetype = ft end
@@ -114,24 +115,30 @@ function _rebase_review_tabline()
   local cols = vim.o.columns
   local indicator = ' ' .. current_idx .. '/' .. total .. ' '
   local avail = cols - #indicator - 4
-  local function entry_width(e) return #e.label + 3 end
+  local function entry_width(e, is_cur)
+    return #e.label + (is_cur and 4 or 2)
+  end
   local lo, hi = current_idx, current_idx
-  local used = entry_width(entries[current_idx])
+  local used = entry_width(entries[current_idx], true)
   while true do
     local expanded = false
-    if lo > 1 and used + entry_width(entries[lo - 1]) <= avail then
-      lo = lo - 1; used = used + entry_width(entries[lo]); expanded = true
+    if lo > 1 and used + entry_width(entries[lo - 1], false) + 1 <= avail then
+      lo = lo - 1; used = used + entry_width(entries[lo], false) + 1; expanded = true
     end
-    if hi < total and used + entry_width(entries[hi + 1]) <= avail then
-      hi = hi + 1; used = used + entry_width(entries[hi]); expanded = true
+    if hi < total and used + entry_width(entries[hi + 1], false) + 1 <= avail then
+      hi = hi + 1; used = used + entry_width(entries[hi], false) + 1; expanded = true
     end
     if not expanded then break end
   end
   local s = ''
-  if lo > 1 then s = s .. '%#TabLine# < %#TabLineFill#|' end
+  if lo > 1 then s = s .. '%#TabLine# < ' end
   for i = lo, hi do
-    local hl = (entries[i].tp == current) and '%#TabLineSel#' or '%#TabLine#'
-    s = s .. hl .. '%' .. i .. 'T ' .. entries[i].label .. ' %#TabLineFill#|'
+    if i > lo then s = s .. '%#TabLineFill# ' end
+    if entries[i].tp == current then
+      s = s .. '%#TabLineSel#%' .. i .. 'T[' .. entries[i].label .. ']'
+    else
+      s = s .. '%#TabLine#%' .. i .. 'T ' .. entries[i].label .. ' '
+    end
   end
   if hi < total then s = s .. '%#TabLine# > ' end
   s = s .. '%#TabLineFill#%T%=%#TabLine#' .. indicator
