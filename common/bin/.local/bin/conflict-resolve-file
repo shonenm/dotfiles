@@ -14,6 +14,7 @@ OURS=""
 THEIRS=""
 REPO_PATH=""
 SAVE_DIR=""
+REVIEW_COMMENTS=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -37,6 +38,10 @@ while [[ $# -gt 0 ]]; do
       SAVE_DIR="$2"
       shift 2
       ;;
+    --review-comments)
+      REVIEW_COMMENTS="$2"
+      shift 2
+      ;;
     *)
       echo "Error: Unknown argument: $1" >&2
       exit 1
@@ -57,9 +62,61 @@ base_content=$(cat "$BASE")
 ours_content=$(cat "$OURS")
 theirs_content=$(cat "$THEIRS")
 
+# コミットログ収集
+commit_context=""
+if git rev-parse --is-inside-work-tree &>/dev/null; then
+  MERGE_BASE_SHA=$(git merge-base ORIG_HEAD "$(git rev-parse HEAD)" 2>/dev/null || true)
+  if [[ -n "$MERGE_BASE_SHA" ]]; then
+    ours_log=$(git log --oneline "${MERGE_BASE_SHA}..ORIG_HEAD" -- "$REPO_PATH" 2>/dev/null || true)
+    theirs_log=$(git log --oneline "${MERGE_BASE_SHA}..HEAD" -- "$REPO_PATH" 2>/dev/null || true)
+    if [[ -n "$ours_log" || -n "$theirs_log" ]]; then
+      commit_context="
+<commit_context>
+ours side changes:
+${ours_log:-（none）}
+
+theirs side changes:
+${theirs_log:-（none）}
+</commit_context>"
+    fi
+  fi
+fi
+
+# REVIEW: コメント構文の決定
+ext="${REPO_PATH##*.}"
+case "$ext" in
+  ts|tsx|js|jsx|go|rs|java|c|cpp|h|hpp)
+    review_syntax='// REVIEW: <message>'
+    ;;
+  py|rb|sh|bash|yaml|yml|toml)
+    review_syntax='# REVIEW: <message>'
+    ;;
+  lua)
+    review_syntax='-- REVIEW: <message>'
+    ;;
+  html|xml|vue|svelte)
+    review_syntax='<!-- REVIEW: <message> -->'
+    ;;
+  *)
+    review_syntax='// REVIEW: <message>'
+    ;;
+esac
+
+# レビューフィードバックセクション
+review_section=""
+if [[ -n "$REVIEW_COMMENTS" ]]; then
+  review_section="
+<review_feedback>
+The user has provided the following feedback on the previous resolution.
+Reflect this feedback and re-resolve the conflict:
+
+${REVIEW_COMMENTS}
+</review_feedback>"
+fi
+
 # プロンプト構築
 prompt="You are resolving a merge conflict for file: ${REPO_PATH}
-
+${commit_context}
 BASE (common ancestor):
 ${base_content}
 
@@ -68,7 +125,7 @@ ${ours_content}
 
 THEIRS (incoming branch):
 ${theirs_content}
-
+${review_section}
 Resolve this conflict by merging both changes. Output your response in the following XML format:
 
 <resolved>
@@ -82,7 +139,8 @@ Rules:
 - If changes conflict logically, make the best judgment
 - Use \"high\" confidence when the merge is straightforward
 - Use \"needs-review\" when there are logical conflicts or ambiguities
-- Add REVIEW: comments in the resolved code for needs-review sections"
+- For sections that need review, add a comment using this syntax: ${review_syntax}
+- Do NOT leave any conflict markers (<<<<<<, ======, >>>>>>) in the output"
 
 # claude -p で解決
 output=$(echo "$prompt" | claude -p 2>/dev/null)
@@ -113,3 +171,6 @@ mkdir -p "$SAVE_DIR"
 printf '%s\n' "$resolved" > "${SAVE_DIR}/resolved"
 printf '%s\n' "$confidence" > "${SAVE_DIR}/confidence"
 printf '%s\n' "$review_comment" > "${SAVE_DIR}/review_comment"
+
+# $OURS ファイル (%A) にも resolved 内容をコピー (conflict-driver からの呼び出し時用)
+cp "${SAVE_DIR}/resolved" "$OURS"
