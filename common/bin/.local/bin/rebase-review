@@ -58,9 +58,9 @@ for i in "${!old_shas[@]}"; do
   [[ -z "$all_files" ]] && continue
 
   while IFS= read -r file_path; do
-    # 元コミットと新コミットのパッチを比較し、差分がなければスキップ
-    old_diff=$(git diff "${old_sha}^".."$old_sha" -- "$file_path" 2>/dev/null || true)
-    new_diff=$(git diff "${new_sha}^".."$new_sha" -- "$file_path" 2>/dev/null || true)
+    # 元コミットと新コミットの実変更行のみを比較（コンテキスト・行番号を除外）
+    old_diff=$(git diff -U0 "${old_sha}^".."$old_sha" -- "$file_path" 2>/dev/null | grep -E '^[+-]' | grep -Ev '^(---|\+\+\+)' || true)
+    new_diff=$(git diff -U0 "${new_sha}^".."$new_sha" -- "$file_path" 2>/dev/null | grep -E '^[+-]' | grep -Ev '^(---|\+\+\+)' || true)
     [[ "$old_diff" == "$new_diff" ]] && continue
 
     # 3状態を一時ファイルに書き出し
