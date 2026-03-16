@@ -76,17 +76,81 @@ wt_copy_ignored() {
   local src="$1"
   local dst="$2"
 
+  # TODO: Make configurable via .wt-config or similar per-project config
+  # Currently hardcoded for SynTopic monorepo structure
+
+  # Directories to symlink instead of copy (large, shared safely)
+  local -a symlink_dirs=(
+    "node_modules"
+    ".pnpm-store"
+    ".venv"
+    "agents/worker/.venv"
+    "agents/api/.venv"
+    "bff/node_modules"
+    "web/node_modules"
+    "hocuspocus/node_modules"
+    "test-e2e/node_modules"
+    "packages/*/node_modules"
+    "seeding/node_modules"
+  )
+
+  # Directories to skip entirely (regenerable caches)
+  local -a skip_dirs=(
+    ".mypy_cache"
+    ".turbo"
+    ".serena/cache"
+    ".dumps"
+    ".ruff_cache"
+    ".pytest_cache"
+    "anonymizer/output"
+    "agents/.mypy_cache"
+    "__pycache__"
+  )
+
   local entries
   entries="$(git -C "$src" ls-files --others --ignored --exclude-standard --directory --no-empty-directory 2>/dev/null)" || return 0
   [[ -z "$entries" ]] && return 0
 
-  wt_info "Copying ignored files from main worktree..."
+  wt_info "Syncing ignored files from main worktree..."
   while IFS= read -r entry; do
     [[ -z "$entry" ]] && continue
     local src_path="$src/$entry"
     local dst_path="$dst/$entry"
     [[ -e "$src_path" ]] || continue
 
+    # Strip trailing slash for matching
+    local entry_clean="${entry%/}"
+
+    # Check if this entry should be skipped
+    local should_skip=false
+    for pattern in "${skip_dirs[@]}"; do
+      if [[ "$entry_clean" == *"$pattern"* ]]; then
+        should_skip=true
+        break
+      fi
+    done
+    [[ "$should_skip" == true ]] && continue
+
+    # Check if this entry should be symlinked
+    local should_symlink=false
+    for pattern in "${symlink_dirs[@]}"; do
+      # shellcheck disable=SC2254
+      if [[ "$entry_clean" == $pattern ]]; then
+        should_symlink=true
+        break
+      fi
+    done
+
+    if [[ "$should_symlink" == true ]]; then
+      local abs_src
+      abs_src="$(cd "$src" && pwd)/$entry_clean"
+      mkdir -p "$(dirname "$dst_path")"
+      ln -snf "$abs_src" "${dst_path%/}"
+      continue
+    fi
+
+    # Default: copy
+    mkdir -p "$(dirname "$dst_path")"
     if [[ "$(uname)" == "Darwin" ]]; then
       # macOS APFS: clonefile (CoW, ディスク消費ほぼゼロ)
       cp -ac "$src_path" "$dst_path" 2>/dev/null || cp -a "$src_path" "$dst_path" 2>/dev/null || true
@@ -95,7 +159,7 @@ wt_copy_ignored() {
       cp -ax --reflink=auto "$src_path" "$dst_path" 2>/dev/null || cp -ax "$src_path" "$dst_path" 2>/dev/null || true
     fi
   done <<< "$entries"
-  wt_success "Copied ignored files"
+  wt_success "Synced ignored files"
 }
 
 # Create a worktree and its associated tmux window.
