@@ -787,6 +787,52 @@ gf done
 - 設定値の微調整
 - lockfile の更新
 
+## /issue, /pr (Claude Code スキル)
+
+`gf` の「Claude Code なしでも動く高速パス」に対して、AI がリッチな Issue 本文・PR 本文を生成する「しっかり記録するパス」。
+`gf` と同じブランチ命名規約 (`<issue番号>-<slug>`) を共有するため、相互に互換性がある。
+
+### コマンド
+
+| コマンド | 動作 |
+|----------|------|
+| `/issue <title-or-description>` | AI が Issue 本文を生成 + ブランチ作成 |
+| `/pr` | 変更を分析して AI が PR 本文を生成 + PR 作成 |
+| `/pr --draft` | Draft PR として作成 |
+| `/pr --base <branch>` | ベースブランチを指定して PR 作成 |
+
+### 使用例
+
+```bash
+# 1. Issue 作成 + ブランチ準備
+/issue Add logout button
+# → AI が Overview, Acceptance criteria を含む Issue 本文を生成
+# → ユーザー確認後、Issue #42 作成
+# → ブランチ 42-add-logout-button 作成・チェックアウト
+
+# 2. 開発・コミット
+# ... 変更を加える ...
+/commit
+
+# 3. PR 作成
+/pr
+# → 全コミット・差分を分析
+# → AI が Summary, Changes, Test plan を含む PR 本文を生成
+# → ユーザー確認後、PR 作成（Closes #42 で Issue 自動クローズ）
+```
+
+### gf との使い分け
+
+| 観点 | `gf` | `/issue` + `/pr` |
+|------|-------|-------------------|
+| 前提 | ターミナルのみ | Claude Code セッション内 |
+| Issue 本文 | 空 | AI が生成 (Overview + AC) |
+| PR 本文 | `Closes #N` のみ | AI が生成 (Summary + Changes + Test plan) |
+| 速度 | 高速 (ワンコマンド) | 確認ステップあり |
+| 用途 | 小さな変更、素早い作業 | 記録を残したい変更 |
+
+両者は同じブランチ命名規約を使うため、`gf start` で始めた作業を `/pr` で PR 作成したり、`/issue` で始めた作業を `gf pr` で PR 作成することも可能。
+
 ## gh-dash (GitHub Dashboard TUI)
 
 [gh-dash](https://github.com/dlvhdr/gh-dash) は GitHub CLI の拡張で、PR/Issue をターミナル上でブラウズできる TUI ダッシュボード。
