@@ -868,6 +868,77 @@ return {
       end,
     })
 
+    -- Virtual buffer treesitter highlight diagnostic
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "CodeDiffVirtualFileLoaded",
+      callback = function(ev)
+        local buf = ev.data and ev.data.buf
+        if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
+        local bufname = vim.api.nvim_buf_get_name(buf)
+        if not bufname:match("^codediff://") then return end
+        vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(buf) then return end
+          local ts_hl = vim.treesitter.highlighter
+          local ts_active = ts_hl and ts_hl.active and ts_hl.active[buf] ~= nil
+          local ts_highlight_var = vim.b[buf].ts_highlight
+          vim.notify(string.format(
+            "codediff VF[%d]: ts_active=%s ts_var=%s ft=%q syn=%q",
+            buf, tostring(ts_active), tostring(ts_highlight_var),
+            vim.bo[buf].filetype, vim.bo[buf].syntax
+          ), vim.log.levels.INFO)
+        end)
+      end,
+    })
+
+    -- Virtual buffer treesitter highlight fix
+    -- treesitterが起動しても描画されないケースを検出し修復する
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "CodeDiffVirtualFileLoaded",
+      callback = function(ev)
+        local buf = ev.data and ev.data.buf
+        if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
+        local bufname = vim.api.nvim_buf_get_name(buf)
+        if not bufname:match("^codediff://") then return end
+
+        local ts_hl = vim.treesitter.highlighter
+        if ts_hl and ts_hl.active and ts_hl.active[buf] then
+          -- treesitter active: 強制再描画でwindow-local stateを初期化
+          vim.schedule(function()
+            if not vim.api.nvim_buf_is_valid(buf) then return end
+            local line_count = vim.api.nvim_buf_line_count(buf)
+            if line_count > 0 then
+              pcall(vim.api.nvim__redraw, { buf = buf, range = { 0, line_count } })
+            end
+          end)
+          return
+        end
+
+        -- treesitter inactive: filepathからlangを取得してリトライ
+        local vf = require("codediff.core.virtual_file")
+        local _, _, filepath = vf.parse_url(bufname)
+        if not filepath then return end
+
+        local ft = vim.filetype.match({ filename = filepath, buf = buf })
+        if not ft then return end
+
+        local lang = vim.treesitter.language.get_lang(ft) or ft
+        if pcall(vim.treesitter.start, buf, lang) then
+          vim.bo[buf].syntax = ""
+          vim.schedule(function()
+            if not vim.api.nvim_buf_is_valid(buf) then return end
+            local line_count = vim.api.nvim_buf_line_count(buf)
+            if line_count > 0 then
+              pcall(vim.api.nvim__redraw, { buf = buf, range = { 0, line_count } })
+            end
+          end)
+        else
+          -- treesitterリトライも失敗: noautocmdでfiletype設定しsyntaxフォールバック
+          vim.cmd("noautocmd setlocal filetype=" .. ft)
+          vim.bo[buf].syntax = ft
+        end
+      end,
+    })
+
     -- Phase 2: auto_refresh throttle adjustment (200ms → 400ms)
     -- Wrap enable() to use custom throttle timer
     local auto_refresh_mod = require("codediff.ui.auto_refresh")
