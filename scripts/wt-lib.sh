@@ -121,6 +121,12 @@ wt_create() {
     return 0
   fi
 
+  # Kill orphaned window (worktree deleted but tmux window still exists)
+  if [[ "$wt_found" == false ]] && wt_window_exists "$win"; then
+    tmux kill-window -t "$win" 2>/dev/null || true
+    wt_info "Killed orphaned window: $win"
+  fi
+
   # Create worktree if it doesn't exist
   if [[ "$wt_found" == false ]]; then
     if git show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null; then

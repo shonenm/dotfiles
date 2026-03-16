@@ -15,6 +15,15 @@ readonly PROMPTS_DIR="/tmp/ralph/prompts"
 # --- Subcommands ---
 
 cmd_init() {
+  # 既存ワーカーの worktree/window をクリーンアップしてからリセット
+  if [[ -d "$WORKERS_DIR" ]]; then
+    for worker_file in "$WORKERS_DIR"/*.json; do
+      [[ -f "$worker_file" ]] || continue
+      local tid
+      tid="$(jq -r '.task_id' "$worker_file")"
+      wt_delete "ralph/${tid}" 2>/dev/null || true
+    done
+  fi
   rm -rf "$RESULTS_DIR" "$WORKERS_DIR" "$PROMPTS_DIR"
   mkdir -p "$RESULTS_DIR" "$WORKERS_DIR" "$PROMPTS_DIR"
   wt_info "Initialized: $RESULTS_DIR, $WORKERS_DIR, $PROMPTS_DIR"
@@ -58,10 +67,16 @@ cmd_launch() {
   prompt_abs="$(cd "$(dirname "$prompt_file")" && pwd)/$(basename "$prompt_file")"
   local cmd="claude -p \"\$(cat '${prompt_abs}')\" --model ${model} 2>&1; echo \$? > '${status_file}'"
 
-  # Split window: left=nvim (code review), right=claude (worker)
-  tmux split-window -h -t "$window_name" -c "$worktree_path"
-  tmux send-keys -t "${window_name}.0" "nvim ." Enter
-  tmux send-keys -t "${window_name}.1" "$cmd" Enter
+  # Split window: left=review, right=claude (worker)
+  # pane ID で直接ターゲットする (pane-base-index に依存しない)
+  local review_pane
+  review_pane=$(tmux display-message -t "$window_name" -p '#{pane_id}')
+  local claude_pane
+  claude_pane=$(tmux split-window -h -t "$window_name" -c "$worktree_path" -P -F '#{pane_id}')
+  if command -v nvim &>/dev/null; then
+    tmux send-keys -t "$review_pane" "nvim ." Enter
+  fi
+  tmux send-keys -t "$claude_pane" "$cmd" Enter
 
   # Record worker metadata
   local worker_json="${WORKERS_DIR}/${task_id}.json"
