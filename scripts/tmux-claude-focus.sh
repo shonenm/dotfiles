@@ -7,6 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATUS_DIR="/tmp/claude/status"
 FOCUS_STATE_FILE="/tmp/claude/focus"
 
+mkdir -p /tmp/claude
+
 # 現在のセッション・ウィンドウ情報を取得
 SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
 WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
@@ -105,3 +107,5 @@ else
   now=$(date +%s)
   echo "${SESSION}:${WINDOW_INDEX}:${now}:" > "$FOCUS_STATE_FILE"
 fi
+
+exit 0

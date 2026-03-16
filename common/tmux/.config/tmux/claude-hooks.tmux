@@ -2,7 +2,8 @@
 # Ghostty + tmux環境でClaude Codeの通知をtmuxステータスバーに表示
 
 # ウィンドウ切り替え時にフォーカス処理を実行（2秒/5秒タイマー）
-set-hook -g session-window-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude-focus.sh"'
+# run-shell は stdout を copy-mode で表示するため、全出力を抑制する
+set-hook -g session-window-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude-focus.sh >/dev/null 2>&1 || true"'
 
 # セッション切り替え時も同様
-set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude-focus.sh"'
+set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude-focus.sh >/dev/null 2>&1 || true"'
