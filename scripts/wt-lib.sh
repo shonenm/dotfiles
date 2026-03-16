@@ -88,9 +88,11 @@ wt_copy_ignored() {
     [[ -e "$src_path" ]] || continue
 
     if [[ "$(uname)" == "Darwin" ]]; then
+      # macOS APFS: clonefile (CoW, ディスク消費ほぼゼロ)
       cp -ac "$src_path" "$dst_path" 2>/dev/null || cp -a "$src_path" "$dst_path" 2>/dev/null || true
     else
-      cp -a --reflink=auto "$src_path" "$dst_path" 2>/dev/null || cp -a "$src_path" "$dst_path" 2>/dev/null || true
+      # Linux: -x でマウントポイントを越えない (Docker ボリューム等を除外)
+      cp -ax --reflink=auto "$src_path" "$dst_path" 2>/dev/null || cp -ax "$src_path" "$dst_path" 2>/dev/null || true
     fi
   done <<< "$entries"
   wt_success "Copied ignored files"
