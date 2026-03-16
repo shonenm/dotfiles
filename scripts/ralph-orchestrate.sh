@@ -61,11 +61,11 @@ cmd_launch() {
   local status_file="${RESULTS_DIR}/${task_id}.status"
 
   # Build the command to run in the worker window
-  # claude -p reads the prompt, runs autonomously, then exits
+  # claude (TUI mode) shows interactive progress visible in tmux
   # Exit code is written to .status file for poll detection
   local prompt_abs
   prompt_abs="$(cd "$(dirname "$prompt_file")" && pwd)/$(basename "$prompt_file")"
-  local cmd="claude -p \"\$(cat '${prompt_abs}')\" --model ${model} 2>&1; echo \$? > '${status_file}'"
+  local cmd="claude \"\$(cat '${prompt_abs}')\" --model ${model}; echo \$? > '${status_file}'"
 
   # Split window: left=review, right=claude (worker)
   # pane ID で直接ターゲットする (pane-base-index に依存しない)
@@ -142,11 +142,13 @@ _worker_status() {
 cmd_poll() {
   local interval=10
   local timeout=600
+  local no_timeout=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --interval) interval="${2:-10}"; shift 2 ;;
       --timeout) timeout="${2:-600}"; shift 2 ;;
+      --no-timeout) no_timeout=true; shift ;;
       *) shift ;;
     esac
   done
@@ -154,7 +156,11 @@ cmd_poll() {
   local start
   start="$(date +%s)"
 
-  wt_info "Polling workers (interval: ${interval}s, timeout: ${timeout}s)..."
+  if [[ "$no_timeout" == true ]]; then
+    wt_info "Polling workers (interval: ${interval}s, no timeout)..."
+  else
+    wt_info "Polling workers (interval: ${interval}s, timeout: ${timeout}s)..."
+  fi
 
   while true; do
     local all_done=true
@@ -186,16 +192,70 @@ cmd_poll() {
       return 0
     fi
 
-    local elapsed
-    elapsed="$(( $(date +%s) - start ))"
-    if [[ "$elapsed" -ge "$timeout" ]]; then
-      wt_error "Timeout after ${timeout}s. Current status:"
-      printf '%b' "$summary" >&2
-      return 1
+    if [[ "$no_timeout" != true ]]; then
+      local elapsed
+      elapsed="$(( $(date +%s) - start ))"
+      if [[ "$elapsed" -ge "$timeout" ]]; then
+        wt_error "Timeout after ${timeout}s. Current status:"
+        printf '%b' "$summary" >&2
+        return 1
+      fi
     fi
 
     sleep "$interval"
   done
+}
+
+_get_worktree() {
+  local task_id="$1"
+  local worker_file="${WORKERS_DIR}/${task_id}.json"
+  [[ -f "$worker_file" ]] || { wt_error "No worker metadata for $task_id"; return 1; }
+  jq -r '.worktree' "$worker_file"
+}
+
+cmd_save() {
+  local task_id="${1:-}"
+  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate.sh save <task-id>"; return 1; }
+
+  local worktree
+  worktree="$(_get_worktree "$task_id")" || return 1
+
+  # Stage all changes (including untracked files)
+  git -C "$worktree" add -A
+
+  # Save patch of all staged changes
+  local patch_file="${RESULTS_DIR}/${task_id}.patch"
+  git -C "$worktree" diff --cached > "$patch_file"
+
+  if [[ ! -s "$patch_file" ]]; then
+    wt_info "No changes to save for $task_id"
+    rm -f "$patch_file"
+    return 0
+  fi
+
+  # Commit to branch (allows recovery even after worktree removal)
+  git -C "$worktree" commit -m "ralph/${task_id}: worker changes" --no-verify
+
+  wt_success "Saved: $patch_file ($(wc -l < "$patch_file") lines)"
+}
+
+cmd_merge() {
+  local task_id="${1:-}"
+  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate.sh merge <task-id>"; return 1; }
+
+  local patch_file="${RESULTS_DIR}/${task_id}.patch"
+  [[ -f "$patch_file" ]] || { wt_error "No patch file for $task_id: $patch_file"; return 1; }
+  [[ -s "$patch_file" ]] || { wt_info "Empty patch for $task_id, skipping"; return 0; }
+
+  wt_check_git || return 1
+
+  if git apply --check "$patch_file" 2>/dev/null; then
+    git apply "$patch_file"
+    wt_success "Merged $task_id into current branch"
+  else
+    wt_error "Patch conflict for $task_id. Patch saved at: $patch_file"
+    return 1
+  fi
 }
 
 cmd_cleanup() {
@@ -230,6 +290,8 @@ case "${1:-}" in
   launch)      shift; cmd_launch "$@" ;;
   status)      cmd_status "${2:-}" ;;
   poll)        shift; cmd_poll "$@" ;;
+  save)        cmd_save "${2:-}" ;;
+  merge)       cmd_merge "${2:-}" ;;
   cleanup)     cmd_cleanup "${2:-}" ;;
   cleanup-all) cmd_cleanup_all ;;
   help|*)
@@ -241,7 +303,10 @@ Usage:
   ralph-orchestrate.sh launch <task-id> <prompt-file> [--model MODEL]
                                                          Launch worker in tmux window
   ralph-orchestrate.sh status [task-id]                  Check worker status
-  ralph-orchestrate.sh poll [--interval N] [--timeout N] Wait for all workers
+  ralph-orchestrate.sh poll [--interval N] [--timeout N] [--no-timeout]
+                                                         Wait for all workers
+  ralph-orchestrate.sh save <task-id>                    Save worker changes as patch + commit
+  ralph-orchestrate.sh merge <task-id>                   Apply saved patch to current branch
   ralph-orchestrate.sh cleanup <task-id>                 Remove worker worktree
   ralph-orchestrate.sh cleanup-all                       Remove all worker worktrees
 EOF
