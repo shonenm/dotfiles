@@ -2,7 +2,7 @@
 name: pr
 description: 変更を分析して PR を作成します。AI がリッチな PR 本文を生成します。
 user-invocable: true
-arguments: "[--draft] [--base <branch>]"
+arguments: "<options>"
 ---
 
 # PR - Pull Request 作成 (変更分析付き)
