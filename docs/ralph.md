@@ -106,7 +106,7 @@ Archives state file to `/tmp/ralph/state/archive_<timestamp>.json` before cleanu
 /ralph-parallel "Add login page, Add signup page"  # Comma-separated
 ```
 
-Orchestrates up to 4 concurrent workers, each in a separate git worktree + tmux window. Workers run as independent `claude -p --model sonnet` processes, visible in tmux for direct observation and intervention. Results are written to `/tmp/ralph/results/` to avoid orchestrator context bloat. After all workers complete, `ralph-reviewer` (sonnet) reviews diffs before reporting.
+Orchestrates up to 4 concurrent workers, each in a separate git worktree + tmux window. Workers run in TUI mode (`claude --model sonnet --dangerously-skip-permissions`), allowing direct observation of progress. The orchestrator runs autonomously without user interaction: launch → poll → review → save/merge → cleanup. APPROVE'd changes are saved as patches and merged into the main branch before cleanup. REQUEST_CHANGES tasks have patches preserved for manual resolution.
 
 ## State File Schema
 
@@ -207,22 +207,25 @@ Orchestrator (user session, Opus)
   |
   +-- ralph-orchestrate.sh launch T-1 /tmp/ralph/prompts/T-1.md --model sonnet
   |     +-- wt_create ralph/T-1      # git worktree + tmux window via wt-lib.sh
-  |     +-- split-window -h          # Left: nvim . (code review), Right: claude -p
-  |     +-- exit code -> /tmp/ralph/results/T-1.status
-  |     +-- worker writes /tmp/ralph/results/T-1.md
+  |     +-- split-window -h          # Left: nvim . (code review), Right: claude TUI
+  |     +-- worker writes /tmp/ralph/results/T-1.{md,status}
   |
-  +-- ralph-orchestrate.sh poll       # Wait for .status files
+  +-- ralph-orchestrate.sh poll       # Wait for .status files (auto-retry on timeout)
   |
   +-- Task(ralph-reviewer)            # Review diffs in worker worktrees
+  |
+  +-- ralph-orchestrate.sh save T-1   # Patch + commit to worker branch
+  +-- ralph-orchestrate.sh merge T-1  # Apply patch to main (APPROVE'd only)
   |
   +-- ralph-orchestrate.sh cleanup-all
 ```
 
 Key differences from Task() subagent model:
-- Workers are visible in tmux windows (user can observe and intervene)
+- Workers run in TUI mode with `--dangerously-skip-permissions` (visible progress in tmux)
 - Workers use sonnet model (cost optimization, orchestrator stays on Opus)
 - Results go to `/tmp/ralph/results/` files (not orchestrator context)
 - Worktrees managed by `wt-lib.sh` (same library as `wt` CLI command)
+- APPROVE'd changes are saved (`save`) and merged (`merge`) before cleanup
 
 ### Reviewer Agent (`ralph-reviewer`)
 
@@ -287,11 +290,12 @@ dotfiles/
 - Zero interaction via PreToolUse hook: `AskUserQuestion`/`EnterPlanMode` denied at hook level
 - `/ralph-plan` defense: `allowed-tools` (hide Edit/MultiEdit, Write は Phase 3 状態ファイル生成のみ許可) + prompt reinforcement. PreToolUse hook は skill frontmatter hooks がグローバルに読み込まれる制約により不採用
 - Backpressure auto-fix: eslint/prettier/ruff fix before reporting remaining errors
-- Parallel execution max 4 workers: resource constraint. Workers run as independent `claude -p` processes in tmux windows (not Task subagents) for observability
+- Parallel execution max 4 workers: resource constraint. Workers run in TUI mode (`claude --dangerously-skip-permissions`) in tmux windows for observability. `--dangerously-skip-permissions` required because worktrees lack `.claude/settings.json`
 - `wt-lib.sh` extracted from `wt` CLI: shared library for worktree+tmux management, used by both `wt` command and `ralph-orchestrate.sh`
 - Parallel results via `/tmp/ralph/results/`: prevents orchestrator context bloat. Orchestrator reads 1-line summaries, not full worker output
 - Model mixing: orchestrator uses session model (Opus), workers and reviewer use sonnet
-- `ralph-reviewer` runs after workers complete but before worktree cleanup (needs access to diffs)
+- `ralph-reviewer` runs after workers complete but before save/merge/cleanup (needs access to diffs)
+- Parallel save/merge/cleanup order: review → `save` all → `merge` APPROVE'd only → `cleanup-all`. Changes are never lost on cleanup
 - No auto-commit: ralph does not commit unless task_graph explicitly includes a commit task. ralph-plan/ralph-resume do not generate commit tasks unless the user explicitly requests it
 - SessionStart context hook: global in `settings.json`, provides project awareness to all sessions
 
