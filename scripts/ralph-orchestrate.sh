@@ -111,8 +111,23 @@ cmd_launch() {
   # - Pass file path instead of content to avoid tmux send-keys buffer limit
   tmux send-keys -t "$claude_pane" "claude --model ${model}" Enter
 
-  # Wait for TUI to initialize
-  sleep 3
+  # Wait for TUI to initialize by detecting prompt via capture-pane
+  local wait_elapsed=0
+  local wait_timeout=30
+  while [[ "$wait_elapsed" -lt "$wait_timeout" ]]; do
+    sleep 1
+    wait_elapsed=$((wait_elapsed + 1))
+    local pane_content
+    pane_content="$(tmux capture-pane -t "$claude_pane" -p 2>/dev/null || true)"
+    # Detect claude TUI ready: prompt indicator ">" or "tips" welcome screen
+    if echo "$pane_content" | grep -qE '^\s*>|^╭|tips'; then
+      break
+    fi
+  done
+  if [[ "$wait_elapsed" -ge "$wait_timeout" ]]; then
+    wt_error "Timeout waiting for claude TUI to initialize in $claude_pane"
+    return 1
+  fi
 
   # Send /ralph with prompt file path (ralph will Read the file)
   tmux send-keys -t "$claude_pane" "/ralph 'Read ${prompt_abs} for task instructions and implement accordingly.' --skip-plan" Enter
@@ -190,27 +205,37 @@ _worker_status() {
     return
   fi
 
-  # tmux capture-pane で完了判定
-  if _pane_is_done "$pane_id"; then
-    echo "done"
-  else
-    echo "running"
-  fi
+  # tmux capture-pane で完了判定 (3段階: done / dead / running)
+  local result
+  result="$(_pane_status "$pane_id" "$task_id")"
+  echo "$result"
 }
 
-_pane_is_done() {
+# Returns: "done" | "dead" | "running"
+_pane_status() {
   local pane_id="$1"
-  # pane が存在しない場合は done
+  local task_id="$2"
+  local result_file="${RESULTS_DIR}/${task_id}.md"
+
+  # pane が存在しない場合: 結果ファイルの有無で done/dead を判定
   if ! tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane_id"; then
-    return 0
+    if [[ -f "$result_file" ]]; then
+      echo "done"
+    else
+      echo "dead"
+    fi
+    return
   fi
-  # capture-pane で最後の100行を取得し RALPH_COMPLETE を検出
+
+  # capture-pane で全履歴を取得し RALPH_COMPLETE を検出
   local captured
-  captured="$(tmux capture-pane -t "$pane_id" -p -S -100 2>/dev/null || true)"
+  captured="$(tmux capture-pane -t "$pane_id" -p -S -500 2>/dev/null || true)"
   if echo "$captured" | grep -qF "RALPH_COMPLETE"; then
-    return 0
+    echo "done"
+    return
   fi
-  return 1
+
+  echo "running"
 }
 
 _status_json() {
