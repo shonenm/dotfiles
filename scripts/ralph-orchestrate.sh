@@ -229,7 +229,7 @@ _pane_status() {
 
   # capture-pane で全履歴を取得し RALPH_COMPLETE を検出
   local captured
-  captured="$(tmux capture-pane -t "$pane_id" -p -S -500 2>/dev/null || true)"
+  captured="$(tmux capture-pane -t "$pane_id" -p -S - 2>/dev/null || true)"
   if echo "$captured" | grep -qF "RALPH_COMPLETE"; then
     echo "done"
     return
@@ -240,6 +240,7 @@ _pane_status() {
 
 _status_json() {
   local all_done=true
+  local has_dead=false
   local workers_json="{"
   local first=true
 
@@ -257,13 +258,15 @@ _status_json() {
     fi
     workers_json="${workers_json}\"${tid}\":\"${st}\""
 
-    if [[ "$st" != "done" ]]; then
+    if [[ "$st" == "dead" ]]; then
+      has_dead=true
+    elif [[ "$st" != "done" ]]; then
       all_done=false
     fi
   done
   workers_json="${workers_json}}"
 
-  printf '{"all_done":%s,"workers":%s}\n' "$all_done" "$workers_json"
+  printf '{"all_done":%s,"has_dead":%s,"workers":%s}\n' "$all_done" "$has_dead" "$workers_json"
 }
 
 # --- Checkpoint ---
@@ -427,33 +430,26 @@ cmd_save_all() {
   wt_success "save-all: all workers saved"
 }
 
-cmd_merge_all() {
-  local errors=0
-  local merged=0
-  if [[ $# -gt 0 ]]; then
-    # 指定タスクのみマージ
-    for tid in "$@"; do
-      if cmd_merge "$tid"; then
-        merged=$((merged + 1))
-      else
-        errors=$((errors + 1))
-      fi
-    done
-  else
-    # 全ワーカーマージ
-    for worker_file in "$WORKERS_DIR"/*.json; do
-      [[ -f "$worker_file" ]] || continue
-      local tid
-      tid="$(jq -r '.task_id' "$worker_file")"
-      if cmd_merge "$tid"; then
-        merged=$((merged + 1))
-      else
-        errors=$((errors + 1))
-      fi
-    done
+cmd_send() {
+  local task_id="${1:-}"
+  local message="${2:-}"
+  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate.sh send <task-id> <message>"; return 1; }
+  [[ -z "$message" ]] && { wt_error "message is required"; return 1; }
+
+  local worker_file="${WORKERS_DIR}/${task_id}.json"
+  [[ -f "$worker_file" ]] || { wt_error "No worker metadata for $task_id"; return 1; }
+
+  local pane_id
+  pane_id="$(jq -r '.claude_pane // empty' "$worker_file")"
+  [[ -z "$pane_id" ]] && { wt_error "No claude_pane recorded for $task_id"; return 1; }
+
+  if ! tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane_id"; then
+    wt_error "Pane $pane_id no longer exists for $task_id"
+    return 1
   fi
-  wt_info "merge-all: $merged merged, $errors failed"
-  [[ "$errors" -eq 0 ]]
+
+  tmux send-keys -t "$pane_id" "$message" Enter
+  wt_success "Sent message to $task_id ($pane_id)"
 }
 
 cmd_results() {
@@ -484,19 +480,45 @@ cmd_cleanup() {
 }
 
 cmd_cleanup_all() {
-  wt_check_git || return 1
+  local keep_results=false
+  local task_ids=()
 
-  for worker_file in "$WORKERS_DIR"/*.json; do
-    [[ -f "$worker_file" ]] || continue
-    local tid
-    tid="$(jq -r '.task_id' "$worker_file")"
-    wt_delete "ralph/${tid}" 2>/dev/null || true
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --keep-results) keep_results=true; shift ;;
+      *) task_ids+=("$1"); shift ;;
+    esac
   done
 
+  wt_check_git || return 1
+
+  if [[ ${#task_ids[@]} -gt 0 ]]; then
+    # 指定タスクのみ cleanup
+    for tid in "${task_ids[@]}"; do
+      wt_delete "ralph/${tid}" 2>/dev/null || true
+      rm -f "${WORKERS_DIR}/${tid}.json"
+    done
+  else
+    # 全 worker cleanup
+    for worker_file in "$WORKERS_DIR"/*.json; do
+      [[ -f "$worker_file" ]] || continue
+      local tid
+      tid="$(jq -r '.task_id' "$worker_file")"
+      wt_delete "ralph/${tid}" 2>/dev/null || true
+    done
+    rm -rf "$WORKERS_DIR"
+  fi
+
   _cleanup_orphaned_branches
-  rm -rf "$WORKERS_DIR"
-  wt_info "Cleaned up all workers"
-  wt_info "Results preserved in: $RESULTS_DIR"
+
+  if [[ "$keep_results" == false ]]; then
+    rm -rf "$RESULTS_DIR" "$PROMPTS_DIR"
+    wt_info "Cleaned up all (including results and prompts)"
+  else
+    wt_info "Cleaned up workers (results preserved in: $RESULTS_DIR)"
+  fi
+
+  rm -f "$CHECKPOINT_FILE"
 }
 
 # --- Main ---
@@ -505,10 +527,10 @@ case "${1:-}" in
   init)              shift; cmd_init "$@" ;;
   launch)            shift; cmd_launch "$@" ;;
   status)            shift; cmd_status "$@" ;;
+  send)              shift; cmd_send "$@" ;;
   save)              cmd_save "${2:-}" ;;
   save-all)          cmd_save_all ;;
   merge)             cmd_merge "${2:-}" ;;
-  merge-all)         shift; cmd_merge_all "$@" ;;
   gen-prompt)        shift; cmd_gen_prompt "$@" ;;
   gen-prompt-batch)  cmd_gen_prompt_batch "${2:-}" ;;
   results)           cmd_results ;;
@@ -516,7 +538,7 @@ case "${1:-}" in
   checkpoint-read)   cmd_checkpoint_read ;;
   checkpoint-clear)  cmd_checkpoint_clear ;;
   cleanup)           cmd_cleanup "${2:-}" ;;
-  cleanup-all)       cmd_cleanup_all ;;
+  cleanup-all)       shift; cmd_cleanup_all "$@" ;;
   help|*)
     cat <<EOF
 ralph-orchestrate.sh - Ralph worker lifecycle management
@@ -527,10 +549,10 @@ Usage:
                                                          Launch worker in tmux window
   ralph-orchestrate.sh status [--json] [--wait N] [task-id]
                                                          Check worker status
+  ralph-orchestrate.sh send <task-id> <message>          Send message to worker pane
   ralph-orchestrate.sh save <task-id>                    Save worker changes as patch + commit
   ralph-orchestrate.sh save-all                          Save all workers
   ralph-orchestrate.sh merge <task-id>                   Apply saved patch to current branch
-  ralph-orchestrate.sh merge-all [task-id...]            Merge specified (or all) workers
   ralph-orchestrate.sh gen-prompt <id> <name> <cond> <files> [ctx-file]
                                                          Generate prompt from template
   ralph-orchestrate.sh gen-prompt-batch <spec.json>      Generate all prompts from JSON
@@ -539,7 +561,8 @@ Usage:
   ralph-orchestrate.sh checkpoint-read                   Read checkpoint (or {"phase":"none"})
   ralph-orchestrate.sh checkpoint-clear                  Clear checkpoint
   ralph-orchestrate.sh cleanup <task-id>                 Remove worker worktree
-  ralph-orchestrate.sh cleanup-all                       Remove all worker worktrees
+  ralph-orchestrate.sh cleanup-all [--keep-results] [task-id...]
+                                                         Remove all (or specified) worker worktrees
 EOF
     ;;
 esac

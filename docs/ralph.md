@@ -106,7 +106,14 @@ Archives state file to `/tmp/ralph/state/archive_<timestamp>.json` before cleanu
 /ralph-parallel "Add login page, Add signup page"  # Comma-separated
 ```
 
-Orchestrates up to 4 concurrent workers, each in a separate git worktree + tmux window. Workers run in TUI mode (`claude --model sonnet --dangerously-skip-permissions`), allowing direct observation of progress. The orchestrator runs autonomously without user interaction: launch → poll → review → save/merge → cleanup. APPROVE'd changes are saved as patches and merged into the main branch before cleanup. REQUEST_CHANGES tasks have patches preserved for manual resolution.
+Orchestrates up to 4 concurrent workers, each in a separate git worktree + tmux window. Workers are launched via `/ralph` skill (Stop hook autonomous loop + backpressure hook quality gate). The orchestrator handles implementation only: init → gen-prompt → launch → wait → results summary → stop. Merge, cleanup, and PR creation are delegated to separate skills invoked by the user after review.
+
+```
+/ralph-collect send T-1 "PRを作成して"             # Send instruction to worker
+/ralph-collect save-all                            # Save all worker changes
+/ralph-cleanup                                     # Remove worktrees + branches
+/ralph-cleanup --keep-results                      # Keep results directory
+```
 
 ## State File Schema
 
@@ -198,34 +205,38 @@ Notes: ...
 
 ### Parallel Worker Architecture
 
-`/ralph-parallel` uses a different execution model from `/ralph`:
+`/ralph-parallel` uses a 3-skill phased model with human review between phases:
 
 ```
-Orchestrator (user session, Opus)
+Phase 1: /ralph-parallel (implementation)
   |
-  +-- ralph-orchestrate.sh init       # Clear /tmp/ralph/{results,workers,prompts}/
-  |
-  +-- ralph-orchestrate.sh launch T-1 /tmp/ralph/prompts/T-1.md --model sonnet
+  +-- ralph-orchestrate.sh init --force
+  +-- ralph-orchestrate.sh gen-prompt-batch task-spec.json
+  +-- ralph-orchestrate.sh launch T-1 ... --model sonnet
   |     +-- wt_create ralph/T-1      # git worktree + tmux window via wt-lib.sh
-  |     +-- split-window -h          # Left: nvim . (code review), Right: claude TUI
-  |     +-- worker writes /tmp/ralph/results/T-1.{md,status}
+  |     +-- split-window -h          # Left: nvim (review), Right: claude TUI
+  |     +-- tmux send-keys "/ralph 'Read prompt.md ...' --skip-plan"
+  +-- ralph-orchestrate.sh status --json --wait 20  (loop until all_done)
+  +-- ralph-orchestrate.sh results   # Output summary, STOP
   |
-  +-- ralph-orchestrate.sh poll       # Wait for .status files (auto-retry on timeout)
+  [Human reviews diffs in tmux windows]
   |
-  +-- Task(ralph-reviewer)            # Review diffs in worker worktrees
+Phase 2: /ralph-collect (post-review)
+  +-- ralph-orchestrate.sh send T-1 "PRを作成して"
+  +-- ralph-orchestrate.sh save-all
   |
-  +-- ralph-orchestrate.sh save T-1   # Patch + commit to worker branch
-  +-- ralph-orchestrate.sh merge T-1  # Apply patch to main (APPROVE'd only)
-  |
-  +-- ralph-orchestrate.sh cleanup-all
+Phase 3: /ralph-cleanup
+  +-- ralph-orchestrate.sh cleanup-all [--keep-results]
 ```
 
-Key differences from Task() subagent model:
-- Workers run in TUI mode with `--dangerously-skip-permissions` (visible progress in tmux)
-- Workers use sonnet model (cost optimization, orchestrator stays on Opus)
-- Results go to `/tmp/ralph/results/` files (not orchestrator context)
-- Worktrees managed by `wt-lib.sh` (same library as `wt` CLI command)
-- APPROVE'd changes are saved (`save`) and merged (`merge`) before cleanup
+Key design choices:
+- Workers launched via `/ralph` skill (Stop hook loop + backpressure hook)
+- No `--dangerously-skip-permissions` (avoids initial confirmation prompt)
+- TUI startup detected via `tmux capture-pane` loop (not `sleep`)
+- Completion detected via `RALPH_COMPLETE` in `tmux capture-pane -S -` (full history)
+- 3-state worker status: `done` / `dead` (pane gone, no result) / `running`
+- No auto-merge. User decides via `/ralph-collect send` or manual merge
+- Checkpoint-based resumable orchestration (`checkpoint-read` / `checkpoint`)
 
 ### Reviewer Agent (`ralph-reviewer`)
 
@@ -245,7 +256,9 @@ dotfiles/
 |   |   +-- ralph-plan/SKILL.md        # /ralph-plan interactive planning
 |   |   +-- ralph-cancel/SKILL.md      # /ralph-cancel with archive
 |   |   +-- ralph-resume/SKILL.md     # /ralph-resume from archive
-|   |   +-- ralph-parallel/SKILL.md    # /ralph-parallel orchestrator
+|   |   +-- ralph-parallel/SKILL.md    # /ralph-parallel orchestrator (implementation only)
+|   |   +-- ralph-collect/SKILL.md    # /ralph-collect post-review operations
+|   |   +-- ralph-cleanup/SKILL.md    # /ralph-cleanup worktree/branch removal
 |   +-- agents/
 |       +-- ralph-worker/ralph-worker.md    # Worktree-isolated worker (Task subagent)
 |       +-- ralph-reviewer/ralph-reviewer.md # Read-only code reviewer (sonnet)
@@ -290,12 +303,12 @@ dotfiles/
 - Zero interaction via PreToolUse hook: `AskUserQuestion`/`EnterPlanMode` denied at hook level
 - `/ralph-plan` defense: `allowed-tools` (hide Edit/MultiEdit, Write は Phase 3 状態ファイル生成のみ許可) + prompt reinforcement. PreToolUse hook は skill frontmatter hooks がグローバルに読み込まれる制約により不採用
 - Backpressure auto-fix: eslint/prettier/ruff fix before reporting remaining errors
-- Parallel execution max 4 workers: resource constraint. Workers run in TUI mode (`claude --dangerously-skip-permissions`) in tmux windows for observability. `--dangerously-skip-permissions` required because worktrees lack `.claude/settings.json`
+- Parallel execution max 4 workers: resource constraint. Workers launched via `/ralph` skill in tmux panes for observability. No `--dangerously-skip-permissions` (avoids "Are you sure?" confirmation; Stop hook provides autonomous loop instead)
 - `wt-lib.sh` extracted from `wt` CLI: shared library for worktree+tmux management, used by both `wt` command and `ralph-orchestrate.sh`
 - Parallel results via `/tmp/ralph/results/`: prevents orchestrator context bloat. Orchestrator reads 1-line summaries, not full worker output
 - Model mixing: orchestrator uses session model (Opus), workers and reviewer use sonnet
-- `ralph-reviewer` runs after workers complete but before save/merge/cleanup (needs access to diffs)
-- Parallel save/merge/cleanup order: review → `save` all → `merge` APPROVE'd only → `cleanup-all`. Changes are never lost on cleanup
+- 3-skill phased parallel model: `/ralph-parallel` (implementation) → human review → `/ralph-collect` (save/send) → `/ralph-cleanup`. Human review is mandatory between implementation and merge
+- No auto-merge in parallel mode: user sends PR instructions via `/ralph-collect send` or merges manually
 - No auto-commit: ralph does not commit unless task_graph explicitly includes a commit task. ralph-plan/ralph-resume do not generate commit tasks unless the user explicitly requests it
 - SessionStart context hook: global in `settings.json`, provides project awareness to all sessions
 
