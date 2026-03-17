@@ -11,11 +11,35 @@ source "$(dirname "$0")/wt-lib.sh"
 readonly RESULTS_DIR="/tmp/ralph/results"
 readonly WORKERS_DIR="/tmp/ralph/workers"
 readonly PROMPTS_DIR="/tmp/ralph/prompts"
+readonly CHECKPOINT_FILE="/tmp/ralph/checkpoint.json"
+
+# --- Helpers ---
+
+_cleanup_orphaned_branches() {
+  local worktree_branches=""
+  worktree_branches="$(git worktree list --porcelain | grep '^branch ' | sed 's|^branch refs/heads/||')"
+
+  local branch
+  while IFS= read -r branch; do
+    [[ -z "$branch" ]] && continue
+    if ! echo "$worktree_branches" | grep -qxF "$branch"; then
+      git branch -D "$branch" 2>/dev/null && wt_info "Deleted orphaned branch: $branch"
+    fi
+  done < <(git branch --list 'ralph/*' | sed 's/^[* ]*//')
+}
 
 # --- Subcommands ---
 
 cmd_init() {
-  # 既存ワーカーの worktree/window をクリーンアップしてからリセット
+  local force=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --force) force=true; shift ;;
+      *) shift ;;
+    esac
+  done
+
+  # 既存ワーカーの worktree/window をクリーンアップ
   if [[ -d "$WORKERS_DIR" ]]; then
     for worker_file in "$WORKERS_DIR"/*.json; do
       [[ -f "$worker_file" ]] || continue
@@ -24,9 +48,20 @@ cmd_init() {
       wt_delete "ralph/${tid}" 2>/dev/null || true
     done
   fi
-  rm -rf "$RESULTS_DIR" "$WORKERS_DIR" "$PROMPTS_DIR"
+
+  _cleanup_orphaned_branches
+
+  if [[ "$force" == true ]]; then
+    # --force: 全消しリセット
+    rm -rf "$RESULTS_DIR" "$WORKERS_DIR" "$PROMPTS_DIR" "$CHECKPOINT_FILE"
+  else
+    # デフォルト: workers のみクリア、prompts 保持、results の .status のみ削除
+    rm -rf "$WORKERS_DIR"
+    rm -f "$RESULTS_DIR"/*.status 2>/dev/null || true
+  fi
+
   mkdir -p "$RESULTS_DIR" "$WORKERS_DIR" "$PROMPTS_DIR"
-  wt_info "Initialized: $RESULTS_DIR, $WORKERS_DIR, $PROMPTS_DIR"
+  wt_info "Initialized (force=$force): $RESULTS_DIR, $WORKERS_DIR, $PROMPTS_DIR"
 }
 
 cmd_launch() {
@@ -58,20 +93,10 @@ cmd_launch() {
   local window_name
   window_name="$(wt_window_name "$branch")"
 
-  local status_file="${RESULTS_DIR}/${task_id}.status"
-
-  # Build the command to run in the worker window
-  # claude (TUI mode) shows interactive progress visible in tmux
-  # --dangerously-skip-permissions: worktree has no .claude/settings.json,
-  #   TUI would block on every tool call without this flag
-  # Completion detection: worker writes .status file per prompt instructions
-  #   (TUI does not auto-exit, so shell-side exit code capture is not viable)
   local prompt_abs
   prompt_abs="$(cd "$(dirname "$prompt_file")" && pwd)/$(basename "$prompt_file")"
-  local cmd="claude \"\$(cat '${prompt_abs}')\" --model ${model} --dangerously-skip-permissions"
 
   # Split window: left=review, right=claude (worker)
-  # pane ID で直接ターゲットする (pane-base-index に依存しない)
   local review_pane
   review_pane=$(tmux display-message -t "$window_name" -p '#{pane_id}')
   local claude_pane
@@ -79,7 +104,18 @@ cmd_launch() {
   if command -v nvim &>/dev/null; then
     tmux send-keys -t "$review_pane" "nvim ." Enter
   fi
-  tmux send-keys -t "$claude_pane" "$cmd" Enter
+
+  # Launch claude TUI then send /ralph with file path reference
+  # - No --dangerously-skip-permissions (avoids "Are you sure?" confirmation)
+  # - Stop hook + backpressure hook provide autonomous loop + quality gate
+  # - Pass file path instead of content to avoid tmux send-keys buffer limit
+  tmux send-keys -t "$claude_pane" "claude --model ${model}" Enter
+
+  # Wait for TUI to initialize
+  sleep 3
+
+  # Send /ralph with prompt file path (ralph will Read the file)
+  tmux send-keys -t "$claude_pane" "/ralph 'Read ${prompt_abs} for task instructions and implement accordingly.' --skip-plan" Enter
 
   # Record worker metadata
   local worker_json="${WORKERS_DIR}/${task_id}.json"
@@ -89,19 +125,36 @@ cmd_launch() {
   "branch": "${branch}",
   "worktree": "${worktree_path}",
   "window": "${window_name}",
+  "claude_pane": "${claude_pane}",
   "model": "${model}",
   "prompt_file": "${prompt_abs}",
   "started": $(date +%s)
 }
 WORKER_EOF
 
-  wt_success "Launched worker: $task_id in $window_name (model: $model)"
+  wt_success "Launched worker: $task_id in $window_name (model: $model, pane: $claude_pane)"
 }
 
 cmd_status() {
-  local task_id="${1:-}"
+  local json_mode=false
+  local wait_seconds=0
+  local task_id=""
 
-  if [[ -n "$task_id" ]]; then
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --json) json_mode=true; shift ;;
+      --wait) wait_seconds="${2:-20}"; shift 2 ;;
+      *) task_id="$1"; shift ;;
+    esac
+  done
+
+  if [[ "$wait_seconds" -gt 0 ]]; then
+    sleep "$wait_seconds"
+  fi
+
+  if [[ "$json_mode" == true ]]; then
+    _status_json
+  elif [[ -n "$task_id" ]]; then
     _worker_status "$task_id"
   else
     local has_workers=false
@@ -122,91 +175,98 @@ cmd_status() {
 
 _worker_status() {
   local task_id="$1"
-  local status_file="${RESULTS_DIR}/${task_id}.status"
-  local result_file="${RESULTS_DIR}/${task_id}.md"
+  local worker_file="${WORKERS_DIR}/${task_id}.json"
 
-  if [[ -f "$status_file" ]]; then
-    local exit_code
-    exit_code="$(cat "$status_file")"
-    if [[ "$exit_code" == "0" ]]; then
-      if [[ -f "$result_file" ]]; then
-        echo "done"
-      else
-        echo "done (no result file)"
-      fi
-    else
-      echo "failed (exit: $exit_code)"
-    fi
+  if [[ ! -f "$worker_file" ]]; then
+    echo "unknown"
+    return
+  fi
+
+  local pane_id
+  pane_id="$(jq -r '.claude_pane // empty' "$worker_file")"
+
+  if [[ -z "$pane_id" ]]; then
+    echo "running"
+    return
+  fi
+
+  # tmux capture-pane で完了判定
+  if _pane_is_done "$pane_id"; then
+    echo "done"
   else
     echo "running"
   fi
 }
 
-cmd_poll() {
-  local interval=10
-  local timeout=600
-  local no_timeout=false
-
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --interval) interval="${2:-10}"; shift 2 ;;
-      --timeout) timeout="${2:-600}"; shift 2 ;;
-      --no-timeout) no_timeout=true; shift ;;
-      *) shift ;;
-    esac
-  done
-
-  local start
-  start="$(date +%s)"
-
-  if [[ "$no_timeout" == true ]]; then
-    wt_info "Polling workers (interval: ${interval}s, no timeout)..."
-  else
-    wt_info "Polling workers (interval: ${interval}s, timeout: ${timeout}s)..."
+_pane_is_done() {
+  local pane_id="$1"
+  # pane が存在しない場合は done
+  if ! tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane_id"; then
+    return 0
   fi
+  # capture-pane で最後の100行を取得し RALPH_COMPLETE を検出
+  local captured
+  captured="$(tmux capture-pane -t "$pane_id" -p -S -100 2>/dev/null || true)"
+  if echo "$captured" | grep -qF "RALPH_COMPLETE"; then
+    return 0
+  fi
+  return 1
+}
 
-  while true; do
-    local all_done=true
-    local summary=""
+_status_json() {
+  local all_done=true
+  local workers_json="{"
+  local first=true
 
-    for worker_file in "$WORKERS_DIR"/*.json; do
-      [[ -f "$worker_file" ]] || continue
-      local tid
-      tid="$(jq -r '.task_id' "$worker_file")"
-      local status_file="${RESULTS_DIR}/${tid}.status"
+  for worker_file in "$WORKERS_DIR"/*.json; do
+    [[ -f "$worker_file" ]] || continue
+    local tid
+    tid="$(jq -r '.task_id' "$worker_file")"
+    local st
+    st="$(_worker_status "$tid")"
 
-      if [[ ! -f "$status_file" ]]; then
-        all_done=false
-        summary="${summary}  ${tid}: running\n"
-      else
-        local exit_code
-        exit_code="$(cat "$status_file")"
-        if [[ "$exit_code" == "0" ]]; then
-          summary="${summary}  ${tid}: done\n"
-        else
-          summary="${summary}  ${tid}: failed (exit: ${exit_code})\n"
-        fi
-      fi
-    done
-
-    if [[ "$all_done" == true ]]; then
-      wt_success "All workers completed"
-      printf '%b' "$summary" >&2
-      return 0
+    if [[ "$first" == true ]]; then
+      first=false
+    else
+      workers_json="${workers_json},"
     fi
+    workers_json="${workers_json}\"${tid}\":\"${st}\""
 
-    if [[ "$no_timeout" != true ]]; then
-      local elapsed
-      elapsed="$(( $(date +%s) - start ))"
-      if [[ "$elapsed" -ge "$timeout" ]]; then
-        wt_error "Timeout after ${timeout}s. Current status:"
-        printf '%b' "$summary" >&2
-        return 1
-      fi
+    if [[ "$st" != "done" ]]; then
+      all_done=false
     fi
-
-    sleep "$interval"
   done
+  workers_json="${workers_json}}"
+
+  printf '{"all_done":%s,"workers":%s}\n' "$all_done" "$workers_json"
+}
+
+# --- Checkpoint ---
+
+cmd_checkpoint() {
+  local phase="${1:-}"
+  local json_data="${2:-}"
+  [[ -z "$phase" ]] && { wt_error "Usage: checkpoint <phase> [json-data]"; return 1; }
+
+  if [[ -n "$json_data" ]]; then
+    echo "$json_data" | jq --arg phase "$phase" '. + {phase: $phase}' > "$CHECKPOINT_FILE"
+  else
+    jq -n --arg phase "$phase" '{phase: $phase}' > "$CHECKPOINT_FILE"
+  fi
+  wt_info "Checkpoint: $phase"
+}
+
+cmd_checkpoint_read() {
+  if [[ -f "$CHECKPOINT_FILE" ]]; then
+    cat "$CHECKPOINT_FILE"
+  else
+    echo '{"phase":"none"}'
+  fi
+}
+
+cmd_checkpoint_clear() {
+  rm -f "$CHECKPOINT_FILE"
+  wt_info "Checkpoint cleared"
 }
 
 _get_worktree() {
@@ -261,6 +321,132 @@ cmd_merge() {
   fi
 }
 
+cmd_gen_prompt() {
+  local task_id="${1:-}" task_name="${2:-}" completion_cond="${3:-}" files="${4:-}" ctx_file="${5:-}"
+  [[ -z "$task_id" ]] && { wt_error "Usage: gen-prompt <id> <name> <cond> <files> [ctx-file]"; return 1; }
+
+  local context=""
+  if [[ -n "$ctx_file" ]] && [[ -f "$ctx_file" ]]; then
+    context="$(cat "$ctx_file")"
+  fi
+
+  local prompt_file="${PROMPTS_DIR}/${task_id}.md"
+  cat > "$prompt_file" <<PROMPT_EOF
+You are a worker agent executing a specific task in an isolated git worktree.
+
+## Task
+ID: ${task_id}
+Name: ${task_name}
+Completion condition: ${completion_cond}
+Target files: ${files}
+
+## Context
+${context}
+
+## Instructions
+1. Implement the task described above
+2. Follow test-driven development when possible
+3. Run type checks and linting to verify changes
+4. Write result report to /tmp/ralph/results/${task_id}.md:
+
+   Status: DONE / PARTIAL / BLOCKED
+   Files changed:
+     - <path> (created/modified/deleted)
+   Tests:
+     - <test_file>: PASS / FAIL
+   Completion condition: <status>
+   Notes: <any notes>
+
+## Constraints
+- Only modify files within this task's scope
+- Do not modify files outside the listed target files
+- Do not git push
+- Do not git commit (the orchestrator will handle commits via save-all)
+PROMPT_EOF
+  echo "$prompt_file"
+}
+
+cmd_gen_prompt_batch() {
+  local spec_file="${1:-}"
+  [[ -z "$spec_file" ]] && { wt_error "Usage: gen-prompt-batch <task-spec.json>"; return 1; }
+  [[ -f "$spec_file" ]] || { wt_error "Spec file not found: $spec_file"; return 1; }
+
+  local count
+  count="$(jq 'length' "$spec_file")"
+  local i=0
+  while [[ "$i" -lt "$count" ]]; do
+    local task_id task_name completion_cond files ctx_file
+    task_id="$(jq -r ".[$i].id" "$spec_file")"
+    task_name="$(jq -r ".[$i].name" "$spec_file")"
+    completion_cond="$(jq -r ".[$i].completion_condition" "$spec_file")"
+    files="$(jq -r ".[$i].files" "$spec_file")"
+    ctx_file="$(jq -r ".[$i].context_file // empty" "$spec_file")"
+    cmd_gen_prompt "$task_id" "$task_name" "$completion_cond" "$files" "$ctx_file"
+    i=$((i + 1))
+  done
+  wt_success "Generated $count prompts"
+}
+
+cmd_save_all() {
+  local errors=0
+  for worker_file in "$WORKERS_DIR"/*.json; do
+    [[ -f "$worker_file" ]] || continue
+    local tid
+    tid="$(jq -r '.task_id' "$worker_file")"
+    cmd_save "$tid" || errors=$((errors + 1))
+  done
+  if [[ "$errors" -gt 0 ]]; then
+    wt_error "save-all: $errors failures"
+    return 1
+  fi
+  wt_success "save-all: all workers saved"
+}
+
+cmd_merge_all() {
+  local errors=0
+  local merged=0
+  if [[ $# -gt 0 ]]; then
+    # 指定タスクのみマージ
+    for tid in "$@"; do
+      if cmd_merge "$tid"; then
+        merged=$((merged + 1))
+      else
+        errors=$((errors + 1))
+      fi
+    done
+  else
+    # 全ワーカーマージ
+    for worker_file in "$WORKERS_DIR"/*.json; do
+      [[ -f "$worker_file" ]] || continue
+      local tid
+      tid="$(jq -r '.task_id' "$worker_file")"
+      if cmd_merge "$tid"; then
+        merged=$((merged + 1))
+      else
+        errors=$((errors + 1))
+      fi
+    done
+  fi
+  wt_info "merge-all: $merged merged, $errors failed"
+  [[ "$errors" -eq 0 ]]
+}
+
+cmd_results() {
+  for worker_file in "$WORKERS_DIR"/*.json; do
+    [[ -f "$worker_file" ]] || continue
+    local tid
+    tid="$(jq -r '.task_id' "$worker_file")"
+    local result_file="${RESULTS_DIR}/${tid}.md"
+    echo "=== ${tid} ==="
+    if [[ -f "$result_file" ]]; then
+      cat "$result_file"
+    else
+      echo "(no result file)"
+    fi
+    echo ""
+  done
+}
+
 cmd_cleanup() {
   local task_id="${1:-}"
   [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate.sh cleanup <task-id>"; return 1; }
@@ -268,6 +454,7 @@ cmd_cleanup() {
   wt_check_git || return 1
   wt_delete "ralph/${task_id}" || true
   rm -f "${WORKERS_DIR}/${task_id}.json"
+  _cleanup_orphaned_branches
   wt_info "Cleaned up worker: $task_id"
 }
 
@@ -281,6 +468,7 @@ cmd_cleanup_all() {
     wt_delete "ralph/${tid}" 2>/dev/null || true
   done
 
+  _cleanup_orphaned_branches
   rm -rf "$WORKERS_DIR"
   wt_info "Cleaned up all workers"
   wt_info "Results preserved in: $RESULTS_DIR"
@@ -289,27 +477,42 @@ cmd_cleanup_all() {
 # --- Main ---
 
 case "${1:-}" in
-  init)        cmd_init ;;
-  launch)      shift; cmd_launch "$@" ;;
-  status)      cmd_status "${2:-}" ;;
-  poll)        shift; cmd_poll "$@" ;;
-  save)        cmd_save "${2:-}" ;;
-  merge)       cmd_merge "${2:-}" ;;
-  cleanup)     cmd_cleanup "${2:-}" ;;
-  cleanup-all) cmd_cleanup_all ;;
+  init)              shift; cmd_init "$@" ;;
+  launch)            shift; cmd_launch "$@" ;;
+  status)            shift; cmd_status "$@" ;;
+  save)              cmd_save "${2:-}" ;;
+  save-all)          cmd_save_all ;;
+  merge)             cmd_merge "${2:-}" ;;
+  merge-all)         shift; cmd_merge_all "$@" ;;
+  gen-prompt)        shift; cmd_gen_prompt "$@" ;;
+  gen-prompt-batch)  cmd_gen_prompt_batch "${2:-}" ;;
+  results)           cmd_results ;;
+  checkpoint)        shift; cmd_checkpoint "$@" ;;
+  checkpoint-read)   cmd_checkpoint_read ;;
+  checkpoint-clear)  cmd_checkpoint_clear ;;
+  cleanup)           cmd_cleanup "${2:-}" ;;
+  cleanup-all)       cmd_cleanup_all ;;
   help|*)
     cat <<EOF
 ralph-orchestrate.sh - Ralph worker lifecycle management
 
 Usage:
-  ralph-orchestrate.sh init                              Initialize work directories
+  ralph-orchestrate.sh init [--force]                    Initialize work directories
   ralph-orchestrate.sh launch <task-id> <prompt-file> [--model MODEL]
                                                          Launch worker in tmux window
-  ralph-orchestrate.sh status [task-id]                  Check worker status
-  ralph-orchestrate.sh poll [--interval N] [--timeout N] [--no-timeout]
-                                                         Wait for all workers
+  ralph-orchestrate.sh status [--json] [--wait N] [task-id]
+                                                         Check worker status
   ralph-orchestrate.sh save <task-id>                    Save worker changes as patch + commit
+  ralph-orchestrate.sh save-all                          Save all workers
   ralph-orchestrate.sh merge <task-id>                   Apply saved patch to current branch
+  ralph-orchestrate.sh merge-all [task-id...]            Merge specified (or all) workers
+  ralph-orchestrate.sh gen-prompt <id> <name> <cond> <files> [ctx-file]
+                                                         Generate prompt from template
+  ralph-orchestrate.sh gen-prompt-batch <spec.json>      Generate all prompts from JSON
+  ralph-orchestrate.sh results                           Print all result files
+  ralph-orchestrate.sh checkpoint <phase> [json-data]    Set checkpoint
+  ralph-orchestrate.sh checkpoint-read                   Read checkpoint (or {"phase":"none"})
+  ralph-orchestrate.sh checkpoint-clear                  Clear checkpoint
   ralph-orchestrate.sh cleanup <task-id>                 Remove worker worktree
   ralph-orchestrate.sh cleanup-all                       Remove all worker worktrees
 EOF
