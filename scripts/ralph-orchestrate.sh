@@ -62,10 +62,13 @@ cmd_launch() {
 
   # Build the command to run in the worker window
   # claude (TUI mode) shows interactive progress visible in tmux
-  # Exit code is written to .status file for poll detection
+  # --dangerously-skip-permissions: worktree has no .claude/settings.json,
+  #   TUI would block on every tool call without this flag
+  # Completion detection: worker writes .status file per prompt instructions
+  #   (TUI does not auto-exit, so shell-side exit code capture is not viable)
   local prompt_abs
   prompt_abs="$(cd "$(dirname "$prompt_file")" && pwd)/$(basename "$prompt_file")"
-  local cmd="claude \"\$(cat '${prompt_abs}')\" --model ${model}; echo \$? > '${status_file}'"
+  local cmd="claude \"\$(cat '${prompt_abs}')\" --model ${model} --dangerously-skip-permissions"
 
   # Split window: left=review, right=claude (worker)
   # pane ID で直接ターゲットする (pane-base-index に依存しない)
