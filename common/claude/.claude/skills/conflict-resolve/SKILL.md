@@ -322,12 +322,22 @@ rebase が全コミット完了した後に実行する。
 
 ```bash
 # 1. .git/info/attributes をクリーンアップ
-sed -i '' '/merge=conflict-driver/d' .git/info/attributes
-sed -i '' '/merge=ours/d' .git/info/attributes
+sed -i '/merge=conflict-driver/d' .git/info/attributes
+sed -i '/merge=ours/d' .git/info/attributes
 
-# 2. 検証 (Step 7)
-# 3. rerere 記録
-# 4. 完了報告 (Step 8 の形式)
+# 2. stale REBASE_HEAD のクリーンアップ
+# git の rebase 完了処理で REBASE_HEAD pseudo-ref の削除が漏れることがある
+# (custom merge driver + 手動解決の組み合わせで発生する edge case)
+GIT_DIR="$(git rev-parse --git-dir)"
+if [[ -f "${GIT_DIR}/REBASE_HEAD" ]] && \
+   [[ ! -d "${GIT_DIR}/rebase-merge" ]] && \
+   [[ ! -d "${GIT_DIR}/rebase-apply" ]]; then
+  rm -f "${GIT_DIR}/REBASE_HEAD"
+fi
+
+# 3. 検証 (Step 7)
+# 4. rerere 記録
+# 5. 完了報告 (Step 8 の形式)
 ```
 
 `git range-diff` の活用:
