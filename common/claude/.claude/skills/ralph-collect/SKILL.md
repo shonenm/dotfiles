@@ -25,7 +25,7 @@ allowed-tools: Bash, Read
 
 使用例:
 ```
-/ralph-collect send T-1 "PRを作成して。タイトル: feat: parseCompositeArray shared utility"
+/ralph-collect send T-1 "変更のサマリーを出力して"
 /ralph-collect send T-2 "この関数のエッジケースのテストを追加して"
 /ralph-collect send T-3 "git diff を見せて"
 ```

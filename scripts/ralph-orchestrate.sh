@@ -119,14 +119,13 @@ cmd_launch() {
     wait_elapsed=$((wait_elapsed + 1))
     local pane_content
     pane_content="$(tmux capture-pane -t "$claude_pane" -p 2>/dev/null || true)"
-    # Detect claude TUI ready: prompt indicator ">" or "tips" welcome screen
-    if echo "$pane_content" | grep -qE '^\s*>|^╭|tips'; then
+    # Detect claude TUI ready: prompt indicator (❯ or >) or welcome screen
+    if echo "$pane_content" | grep -qE '❯|^\s*>|^╭|tips'; then
       break
     fi
   done
   if [[ "$wait_elapsed" -ge "$wait_timeout" ]]; then
-    wt_error "Timeout waiting for claude TUI to initialize in $claude_pane"
-    return 1
+    wt_info "Timeout waiting for claude TUI to initialize in $claude_pane (continuing anyway)"
   fi
 
   # Send /ralph with prompt file path (ralph will Read the file)
@@ -311,8 +310,8 @@ cmd_save() {
   local worktree
   worktree="$(_get_worktree "$task_id")" || return 1
 
-  # Stage all changes (including untracked files)
-  git -C "$worktree" add -A
+  # Stage tracked files only (avoid .venv symlinks and other untracked artifacts)
+  git -C "$worktree" add -u
 
   # Save patch of all staged changes
   local patch_file="${RESULTS_DIR}/${task_id}.patch"

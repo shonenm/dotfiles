@@ -147,7 +147,7 @@ gen-prompt テンプレートには完了条件のみ記載すること。RALPH_
 
 次のステップはユーザーが判断する:
 - tmux window で各 worker の diff を直接確認
-- `/ralph-collect send T-1 "PRを作成して"` で worker に指示
+- `/ralph-collect send T-1 "変更のサマリーを出力して"` で worker に指示
 - `/ralph-collect save-all` で変更を保存
 - `/ralph-cleanup` で後片付け
 
