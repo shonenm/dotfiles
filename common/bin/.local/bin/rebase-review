@@ -10,10 +10,16 @@ if ! git rev-parse --is-inside-work-tree &>/dev/null; then
   exit 1
 fi
 
-if git rev-parse --verify REBASE_HEAD &>/dev/null; then
-  echo "Error: Rebase is still in progress (REBASE_HEAD exists)." >&2
+GIT_DIR="$(git rev-parse --git-dir)"
+if [[ -d "${GIT_DIR}/rebase-merge" || -d "${GIT_DIR}/rebase-apply" ]]; then
+  echo "Error: Rebase is still in progress." >&2
   echo "Complete or abort the rebase first." >&2
   exit 1
+fi
+# Clean up stale REBASE_HEAD left by git after rebase completion
+if [[ -f "${GIT_DIR}/REBASE_HEAD" ]]; then
+  echo "Warning: Removing stale REBASE_HEAD (rebase already completed)." >&2
+  rm -f "${GIT_DIR}/REBASE_HEAD"
 fi
 
 if ! git rev-parse --verify ORIG_HEAD &>/dev/null; then
