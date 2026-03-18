@@ -3,7 +3,7 @@ name: ralph-cleanup
 description: ralph-parallel で作成された worktree、tmux window、ブランチを削除します。
 user-invocable: true
 disable-model-invocation: true
-arguments: "[--keep-results] [task-id...]"
+arguments: "<options>"
 allowed-tools: Bash
 ---
 
