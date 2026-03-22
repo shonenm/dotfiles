@@ -210,23 +210,23 @@ Notes: ...
 ```
 Phase 1: /ralph-parallel (implementation)
   |
-  +-- ralph-orchestrate.sh init --force
-  +-- ralph-orchestrate.sh gen-prompt-batch task-spec.json
-  +-- ralph-orchestrate.sh launch T-1 ... --model sonnet
+  +-- ralph-orchestrate init --force
+  +-- ralph-orchestrate gen-prompt-batch task-spec.json
+  +-- ralph-orchestrate launch T-1 ... --model sonnet
   |     +-- wt_create ralph/T-1      # git worktree + tmux window via wt-lib.sh
   |     +-- split-window -h          # Left: nvim (review), Right: claude TUI
   |     +-- tmux send-keys "/ralph 'Read prompt.md ...' --skip-plan"
-  +-- ralph-orchestrate.sh status --json --wait 20  (loop until all_done)
-  +-- ralph-orchestrate.sh results   # Output summary, STOP
+  +-- ralph-orchestrate status --json --wait 20  (loop until all_done)
+  +-- ralph-orchestrate results   # Output summary, STOP
   |
   [Human reviews diffs in tmux windows]
   |
 Phase 2: /ralph-collect (post-review)
-  +-- ralph-orchestrate.sh send T-1 "PRを作成して"
-  +-- ralph-orchestrate.sh save-all
+  +-- ralph-orchestrate send T-1 "PRを作成して"
+  +-- ralph-orchestrate save-all
   |
 Phase 3: /ralph-cleanup
-  +-- ralph-orchestrate.sh cleanup-all [--keep-results]
+  +-- ralph-orchestrate cleanup-all [--keep-results]
 ```
 
 Key design choices:
@@ -273,9 +273,12 @@ dotfiles/
 |       +-- ralph-worker/ralph-worker.md
 +-- scripts/
 |   +-- wt-lib.sh                      # Worktree + tmux window management library
-|   +-- ralph-orchestrate.sh           # Parallel worker lifecycle management
+|   +-- ralph-lib.sh                   # Shared utilities (permissions setup)
+|   +-- ralph-orchestrate           # Parallel worker lifecycle management
+|   +-- ralph-crew                  # Persistent worker management with periodic dispatch
 +-- docs/
     +-- ralph.md                       # This documentation
+    +-- ralph-crew.md                  # Crew system documentation
 ```
 
 `~/.claude/settings.json` contains the SessionStart hook registration.
@@ -304,7 +307,7 @@ dotfiles/
 - `/ralph-plan` defense: `allowed-tools` (hide Edit/MultiEdit, Write は Phase 3 状態ファイル生成のみ許可) + prompt reinforcement. PreToolUse hook は skill frontmatter hooks がグローバルに読み込まれる制約により不採用
 - Backpressure auto-fix: eslint/prettier/ruff fix before reporting remaining errors
 - Parallel execution max 4 workers: resource constraint. Workers launched via `/ralph` skill in tmux panes for observability. No `--dangerously-skip-permissions` (avoids "Are you sure?" confirmation; Stop hook provides autonomous loop instead)
-- `wt-lib.sh` extracted from `wt` CLI: shared library for worktree+tmux management, used by both `wt` command and `ralph-orchestrate.sh`
+- `wt-lib.sh` extracted from `wt` CLI: shared library for worktree+tmux management, used by both `wt` command and `ralph-orchestrate`
 - Parallel results via `/tmp/ralph/results/`: prevents orchestrator context bloat. Orchestrator reads 1-line summaries, not full worker output
 - Model mixing: orchestrator uses session model (Opus), workers and reviewer use sonnet
 - 3-skill phased parallel model: `/ralph-parallel` (implementation) → human review → `/ralph-collect` (save/send) → `/ralph-cleanup`. Human review is mandatory between implementation and merge

@@ -38,7 +38,7 @@ Step 4-5 は一切中断せず完了まで走ること。
 ### Step 0: チェックポイント確認
 
 ```bash
-~/dotfiles/scripts/ralph-orchestrate.sh checkpoint-read
+ralph-orchestrate checkpoint-read
 ```
 
 phase が `none` 以外であれば途中再開。該当フェーズの次のステップから再開する。
@@ -56,16 +56,16 @@ phase が `none` 以外であれば途中再開。該当フェーズの次のス
 
 ```bash
 # 初回起動
-~/dotfiles/scripts/ralph-orchestrate.sh init --force
+ralph-orchestrate init --force
 
 # 途中再開時
-~/dotfiles/scripts/ralph-orchestrate.sh init
+ralph-orchestrate init
 ```
 
 チェックポイント設定:
 
 ```bash
-~/dotfiles/scripts/ralph-orchestrate.sh checkpoint initialized
+ralph-orchestrate checkpoint initialized
 ```
 
 ### Step 3: プロンプト一括生成
@@ -80,7 +80,7 @@ phase が `none` 以外であれば途中再開。該当フェーズの次のス
 #   ...
 # ]
 
-~/dotfiles/scripts/ralph-orchestrate.sh gen-prompt-batch /tmp/ralph/task-spec.json
+ralph-orchestrate gen-prompt-batch /tmp/ralph/task-spec.json
 ```
 
 gen-prompt テンプレートには完了条件のみ記載すること。RALPH_COMPLETE は ralph の SKILL.md (Step 6) が自動出力するため、テンプレートでは触れない。
@@ -88,7 +88,7 @@ gen-prompt テンプレートには完了条件のみ記載すること。RALPH_
 チェックポイント設定:
 
 ```bash
-~/dotfiles/scripts/ralph-orchestrate.sh checkpoint prompts_generated
+ralph-orchestrate checkpoint prompts_generated
 ```
 
 ### Step 4: 並列起動
@@ -96,7 +96,7 @@ gen-prompt テンプレートには完了条件のみ記載すること。RALPH_
 実行可能タスク (deps が全て完了済み) を最大4つまで起動:
 
 ```bash
-~/dotfiles/scripts/ralph-orchestrate.sh launch <task-id> /tmp/ralph/prompts/<task-id>.md --model sonnet
+ralph-orchestrate launch <task-id> /tmp/ralph/prompts/<task-id>.md --model sonnet
 ```
 
 各起動により:
@@ -109,7 +109,7 @@ gen-prompt テンプレートには完了条件のみ記載すること。RALPH_
 チェックポイント設定:
 
 ```bash
-~/dotfiles/scripts/ralph-orchestrate.sh checkpoint launched
+ralph-orchestrate checkpoint launched
 ```
 
 ### Step 5: 完了待機 (status --wait ループ)
@@ -117,7 +117,7 @@ gen-prompt テンプレートには完了条件のみ記載すること。RALPH_
 以下のループを全ワーカーが完了するまで繰り返す:
 
 ```bash
-~/dotfiles/scripts/ralph-orchestrate.sh status --json --wait 20
+ralph-orchestrate status --json --wait 20
 ```
 
 - `all_done` が `true` になるまで繰り返す
@@ -128,13 +128,13 @@ gen-prompt テンプレートには完了条件のみ記載すること。RALPH_
 チェックポイント設定:
 
 ```bash
-~/dotfiles/scripts/ralph-orchestrate.sh checkpoint workers_done
+ralph-orchestrate checkpoint workers_done
 ```
 
 ### Step 6: 結果サマリー出力して停止
 
 ```bash
-~/dotfiles/scripts/ralph-orchestrate.sh results
+ralph-orchestrate results
 ```
 
 全結果を stdout で一括取得し、以下の情報をユーザーに報告して停止する:
@@ -161,3 +161,4 @@ gen-prompt テンプレートには完了条件のみ記載すること。RALPH_
 - 完了判定は tmux capture-pane (`-S -`) で RALPH_COMPLETE を検出
 - pane 消失 + 結果ファイルなし = dead (クラッシュ or 誤操作)
 - worktree も tmux window も片付けない。ユーザーが確認できるよう残す
+- worker への指示は全て `ralph-orchestrate send` 経由で tmux の Claude TUI に送ること。Task ツール (ralph-worker subagent) へのフォールバックは禁止。Agent サブプロセスは tmux 上に表示されず、ユーザーが進捗を追えなくなる

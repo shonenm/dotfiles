@@ -21,17 +21,17 @@ allowed-tools: Bash
 
 ## 手順
 
-引数をパースし、`ralph-orchestrate.sh cleanup-all` を実行する。
+引数をパースし、`ralph-orchestrate cleanup-all` を実行する。
 
 ```bash
 # 全削除
-~/dotfiles/scripts/ralph-orchestrate.sh cleanup-all
+ralph-orchestrate cleanup-all
 
 # results 保持
-~/dotfiles/scripts/ralph-orchestrate.sh cleanup-all --keep-results
+ralph-orchestrate cleanup-all --keep-results
 
 # 指定タスクのみ
-~/dotfiles/scripts/ralph-orchestrate.sh cleanup-all T-1 T-3
+ralph-orchestrate cleanup-all T-1 T-3
 ```
 
 完了後、削除されたリソースをユーザーに報告する。
