@@ -68,7 +68,7 @@ gh issue create --title "<title>" --body "<body>" [--label "<label1>,<label2>"]
 
 1. デフォルトブランチを検出:
    ```bash
-   default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+   default_branch=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
    ```
 2. デフォルトブランチに移動して最新を取得:
    ```bash

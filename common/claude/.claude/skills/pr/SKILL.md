@@ -37,7 +37,7 @@ arguments: "<options>"
 2. ベースブランチの決定と現在のブランチの確認:
    ```bash
    # --base 指定があればそれを使用、なければデフォルトブランチを検出
-   base_branch=${BASE_ARG:-$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")}
+   base_branch=${BASE_ARG:-$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')}
    current_branch=$(git branch --show-current)
    ```
    ベースブランチ上なら「作業ブランチ上で実行してください」とエラー
@@ -68,6 +68,15 @@ issue_num=$(echo "$current_branch" | grep -oE '^[0-9]+')
 - `git diff --stat ${base_branch}..HEAD` - 変更ファイル統計
 - `git diff ${base_branch}..HEAD` - 全差分
 - Issue がある場合: `gh issue view <N> --json title,body,labels` - Issue 情報
+- PR テンプレートの検出:
+  ```bash
+  # 以下の順で探索し、最初に見つかったものを使用
+  # 1. .github/pull_request_template.md
+  # 2. .github/PULL_REQUEST_TEMPLATE.md
+  # 3. .github/PULL_REQUEST_TEMPLATE/ ディレクトリ内の .md ファイル (デフォルトテンプレート)
+  # 4. docs/pull_request_template.md
+  # 5. pull_request_template.md (リポジトリルート)
+  ```
 
 ### 4. PR タイトル・本文の生成
 
@@ -75,20 +84,22 @@ issue_num=$(echo "$current_branch" | grep -oE '^[0-9]+')
 
 - タイトル: 70文字以内、変更の要約 (Issue がある場合は Issue タイトルも参考にする)
 - 本文:
-  ```markdown
-  ## Summary
-  <変更の概要 1-3行>
+  - PR テンプレートが見つかった場合: テンプレートの構造 (セクション見出し、チェックリスト等) を維持し、各セクションを変更内容に基づいて埋める
+  - テンプレートがない場合のデフォルト構成:
+    ```markdown
+    ## Summary
+    <変更の概要 1-3行>
 
-  ## Changes
-  - <変更点1>
-  - <変更点2>
+    ## Changes
+    - <変更点1>
+    - <変更点2>
 
-  ## Test plan
-  - [ ] <テスト計画1>
-  - [ ] <テスト計画2>
+    ## Test plan
+    - [ ] <テスト計画1>
+    - [ ] <テスト計画2>
 
-  Closes #<issue_number>
-  ```
+    Closes #<issue_number>
+    ```
   - Issue がない場合は `Closes #N` 行を省略
 
 生成した内容をユーザーに提示し、確認を求める。
