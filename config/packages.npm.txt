@@ -4,3 +4,6 @@
 @anthropic-ai/claude-code
 @openai/codex
 @google/gemini-cli
+
+# Neovim dependencies
+@mermaid-js/mermaid-cli
