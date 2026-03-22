@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ralph-orchestrate.sh - Ralph worker lifecycle management
+# ralph-orchestrate - Ralph worker lifecycle management
 #
 # Uses wt-lib.sh to create worktrees + tmux windows for each worker,
 # launches independent claude processes, and polls for completion.
@@ -7,6 +7,8 @@ set -euo pipefail
 
 # shellcheck source=wt-lib.sh
 source "$(dirname "$0")/wt-lib.sh"
+# shellcheck source=ralph-lib.sh
+source "$(dirname "$0")/ralph-lib.sh"
 
 readonly RESULTS_DIR="/tmp/ralph/results"
 readonly WORKERS_DIR="/tmp/ralph/workers"
@@ -26,6 +28,15 @@ _cleanup_orphaned_branches() {
       git branch -D "$branch" 2>/dev/null && wt_info "Deleted orphaned branch: $branch"
     fi
   done < <(git branch --list 'ralph/*' | sed 's/^[* ]*//')
+}
+
+# --- Worker settings ---
+# Uses ralph_setup_worker_settings from ralph-lib.sh
+
+_setup_worker_settings() {
+  local worktree_path="$1"
+  ralph_setup_worker_settings "$worktree_path"
+  wt_info "Worker settings created: ${worktree_path}/.claude/settings.local.json"
 }
 
 # --- Subcommands ---
@@ -78,7 +89,7 @@ cmd_launch() {
     esac
   done
 
-  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate.sh launch <task-id> <prompt-file> [--model MODEL]"; return 1; }
+  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate launch <task-id> <prompt-file> [--model MODEL]"; return 1; }
   [[ -z "$prompt_file" ]] && { wt_error "prompt-file is required"; return 1; }
   [[ -f "$prompt_file" ]] || { wt_error "prompt file not found: $prompt_file"; return 1; }
 
@@ -95,6 +106,9 @@ cmd_launch() {
 
   local prompt_abs
   prompt_abs="$(cd "$(dirname "$prompt_file")" && pwd)/$(basename "$prompt_file")"
+
+  # Setup worker permissions in worktree
+  _setup_worker_settings "$worktree_path"
 
   # Split window: left=review, right=claude (worker)
   local review_pane
@@ -305,7 +319,7 @@ _get_worktree() {
 
 cmd_save() {
   local task_id="${1:-}"
-  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate.sh save <task-id>"; return 1; }
+  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate save <task-id>"; return 1; }
 
   local worktree
   worktree="$(_get_worktree "$task_id")" || return 1
@@ -331,7 +345,7 @@ cmd_save() {
 
 cmd_merge() {
   local task_id="${1:-}"
-  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate.sh merge <task-id>"; return 1; }
+  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate merge <task-id>"; return 1; }
 
   local patch_file="${RESULTS_DIR}/${task_id}.patch"
   [[ -f "$patch_file" ]] || { wt_error "No patch file for $task_id: $patch_file"; return 1; }
@@ -432,7 +446,7 @@ cmd_save_all() {
 cmd_send() {
   local task_id="${1:-}"
   local message="${2:-}"
-  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate.sh send <task-id> <message>"; return 1; }
+  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate send <task-id> <message>"; return 1; }
   [[ -z "$message" ]] && { wt_error "message is required"; return 1; }
 
   local worker_file="${WORKERS_DIR}/${task_id}.json"
@@ -469,7 +483,7 @@ cmd_results() {
 
 cmd_cleanup() {
   local task_id="${1:-}"
-  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate.sh cleanup <task-id>"; return 1; }
+  [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate cleanup <task-id>"; return 1; }
 
   wt_check_git || return 1
   wt_delete "ralph/${task_id}" || true
@@ -540,27 +554,27 @@ case "${1:-}" in
   cleanup-all)       shift; cmd_cleanup_all "$@" ;;
   help|*)
     cat <<EOF
-ralph-orchestrate.sh - Ralph worker lifecycle management
+ralph-orchestrate - Ralph worker lifecycle management
 
 Usage:
-  ralph-orchestrate.sh init [--force]                    Initialize work directories
-  ralph-orchestrate.sh launch <task-id> <prompt-file> [--model MODEL]
+  ralph-orchestrate init [--force]                    Initialize work directories
+  ralph-orchestrate launch <task-id> <prompt-file> [--model MODEL]
                                                          Launch worker in tmux window
-  ralph-orchestrate.sh status [--json] [--wait N] [task-id]
+  ralph-orchestrate status [--json] [--wait N] [task-id]
                                                          Check worker status
-  ralph-orchestrate.sh send <task-id> <message>          Send message to worker pane
-  ralph-orchestrate.sh save <task-id>                    Save worker changes as patch + commit
-  ralph-orchestrate.sh save-all                          Save all workers
-  ralph-orchestrate.sh merge <task-id>                   Apply saved patch to current branch
-  ralph-orchestrate.sh gen-prompt <id> <name> <cond> <files> [ctx-file]
+  ralph-orchestrate send <task-id> <message>          Send message to worker pane
+  ralph-orchestrate save <task-id>                    Save worker changes as patch + commit
+  ralph-orchestrate save-all                          Save all workers
+  ralph-orchestrate merge <task-id>                   Apply saved patch to current branch
+  ralph-orchestrate gen-prompt <id> <name> <cond> <files> [ctx-file]
                                                          Generate prompt from template
-  ralph-orchestrate.sh gen-prompt-batch <spec.json>      Generate all prompts from JSON
-  ralph-orchestrate.sh results                           Print all result files
-  ralph-orchestrate.sh checkpoint <phase> [json-data]    Set checkpoint
-  ralph-orchestrate.sh checkpoint-read                   Read checkpoint (or {"phase":"none"})
-  ralph-orchestrate.sh checkpoint-clear                  Clear checkpoint
-  ralph-orchestrate.sh cleanup <task-id>                 Remove worker worktree
-  ralph-orchestrate.sh cleanup-all [--keep-results] [task-id...]
+  ralph-orchestrate gen-prompt-batch <spec.json>      Generate all prompts from JSON
+  ralph-orchestrate results                           Print all result files
+  ralph-orchestrate checkpoint <phase> [json-data]    Set checkpoint
+  ralph-orchestrate checkpoint-read                   Read checkpoint (or {"phase":"none"})
+  ralph-orchestrate checkpoint-clear                  Clear checkpoint
+  ralph-orchestrate cleanup <task-id>                 Remove worker worktree
+  ralph-orchestrate cleanup-all [--keep-results] [task-id...]
                                                          Remove all (or specified) worker worktrees
 EOF
     ;;

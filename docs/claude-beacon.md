@@ -290,12 +290,12 @@ claude-status.sh clear-tmux <tmux_session> <tmux_window_index>  # Clear tmux win
 claude-status.sh cleanup          # Delete items not updated for 1+ hours
 ```
 
-### scripts/beacon.sh
+### scripts/beacon
 
 Manually registers the current git repository to an Aerospace workspace.
 
 ```bash
-beacon.sh <workspace_number>
+beacon <workspace_number>
 ```
 
 Saves mapping to `~/.local/share/claude/workspace_map.json`. This mapping is used by `ai-notify.sh` to determine which workspace to notify.
@@ -607,7 +607,7 @@ Commit message format: `prefix(scope): description`
 
 ```bash
 # Register current git repository to workspace 3
-~/dotfiles/scripts/beacon.sh 3
+beacon 3
 
 # Check current mappings
 cat ~/.local/share/claude/workspace_map.json | jq .
@@ -735,7 +735,7 @@ dotfiles/
 │   ├── claude-status.sh            # State management (workspace-based)
 │   ├── claude-status-watch.sh      # Remote monitoring (SSH + inotifywait)
 │   ├── claude-status-local-watch.sh # Local container monitoring (launchd WatchPaths)
-│   ├── beacon.sh                   # Manual workspace registration
+│   ├── beacon                      # Manual workspace registration
 │   ├── tmux-claude-badge.sh        # tmux badge display
 │   └── tmux-claude-focus.sh        # tmux focus processing
 ├── common/zsh/.zshrc.common        # _claude_context, dexec, rssh function definitions
