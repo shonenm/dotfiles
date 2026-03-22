@@ -146,7 +146,9 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 
 | プラグイン         | 役割                                                    |
 | ------------------ | ------------------------------------------------------- |
-| snacks.nvim (image)| ターミナル内画像表示（Kitty Graphics Protocol、SSH対応）|
+| snacks.nvim (image)| ターミナル内画像表示（Kitty Graphics Protocol、SSH対応、Mermaid 図レンダリング）|
+
+Mermaid 図レンダリングには `mmdc` (`@mermaid-js/mermaid-cli`) が必要。Markdown 内の `` ```mermaid `` コードブロックにカーソルを置くとフローティングウィンドウに図が表示される。
 
 ### テスト
 
