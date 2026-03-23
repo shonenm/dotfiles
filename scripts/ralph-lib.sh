@@ -36,6 +36,7 @@ readonly RALPH_DEFAULT_PERMISSIONS='{
     "Bash(shellcheck:*)",
     "Bash(chmod:*)",
     "Bash(stow:*)",
+    "Bash(git worktree:*)",
     "WebSearch"
   ],
   "deny": [
