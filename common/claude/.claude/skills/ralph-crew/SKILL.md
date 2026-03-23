@@ -37,8 +37,9 @@ ralph-crew <引数をそのまま渡す>
 ### 1. 設定ファイルを作成
 
 ```bash
-mkdir -p ~/.config/ralph-crew
-cp ~/dotfiles/templates/crew.example.json ~/.config/ralph-crew/crew.json
+# プロジェクトディレクトリで実行
+mkdir -p .claude
+cp ~/dotfiles/templates/crew.example.json .claude/crew.json
 # crew.json を編集: workers, tasks, schedule を設定
 ```
 
@@ -54,8 +55,9 @@ ralph-crew init
 ```bash
 # plist テンプレートをコピーしてプレースホルダーを置換
 # __INTERVAL__ は秒数 (例: 900 = 15分, 1800 = 30分, 3600 = 1時間)
+# __PROJECT__ はプロジェクトの絶対パス
 cp ~/dotfiles/templates/com.user.ralph-crew.plist ~/Library/LaunchAgents/
-sed -i '' "s|__HOME__|$HOME|g; s|__INTERVAL__|900|g" ~/Library/LaunchAgents/com.user.ralph-crew.plist
+sed -i '' "s|__HOME__|$HOME|g; s|__PROJECT__|/path/to/project|g; s|__INTERVAL__|900|g" ~/Library/LaunchAgents/com.user.ralph-crew.plist
 
 # 登録
 launchctl load ~/Library/LaunchAgents/com.user.ralph-crew.plist
@@ -69,11 +71,11 @@ ralph-crew dispatch
 
 ## 設定ファイル構造
 
-`~/.config/ralph-crew/crew.json`:
+`<project>/.claude/crew.json` (プロジェクトディレクトリから自動導出):
 
-- `tmux_session`: tmux セッション名 (default: "ralph-crew")
-- `state_dir`: ランタイム状態ディレクトリ (default: "/tmp/ralph-crew")
-- `workers[]`: ワーカー定義 (id, project_dir, model, mcp_config, system_prompt, permissions)
+- `tmux_session`: tmux セッション名 (default: `crew-<project-name>`)
+- `state_dir`: ランタイム状態ディレクトリ (default: `/tmp/ralph-crew/<project-name>`)
+- `workers[]`: ワーカー定義 (id, model, mcp_config, system_prompt, permissions)
 - `tasks[]`: タスク定義 (id, pattern, worker_id, action, prompt, schedule)
   - `action`: `"fix"` (デフォルト: worktree で修正 -> PR) または `"issue-only"` (報告のみ)
 

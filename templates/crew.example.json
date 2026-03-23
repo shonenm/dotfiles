@@ -1,13 +1,9 @@
 {
-  "tmux_session": "ralph-crew",
-  "state_dir": "/tmp/ralph-crew",
   "workers": [
     {
-      "id": "qa-frontend",
-      "project_dir": "/path/to/project",
+      "id": "qa",
       "model": "sonnet",
-      "mcp_config": null,
-      "system_prompt": "You are a QA engineer focused on the frontend module.",
+      "system_prompt": "You are a QA engineer. Run checks, fix issues or report them.",
       "permissions": {
         "allow": [
           "Bash(npm:*)",
@@ -27,7 +23,7 @@
     {
       "id": "lint-fix",
       "pattern": "standing",
-      "worker_id": "qa-frontend",
+      "worker_id": "qa",
       "action": "fix",
       "prompt": "Run `npx eslint .` and `npx tsc --noEmit`. If issues found, fix them.",
       "schedule": {
@@ -38,7 +34,7 @@
     {
       "id": "test-watch",
       "pattern": "standing",
-      "worker_id": "qa-frontend",
+      "worker_id": "qa",
       "action": "issue-only",
       "prompt": "Run `npm test`. If any tests fail, analyze failures and create a GitHub issue.",
       "schedule": {
