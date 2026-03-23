@@ -117,6 +117,23 @@ _start_worker() {
     return 1
   fi
 
+  # If worker has fix tasks, adjust permissions: allow git push, deny only force push
+  local has_fix
+  has_fix="$(jq --arg wid "$worker_id" \
+    '[.tasks[] | select(.worker_id == $wid) | .action // "fix" | select(. == "fix")] | length' \
+    "$config_file")"
+  if [[ "$has_fix" -gt 0 ]]; then
+    if [[ -z "$permissions_json" || "$permissions_json" == "null" ]]; then
+      permissions_json="$RALPH_DEFAULT_PERMISSIONS"
+    fi
+    permissions_json="$(echo "$permissions_json" | jq '
+      .deny = [.deny[]? | select(
+        (. == "Bash(git push:*)" or . == "Bash(git push)") | not
+      )] + ["Bash(git push --force:*)", "Bash(git push -f:*)"] |
+      .allow = (.allow + ["Bash(git worktree:*)", "Bash(git push:*)", "Bash(gh pr:*)"]) | .allow |= unique
+    ')"
+  fi
+
   # Create tmux window
   local window_name="crew/${worker_id}"
   if tmux list-windows -t "$TMUX_SESSION" -F '#{window_name}' 2>/dev/null | grep -qxF "$window_name"; then
@@ -206,11 +223,50 @@ _dispatch_task() {
   local task_id="$2"
   local prompt="$3"
   local worker_id="$4"
+  local action="${5:-fix}"
+  local project_dir="${6:-}"
 
-  # Write prompt to file
+  local ts
+  ts="$(date +%Y%m%d-%H%M%S)"
+  local branch="crew/${task_id}-${ts}"
+  local worktree="${STATE_DIR}/fix/${task_id}-${ts}"
+
+  # Build prompt with action mode wrapper
   mkdir -p "${STATE_DIR}/prompts"
   local prompt_file="${STATE_DIR}/prompts/${task_id}.md"
-  printf '%s' "$prompt" > "$prompt_file"
+
+  if [[ "$action" == "issue-only" ]]; then
+    cat > "$prompt_file" <<PROMPT_EOF
+# Task: ${task_id}
+
+${prompt}
+
+## Action: issue-only
+If issues are found, create a GitHub issue with analysis and suggested fix.
+Do not attempt to fix the issues directly.
+If no issues found, report: all checks passed.
+PROMPT_EOF
+  else
+    cat > "$prompt_file" <<PROMPT_EOF
+# Task: ${task_id}
+
+${prompt}
+
+## Action: fix (worktree isolation)
+If issues are found, fix them in an isolated worktree:
+\`\`\`bash
+git worktree add ${worktree} -b ${branch} HEAD
+cd ${worktree}
+# ... fix issues ...
+git add <files> && git commit -m "fix(<scope>): <description>"
+git push -u origin ${branch}
+gh pr create --title "fix(<scope>): <description>" --body "<analysis>"
+cd ${project_dir} && git worktree remove ${worktree}
+\`\`\`
+If auto-fix fails or issues are too complex, create a GitHub issue instead.
+If no issues found, report: all checks passed.
+PROMPT_EOF
+  fi
 
   # Update status to running
   echo "running" > "${STATE_DIR}/workers/${worker_id}.status"
@@ -222,7 +278,7 @@ _dispatch_task() {
   mkdir -p "${STATE_DIR}/dispatch"
   date +%s > "${STATE_DIR}/dispatch/${task_id}.last"
 
-  _log "task=$task_id worker=$worker_id status=dispatched"
+  _log "task=$task_id worker=$worker_id action=$action status=dispatched"
 }
 
 _should_dispatch() {
@@ -347,11 +403,12 @@ cmd_dispatch() {
   local i=0
   local dispatched=0
   while [[ "$i" -lt "$task_count" ]]; do
-    local task_id worker_id prompt interval_minutes
+    local task_id worker_id prompt interval_minutes action
     task_id="$(jq -r ".tasks[$i].id" "$config_file")"
     worker_id="$(jq -r ".tasks[$i].worker_id" "$config_file")"
     prompt="$(jq -r ".tasks[$i].prompt" "$config_file")"
     interval_minutes="$(jq -r ".tasks[$i].schedule.minutes" "$config_file")"
+    action="$(jq -r '.tasks['"$i"'].action // "fix"' "$config_file")"
 
     # Check schedule
     if ! _should_dispatch "$task_id" "$interval_minutes"; then
@@ -366,9 +423,10 @@ cmd_dispatch() {
     case "$status" in
       idle)
         local worker_file="${STATE_DIR}/workers/${worker_id}.json"
-        local pane_id
+        local pane_id project_dir
         pane_id="$(jq -r '.pane_id' "$worker_file")"
-        _dispatch_task "$pane_id" "$task_id" "$prompt" "$worker_id"
+        project_dir="$(jq -r '.project_dir' "$worker_file")"
+        _dispatch_task "$pane_id" "$task_id" "$prompt" "$worker_id" "$action" "$project_dir"
         dispatched=$((dispatched + 1))
         ;;
       running)

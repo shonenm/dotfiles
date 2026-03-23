@@ -16,6 +16,9 @@ ralph-crew dispatch (flock で排他制御)
   |     idle  -> タスク注入 (常にファイル経由 + tmux send-keys)
   |     running -> スキップ
   |     dead  -> 自動再起動 (sliding window で制限)
+  +-- action モードに応じたプロンプト生成
+  |     fix        -> worktree 作成 → 修正 → commit → push → PR
+  |     issue-only -> 問題報告のみ (GitHub issue)
   +-- 実行時刻を記録
   v
 tmux session: "ralph-crew"
@@ -70,6 +73,28 @@ launchctl load ~/Library/LaunchAgents/com.user.ralph-crew.plist
 /ralph-crew teardown
 ```
 
+## Action Modes
+
+タスクの `action` フィールドで検出後の行動を制御する。
+
+| Action | デフォルト | 動作 |
+|--------|-----------|------|
+| `fix` | Yes | 問題検出 → worktree で修正 → commit → push → PR 作成。修正不能なら issue にフォールバック |
+| `issue-only` | No | 問題検出 → GitHub issue 作成のみ。修正は試みない |
+
+### fix モードのワークフロー
+
+```
+1. project_dir でチェック実行 (read-only)
+2. 問題検出
+3. git worktree add /tmp/ralph-crew/fix/<task-id>-<ts> -b crew/<task-id>-<ts> HEAD
+4. worktree 内で修正 → commit → push
+5. gh pr create
+6. worktree 削除、project_dir に戻る
+```
+
+fix モードのワーカーは自動的に git push / worktree 権限が付与される (force push は deny)。
+
 ## Task Patterns
 
 `pattern` フィールドは意味論的な分類。dispatch ロジックは共通 (schedule 評価 -> idle 確認 -> プロンプト注入)。
@@ -103,6 +128,7 @@ Notification hook ベースの状態検出:
   workers/           # {worker_id}.json (pane_id, started, restart_timestamps)
                      # {worker_id}.status (idle / running / unknown)
   dispatch/          # {task_id}.last (最終実行 epoch)
+  fix/               # fix モードの一時 worktree ({task_id}-{timestamp})
   prompts/           # タスクプロンプト一時ファイル (24h TTL で自動削除)
   system-prompts/    # ワーカー system_prompt ファイル
   logs/              # dispatch.log, launchd.out, launchd.err
@@ -133,6 +159,7 @@ Notification hook ベースの状態検出:
       "id": "test-watch",
       "pattern": "standing",     // standing | kb_pull
       "worker_id": "qa-frontend",
+      "action": "fix",           // "fix" (default) | "issue-only"
       "prompt": "Run `npm test`...",
       "schedule": {
         "type": "interval",
@@ -168,7 +195,7 @@ dotfiles/
 - flock 排他制御: launchd の重複発火を防止
 - sliding window 再起動制限: 単純なカウンターではなく時間ベースで判定
 - `max_budget_usd` 非対応: persistent TUI では累積消費で予算到達時にフリーズするため
-- worktree 不使用: crew ワーカーはプロジェクトディレクトリで直接動作
+- fix モードで worktree 分離: チェックは project_dir (read-only)、修正は一時 worktree で実施。ワーカー間の競合を防止
 - ralph-orchestrate と独立: ライフサイクルモデルが異なる (一時的 vs 常駐)
 
 ## TODO
