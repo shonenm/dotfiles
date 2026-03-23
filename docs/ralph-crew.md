@@ -35,27 +35,31 @@ tmux session: "ralph-crew"
 ### セットアップ
 
 ```bash
-# 1. 設定ファイルを作成
-mkdir -p ~/.config/ralph-crew
-cp ~/dotfiles/templates/crew.example.json ~/.config/ralph-crew/crew.json
-# crew.json を編集
+# 1. プロジェクト配下に設定ファイルを作成
+cd /path/to/project
+mkdir -p .claude
+cp ~/dotfiles/templates/crew.example.json .claude/crew.json
+# crew.json を編集: workers, tasks, schedule を設定
 
-# 2. ワーカーを起動
-~/dotfiles/scripts/ralph-crew init
+# 2. ワーカーを起動 (プロジェクトディレクトリで実行)
+ralph-crew init
 
 # 3. 手動ディスパッチ
-~/dotfiles/scripts/ralph-crew dispatch
+ralph-crew dispatch
 
 # 4. 状態確認
-~/dotfiles/scripts/ralph-crew status
+ralph-crew status
 ```
+
+設定ファイルはプロジェクトの `.claude/crew.json` に配置する。プロジェクトディレクトリは config ファイルのパスから自動導出される。`tmux_session` と `state_dir` を省略するとプロジェクト名ベースのデフォルト値が使われる。
 
 ### launchd で定期実行
 
 ```bash
 # __INTERVAL__ は秒数 (例: 900 = 15分, 1800 = 30分, 3600 = 1時間)
+# __PROJECT__ はプロジェクトの絶対パス
 cp ~/dotfiles/templates/com.user.ralph-crew.plist ~/Library/LaunchAgents/
-sed -i '' "s|__HOME__|$HOME|g; s|__INTERVAL__|900|g" ~/Library/LaunchAgents/com.user.ralph-crew.plist
+sed -i '' "s|__HOME__|$HOME|g; s|__PROJECT__|/path/to/project|g; s|__INTERVAL__|900|g" ~/Library/LaunchAgents/com.user.ralph-crew.plist
 
 launchctl load ~/Library/LaunchAgents/com.user.ralph-crew.plist
 ```
@@ -68,8 +72,8 @@ launchctl load ~/Library/LaunchAgents/com.user.ralph-crew.plist
 /ralph-crew init
 /ralph-crew dispatch
 /ralph-crew status
-/ralph-crew send qa-frontend "Run npm test and report results"
-/ralph-crew restart qa-frontend
+/ralph-crew send qa "Run npm test and report results"
+/ralph-crew restart qa
 /ralph-crew teardown
 ```
 
@@ -124,7 +128,7 @@ Notification hook ベースの状態検出:
 ## Runtime Directory
 
 ```
-/tmp/ralph-crew/
+/tmp/ralph-crew/<project-name>/
   workers/           # {worker_id}.json (pane_id, started, restart_timestamps)
                      # {worker_id}.status (idle / running / unknown)
   dispatch/          # {task_id}.last (最終実行 epoch)
@@ -137,14 +141,15 @@ Notification hook ベースの状態検出:
 
 ## Config Schema
 
+配置場所: `<project>/.claude/crew.json`
+
 ```jsonc
 {
-  "tmux_session": "ralph-crew",
-  "state_dir": "/tmp/ralph-crew",
+  // "tmux_session": "crew-<project-name>",  // optional (default: derived from project dir)
+  // "state_dir": "/tmp/ralph-crew/<project-name>",  // optional (default: derived from project dir)
   "workers": [
     {
-      "id": "qa-frontend",
-      "project_dir": "/path/to/project",
+      "id": "qa",
       "model": "sonnet",         // claude model
       "mcp_config": null,        // MCP config file path (for kb_pull pattern)
       "system_prompt": "...",    // append-system-prompt

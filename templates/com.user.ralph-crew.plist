@@ -9,7 +9,7 @@
         <string>__HOME__/dotfiles/scripts/ralph-crew</string>
         <string>dispatch</string>
         <string>--config</string>
-        <string>__HOME__/.config/ralph-crew/crew.json</string>
+        <string>__PROJECT__/.claude/crew.json</string>
     </array>
     <key>EnvironmentVariables</key>
     <dict>

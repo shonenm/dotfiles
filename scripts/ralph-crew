@@ -9,7 +9,8 @@ set -euo pipefail
 source "$(dirname "$0")/ralph-lib.sh"
 
 # --- Defaults ---
-DEFAULT_CONFIG="$HOME/.config/ralph-crew/crew.json"
+DEFAULT_CONFIG=".claude/crew.json"
+PROJECT_DIR=""
 STATE_DIR="/tmp/ralph-crew"
 TMUX_SESSION="ralph-crew"
 LOG_FILE="${STATE_DIR}/logs/dispatch.log"
@@ -42,8 +43,16 @@ _load_config() {
     return 1
   fi
 
-  TMUX_SESSION="$(jq -r '.tmux_session // "ralph-crew"' "$config_file")"
-  STATE_DIR="$(jq -r '.state_dir // "/tmp/ralph-crew"' "$config_file")"
+  # Derive project directory from config file path
+  # e.g. /path/to/project/.claude/crew.json -> /path/to/project
+  local abs_config
+  abs_config="$(cd "$(dirname "$config_file")" && pwd)/$(basename "$config_file")"
+  PROJECT_DIR="$(dirname "$(dirname "$abs_config")")"
+
+  local project_name
+  project_name="$(basename "$PROJECT_DIR")"
+  TMUX_SESSION="$(jq -r --arg default "crew-${project_name}" '.tmux_session // $default' "$config_file")"
+  STATE_DIR="$(jq -r --arg default "/tmp/ralph-crew/${project_name}" '.state_dir // $default' "$config_file")"
   LOG_FILE="${STATE_DIR}/logs/dispatch.log"
 
   echo "$config_file"
@@ -105,17 +114,11 @@ _start_worker() {
     return 1
   fi
 
-  local project_dir model mcp_config system_prompt permissions_json
-  project_dir="$(echo "$worker_json" | jq -r '.project_dir')"
+  local model mcp_config system_prompt permissions_json
   model="$(echo "$worker_json" | jq -r '.model // "sonnet"')"
   mcp_config="$(echo "$worker_json" | jq -r '.mcp_config // empty')"
   system_prompt="$(echo "$worker_json" | jq -r '.system_prompt // empty')"
   permissions_json="$(echo "$worker_json" | jq '.permissions // empty')"
-
-  if [[ ! -d "$project_dir" ]]; then
-    _error "Project directory not found: $project_dir"
-    return 1
-  fi
 
   # If worker has fix tasks, adjust permissions: allow git push, deny only force push
   local has_fix
@@ -139,7 +142,7 @@ _start_worker() {
   if tmux list-windows -t "$TMUX_SESSION" -F '#{window_name}' 2>/dev/null | grep -qxF "$window_name"; then
     tmux kill-window -t "${TMUX_SESSION}:${window_name}" 2>/dev/null || true
   fi
-  tmux new-window -t "$TMUX_SESSION" -n "$window_name" -c "$project_dir"
+  tmux new-window -t "$TMUX_SESSION" -n "$window_name" -c "$PROJECT_DIR"
 
   local pane_id
   pane_id="$(tmux display-message -t "${TMUX_SESSION}:${window_name}" -p '#{pane_id}')"
@@ -163,11 +166,11 @@ _start_worker() {
   }')"
 
   if [[ -n "$permissions_json" && "$permissions_json" != "null" ]]; then
-    ralph_setup_worker_settings "$project_dir" "$permissions_json" "$hook_json"
+    ralph_setup_worker_settings "$PROJECT_DIR" "$permissions_json" "$hook_json"
   else
-    ralph_setup_worker_settings "$project_dir" "$RALPH_DEFAULT_PERMISSIONS" "$hook_json"
+    ralph_setup_worker_settings "$PROJECT_DIR" "$RALPH_DEFAULT_PERMISSIONS" "$hook_json"
   fi
-  _info "Worker settings created: ${project_dir}/.claude/settings.local.json"
+  _info "Worker settings created: ${PROJECT_DIR}/.claude/settings.local.json"
 
   # Write system prompt to file
   local system_prompt_file="${STATE_DIR}/system-prompts/${worker_id}.txt"
@@ -198,7 +201,7 @@ _start_worker() {
   jq -n \
     --arg id "$worker_id" \
     --arg pane_id "$pane_id" \
-    --arg project_dir "$project_dir" \
+    --arg project_dir "$PROJECT_DIR" \
     --arg model "$model" \
     --argjson started "$(date +%s)" \
     '{
@@ -615,7 +618,7 @@ Usage:
                                                    Restart a worker
   ralph-crew teardown                           Stop all workers and cleanup
 
-Config file default: $DEFAULT_CONFIG
+Config file default: \$PWD/$DEFAULT_CONFIG
 EOF
     ;;
 esac
