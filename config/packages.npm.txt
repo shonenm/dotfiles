@@ -7,3 +7,4 @@
 
 # Neovim dependencies
 @mermaid-js/mermaid-cli
+@softwaretechnik/dbml-renderer
