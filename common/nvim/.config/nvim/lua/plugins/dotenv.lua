@@ -1,12 +1,5 @@
--- .env file support (syntax highlighting via treesitter)
+-- .env file support (filetype detection for .env variants)
 return {
-  {
-    "nvim-treesitter/nvim-treesitter",
-    opts = {
-      ensure_installed = { "dotenv" },
-    },
-  },
-  -- Set filetype for .env files
   {
     "LazyVim/LazyVim",
     opts = function()
