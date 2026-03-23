@@ -74,6 +74,7 @@ ralph-crew dispatch
 - `tmux_session`: tmux セッション名 (default: "ralph-crew")
 - `state_dir`: ランタイム状態ディレクトリ (default: "/tmp/ralph-crew")
 - `workers[]`: ワーカー定義 (id, project_dir, model, mcp_config, system_prompt, permissions)
-- `tasks[]`: タスク定義 (id, pattern, worker_id, prompt, schedule)
+- `tasks[]`: タスク定義 (id, pattern, worker_id, action, prompt, schedule)
+  - `action`: `"fix"` (デフォルト: worktree で修正 -> PR) または `"issue-only"` (報告のみ)
 
 テンプレート: `~/dotfiles/templates/crew.example.json`

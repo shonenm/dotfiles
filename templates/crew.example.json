@@ -25,20 +25,22 @@
   ],
   "tasks": [
     {
-      "id": "test-watch",
+      "id": "lint-fix",
       "pattern": "standing",
       "worker_id": "qa-frontend",
-      "prompt": "Run `npm test`. If any tests fail, analyze failures and create a GitHub issue.",
+      "action": "fix",
+      "prompt": "Run `npx eslint .` and `npx tsc --noEmit`. If issues found, fix them.",
       "schedule": {
         "type": "interval",
         "minutes": 30
       }
     },
     {
-      "id": "kb-pull",
-      "pattern": "kb_pull",
+      "id": "test-watch",
+      "pattern": "standing",
       "worker_id": "qa-frontend",
-      "prompt": "Use Notion MCP to fetch tasks marked 'Ready'. For each, create an implementation plan.",
+      "action": "issue-only",
+      "prompt": "Run `npm test`. If any tests fail, analyze failures and create a GitHub issue.",
       "schedule": {
         "type": "interval",
         "minutes": 60
