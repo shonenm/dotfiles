@@ -1,0 +1,563 @@
+#!/usr/bin/env bash
+# ralph-crew - Persistent worker management with periodic task dispatch
+#
+# Manages long-lived Claude TUI workers in tmux, dispatching tasks on schedule.
+# Designed for launchd integration (periodic dispatch via StartInterval).
+set -euo pipefail
+
+# shellcheck source=ralph-lib.sh
+source "$(dirname "$0")/ralph-lib.sh"
+
+# --- Defaults ---
+DEFAULT_CONFIG="$HOME/.config/ralph-crew/crew.json"
+STATE_DIR="/tmp/ralph-crew"
+TMUX_SESSION="ralph-crew"
+LOG_FILE="${STATE_DIR}/logs/dispatch.log"
+
+# --- Logging ---
+
+_log() {
+  local ts
+  ts="$(date '+%Y-%m-%d %H:%M:%S')"
+  mkdir -p "$(dirname "$LOG_FILE")"
+  printf '[%s] %s\n' "$ts" "$*" | tee -a "$LOG_FILE" >&2
+}
+
+_info() { printf '\033[0;36minfo\033[0m %s\n' "$*" >&2; }
+_error() { printf '\033[0;31merror\033[0m %s\n' "$*" >&2; }
+_success() { printf '\033[0;32mok\033[0m %s\n' "$*" >&2; }
+
+# --- Config ---
+
+_load_config() {
+  local config_file="${1:-$DEFAULT_CONFIG}"
+  if [[ ! -f "$config_file" ]]; then
+    _error "Config file not found: $config_file"
+    return 1
+  fi
+
+  # Validate JSON
+  if ! jq empty "$config_file" 2>/dev/null; then
+    _error "Invalid JSON: $config_file"
+    return 1
+  fi
+
+  TMUX_SESSION="$(jq -r '.tmux_session // "ralph-crew"' "$config_file")"
+  STATE_DIR="$(jq -r '.state_dir // "/tmp/ralph-crew"' "$config_file")"
+  LOG_FILE="${STATE_DIR}/logs/dispatch.log"
+
+  echo "$config_file"
+}
+
+# --- Worker state ---
+
+_crew_worker_status() {
+  local worker_id="$1"
+  local status_file="${STATE_DIR}/workers/${worker_id}.status"
+  local worker_file="${STATE_DIR}/workers/${worker_id}.json"
+
+  # Check pane existence
+  if [[ -f "$worker_file" ]]; then
+    local pane_id
+    pane_id="$(jq -r '.pane_id // empty' "$worker_file")"
+    if [[ -n "$pane_id" ]] && ! tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane_id"; then
+      echo "dead"
+      return
+    fi
+  fi
+
+  # Status file based detection
+  if [[ -f "$status_file" ]]; then
+    cat "$status_file"
+  else
+    echo "unknown"
+  fi
+}
+
+# --- Worker lifecycle ---
+
+_wait_for_tui() {
+  local pane_id="$1"
+  local timeout="${2:-30}"
+  local elapsed=0
+
+  while [[ "$elapsed" -lt "$timeout" ]]; do
+    sleep 1
+    elapsed=$((elapsed + 1))
+    local content
+    content="$(tmux capture-pane -t "$pane_id" -p 2>/dev/null || true)"
+    if echo "$content" | grep -qE '❯|^\s*>|^╭|tips'; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+_start_worker() {
+  local config_file="$1"
+  local worker_id="$2"
+
+  # Read worker config
+  local worker_json
+  worker_json="$(jq --arg id "$worker_id" '.workers[] | select(.id == $id)' "$config_file")"
+  if [[ -z "$worker_json" ]]; then
+    _error "Worker not found in config: $worker_id"
+    return 1
+  fi
+
+  local project_dir model mcp_config system_prompt permissions_json
+  project_dir="$(echo "$worker_json" | jq -r '.project_dir')"
+  model="$(echo "$worker_json" | jq -r '.model // "sonnet"')"
+  mcp_config="$(echo "$worker_json" | jq -r '.mcp_config // empty')"
+  system_prompt="$(echo "$worker_json" | jq -r '.system_prompt // empty')"
+  permissions_json="$(echo "$worker_json" | jq '.permissions // empty')"
+
+  if [[ ! -d "$project_dir" ]]; then
+    _error "Project directory not found: $project_dir"
+    return 1
+  fi
+
+  # Create tmux window
+  local window_name="crew/${worker_id}"
+  if tmux list-windows -t "$TMUX_SESSION" -F '#{window_name}' 2>/dev/null | grep -qxF "$window_name"; then
+    tmux kill-window -t "${TMUX_SESSION}:${window_name}" 2>/dev/null || true
+  fi
+  tmux new-window -t "$TMUX_SESSION" -n "$window_name" -c "$project_dir"
+
+  local pane_id
+  pane_id="$(tmux display-message -t "${TMUX_SESSION}:${window_name}" -p '#{pane_id}')"
+
+  # Setup permissions + Notification hook
+  local hook_json
+  hook_json="$(jq -n --arg worker_id "$worker_id" --arg state_dir "$STATE_DIR" '{
+    "hooks": {
+      "Notification": [
+        {
+          "matcher": "idle_prompt",
+          "hooks": [
+            {
+              "type": "command",
+              "command": ("bash -c " + ("echo idle > " + $state_dir + "/workers/" + $worker_id + ".status" | @sh))
+            }
+          ]
+        }
+      ]
+    }
+  }')"
+
+  if [[ -n "$permissions_json" && "$permissions_json" != "null" ]]; then
+    ralph_setup_worker_settings "$project_dir" "$permissions_json" "$hook_json"
+  else
+    ralph_setup_worker_settings "$project_dir" "$RALPH_DEFAULT_PERMISSIONS" "$hook_json"
+  fi
+  _info "Worker settings created: ${project_dir}/.claude/settings.local.json"
+
+  # Write system prompt to file
+  local system_prompt_file="${STATE_DIR}/system-prompts/${worker_id}.txt"
+  mkdir -p "$(dirname "$system_prompt_file")"
+  if [[ -n "$system_prompt" ]]; then
+    printf '%s' "$system_prompt" > "$system_prompt_file"
+  fi
+
+  # Build claude command
+  local cmd="claude --model ${model}"
+  if [[ -n "$mcp_config" ]]; then
+    cmd+=" --mcp-config $(printf '%q' "$mcp_config")"
+  fi
+  if [[ -n "$system_prompt" ]]; then
+    cmd+=" --append-system-prompt \"\$(cat $(printf '%q' "$system_prompt_file"))\""
+  fi
+
+  # Launch Claude TUI
+  tmux send-keys -t "$pane_id" "$cmd" Enter
+
+  # Wait for TUI to be ready
+  if ! _wait_for_tui "$pane_id" 30; then
+    _log "worker=$worker_id timeout waiting for TUI (continuing)"
+  fi
+
+  # Record worker metadata
+  mkdir -p "${STATE_DIR}/workers"
+  jq -n \
+    --arg id "$worker_id" \
+    --arg pane_id "$pane_id" \
+    --arg project_dir "$project_dir" \
+    --arg model "$model" \
+    --argjson started "$(date +%s)" \
+    '{
+      id: $id,
+      pane_id: $pane_id,
+      project_dir: $project_dir,
+      model: $model,
+      started: $started,
+      restart_timestamps: []
+    }' > "${STATE_DIR}/workers/${worker_id}.json"
+
+  # Initial status
+  echo "idle" > "${STATE_DIR}/workers/${worker_id}.status"
+
+  _success "Started worker: $worker_id (pane: $pane_id)"
+}
+
+# --- Task dispatch ---
+
+_dispatch_task() {
+  local pane_id="$1"
+  local task_id="$2"
+  local prompt="$3"
+  local worker_id="$4"
+
+  # Write prompt to file
+  mkdir -p "${STATE_DIR}/prompts"
+  local prompt_file="${STATE_DIR}/prompts/${task_id}.md"
+  printf '%s' "$prompt" > "$prompt_file"
+
+  # Update status to running
+  echo "running" > "${STATE_DIR}/workers/${worker_id}.status"
+
+  # Inject task via file reference (fixed string, no escaping issues)
+  tmux send-keys -t "$pane_id" "Read ${prompt_file} and follow the instructions." Enter
+
+  # Record dispatch time
+  mkdir -p "${STATE_DIR}/dispatch"
+  date +%s > "${STATE_DIR}/dispatch/${task_id}.last"
+
+  _log "task=$task_id worker=$worker_id status=dispatched"
+}
+
+_should_dispatch() {
+  local task_id="$1"
+  local interval_minutes="$2"
+
+  local last_file="${STATE_DIR}/dispatch/${task_id}.last"
+  if [[ ! -f "$last_file" ]]; then
+    return 0  # Never dispatched
+  fi
+
+  local last_epoch now_epoch
+  last_epoch="$(cat "$last_file")"
+  now_epoch="$(date +%s)"
+  local elapsed_minutes=$(( (now_epoch - last_epoch) / 60 ))
+
+  [[ "$elapsed_minutes" -ge "$interval_minutes" ]]
+}
+
+# --- Auto-restart ---
+
+_should_restart() {
+  local worker_file="$1"
+  local now
+  now="$(date +%s)"
+  local window=300  # 5 minutes
+  local max_restarts=3
+
+  local recent_count
+  recent_count="$(jq --argjson now "$now" --argjson window "$window" \
+    '[.restart_timestamps[]? | select(. > ($now - $window))] | length' \
+    "$worker_file")"
+
+  [[ "$recent_count" -lt "$max_restarts" ]]
+}
+
+_record_restart() {
+  local worker_file="$1"
+  local now
+  now="$(date +%s)"
+  jq --argjson now "$now" '.restart_timestamps += [$now]' \
+    "$worker_file" > "${worker_file}.tmp" && mv "${worker_file}.tmp" "$worker_file"
+}
+
+# --- Cleanup ---
+
+_cleanup_old_prompts() {
+  find "${STATE_DIR}/prompts" -type f -mmin +1440 -delete 2>/dev/null || true
+}
+
+# === Subcommands ===
+
+cmd_init() {
+  local config_file="$DEFAULT_CONFIG"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config) config_file="${2:-}"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  config_file="$(_load_config "$config_file")" || return 1
+
+  # Create state directories
+  mkdir -p "${STATE_DIR}"/{workers,dispatch,prompts,system-prompts,logs}
+
+  # Create or attach to tmux session
+  if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
+    _info "Session already exists: $TMUX_SESSION"
+  else
+    tmux new-session -d -s "$TMUX_SESSION" -n "control"
+    _success "Created tmux session: $TMUX_SESSION"
+  fi
+
+  # Start all workers
+  local worker_count
+  worker_count="$(jq '.workers | length' "$config_file")"
+  local i=0
+  while [[ "$i" -lt "$worker_count" ]]; do
+    local worker_id
+    worker_id="$(jq -r ".workers[$i].id" "$config_file")"
+    _start_worker "$config_file" "$worker_id"
+    i=$((i + 1))
+  done
+
+  _success "Initialized $worker_count worker(s) in session: $TMUX_SESSION"
+  _log "init completed: $worker_count workers"
+}
+
+cmd_dispatch() {
+  local config_file="$DEFAULT_CONFIG"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config) config_file="${2:-}"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  config_file="$(_load_config "$config_file")" || return 1
+
+  # Exclusive lock
+  mkdir -p "$STATE_DIR"
+  local lock_file="${STATE_DIR}/dispatch.lock"
+  exec 9>"$lock_file"
+  if ! flock -n 9; then
+    _log "dispatch already running, skipping"
+    return 0
+  fi
+
+  # Cleanup old prompt files
+  _cleanup_old_prompts
+
+  # Check session exists
+  if ! tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
+    _log "tmux session not found: $TMUX_SESSION (run init first)"
+    return 1
+  fi
+
+  # Process each task
+  local task_count
+  task_count="$(jq '.tasks | length' "$config_file")"
+  local i=0
+  local dispatched=0
+  while [[ "$i" -lt "$task_count" ]]; do
+    local task_id worker_id prompt interval_minutes
+    task_id="$(jq -r ".tasks[$i].id" "$config_file")"
+    worker_id="$(jq -r ".tasks[$i].worker_id" "$config_file")"
+    prompt="$(jq -r ".tasks[$i].prompt" "$config_file")"
+    interval_minutes="$(jq -r ".tasks[$i].schedule.minutes" "$config_file")"
+
+    # Check schedule
+    if ! _should_dispatch "$task_id" "$interval_minutes"; then
+      i=$((i + 1))
+      continue
+    fi
+
+    # Check worker status
+    local status
+    status="$(_crew_worker_status "$worker_id")"
+
+    case "$status" in
+      idle)
+        local worker_file="${STATE_DIR}/workers/${worker_id}.json"
+        local pane_id
+        pane_id="$(jq -r '.pane_id' "$worker_file")"
+        _dispatch_task "$pane_id" "$task_id" "$prompt" "$worker_id"
+        dispatched=$((dispatched + 1))
+        ;;
+      running)
+        _log "task=$task_id worker=$worker_id status=skipped (worker busy)"
+        ;;
+      dead)
+        _log "task=$task_id worker=$worker_id status=dead, attempting restart"
+        local worker_file="${STATE_DIR}/workers/${worker_id}.json"
+        if [[ -f "$worker_file" ]] && _should_restart "$worker_file"; then
+          _record_restart "$worker_file"
+          _start_worker "$config_file" "$worker_id"
+          _log "worker=$worker_id restarted"
+        else
+          _log "worker=$worker_id restart limit exceeded, skipping"
+        fi
+        ;;
+      *)
+        _log "task=$task_id worker=$worker_id status=$status (unknown, skipping)"
+        ;;
+    esac
+
+    i=$((i + 1))
+  done
+
+  _log "dispatch completed: $dispatched task(s) dispatched"
+}
+
+cmd_status() {
+  local json_mode=false
+  local config_file="$DEFAULT_CONFIG"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --json) json_mode=true; shift ;;
+      --config) config_file="${2:-}"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  config_file="$(_load_config "$config_file")" || return 1
+
+  if [[ "$json_mode" == true ]]; then
+    local result="{"
+    local first=true
+    for status_file in "${STATE_DIR}/workers"/*.status; do
+      [[ -f "$status_file" ]] || continue
+      local wid
+      wid="$(basename "$status_file" .status)"
+      local st
+      st="$(_crew_worker_status "$wid")"
+      if [[ "$first" == true ]]; then
+        first=false
+      else
+        result+=","
+      fi
+      result+="\"${wid}\":\"${st}\""
+    done
+    result+="}"
+    echo "$result"
+  else
+    local worker_count
+    worker_count="$(jq '.workers | length' "$config_file")"
+    local i=0
+    while [[ "$i" -lt "$worker_count" ]]; do
+      local wid
+      wid="$(jq -r ".workers[$i].id" "$config_file")"
+      local st
+      st="$(_crew_worker_status "$wid")"
+      local last_task=""
+
+      # Find latest dispatch for this worker
+      for task_last in "${STATE_DIR}/dispatch"/*.last; do
+        [[ -f "$task_last" ]] || continue
+        local tid
+        tid="$(basename "$task_last" .last)"
+        local task_worker
+        task_worker="$(jq -r --arg tid "$tid" '.tasks[] | select(.id == $tid) | .worker_id' "$config_file" 2>/dev/null || true)"
+        if [[ "$task_worker" == "$wid" ]]; then
+          local epoch
+          epoch="$(cat "$task_last")"
+          local ts
+          ts="$(date -r "$epoch" '+%H:%M:%S' 2>/dev/null || date -d "@$epoch" '+%H:%M:%S' 2>/dev/null || echo "?")"
+          last_task="$tid@$ts"
+        fi
+      done
+
+      printf "  %-20s %-10s %s\n" "$wid" "$st" "${last_task:-(no dispatch)}"
+      i=$((i + 1))
+    done
+  fi
+}
+
+cmd_send() {
+  local worker_id="${1:-}"
+  local message="${2:-}"
+  [[ -z "$worker_id" ]] && { _error "Usage: ralph-crew send <worker-id> <message>"; return 1; }
+  [[ -z "$message" ]] && { _error "message is required"; return 1; }
+
+  local worker_file="${STATE_DIR}/workers/${worker_id}.json"
+  [[ -f "$worker_file" ]] || { _error "Worker not found: $worker_id"; return 1; }
+
+  local pane_id
+  pane_id="$(jq -r '.pane_id // empty' "$worker_file")"
+  [[ -z "$pane_id" ]] && { _error "No pane_id for worker: $worker_id"; return 1; }
+
+  if ! tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane_id"; then
+    _error "Pane $pane_id no longer exists for $worker_id"
+    return 1
+  fi
+
+  # Write message to file for safe injection
+  mkdir -p "${STATE_DIR}/prompts"
+  local msg_file="${STATE_DIR}/prompts/manual-${worker_id}-$(date +%s).md"
+  printf '%s' "$message" > "$msg_file"
+
+  echo "running" > "${STATE_DIR}/workers/${worker_id}.status"
+  tmux send-keys -t "$pane_id" "Read ${msg_file} and follow the instructions." Enter
+
+  _success "Sent message to $worker_id ($pane_id)"
+}
+
+cmd_restart() {
+  local worker_id="${1:-}"
+  local config_file="$DEFAULT_CONFIG"
+  [[ -z "$worker_id" ]] && { _error "Usage: ralph-crew restart <worker-id> [--config <path>]"; return 1; }
+  shift
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config) config_file="${2:-}"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  config_file="$(_load_config "$config_file")" || return 1
+
+  # Kill existing window if present
+  local window_name="crew/${worker_id}"
+  if tmux list-windows -t "$TMUX_SESSION" -F '#{window_name}' 2>/dev/null | grep -qxF "$window_name"; then
+    tmux kill-window -t "${TMUX_SESSION}:${window_name}" 2>/dev/null || true
+  fi
+
+  # Record restart timestamp
+  local worker_file="${STATE_DIR}/workers/${worker_id}.json"
+  if [[ -f "$worker_file" ]]; then
+    _record_restart "$worker_file"
+  fi
+
+  _start_worker "$config_file" "$worker_id"
+  _log "worker=$worker_id manually restarted"
+}
+
+cmd_teardown() {
+  # Kill tmux session
+  if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
+    tmux kill-session -t "$TMUX_SESSION"
+    _success "Killed tmux session: $TMUX_SESSION"
+  else
+    _info "No tmux session: $TMUX_SESSION"
+  fi
+
+  # Cleanup state
+  rm -rf "$STATE_DIR"
+  _success "Cleaned up state: $STATE_DIR"
+  _log "teardown completed"
+}
+
+# --- Main ---
+
+case "${1:-}" in
+  init)      shift; cmd_init "$@" ;;
+  dispatch)  shift; cmd_dispatch "$@" ;;
+  status)    shift; cmd_status "$@" ;;
+  send)      shift; cmd_send "$@" ;;
+  restart)   shift; cmd_restart "$@" ;;
+  teardown)  cmd_teardown ;;
+  help|*)
+    cat <<EOF
+ralph-crew - Persistent worker management with periodic task dispatch
+
+Usage:
+  ralph-crew init [--config <path>]           Create tmux session and start all workers
+  ralph-crew dispatch [--config <path>]        Evaluate schedules and dispatch tasks
+  ralph-crew status [--json] [--config <path>] Show worker status
+  ralph-crew send <worker-id> "<message>"      Send manual message to worker
+  ralph-crew restart <worker-id> [--config <path>]
+                                                   Restart a worker
+  ralph-crew teardown                           Stop all workers and cleanup
+
+Config file default: $DEFAULT_CONFIG
+EOF
+    ;;
+esac

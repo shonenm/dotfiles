@@ -1,0 +1,48 @@
+{
+  "tmux_session": "ralph-crew",
+  "state_dir": "/tmp/ralph-crew",
+  "workers": [
+    {
+      "id": "qa-frontend",
+      "project_dir": "/path/to/project",
+      "model": "sonnet",
+      "mcp_config": null,
+      "system_prompt": "You are a QA engineer focused on the frontend module.",
+      "permissions": {
+        "allow": [
+          "Bash(npm:*)",
+          "Bash(npx:*)",
+          "Bash(git diff:*)",
+          "Bash(git status:*)",
+          "Bash(gh issue:*)"
+        ],
+        "deny": [
+          "Bash(git push:*)",
+          "Bash(git push)"
+        ]
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "test-watch",
+      "pattern": "standing",
+      "worker_id": "qa-frontend",
+      "prompt": "Run `npm test`. If any tests fail, analyze failures and create a GitHub issue.",
+      "schedule": {
+        "type": "interval",
+        "minutes": 30
+      }
+    },
+    {
+      "id": "kb-pull",
+      "pattern": "kb_pull",
+      "worker_id": "qa-frontend",
+      "prompt": "Use Notion MCP to fetch tasks marked 'Ready'. For each, create an implementation plan.",
+      "schedule": {
+        "type": "interval",
+        "minutes": 60
+      }
+    }
+  ]
+}
