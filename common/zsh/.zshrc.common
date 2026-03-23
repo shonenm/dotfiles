@@ -7,6 +7,12 @@
 # Ensure $SHELL is set correctly when running zsh
 [[ "$SHELL" != */zsh ]] && export SHELL=$(which zsh)
 
+# --- Terminal Detection (SSH) ---
+# SSH forwards TERM but not TERM_PROGRAM; derive it for Neovim image rendering
+if [[ -n "$SSH_CONNECTION" && -z "$TERM_PROGRAM" && "$TERM" == *ghostty* ]]; then
+  export TERM_PROGRAM=ghostty
+fi
+
 # --- XDG Base Directory ---
 # Ensure consistent config paths across macOS/Linux
 export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
