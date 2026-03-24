@@ -61,26 +61,19 @@ arguments: "<title-or-description>"
 ### 4. Issue の作成
 
 ```bash
-gh issue create --title "<title>" --body "<body>" [--label "<label1>,<label2>"]
+gh issue create --title "<title>" --body "<body>" --assignee @me [--label "<label1>,<label2>"]
 ```
 
 ### 5. ブランチの準備
 
-1. デフォルトブランチを検出:
-   ```bash
-   default_branch=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
-   ```
-2. デフォルトブランチに移動して最新を取得:
-   ```bash
-   git checkout "$default_branch"
-   git pull --rebase
-   ```
-3. ブランチ名を生成 (`<issue番号>-<slug>`):
+1. ブランチ名を生成 (`<issue番号>-<slug>`):
    - タイトルを小文字化、スペースをハイフンに、英数字とハイフンのみ残す、50文字制限
-4. ブランチ作成:
+2. `gh issue develop` でブランチ作成 + Issue への紐づけ:
    ```bash
-   git checkout -b "<branch_name>"
+   gh issue develop <issue_number> --name "<branch_name>" --checkout
    ```
+   - リモートにブランチが作成され、Issue の Development セクションに自動紐づけされる
+   - `--checkout` でローカルにチェックアウトされる
 
 ### 6. 完了報告
 
@@ -94,10 +87,10 @@ gh issue create --title "<title>" --body "<body>" [--label "<label1>,<label2>"]
 
 - `gh auth status` で認証チェック → 未認証なら `gh auth login` を案内して終了
 - uncommitted changes がある場合 → stash するか `/commit` を先に実行するよう提案
-- 既にデフォルトブランチ以外にいる場合 → 確認してからデフォルトブランチに移動
+- 既にデフォルトブランチ以外にいる場合 → `gh issue develop` はリモートのデフォルトブランチから作成するため問題なし
 
 ## 注意事項
 
-- `git push` は実行しない (ブランチ作成のみ)
+- `gh issue develop` はリモートにブランチを作成する (Issue 紐づけに必要)
 - テンプレートがある場合はテンプレートの構造を尊重する
 - ラベルの存在しないものを指定しない (`gh label list` の結果のみ使用)
