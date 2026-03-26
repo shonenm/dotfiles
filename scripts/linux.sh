@@ -5,6 +5,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(dirname "$SCRIPT_DIR")"
 CONFIG_DIR="$DOTFILES_DIR/config"
+# shellcheck source=/dev/null
 source "$SCRIPT_DIR/utils.sh"
 
 # Setup SUDO variable
@@ -18,6 +19,7 @@ else
 fi
 
 # Source tool definitions from config
+# shellcheck source=/dev/null
 source "$CONFIG_DIR/tools.linux.bash"
 
 # --- 1. Pre-flight Check ---
@@ -171,12 +173,14 @@ _install_github_release() {
   repo=$(_tool_field "$tool" "github_repo")
   arch_map=$(_tool_field "$tool" "arch_map")
 
+  # shellcheck disable=SC2034  # used in eval'd archive_pattern/install_cmd
   ARCH=$(_resolve_arch "$arch_map") || {
     log_error "Unsupported architecture for $tool: $(uname -m)"
     return 1
   }
 
   VERSION=$(curl -s "https://api.github.com/repos/$repo/releases/latest" | grep -Po '"tag_name": "\K[^"]*')
+  # shellcheck disable=SC2034  # used in eval'd archive_pattern/install_cmd
   VERSION_NOTAG="${VERSION#v}"
 
   local custom_cmd
@@ -496,7 +500,7 @@ install_fancy_cat() {
   rm -rf "$build_dir"
   git clone --recursive https://github.com/freref/fancy-cat.git "$build_dir"
   (
-    cd "$build_dir"
+    cd "$build_dir" || return 1
     $zig_cmd build --release=small
   )
   mkdir -p "$HOME/.local/bin"

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Claude Code tmux 通知統合
 # Ghostty + tmux環境でClaude Codeの通知をtmuxステータスバーに表示
 

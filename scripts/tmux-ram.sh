@@ -16,6 +16,7 @@ RAM_ICON=$'\xee\xbf\xb5'
 
 mkdir -p "$CACHE_DIR"
 
+# shellcheck source=/dev/null
 source "${BASH_SOURCE%/*}/tmux-utils.sh"
 
 # Check cache freshness

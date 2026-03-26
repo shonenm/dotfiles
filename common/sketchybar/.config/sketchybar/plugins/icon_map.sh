@@ -141,7 +141,7 @@ function __icon_map() {
    "BluOS Controller")
         icon_result=":bluos_controller:"
         ;;
-   "Books" | "Calibre" | "Bücher")
+   "Calibre" | "Bücher")
         icon_result=":book:"
         ;;
    "Brain.fm")
@@ -1255,6 +1255,7 @@ function __icon_map() {
         icon_result=":zulip:"
         ;;
     *)
+        # shellcheck disable=SC2034  # used by callers via source
         icon_result=":default:"
         ;;
     esac

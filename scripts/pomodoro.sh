@@ -30,13 +30,17 @@ get_duration() {
 }
 
 get_remaining() {
-  local state=$(get_state)
-  local duration=$(get_duration)
+  local state
+  state=$(get_state)
+  local duration
+  duration=$(get_duration)
 
   case "$state" in
     running)
-      local end_time=$(cat "$END_FILE" 2>/dev/null || echo "0")
-      local now=$(date +%s)
+      local end_time
+      end_time=$(cat "$END_FILE" 2>/dev/null || echo "0")
+      local now
+      now=$(date +%s)
       echo $((end_time - now))
       ;;
     paused)
@@ -51,14 +55,16 @@ get_remaining() {
 # スタート
 start_timer() {
   local minutes="${1:-}"
-  local duration=$(get_duration)
+  local duration
+  duration=$(get_duration)
 
   if [[ -n "$minutes" ]]; then
     duration=$((minutes * 60))
     echo "$duration" > "$DURATION_FILE"
   fi
 
-  local state=$(get_state)
+  local state
+  state=$(get_state)
   local remaining
 
   if [[ "$state" == "paused" ]]; then
@@ -67,7 +73,8 @@ start_timer() {
     remaining=$duration
   fi
 
-  local now=$(date +%s)
+  local now
+  now=$(date +%s)
   local end_time=$((now + remaining))
 
   echo "$end_time" > "$END_FILE"
@@ -79,15 +86,18 @@ start_timer() {
 
 # 一時停止
 pause_timer() {
-  local state=$(get_state)
+  local state
+  state=$(get_state)
 
   if [[ "$state" != "running" ]]; then
     echo "Not running"
     return
   fi
 
-  local end_time=$(cat "$END_FILE" 2>/dev/null || echo "0")
-  local now=$(date +%s)
+  local end_time
+  end_time=$(cat "$END_FILE" 2>/dev/null || echo "0")
+  local now
+  now=$(date +%s)
   local remaining=$((end_time - now))
 
   echo "$remaining" > "$REMAIN_FILE"
@@ -99,7 +109,8 @@ pause_timer() {
 
 # トグル（スタート/ポーズ切り替え）
 toggle_timer() {
-  local state=$(get_state)
+  local state
+  state=$(get_state)
 
   case "$state" in
     running)
@@ -113,7 +124,8 @@ toggle_timer() {
 
 # リセット
 reset_timer() {
-  local duration=$(get_duration)
+  local duration
+  duration=$(get_duration)
 
   echo "stopped" > "$STATE_FILE"
   echo "$duration" > "$REMAIN_FILE"
@@ -131,7 +143,8 @@ set_duration() {
   echo "$duration" > "$DURATION_FILE"
 
   # stoppedの場合はremainingも更新
-  local state=$(get_state)
+  local state
+  state=$(get_state)
   if [[ "$state" == "stopped" ]]; then
     echo "$duration" > "$REMAIN_FILE"
   fi
@@ -142,9 +155,12 @@ set_duration() {
 
 # 状態表示
 show_status() {
-  local state=$(get_state)
-  local duration=$(get_duration)
-  local remaining=$(get_remaining)
+  local state
+  state=$(get_state)
+  local duration
+  duration=$(get_duration)
+  local remaining
+  remaining=$(get_remaining)
 
   echo "State: $state"
   echo "Duration: $((duration / 60))m"

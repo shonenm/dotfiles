@@ -134,7 +134,7 @@ wt_copy_ignored() {
     # Check if this entry should be symlinked
     local should_symlink=false
     for pattern in "${symlink_dirs[@]}"; do
-      # shellcheck disable=SC2254
+      # shellcheck disable=SC2053
       if [[ "$entry_clean" == $pattern ]]; then
         should_symlink=true
         break

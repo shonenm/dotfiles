@@ -65,9 +65,11 @@ fi
 
 # Supabase 情報
 if [[ -d "supabase/migrations" ]]; then
+  # shellcheck disable=SC2012  # ls is fine here; filenames are timestamps
   migrations="$(ls -1 supabase/migrations/ 2>/dev/null | tail -10)" || true
   tables=""
   if [[ -f "supabase/database.types.ts" ]] || [[ -f "src/database.types.ts" ]]; then
+    # shellcheck disable=SC2012  # known filenames, no special chars
     types_file="$(ls supabase/database.types.ts src/database.types.ts 2>/dev/null | head -1)"
     if [[ -n "$types_file" ]]; then
       tables="$(grep -oP '(?<=")[a-z_]+(?="\s*:\s*\{)' "$types_file" 2>/dev/null | sort -u | head -30)" || true
