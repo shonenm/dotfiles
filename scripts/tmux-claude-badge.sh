@@ -54,25 +54,34 @@ show_window_badge() {
   # キャッシュ無効/なし: 計算実行
   local count=0
 
-  for f in "$STATUS_DIR"/workspace_*.json; do
-    [[ -f "$f" ]] || continue
+  # 1. tmux pane option チェック (純ローカル、Beacon不要)
+  local pane_count
+  pane_count=$(tmux list-panes -t "${session_name}:${window_index}" -F '#{@claude_status}' 2>/dev/null \
+    | grep -cE '^(idle|permission|complete)$' || true)
+  count=$pane_count
 
-    # jq 1回で3フィールドを取得（@tsvでタブ区切り）
-    local result
-    result=$(jq -r '[.tmux_session // "", .tmux_window_index // "", .status // "none"] | @tsv' "$f" 2>/dev/null)
-    [[ -z "$result" ]] && continue
+  # 2. ファイルベースのフォールバック (リモート/Beacon連携用、pane通知がなければ参照)
+  if [[ $count -eq 0 ]]; then
+    for f in "$STATUS_DIR"/workspace_*.json; do
+      [[ -f "$f" ]] || continue
 
-    local file_session file_window file_status
-    IFS=$'\t' read -r file_session file_window file_status <<< "$result"
+      # jq 1回で3フィールドを取得（@tsvでタブ区切り）
+      local result
+      result=$(jq -r '[.tmux_session // "", .tmux_window_index // "", .status // "none"] | @tsv' "$f" 2>/dev/null)
+      [[ -z "$result" ]] && continue
 
-    if [[ "$file_session" == "$session_name" && "$file_window" == "$window_index" ]]; then
-      case "$file_status" in
-        idle|permission|complete)
-          ((count++))
-          ;;
-      esac
-    fi
-  done
+      local file_session file_window file_status
+      IFS=$'\t' read -r file_session file_window file_status <<< "$result"
+
+      if [[ "$file_session" == "$session_name" && "$file_window" == "$window_index" ]]; then
+        case "$file_status" in
+          idle|permission|complete)
+            ((count++))
+            ;;
+        esac
+      fi
+    done
+  fi
 
   # キャッシュ保存
   echo "$count" > "$cache_file" 2>/dev/null

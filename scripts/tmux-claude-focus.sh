@@ -15,7 +15,8 @@ WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
 
 [[ -z "$SESSION" || -z "$WINDOW_INDEX" ]] && exit 0
 
-# tmuxウィンドウの通知を消去（claude-status.shに委譲）
+# tmuxウィンドウの通知を消去（ファイルベースのみ）
+# pane option はペーン単位の通知なのでここでは消さない（PreToolUse hook で消去）
 clear_tmux_window() {
   local session="$1"
   local window_index="$2"
@@ -48,11 +49,18 @@ start_clear_timer() {
   echo "${session}:${window_index}:${now}:${timer_pid}" > "$FOCUS_STATE_FILE"
 }
 
-# このウィンドウに通知があるかチェック
+# このウィンドウに通知があるかチェック（pane option + ファイルベース）
 has_notification() {
   local session="$1"
   local window_index="$2"
 
+  # 1. pane option チェック（高速）
+  local pane_count
+  pane_count=$(tmux list-panes -t "${session}:${window_index}" -F '#{@claude_status}' 2>/dev/null \
+    | grep -cE '^(idle|permission|complete)$' || true)
+  [[ $pane_count -gt 0 ]] && return 0
+
+  # 2. ファイルベース フォールバック
   [[ ! -d "$STATUS_DIR" ]] && return 1
 
   for f in "$STATUS_DIR"/workspace_*.json; do
