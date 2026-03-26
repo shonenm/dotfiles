@@ -276,6 +276,7 @@ dotfiles/
 |   +-- ralph-lib.sh                   # Shared utilities (permissions setup)
 |   +-- ralph-orchestrate           # Parallel worker lifecycle management
 |   +-- ralph-crew                  # Persistent worker management with periodic dispatch
+|   +-- claude-gc                   # Cleanup all Claude artifacts (state, worktrees, branches, tmux)
 +-- docs/
     +-- ralph.md                       # This documentation
     +-- ralph-crew.md                  # Crew system documentation
