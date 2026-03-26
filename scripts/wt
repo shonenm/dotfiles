@@ -2,7 +2,7 @@
 # wt - git worktree + tmux window 統合管理CLI
 set -euo pipefail
 
-# shellcheck source=wt-lib.sh
+# shellcheck source=/dev/null
 source "$(dirname "$0")/wt-lib.sh"
 
 # CLI-specific: error exits the process

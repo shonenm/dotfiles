@@ -15,6 +15,7 @@ CACHE_FILE="$CACHE_DIR/git_branch_$CACHE_KEY"
 
 mkdir -p "$CACHE_DIR"
 
+# shellcheck source=/dev/null
 source "${BASH_SOURCE%/*}/tmux-utils.sh"
 
 # Check cache freshness

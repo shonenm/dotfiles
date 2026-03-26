@@ -3,6 +3,7 @@
 # Usage: loader.sh global | loader.sh project <session_name>
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
 source "$SCRIPT_DIR/helpers.sh"
 
 # Parse a popup definition: key|width|height|command[|display_name]

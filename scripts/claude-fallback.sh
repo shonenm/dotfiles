@@ -13,6 +13,7 @@ ENV_FILE="$DATA_DIR/env"
 
 # Source utilities if available
 if [[ -f "$SCRIPT_DIR/utils.sh" ]]; then
+  # shellcheck source=/dev/null
   source "$SCRIPT_DIR/utils.sh"
 else
   log_info()    { echo "[INFO] $1"; }

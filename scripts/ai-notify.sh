@@ -30,15 +30,22 @@ send_setup_notification() {
   local tool="$1"
   local webhook="$2"
 
-  local device=$(hostname -s 2>/dev/null || hostname)
-  local os_info="$(uname -s) ($(uname -m))"
-  local user=$(whoami)
-  local ip=$(curl -s --max-time 2 ifconfig.me 2>/dev/null || echo "N/A")
-  local dotfiles_version=$(git -C "$HOME/dotfiles" rev-parse --short HEAD 2>/dev/null || echo "N/A")
-  local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+  local device
+  device=$(hostname -s 2>/dev/null || hostname)
+  local os_info
+  os_info="$(uname -s) ($(uname -m))"
+  local user
+  user=$(whoami)
+  local ip
+  ip=$(curl -s --max-time 2 ifconfig.me 2>/dev/null || echo "N/A")
+  local dotfiles_version
+  dotfiles_version=$(git -C "$HOME/dotfiles" rev-parse --short HEAD 2>/dev/null || echo "N/A")
+  local timestamp
+  timestamp=$(date "+%Y-%m-%d %H:%M:%S")
 
   # ツール名を大文字に変換 (bash 3.2互換)
-  local tool_upper=$(echo "$tool" | tr '[:lower:]' '[:upper:]')
+  local tool_upper
+  tool_upper=$(echo "$tool" | tr '[:lower:]' '[:upper:]')
 
   curl -s -X POST "$webhook" \
     -H "Content-Type: application/json" \
@@ -174,7 +181,8 @@ update_sketchybar_status() {
     local status_file
     if [[ -n "$workspace" ]]; then
       # workspace があれば新形式
-      local timestamp=$(date +%s%N)
+      local timestamp
+      timestamp=$(date +%s%N)
       status_file="$status_dir/workspace_${workspace}_${timestamp}.json"
     else
       # workspace がなければプロジェクト名ベース（フォールバック）
@@ -220,7 +228,8 @@ get_webhook() {
     INPUT=$(timeout 1 cat 2>/dev/null || echo "{}")
   fi
 
-  SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
+  # session_id: 将来の拡張用に取得可能だが現在未使用
+  # SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
 
   # CLAUDE_CONTEXT 環境変数からコンテキスト取得（コンテナ用）
   # 設定されていれば環境推測をスキップして明示的な値を使用

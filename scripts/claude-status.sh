@@ -31,7 +31,7 @@ set_status() {
   # 重複通知チェック: 同じworkspace + statusの通知が2秒以内にあればスキップ
   local now_sec
   now_sec=$(date +%s)
-  for existing_file in "$STATUS_DIR"/workspace_${workspace}_*.json; do
+  for existing_file in "$STATUS_DIR"/workspace_"${workspace}"_*.json; do
     [[ -f "$existing_file" ]] || continue
     local existing_status existing_updated
     existing_status=$(jq -r '.status // ""' "$existing_file" 2>/dev/null || echo "")
@@ -73,7 +73,8 @@ get_status() {
 
   # 最新のファイルを取得
   local latest_file
-  latest_file=$(ls -t "$STATUS_DIR"/workspace_${workspace}_*.json 2>/dev/null | head -1)
+  # shellcheck disable=SC2012
+  latest_file=$(ls -t "$STATUS_DIR"/workspace_"${workspace}"_*.json 2>/dev/null | head -1)
 
   if [[ -n "$latest_file" && -f "$latest_file" ]]; then
     cat "$latest_file"
@@ -98,7 +99,7 @@ list_status() {
 # 状態をクリア
 clear_status() {
   local workspace="$1"
-  rm -f "$STATUS_DIR"/workspace_${workspace}_*.json
+  rm -f "$STATUS_DIR"/workspace_"${workspace}"_*.json
 
   # SketchyBar 通知
   if command -v sketchybar &>/dev/null; then

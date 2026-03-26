@@ -3,6 +3,7 @@
 # Ensure CONFIG_DIR is set (for when called directly, not via sketchybar)
 : "${CONFIG_DIR:=$HOME/.config/sketchybar}"
 
+# shellcheck source=/dev/null
 source "$CONFIG_DIR/plugins/colors.sh"
 
 # Get current mode color
@@ -100,7 +101,7 @@ for WS in $WORKSPACES; do
                label.font="Hack Nerd Font:Regular:14.0" \
                label.color=0xffffffff \
                label.padding_right=16 \
-               background.color=$BG_COLOR \
+               background.color="$BG_COLOR" \
                background.corner_radius=8 \
                background.height=36 \
                background.padding_left=8 \
@@ -112,5 +113,5 @@ done
 
 # Show popup with theme-colored border
 sketchybar --set layout_anchor \
-    popup.background.border_color=$THEME_COLOR \
+    popup.background.border_color="$THEME_COLOR" \
     popup.drawing=on

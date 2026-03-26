@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# shellcheck source=/dev/null
 source "$CONFIG_DIR/plugins/colors.sh"
 
 # AeroSpaceモニター番号 → sketchybarディスプレイ番号の変換
@@ -8,14 +9,16 @@ get_sketchybar_display() {
     local aerospace_monitor=$1
 
     # シングルモニターの場合は常に1を返す
-    local monitor_count=$(aerospace list-monitors 2>/dev/null | wc -l | tr -d ' ')
+    local monitor_count
+    monitor_count=$(aerospace list-monitors 2>/dev/null | wc -l | tr -d ' ')
     if [ "$monitor_count" -le 1 ]; then
         echo "1"
         return
     fi
 
     # 複数モニターの場合：AeroSpaceのモニター名を取得
-    local monitor_name=$(aerospace list-monitors --json 2>/dev/null \
+    local monitor_name
+    monitor_name=$(aerospace list-monitors --json 2>/dev/null \
         | jq -r ".[] | select(.\"monitor-id\" == $aerospace_monitor) | .\"monitor-name\"")
 
     # Built-in Retina Display → sketchybar display=1
@@ -47,13 +50,11 @@ MONITOR_COUNT=$(aerospace list-monitors 2>/dev/null | wc -l | tr -d ' ')
 
 # Get all non-empty workspaces for state tracking
 ALL_WS=""
-for monitor in $(seq 1 $MONITOR_COUNT); do
-    WS=$(aerospace list-workspaces --monitor $monitor --empty no 2>/dev/null | sort)
+for monitor in $(seq 1 "$MONITOR_COUNT"); do
+    WS=$(aerospace list-workspaces --monitor "$monitor" --empty no 2>/dev/null | sort)
     ALL_WS="$ALL_WS $WS"
 done
 ALL_WS=$(echo "$ALL_WS" | xargs | tr ' ' '|')
-
-FOCUSED_WS=$(aerospace list-workspaces --focused 2>/dev/null)
 
 # State file to track existing workspace items
 STATE_FILE="/tmp/sketchybar_workspaces_state"
@@ -72,21 +73,21 @@ if [ "$CURRENT_STATE" != "$PREV_STATE" ]; then
     sketchybar --remove '/monitor_label_.*/' 2>/dev/null
 
     # Create workspace items per monitor
-    for monitor in $(seq 1 $MONITOR_COUNT); do
-        MONITOR_WS=$(aerospace list-workspaces --monitor $monitor --empty no 2>/dev/null | sort)
+    for monitor in $(seq 1 "$MONITOR_COUNT"); do
+        MONITOR_WS=$(aerospace list-workspaces --monitor "$monitor" --empty no 2>/dev/null | sort)
         [ -z "$MONITOR_WS" ] && continue
 
         # AeroSpaceモニター番号をsketchybarディスプレイ番号に変換
-        SKETCHYBAR_DISPLAY=$(get_sketchybar_display $monitor)
+        SKETCHYBAR_DISPLAY=$(get_sketchybar_display "$monitor")
 
         SPACE_ITEMS=()
 
         # モニターラベル（マルチモニター時のみ）
         if [ "$MONITOR_COUNT" -gt 1 ]; then
-            MONITOR_LABEL=$(get_monitor_label $monitor)
+            MONITOR_LABEL=$(get_monitor_label "$monitor")
             sketchybar --add item "monitor_label_$monitor" left \
                 --set "monitor_label_$monitor" \
-                display=$SKETCHYBAR_DISPLAY \
+                display="$SKETCHYBAR_DISPLAY" \
                 icon.drawing=off \
                 label="$MONITOR_LABEL" \
                 label.font="Hack Nerd Font:Bold:10.0" \
@@ -101,10 +102,10 @@ if [ "$CURRENT_STATE" != "$PREV_STATE" ]; then
             SPACE_ITEMS+=("space.$sid")
 
             # ワークスペースアイテム（モニター指定付き）
-            sketchybar --add item space.$sid left \
-                --subscribe space.$sid aerospace_workspace_change \
-                --set space.$sid \
-                display=$SKETCHYBAR_DISPLAY \
+            sketchybar --add item "space.$sid" left \
+                --subscribe "space.$sid" aerospace_workspace_change \
+                --set "space.$sid" \
+                display="$SKETCHYBAR_DISPLAY" \
                 icon.drawing=off \
                 label="$sid" \
                 label.font="Hack Nerd Font:Bold:12.0" \
@@ -121,7 +122,7 @@ if [ "$CURRENT_STATE" != "$PREV_STATE" ]; then
             # バッジアイテム（モニター指定付き）
             sketchybar --add item "space.${sid}_badge" left \
                 --set "space.${sid}_badge" \
-                display=$SKETCHYBAR_DISPLAY \
+                display="$SKETCHYBAR_DISPLAY" \
                 drawing=on \
                 icon.drawing=off \
                 label="" \
@@ -143,13 +144,13 @@ if [ "$CURRENT_STATE" != "$PREV_STATE" ]; then
 
         # Create bracket for unified background (per monitor)
         if [ ${#SPACE_ITEMS[@]} -gt 0 ]; then
-            sketchybar --add bracket workspaces_$monitor "${SPACE_ITEMS[@]}" \
-                       --set workspaces_$monitor \
-                       display=$SKETCHYBAR_DISPLAY \
+            sketchybar --add bracket "workspaces_$monitor" "${SPACE_ITEMS[@]}" \
+                       --set "workspaces_$monitor" \
+                       display="$SKETCHYBAR_DISPLAY" \
                        background.color=0xff1e1f29 \
                        background.corner_radius=5 \
                        background.height=24 \
-                       background.border_color=$HIGHLIGHT_COLOR \
+                       background.border_color="$HIGHLIGHT_COLOR" \
                        background.border_width=2 \
                        background.drawing=on
         fi
@@ -157,18 +158,18 @@ if [ "$CURRENT_STATE" != "$PREV_STATE" ]; then
 fi
 
 # Update highlight for visible workspaces on each monitor (not just focused)
-for monitor in $(seq 1 $MONITOR_COUNT); do
+for monitor in $(seq 1 "$MONITOR_COUNT"); do
     # Update bracket border color
-    sketchybar --set "workspaces_$monitor" background.border_color=$HIGHLIGHT_COLOR 2>/dev/null
+    sketchybar --set "workspaces_$monitor" background.border_color="$HIGHLIGHT_COLOR" 2>/dev/null
 
     # 各モニターの表示中ワークスペースを取得（フォーカスの有無に関係なく）
-    VISIBLE_WS=$(aerospace list-workspaces --monitor $monitor --visible 2>/dev/null)
+    VISIBLE_WS=$(aerospace list-workspaces --monitor "$monitor" --visible 2>/dev/null)
 
-    MONITOR_WS=$(aerospace list-workspaces --monitor $monitor --empty no 2>/dev/null)
+    MONITOR_WS=$(aerospace list-workspaces --monitor "$monitor" --empty no 2>/dev/null)
     for sid in $MONITOR_WS; do
         if [ "$sid" = "$VISIBLE_WS" ]; then
             sketchybar --set "space.$sid" \
-                background.color=$HIGHLIGHT_COLOR \
+                background.color="$HIGHLIGHT_COLOR" \
                 background.drawing=on
         else
             sketchybar --set "space.$sid" \

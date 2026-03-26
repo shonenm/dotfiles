@@ -2,6 +2,7 @@
 # Pomodoro Timer Plugin for SketchyBar
 # 進捗バー表示、状態に応じた色変更
 
+# shellcheck source=/dev/null
 source "$CONFIG_DIR/plugins/colors.sh"
 
 STATE_DIR="/tmp/sketchybar_pomodoro"
