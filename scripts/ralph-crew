@@ -10,6 +10,7 @@ source "$(dirname "$0")/ralph-lib.sh"
 
 # --- Defaults ---
 DEFAULT_CONFIG=".claude/crew.json"
+CONFIG_FILE=""
 PROJECT_DIR=""
 STATE_DIR="/tmp/ralph-crew"
 TMUX_SESSION="ralph-crew"
@@ -55,7 +56,7 @@ _load_config() {
   STATE_DIR="$(jq -r --arg default "/tmp/ralph-crew/${project_name}" '.state_dir // $default' "$config_file")"
   LOG_FILE="${STATE_DIR}/logs/dispatch.log"
 
-  echo "$config_file"
+  CONFIG_FILE="$abs_config"
 }
 
 # --- Worker state ---
@@ -343,7 +344,8 @@ cmd_init() {
     esac
   done
 
-  config_file="$(_load_config "$config_file")" || return 1
+  _load_config "$config_file" || return 1
+  config_file="$CONFIG_FILE"
 
   # Create state directories
   mkdir -p "${STATE_DIR}"/{workers,dispatch,prompts,system-prompts,logs}
@@ -380,7 +382,8 @@ cmd_dispatch() {
     esac
   done
 
-  config_file="$(_load_config "$config_file")" || return 1
+  _load_config "$config_file" || return 1
+  config_file="$CONFIG_FILE"
 
   # Exclusive lock
   mkdir -p "$STATE_DIR"
@@ -468,7 +471,8 @@ cmd_status() {
     esac
   done
 
-  config_file="$(_load_config "$config_file")" || return 1
+  _load_config "$config_file" || return 1
+  config_file="$CONFIG_FILE"
 
   if [[ "$json_mode" == true ]]; then
     local result="{"
@@ -563,7 +567,8 @@ cmd_restart() {
     esac
   done
 
-  config_file="$(_load_config "$config_file")" || return 1
+  _load_config "$config_file" || return 1
+  config_file="$CONFIG_FILE"
 
   # Kill existing window if present
   local window_name="crew/${worker_id}"
