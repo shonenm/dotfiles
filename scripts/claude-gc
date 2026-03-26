@@ -1,0 +1,290 @@
+#!/usr/bin/env bash
+# claude-gc - Claude Code が残したアーティファクトを一括クリーンアップ
+#
+# 対象:
+#   1. /tmp/ralph/state/ の orphaned state/active ファイル
+#   2. /tmp/ralph/ 配下の workers, results, prompts, checkpoint
+#   3. /tmp/ralph-crew/ 配下のファイル
+#   4. git worktree (--wt-- パターン)
+#   5. orphaned git branch (ralph/*, crew/*)
+#   6. orphaned tmux sessions (数字名の空セッション)
+#
+# Usage:
+#   claude-gc              # dry-run (削除対象を表示)
+#   claude-gc --force      # 実際に削除
+#   claude-gc --all        # archive も含めて全削除 (dry-run)
+#   claude-gc --all --force
+set -euo pipefail
+
+# --- Options ---
+DRY_RUN=true
+INCLUDE_ARCHIVE=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --force|-f) DRY_RUN=false; shift ;;
+    --all|-a)   INCLUDE_ARCHIVE=true; shift ;;
+    --help|-h)
+      sed -n '2,/^[^#]/{ /^#/{ s/^# //p; s/^#$//p; }; }' "$0"
+      exit 0
+      ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
+  esac
+done
+
+# --- Output ---
+_info()    { printf '\033[0;36minfo\033[0m  %s\n' "$*"; }
+_remove()  { printf '\033[0;33mremove\033[0m %s\n' "$*"; }
+_ok()      { printf '\033[0;32mok\033[0m    %s\n' "$*"; }
+_skip()    { printf '\033[0;90mskip\033[0m  %s\n' "$*"; }
+
+removed_count=0
+
+_do_remove_file() {
+  local path="$1"
+  if [[ "$DRY_RUN" == true ]]; then
+    _remove "$path"
+  else
+    rm -f "$path" && _ok "removed $path"
+  fi
+  removed_count=$((removed_count + 1))
+}
+
+_do_remove_dir() {
+  local path="$1"
+  if [[ "$DRY_RUN" == true ]]; then
+    _remove "$path/"
+  else
+    rm -rf "$path" && _ok "removed $path/"
+  fi
+  removed_count=$((removed_count + 1))
+}
+
+# --- 1. Ralph state files ---
+_gc_ralph_state() {
+  local state_dir="/tmp/ralph/state"
+  [[ -d "$state_dir" ]] || return 0
+
+  _info "Ralph state files ($state_dir)"
+
+  # active ファイル経由で処理済みの state ファイルを記録
+  local -a handled_states=()
+
+  # active ファイルとそれに紐づく state ファイルを収集
+  for active_file in "$state_dir"/active_*; do
+    [[ -f "$active_file" ]] || continue
+    local state_file
+    state_file="$(cat "$active_file" 2>/dev/null || true)"
+
+    _do_remove_file "$active_file"
+    if [[ -n "$state_file" ]] && [[ -f "$state_file" ]]; then
+      _do_remove_file "$state_file"
+      handled_states+=("$state_file")
+    fi
+  done
+
+  # 孤立した state ファイル (active ファイルがないもの)
+  for state_file in "$state_dir"/*.json; do
+    [[ -f "$state_file" ]] || continue
+
+    # 既に active 経由で処理済みならスキップ
+    local already_handled=false
+    for h in "${handled_states[@]+"${handled_states[@]}"}"; do
+      if [[ "$h" == "$state_file" ]]; then
+        already_handled=true
+        break
+      fi
+    done
+    [[ "$already_handled" == true ]] && continue
+
+    local basename
+    basename="$(basename "$state_file")"
+    # archive ファイルは --all 指定時のみ
+    if [[ "$basename" == archive_* ]]; then
+      if [[ "$INCLUDE_ARCHIVE" == true ]]; then
+        _do_remove_file "$state_file"
+      else
+        _skip "$state_file (use --all to include archives)"
+      fi
+      continue
+    fi
+    # latest ファイル
+    if [[ "$basename" == "latest" ]]; then
+      _do_remove_file "$state_file"
+      continue
+    fi
+    # まだ残っている通常 state ファイル
+    _do_remove_file "$state_file"
+  done
+}
+
+# --- 2. Ralph orchestrate artifacts ---
+_gc_ralph_orchestrate() {
+  local base="/tmp/ralph"
+  local has_target=false
+
+  for dir in "$base/workers" "$base/results" "$base/prompts"; do
+    if [[ -d "$dir" ]] && [[ -n "$(ls -A "$dir" 2>/dev/null)" ]]; then
+      has_target=true
+      break
+    fi
+  done
+  if [[ -f "$base/checkpoint.json" ]]; then
+    has_target=true
+  fi
+
+  [[ "$has_target" == true ]] || return 0
+
+  _info "Ralph orchestrate artifacts ($base)"
+
+  for dir in "$base/workers" "$base/results" "$base/prompts"; do
+    [[ -d "$dir" ]] || continue
+    _do_remove_dir "$dir"
+  done
+  if [[ -f "$base/checkpoint.json" ]]; then
+    _do_remove_file "$base/checkpoint.json"
+  fi
+}
+
+# --- 3. Ralph crew artifacts ---
+_gc_ralph_crew() {
+  local base="/tmp/ralph-crew"
+  [[ -d "$base" ]] || return 0
+
+  _info "Ralph crew artifacts ($base)"
+
+  for project_dir in "$base"/*/; do
+    [[ -d "$project_dir" ]] || continue
+    local project_name
+    project_name="$(basename "$project_dir")"
+
+    # crew tmux session が生きていたらスキップ
+    local session_name="crew-${project_name}"
+    if tmux has-session -t "$session_name" 2>/dev/null; then
+      _skip "$project_dir (active session: $session_name)"
+      continue
+    fi
+
+    _do_remove_dir "$project_dir"
+  done
+}
+
+# --- 4. Git worktrees ---
+_gc_worktrees() {
+  # 全リポジトリの worktree をチェックするのは困難なので、
+  # カレントリポジトリ (git 管理下にいる場合) のみ対象
+  if ! git rev-parse --git-dir &>/dev/null 2>&1; then
+    return 0
+  fi
+
+  local found=false
+  while IFS= read -r line; do
+    local wt_dir
+    wt_dir="$(echo "$line" | awk '{print $1}')"
+    [[ "$wt_dir" == *--wt--* ]] || continue
+    found=true
+
+    if [[ "$DRY_RUN" == true ]]; then
+      _remove "worktree: $wt_dir"
+      removed_count=$((removed_count + 1))
+    else
+      # tmux window も同時に削除
+      local repo branch_info win
+      repo="$(basename "$(git worktree list --porcelain | head -1 | sed 's/^worktree //')")"
+      branch_info="$(echo "$line" | sed 's/.*\[//' | sed 's/\]//')"
+      win="${repo}#${branch_info}"
+      if tmux list-windows -F '#{window_name}' 2>/dev/null | grep -qxF "$win"; then
+        tmux kill-window -t "$win" 2>/dev/null || true
+      fi
+      if git worktree remove --force "$wt_dir" 2>/dev/null; then
+        _ok "removed worktree: $wt_dir"
+      else
+        _remove "failed to remove: $wt_dir (try manually)"
+      fi
+      removed_count=$((removed_count + 1))
+    fi
+  done < <(git worktree list)
+
+  if [[ "$found" == true ]]; then
+    if [[ "$DRY_RUN" == false ]]; then
+      git worktree prune 2>/dev/null || true
+    fi
+  fi
+}
+
+# --- 5. Orphaned branches ---
+_gc_branches() {
+  if ! git rev-parse --git-dir &>/dev/null 2>&1; then
+    return 0
+  fi
+
+  # worktree に紐づいているブランチを収集
+  local worktree_branches=""
+  worktree_branches="$(git worktree list --porcelain | grep '^branch ' | sed 's|^branch refs/heads/||' || true)"
+
+  local found=false
+  for prefix in "ralph/" "crew/"; do
+    while IFS= read -r branch; do
+      [[ -z "$branch" ]] && continue
+      # worktree で使用中ならスキップ
+      if echo "$worktree_branches" | grep -qxF "$branch"; then
+        _skip "branch $branch (in use by worktree)"
+        continue
+      fi
+      found=true
+      if [[ "$DRY_RUN" == true ]]; then
+        _remove "branch: $branch"
+        removed_count=$((removed_count + 1))
+      else
+        git branch -D "$branch" 2>/dev/null && _ok "deleted branch: $branch"
+        removed_count=$((removed_count + 1))
+      fi
+    done < <(git branch --list "${prefix}*" | sed 's/^[* ]*//')
+  done
+}
+
+# --- 6. Orphaned tmux sessions ---
+_gc_tmux_sessions() {
+  # 数字のみの名前のセッションで、アタッチされていないものを対象
+  local found=false
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    local name attached
+    name="$(echo "$line" | cut -d: -f1)"
+    attached="$(echo "$line" | cut -d: -f2)"
+
+    # 数字のみの名前 = tmux のデフォルト命名 (意図的に作ったものではない)
+    if [[ "$name" =~ ^[0-9]+$ ]] && [[ "$attached" == "0" ]]; then
+      found=true
+      if [[ "$DRY_RUN" == true ]]; then
+        _remove "tmux session: $name"
+        removed_count=$((removed_count + 1))
+      else
+        tmux kill-session -t "$name" 2>/dev/null && _ok "killed tmux session: $name"
+        removed_count=$((removed_count + 1))
+      fi
+    fi
+  done < <(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null || true)
+}
+
+# --- Main ---
+_info "Claude GC$(if [[ "$DRY_RUN" == true ]]; then echo " (dry-run, use --force to execute)"; fi)"
+echo ""
+
+_gc_ralph_state
+_gc_ralph_orchestrate
+_gc_ralph_crew
+_gc_worktrees
+_gc_branches
+_gc_tmux_sessions
+
+echo ""
+if [[ "$removed_count" -eq 0 ]]; then
+  _ok "Nothing to clean up"
+else
+  if [[ "$DRY_RUN" == true ]]; then
+    _info "$removed_count item(s) would be removed. Run with --force to execute."
+  else
+    _ok "Cleaned up $removed_count item(s)"
+  fi
+fi
