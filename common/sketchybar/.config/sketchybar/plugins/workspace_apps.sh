@@ -1,6 +1,8 @@
 #!/bin/bash
 
+# shellcheck source=/dev/null
 source "$CONFIG_DIR/plugins/icon_map.sh"
+# shellcheck source=/dev/null
 source "$CONFIG_DIR/plugins/colors.sh"
 
 # Get current mode color
@@ -40,6 +42,7 @@ if [ "$CURRENT_APPS" != "$PREV_APPS" ]; then
         APP_ITEMS+=("$item_name")
         __icon_map "$app"
 
+        # shellcheck disable=SC2154  # icon_result is set by __icon_map
         sketchybar --add item "$item_name" left \
                    --set "$item_name" \
                    icon="$icon_result" \
@@ -82,7 +85,7 @@ if [ "$CURRENT_APPS" != "$PREV_APPS" ]; then
                    background.color=0xff1e1f29 \
                    background.corner_radius=5 \
                    background.height=24 \
-                   background.border_color=$HIGHLIGHT_COLOR \
+                   background.border_color="$HIGHLIGHT_COLOR" \
                    background.border_width=2 \
                    background.drawing=on
 
@@ -102,7 +105,7 @@ if [ "$CURRENT_APPS" != "$PREV_APPS" ]; then
 fi
 
 # Update apps_bracket border color (for mode changes)
-sketchybar --set apps_bracket background.border_color=$HIGHLIGHT_COLOR 2>/dev/null
+sketchybar --set apps_bracket background.border_color="$HIGHLIGHT_COLOR" 2>/dev/null
 
 # Update styles based on focus (without recreating)
 if [ -n "$APPS" ]; then
@@ -114,7 +117,7 @@ if [ -n "$APPS" ]; then
                 label="$app" \
                 label.drawing=on \
                 icon.background.drawing=on \
-                icon.background.color=$HIGHLIGHT_COLOR \
+                icon.background.color="$HIGHLIGHT_COLOR" \
                 icon.background.corner_radius=4 \
                 icon.background.height=20
         else

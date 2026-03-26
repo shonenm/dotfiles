@@ -17,6 +17,7 @@ RIGHT_ROUND=$'\xee\x82\xb4'
 # キャッシュディレクトリ作成
 mkdir -p "$CACHE_DIR" 2>/dev/null
 
+# shellcheck source=/dev/null
 source "${BASH_SOURCE%/*}/tmux-utils.sh"
 
 # ウィンドウ用バッジ: このウィンドウに通知があるか（数字付き）

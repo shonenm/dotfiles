@@ -1,6 +1,7 @@
 #!/bin/bash
 # Day Progress - 1日の進捗をバーで表示
 
+# shellcheck source=/dev/null
 source "$CONFIG_DIR/plugins/colors.sh"
 
 hour=$(date +%H)

@@ -19,7 +19,7 @@ case "${PERCENTAGE}" in
   *) ICON=""
 esac
 
-if [[ "$CHARGING" != "" ]]; then
+if [ "$CHARGING" != "" ]; then
   ICON=""
 fi
 

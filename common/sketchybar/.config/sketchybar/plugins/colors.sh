@@ -11,6 +11,7 @@ CUSTOM_ACCENT_COLOR="0xff0055bb"
 SERVICE_MODE_COLOR="0xffff6600"
 
 # バッジ色（薄い版 - タイマー中）
+# shellcheck disable=SC2034  # used by claude.sh
 DIM_BADGE_COLOR="0x88ff6600"
 
 # タイマーモード（緑）
@@ -25,11 +26,13 @@ get_accent_color() {
         return
     fi
 
-    local highlight=$(defaults read -g AppleHighlightColor 2>/dev/null)
+    local highlight
+    highlight=$(defaults read -g AppleHighlightColor 2>/dev/null)
     if [ -n "$highlight" ]; then
-        local r=$(echo "$highlight" | awk '{printf "%02x", $1 * 255}')
-        local g=$(echo "$highlight" | awk '{printf "%02x", $2 * 255}')
-        local b=$(echo "$highlight" | awk '{printf "%02x", $3 * 255}')
+        local r g b
+        r=$(echo "$highlight" | awk '{printf "%02x", $1 * 255}')
+        g=$(echo "$highlight" | awk '{printf "%02x", $2 * 255}')
+        b=$(echo "$highlight" | awk '{printf "%02x", $3 * 255}')
         echo "0xff${r}${g}${b}"
     else
         echo "0xff007aff"
@@ -43,9 +46,10 @@ get_mode_color() {
     case "$mode" in
         service) echo "$SERVICE_MODE_COLOR" ;;
         timer)   echo "$TIMER_MODE_COLOR" ;;
-        *)       echo "$(get_accent_color)" ;;
+        *)       get_accent_color ;;
     esac
 }
 
 # アクセントカラーを変数として公開
+# shellcheck disable=SC2034  # used by sketchybarrc
 ACCENT_COLOR=$(get_accent_color)

@@ -27,6 +27,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# shellcheck disable=SC2016
 "$UNBUFFER" ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$REMOTE_HOST" '
   export LD_LIBRARY_PATH="$HOME/.local/lib:$LD_LIBRARY_PATH"
   INOTIFYWAIT="$HOME/.local/bin/inotifywait"

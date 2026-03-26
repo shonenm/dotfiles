@@ -2,6 +2,7 @@
 # Claude Code Status Plugin for SketchyBar
 # Updates workspace badges based on Claude session status (workspace-based)
 
+# shellcheck source=/dev/null
 source "$CONFIG_DIR/plugins/colors.sh"
 
 STATUS_DIR="/tmp/claude/status"
@@ -17,7 +18,7 @@ remove_notifications_for_workspace() {
   local target_session="${2:-}"
   local target_window="${3:-}"
 
-  for f in "$STATUS_DIR"/workspace_${target_workspace}_*.json; do
+  for f in "$STATUS_DIR"/workspace_"${target_workspace}"_*.json; do
     [[ -f "$f" ]] || continue
     local notif_session notif_window
     notif_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
@@ -65,7 +66,7 @@ start_clear_timer() {
   (
     sleep 5
     # Delete considering tmux info
-    for f in "$STATUS_DIR"/workspace_${workspace}_*.json; do
+    for f in "$STATUS_DIR"/workspace_"${workspace}"_*.json; do
       [[ -f "$f" ]] || continue
       local notif_session notif_window
       notif_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
@@ -103,13 +104,14 @@ handle_focus_change() {
 
   # Load previous focus state and handle timer
   if [[ -f "$FOCUS_STATE_FILE" ]]; then
-    local prev_state prev_workspace prev_ts prev_pid prev_session prev_tmux_window
+    local prev_state prev_workspace prev_ts prev_pid
     prev_state=$(cat "$FOCUS_STATE_FILE" 2>/dev/null)
     prev_workspace=$(echo "$prev_state" | cut -d: -f1)
     prev_ts=$(echo "$prev_state" | cut -d: -f2)
     prev_pid=$(echo "$prev_state" | cut -d: -f3)
-    prev_session=$(echo "$prev_state" | cut -d: -f4)
-    prev_tmux_window=$(echo "$prev_state" | cut -d: -f5)
+    # prev_session/prev_tmux_window: parsed but not currently needed
+    # prev_session=$(echo "$prev_state" | cut -d: -f4)
+    # prev_tmux_window=$(echo "$prev_state" | cut -d: -f5)
 
     local elapsed=$((now - prev_ts))
 
@@ -124,7 +126,7 @@ handle_focus_change() {
     # 2-second rule when workspace changed
     if [[ $elapsed -ge 2 ]]; then
       # Stayed 2+ seconds -> clear all notifications for prev workspace
-      rm -f "$STATUS_DIR"/workspace_${prev_workspace}_*.json 2>/dev/null
+      rm -f "$STATUS_DIR"/workspace_"${prev_workspace}"_*.json 2>/dev/null
       sketchybar --trigger claude_status_change 2>/dev/null
     fi
   fi
@@ -166,7 +168,7 @@ handle_notification_arrived() {
   [[ -z "$focused_ws" ]] && return
 
   # Check if focused workspace has notifications
-  if ls "$STATUS_DIR"/workspace_${focused_ws}_*.json &>/dev/null; then
+  if ls "$STATUS_DIR"/workspace_"${focused_ws}"_*.json &>/dev/null; then
     local should_start_timer=true
 
     # For terminal apps with tmux, also check tmux position
@@ -177,7 +179,7 @@ handle_notification_arrived() {
         current_window=$(tmux display-message -p '#I' 2>/dev/null)
         if [[ -n "$current_session" && -n "$current_window" ]]; then
           # Check notifications with tmux info
-          for f in "$STATUS_DIR"/workspace_${focused_ws}_*.json; do
+          for f in "$STATUS_DIR"/workspace_"${focused_ws}"_*.json; do
             [[ -f "$f" ]] || continue
             local notif_session notif_window
             notif_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
@@ -313,7 +315,8 @@ update_badges() {
     done
 
     # Item name (replace space and dot with underscore)
-    local item_name="app.$(echo "$app" | tr ' .' '_')_badge"
+    local item_name
+    item_name="app.$(echo "$app" | tr ' .' '_')_badge"
 
     if [[ $app_total -eq 0 ]]; then
       sketchybar --set "$item_name" \

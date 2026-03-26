@@ -3,6 +3,7 @@
 # モードキャッシュ更新 + mode_indicatorのみ更新
 # 他のアイテムは mode_color_changed イベントで自己更新
 
+# shellcheck source=/dev/null
 source "$CONFIG_DIR/plugins/colors.sh"
 
 # モード取得・キャッシュ
@@ -37,7 +38,7 @@ sketchybar --set mode_indicator \
     icon.drawing=on \
     label="$LABEL" \
     label.drawing=on \
-    background.color=$MODE_COLOR \
+    background.color="$MODE_COLOR" \
     background.drawing=on
 
 # keybind_help 更新
@@ -54,7 +55,7 @@ if [ -n "$HELP" ]; then
                background.color=0xff1e1f29 \
                background.corner_radius=5 \
                background.height=24 \
-               background.border_color=$MODE_COLOR \
+               background.border_color="$MODE_COLOR" \
                background.border_width=2 \
                background.drawing=on
 else
@@ -65,10 +66,10 @@ else
 fi
 
 # JankyBorders 更新
-borders active_color=$MODE_COLOR 2>/dev/null
+borders active_color="$MODE_COLOR" 2>/dev/null
 
 # layout_anchor popup の色も更新（開いていれば）
-sketchybar --set layout_anchor popup.background.border_color=$MODE_COLOR 2>/dev/null
+sketchybar --set layout_anchor popup.background.border_color="$MODE_COLOR" 2>/dev/null
 
 # ポップアップ内のフォーカスワークスペースアイテムも更新
 POPUP_STATE=$(sketchybar --query layout_anchor 2>/dev/null | jq -r '.popup.drawing' 2>/dev/null)
@@ -77,7 +78,7 @@ if [ "$POPUP_STATE" = "on" ]; then
     INDEX=0
     for WS in $(aerospace list-workspaces --monitor all --empty no 2>/dev/null | sort); do
         if [ "$WS" = "$FOCUSED_WS" ]; then
-            sketchybar --set "layout_item.$INDEX" background.color=$MODE_COLOR 2>/dev/null
+            sketchybar --set "layout_item.$INDEX" background.color="$MODE_COLOR" 2>/dev/null
         fi
         INDEX=$((INDEX + 1))
     done

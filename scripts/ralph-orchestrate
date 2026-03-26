@@ -5,9 +5,9 @@
 # launches independent claude processes, and polls for completion.
 set -euo pipefail
 
-# shellcheck source=wt-lib.sh
+# shellcheck source=/dev/null
 source "$(dirname "$0")/wt-lib.sh"
-# shellcheck source=ralph-lib.sh
+# shellcheck source=/dev/null
 source "$(dirname "$0")/ralph-lib.sh"
 
 readonly RESULTS_DIR="/tmp/ralph/results"

@@ -5,6 +5,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(dirname "$SCRIPT_DIR")"
 CONFIG_DIR="$DOTFILES_DIR/config"
+# shellcheck source=/dev/null
 source "$SCRIPT_DIR/utils.sh"
 
 install_brew_bundle() {
@@ -50,7 +51,8 @@ install_dops() {
   log_info "Installing dops (better docker ps)..."
   mkdir -p "$HOME/.local/bin"
 
-  local arch=$(uname -m)
+  local arch
+  arch=$(uname -m)
   local binary="dops_macos-amd64"
   [[ "$arch" == "arm64" ]] && binary="dops_macos-arm64"
 

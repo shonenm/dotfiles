@@ -16,6 +16,7 @@ GPU_ICON=$'\xef\x89\xac'
 
 mkdir -p "$CACHE_DIR"
 
+# shellcheck source=/dev/null
 source "${BASH_SOURCE%/*}/tmux-utils.sh"
 
 # Check cache freshness

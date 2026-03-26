@@ -83,6 +83,7 @@ cmd_fzf_sessions() {
   [ -z "$selected" ] && exit 0
 
   # Strip ANSI codes from selection
+  # shellcheck disable=SC2001
   selected=$(echo "$selected" | sed $'s/\033\\[[0-9;]*m//g')
   tmux switch-client -t "$selected"
 }

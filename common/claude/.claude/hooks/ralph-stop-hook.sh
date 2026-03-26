@@ -63,7 +63,8 @@ fi
 # archive: cleanup 前に状態ファイルを保存
 archive() {
   mkdir -p /tmp/ralph/state
-  local archive_file="/tmp/ralph/state/archive_$(date +%Y%m%d_%H%M%S).json"
+  local archive_file
+  archive_file="/tmp/ralph/state/archive_$(date +%Y%m%d_%H%M%S).json"
   cp "$state_file" "$archive_file"
 }
 

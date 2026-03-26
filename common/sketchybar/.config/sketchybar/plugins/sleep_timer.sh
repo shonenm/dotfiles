@@ -1,6 +1,7 @@
 #!/bin/bash
 # ディスプレイスリープ設定を表示
 
+# shellcheck source=/dev/null
 source "$CONFIG_DIR/plugins/colors.sh"
 
 # ディスプレイスリープ設定を分で取得

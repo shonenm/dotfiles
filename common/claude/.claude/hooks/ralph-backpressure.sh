@@ -42,8 +42,6 @@ project_root="$(find_project_root "$file_path" || echo "")"
 
 # 拡張子を取得
 ext="${file_path##*.}"
-basename_file="$(basename "$file_path")"
-
 errors=""
 
 # エラー収集ヘルパー
@@ -95,13 +93,14 @@ case "$ext" in
       done
       if [[ -n "$test_file" ]]; then
         test_output=""
+        test_exit=0
         if [[ -f "$project_root/node_modules/.bin/vitest" ]]; then
-          test_output="$(cd "$project_root" && timeout 15 ./node_modules/.bin/vitest run "$test_file" --reporter=verbose 2>&1)" || true
+          test_output="$(cd "$project_root" && timeout 15 ./node_modules/.bin/vitest run "$test_file" --reporter=verbose 2>&1)" || test_exit=$?
         elif [[ -f "$project_root/node_modules/.bin/jest" ]]; then
-          test_output="$(cd "$project_root" && timeout 15 ./node_modules/.bin/jest "$test_file" --no-coverage 2>&1)" || true
+          test_output="$(cd "$project_root" && timeout 15 ./node_modules/.bin/jest "$test_file" --no-coverage 2>&1)" || test_exit=$?
         fi
         # テスト成功時は報告しない
-        if [[ $? -ne 0 ]] && [[ -n "$test_output" ]]; then
+        if [[ "$test_exit" -ne 0 ]] && [[ -n "$test_output" ]]; then
           append_error "test ($test_file)" "$test_output"
         fi
       fi

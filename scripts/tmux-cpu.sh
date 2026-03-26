@@ -17,6 +17,7 @@ CPU_ICON=$'\xef\x8b\x9b'
 
 mkdir -p "$CACHE_DIR"
 
+# shellcheck source=/dev/null
 source "${BASH_SOURCE%/*}/tmux-utils.sh"
 
 # Check cache freshness
