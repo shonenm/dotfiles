@@ -5,7 +5,7 @@
 # Designed for launchd integration (periodic dispatch via StartInterval).
 set -euo pipefail
 
-# shellcheck source=ralph-lib.sh
+# shellcheck source=/dev/null
 source "$(dirname "$0")/ralph-lib.sh"
 
 # --- Defaults ---
@@ -526,10 +526,23 @@ cmd_status() {
 }
 
 cmd_send() {
-  local worker_id="${1:-}"
-  local message="${2:-}"
-  [[ -z "$worker_id" ]] && { _error "Usage: ralph-crew send <worker-id> <message>"; return 1; }
+  local worker_id="" message="" config_file="$DEFAULT_CONFIG"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config) config_file="${2:-}"; shift 2 ;;
+      *)
+        if [[ -z "$worker_id" ]]; then
+          worker_id="$1"
+        elif [[ -z "$message" ]]; then
+          message="$1"
+        fi
+        shift ;;
+    esac
+  done
+  [[ -z "$worker_id" ]] && { _error "Usage: ralph-crew send <worker-id> <message> [--config <path>]"; return 1; }
   [[ -z "$message" ]] && { _error "message is required"; return 1; }
+
+  _load_config "$config_file" || return 1
 
   local worker_file="${STATE_DIR}/workers/${worker_id}.json"
   [[ -f "$worker_file" ]] || { _error "Worker not found: $worker_id"; return 1; }
@@ -545,7 +558,8 @@ cmd_send() {
 
   # Write message to file for safe injection
   mkdir -p "${STATE_DIR}/prompts"
-  local msg_file="${STATE_DIR}/prompts/manual-${worker_id}-$(date +%s).md"
+  local msg_file
+  msg_file="${STATE_DIR}/prompts/manual-${worker_id}-$(date +%s).md"
   printf '%s' "$message" > "$msg_file"
 
   echo "running" > "${STATE_DIR}/workers/${worker_id}.status"
@@ -587,6 +601,16 @@ cmd_restart() {
 }
 
 cmd_teardown() {
+  local config_file="$DEFAULT_CONFIG"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config) config_file="${2:-}"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  _load_config "$config_file" || return 1
+
   # Kill tmux session
   if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
     tmux kill-session -t "$TMUX_SESSION"
@@ -609,7 +633,7 @@ case "${1:-}" in
   status)    shift; cmd_status "$@" ;;
   send)      shift; cmd_send "$@" ;;
   restart)   shift; cmd_restart "$@" ;;
-  teardown)  cmd_teardown ;;
+  teardown)  shift; cmd_teardown "$@" ;;
   help|*)
     cat <<EOF
 ralph-crew - Persistent worker management with periodic task dispatch
@@ -618,10 +642,11 @@ Usage:
   ralph-crew init [--config <path>]           Create tmux session and start all workers
   ralph-crew dispatch [--config <path>]        Evaluate schedules and dispatch tasks
   ralph-crew status [--json] [--config <path>] Show worker status
-  ralph-crew send <worker-id> "<message>"      Send manual message to worker
+  ralph-crew send <worker-id> "<message>" [--config <path>]
+                                                Send manual message to worker
   ralph-crew restart <worker-id> [--config <path>]
-                                                   Restart a worker
-  ralph-crew teardown                           Stop all workers and cleanup
+                                                Restart a worker
+  ralph-crew teardown [--config <path>]         Stop all workers and cleanup
 
 Config file default: \$PWD/$DEFAULT_CONFIG
 EOF
