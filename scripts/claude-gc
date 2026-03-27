@@ -5,9 +5,10 @@
 #   1. /tmp/ralph/state/ の orphaned state/active ファイル
 #   2. /tmp/ralph/ 配下の workers, results, prompts, checkpoint
 #   3. /tmp/ralph-crew/ 配下のファイル
-#   4. git worktree (--wt-- パターン)
-#   5. orphaned git branch (ralph/*, crew/*)
-#   6. orphaned tmux sessions (数字名の空セッション)
+#   4. /tmp/ralph-schedule/ の完了済みジョブ + 孤立plist
+#   5. git worktree (--wt-- パターン)
+#   6. orphaned git branch (ralph/*, crew/*)
+#   7. orphaned tmux sessions (数字名の空セッション)
 #
 # Usage:
 #   claude-gc              # dry-run (削除対象を表示)
@@ -169,7 +170,83 @@ _gc_ralph_crew() {
   done
 }
 
-# --- 4. Git worktrees ---
+# --- 4. Ralph schedule artifacts ---
+_gc_ralph_schedule() {
+  local base="/tmp/ralph-schedule"
+  local jobs_dir="${base}/jobs"
+  [[ -d "$jobs_dir" ]] || return 0
+
+  local has_target=false
+  for job_file in "$jobs_dir"/*.json; do
+    [[ -f "$job_file" ]] || continue
+    local status
+    status="$(jq -r '.status' "$job_file" 2>/dev/null || echo "unknown")"
+    if [[ "$status" == "done" || "$status" == "failed" || "$status" == "cancelled" ]]; then
+      has_target=true
+      break
+    fi
+  done
+
+  # Check for orphaned plists
+  if [[ "$(uname)" == "Darwin" ]]; then
+    for plist in "$HOME/Library/LaunchAgents"/com.user.ralph-schedule.*.plist; do
+      [[ -f "$plist" ]] || continue
+      has_target=true
+      break
+    done
+  fi
+
+  [[ "$has_target" == true ]] || return 0
+
+  _info "Ralph schedule artifacts ($base)"
+
+  # Clean completed/failed/cancelled jobs and their artifacts
+  for job_file in "$jobs_dir"/*.json; do
+    [[ -f "$job_file" ]] || continue
+    local job_id status prompt_file
+    job_id="$(jq -r '.id' "$job_file" 2>/dev/null || true)"
+    status="$(jq -r '.status' "$job_file" 2>/dev/null || echo "unknown")"
+
+    if [[ "$status" == "done" || "$status" == "failed" || "$status" == "cancelled" ]]; then
+      # Remove prompt file
+      prompt_file="$(jq -r '.prompt_file // empty' "$job_file" 2>/dev/null || true)"
+      if [[ -n "$prompt_file" ]] && [[ -f "$prompt_file" ]]; then
+        _do_remove_file "$prompt_file"
+      fi
+      # Remove log files
+      for log_ext in log out err; do
+        local log_path="${base}/logs/${job_id}.${log_ext}"
+        if [[ -f "$log_path" ]]; then
+          _do_remove_file "$log_path"
+        fi
+      done
+      # Remove job file
+      _do_remove_file "$job_file"
+    fi
+  done
+
+  # Clean orphaned plists (no corresponding pending job)
+  if [[ "$(uname)" == "Darwin" ]]; then
+    for plist in "$HOME/Library/LaunchAgents"/com.user.ralph-schedule.*.plist; do
+      [[ -f "$plist" ]] || continue
+      local plist_basename
+      plist_basename="$(basename "$plist" .plist)"
+      # Extract job ID: com.user.ralph-schedule.<job-id> -> <job-id>
+      local plist_job_id="${plist_basename#com.user.ralph-schedule.}"
+
+      local matching_job="${jobs_dir}/${plist_job_id}.json"
+      if [[ ! -f "$matching_job" ]] || [[ "$(jq -r '.status' "$matching_job" 2>/dev/null)" != "pending" ]]; then
+        # Bootout before removing
+        if [[ "$DRY_RUN" == false ]]; then
+          launchctl bootout "gui/$(id -u)/${plist_basename}" 2>/dev/null || true
+        fi
+        _do_remove_file "$plist"
+      fi
+    done
+  fi
+}
+
+# --- 5. Git worktrees ---
 _gc_worktrees() {
   # 全リポジトリの worktree をチェックするのは困難なので、
   # カレントリポジトリ (git 管理下にいる場合) のみ対象
@@ -212,7 +289,7 @@ _gc_worktrees() {
   fi
 }
 
-# --- 5. Orphaned branches ---
+# --- 6. Orphaned branches ---
 _gc_branches() {
   if ! git rev-parse --git-dir &>/dev/null 2>&1; then
     return 0
@@ -243,7 +320,7 @@ _gc_branches() {
   done
 }
 
-# --- 6. Orphaned tmux sessions ---
+# --- 7. Orphaned tmux sessions ---
 _gc_tmux_sessions() {
   # 数字のみの名前のセッションで、アタッチされていないものを対象
   local found=false
@@ -274,6 +351,7 @@ echo ""
 _gc_ralph_state
 _gc_ralph_orchestrate
 _gc_ralph_crew
+_gc_ralph_schedule
 _gc_worktrees
 _gc_branches
 _gc_tmux_sessions
