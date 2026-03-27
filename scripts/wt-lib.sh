@@ -34,6 +34,23 @@ wt_repo_name() {
   basename "$main"
 }
 
+wt_default_branch() {
+  local ref
+  ref="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null)" && {
+    echo "${ref#refs/remotes/origin/}"
+    return 0
+  }
+  # origin/HEAD が未設定の場合、main / master をチェック
+  for candidate in main master; do
+    if git show-ref --verify --quiet "refs/remotes/origin/$candidate" 2>/dev/null; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  wt_error "Could not detect default branch"
+  return 1
+}
+
 wt_path() {
   local branch="$1"
   local main_path
@@ -200,11 +217,14 @@ wt_create() {
     elif git show-ref --verify --quiet "refs/remotes/origin/$branch" 2>/dev/null; then
       git worktree add "$path" "$branch" >&2
     else
-      if [[ -n "$base" ]]; then
-        git worktree add -b "$branch" "$path" "$base" >&2
-      else
-        git worktree add -b "$branch" "$path" >&2
+      if [[ -z "$base" ]]; then
+        local default_branch
+        default_branch="$(wt_default_branch)" || return 1
+        git fetch origin "$default_branch" >&2
+        base="origin/$default_branch"
+        wt_info "Base: $base (default branch)"
       fi
+      git worktree add -b "$branch" "$path" "$base" >&2
     fi
     local main
     main="$(wt_main_worktree)"
