@@ -97,8 +97,6 @@ arguments: "[all] [<path>...]"
      ```bash
      git commit -m "$(cat <<'EOF'
      prefix(scope): 説明
-
-     Co-Authored-By: Claude <noreply@anthropic.com>
      EOF
      )"
      ```
