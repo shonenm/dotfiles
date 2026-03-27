@@ -271,15 +271,19 @@ dotfiles/
 |   |   +-- ralph-parallel/SKILL.md
 |   +-- claude-agents/
 |       +-- ralph-worker/ralph-worker.md
+|   +-- com.user.ralph-schedule.plist  # launchd plist for scheduled execution
 +-- scripts/
 |   +-- wt-lib.sh                      # Worktree + tmux window management library
 |   +-- ralph-lib.sh                   # Shared utilities (permissions setup)
 |   +-- ralph-orchestrate           # Parallel worker lifecycle management
 |   +-- ralph-crew                  # Persistent worker management with periodic dispatch
+|   +-- ralph-schedule              # One-shot scheduled Claude TUI execution
+|   +-- ralph-schedule-exec.sh      # Executor called by launchd/at
 |   +-- claude-gc                   # Cleanup all Claude artifacts (state, worktrees, branches, tmux)
 +-- docs/
     +-- ralph.md                       # This documentation
     +-- ralph-crew.md                  # Crew system documentation
+    +-- ralph-schedule.md              # Schedule system documentation
 ```
 
 `~/.claude/settings.json` contains the SessionStart hook registration.

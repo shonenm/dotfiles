@@ -1,0 +1,487 @@
+#!/usr/bin/env bash
+# ralph-schedule - One-shot scheduled Claude TUI execution
+#
+# Schedule a Claude TUI session to launch at a specified time.
+# Designed for launchd (macOS) / at (Linux) integration.
+#
+# Usage:
+#   ralph-schedule <prompt> --at <time-spec> [--branch <name>] [--base <ref>] [--model <model>]
+#   ralph-schedule list [--json]
+#   ralph-schedule cancel <job-id>
+#   ralph-schedule cancel --all
+set -euo pipefail
+
+SCRIPT_DIR="$(dirname "$0")"
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/wt-lib.sh"
+
+STATE_DIR="/tmp/ralph-schedule"
+TEMPLATE_DIR="$(cd "${SCRIPT_DIR}/../templates" && pwd)"
+
+# --- Output ---
+
+_info()    { printf '\033[0;36minfo\033[0m %s\n' "$*" >&2; }
+_error()   { printf '\033[0;31merror\033[0m %s\n' "$*" >&2; }
+_success() { printf '\033[0;32mok\033[0m %s\n' "$*" >&2; }
+
+# --- Time parsing ---
+
+_parse_time_spec() {
+  local spec="$1"
+  local now
+  now="$(date +%s)"
+
+  # Relative: +NhMm
+  if [[ "$spec" =~ ^\+([0-9]+)h([0-9]+)m$ ]]; then
+    local hours="${BASH_REMATCH[1]}"
+    local mins="${BASH_REMATCH[2]}"
+    echo $(( now + hours * 3600 + mins * 60 ))
+    return 0
+  fi
+
+  # Relative: +Nh
+  if [[ "$spec" =~ ^\+([0-9]+)h$ ]]; then
+    local hours="${BASH_REMATCH[1]}"
+    echo $(( now + hours * 3600 ))
+    return 0
+  fi
+
+  # Relative: +Nm
+  if [[ "$spec" =~ ^\+([0-9]+)m$ ]]; then
+    local mins="${BASH_REMATCH[1]}"
+    echo $(( now + mins * 60 ))
+    return 0
+  fi
+
+  # Absolute datetime: YYYY-MM-DD HH:MM
+  if [[ "$spec" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}$ ]]; then
+    local epoch
+    if [[ "$(uname)" == "Darwin" ]]; then
+      epoch="$(date -j -f '%Y-%m-%d %H:%M' "$spec" +%s 2>/dev/null)" \
+        || { _error "Invalid datetime: $spec"; return 1; }
+    else
+      epoch="$(date -d "$spec" +%s 2>/dev/null)" \
+        || { _error "Invalid datetime: $spec"; return 1; }
+    fi
+    if [[ "$epoch" -le "$now" ]]; then
+      _error "Specified time is in the past: $spec"
+      return 1
+    fi
+    echo "$epoch"
+    return 0
+  fi
+
+  # Absolute time only: HH:MM
+  if [[ "$spec" =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
+    local today_str
+    today_str="$(date '+%Y-%m-%d') $spec"
+    local epoch
+    if [[ "$(uname)" == "Darwin" ]]; then
+      epoch="$(date -j -f '%Y-%m-%d %H:%M' "$today_str" +%s 2>/dev/null)" \
+        || { _error "Invalid time: $spec"; return 1; }
+    else
+      epoch="$(date -d "$today_str" +%s 2>/dev/null)" \
+        || { _error "Invalid time: $spec"; return 1; }
+    fi
+    # If past, roll to tomorrow
+    if [[ "$epoch" -le "$now" ]]; then
+      epoch=$(( epoch + 86400 ))
+    fi
+    echo "$epoch"
+    return 0
+  fi
+
+  _error "Unsupported time format: $spec (use +Nh, +Nm, +NhMm, HH:MM, or YYYY-MM-DD HH:MM)"
+  return 1
+}
+
+_epoch_to_display() {
+  local epoch="$1"
+  if [[ "$(uname)" == "Darwin" ]]; then
+    date -r "$epoch" '+%Y-%m-%d %H:%M'
+  else
+    date -d "@$epoch" '+%Y-%m-%d %H:%M'
+  fi
+}
+
+_epoch_to_calendar_field() {
+  local epoch="$1"
+  local field="$2"
+  if [[ "$(uname)" == "Darwin" ]]; then
+    case "$field" in
+      month)  date -r "$epoch" '+%-m' ;;
+      day)    date -r "$epoch" '+%-d' ;;
+      hour)   date -r "$epoch" '+%-H' ;;
+      minute) date -r "$epoch" '+%-M' ;;
+    esac
+  else
+    case "$field" in
+      month)  date -d "@$epoch" '+%-m' ;;
+      day)    date -d "@$epoch" '+%-d' ;;
+      hour)   date -d "@$epoch" '+%-H' ;;
+      minute) date -d "@$epoch" '+%-M' ;;
+    esac
+  fi
+}
+
+# --- Job ID ---
+
+_generate_job_id() {
+  local epoch="$1"
+  local random
+  random="$(LC_ALL=C tr -dc 'a-z0-9' < /dev/urandom | head -c5 || true)"
+  echo "sched-${epoch}-${random}"
+}
+
+# --- Scheduler registration ---
+
+_register_launchd() {
+  local job_id="$1"
+  local epoch="$2"
+
+  local label="com.user.ralph-schedule.${job_id}"
+  local plist_src="${TEMPLATE_DIR}/com.user.ralph-schedule.plist"
+  local plist_dst="$HOME/Library/LaunchAgents/${label}.plist"
+
+  local month day hour minute
+  month="$(_epoch_to_calendar_field "$epoch" month)"
+  day="$(_epoch_to_calendar_field "$epoch" day)"
+  hour="$(_epoch_to_calendar_field "$epoch" hour)"
+  minute="$(_epoch_to_calendar_field "$epoch" minute)"
+
+  mkdir -p "$HOME/Library/LaunchAgents"
+  sed \
+    -e "s|__LABEL__|${label}|g" \
+    -e "s|__HOME__|${HOME}|g" \
+    -e "s|__JOB_ID__|${job_id}|g" \
+    -e "s|__MONTH__|${month}|g" \
+    -e "s|__DAY__|${day}|g" \
+    -e "s|__HOUR__|${hour}|g" \
+    -e "s|__MINUTE__|${minute}|g" \
+    "$plist_src" > "$plist_dst"
+
+  launchctl bootstrap "gui/$(id -u)" "$plist_dst"
+  echo "$label"
+}
+
+_register_at() {
+  local job_id="$1"
+  local epoch="$2"
+
+  if ! command -v at &>/dev/null; then
+    _error "'at' command not available. Install it or use macOS with launchd."
+    return 1
+  fi
+
+  local at_time
+  if [[ "$(uname)" == "Darwin" ]]; then
+    at_time="$(date -r "$epoch" '+%H:%M %m/%d/%Y')"
+  else
+    at_time="$(date -d "@$epoch" '+%H:%M %m/%d/%Y')"
+  fi
+
+  local exec_script="${SCRIPT_DIR}/ralph-schedule-exec.sh"
+  echo "${exec_script} ${job_id}" | at "$at_time" 2>&1
+}
+
+# === Subcommands ===
+
+cmd_add() {
+  local prompt="" time_spec="" branch="" base="" model="sonnet"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --at)
+        shift
+        time_spec="${1:-}"
+        # Handle "YYYY-MM-DD HH:MM" as two arguments
+        if [[ "$time_spec" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && [[ "${2:-}" =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
+          time_spec="$time_spec $2"
+          shift
+        fi
+        shift ;;
+      --branch) branch="${2:-}"; shift 2 ;;
+      --base)   base="${2:-}"; shift 2 ;;
+      --model)  model="${2:-}"; shift 2 ;;
+      --*)      _error "Unknown option: $1"; return 1 ;;
+      *)
+        if [[ -z "$prompt" ]]; then
+          prompt="$1"
+        else
+          _error "Unexpected argument: $1"
+          return 1
+        fi
+        shift ;;
+    esac
+  done
+
+  [[ -z "$prompt" ]] && { _error "prompt is required"; return 1; }
+  [[ -z "$time_spec" ]] && { _error "--at <time-spec> is required"; return 1; }
+
+  # Parse time
+  local scheduled_epoch
+  scheduled_epoch="$(_parse_time_spec "$time_spec")" || return 1
+  local scheduled_at
+  scheduled_at="$(_epoch_to_display "$scheduled_epoch")"
+
+  # Verify git repo
+  wt_check_git || return 1
+
+  local project_dir
+  project_dir="$(wt_main_worktree)"
+
+  # Generate job ID
+  local job_id
+  job_id="$(_generate_job_id "$scheduled_epoch")"
+
+  # Create state dirs
+  mkdir -p "${STATE_DIR}"/{jobs,prompts,logs}
+
+  # Determine tmux session
+  local tmux_session="ralph-schedule"
+  if [[ -n "${TMUX:-}" ]]; then
+    tmux_session="$(tmux display-message -p '#{session_name}')"
+  fi
+
+  # Determine tmux window name and worktree path
+  local tmux_window="" worktree_path=""
+  if [[ -n "$branch" ]]; then
+    tmux_window="$(wt_window_name "$branch")"
+    worktree_path="$(wt_path "$branch")"
+
+    # Create worktree now (executor will verify at execution time)
+    cd "$project_dir"
+    if ! wt_exists "$branch"; then
+      if git show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null; then
+        git worktree add "$worktree_path" "$branch" >&2
+      elif git show-ref --verify --quiet "refs/remotes/origin/$branch" 2>/dev/null; then
+        git worktree add "$worktree_path" "$branch" >&2
+      else
+        if [[ -n "$base" ]]; then
+          git worktree add -b "$branch" "$worktree_path" "$base" >&2
+        else
+          git worktree add -b "$branch" "$worktree_path" >&2
+        fi
+      fi
+      wt_copy_ignored "$project_dir" "$worktree_path"
+      _success "Created worktree: $worktree_path"
+    else
+      _info "Worktree already exists: $worktree_path"
+    fi
+  else
+    tmux_window="sched/${job_id}"
+  fi
+
+  # Write prompt file
+  local prompt_file="${STATE_DIR}/prompts/${job_id}.md"
+  printf '%s\n' "$prompt" > "$prompt_file"
+
+  # Register scheduler
+  local scheduler="" plist_label=""
+  if [[ "$(uname)" == "Darwin" ]]; then
+    scheduler="launchd"
+    plist_label="$(_register_launchd "$job_id" "$scheduled_epoch")"
+    _success "Registered launchd job: $plist_label"
+  else
+    scheduler="at"
+    _register_at "$job_id" "$scheduled_epoch"
+    _success "Registered at job"
+  fi
+
+  # Write job metadata
+  local created_at
+  created_at="$(date '+%Y-%m-%d %H:%M')"
+
+  jq -n \
+    --arg id "$job_id" \
+    --argjson scheduled_epoch "$scheduled_epoch" \
+    --arg scheduled_at "$scheduled_at" \
+    --arg created_at "$created_at" \
+    --arg branch "$branch" \
+    --arg base "$base" \
+    --arg model "$model" \
+    --arg project_dir "$project_dir" \
+    --arg tmux_session "$tmux_session" \
+    --arg tmux_window "$tmux_window" \
+    --arg worktree_path "$worktree_path" \
+    --arg prompt_file "$prompt_file" \
+    --arg scheduler "$scheduler" \
+    --arg plist_label "$plist_label" \
+    '{
+      id: $id,
+      scheduled_epoch: $scheduled_epoch,
+      scheduled_at: $scheduled_at,
+      created_at: $created_at,
+      branch: (if $branch == "" then null else $branch end),
+      base: (if $base == "" then null else $base end),
+      model: $model,
+      project_dir: $project_dir,
+      tmux_session: $tmux_session,
+      tmux_window: $tmux_window,
+      worktree_path: (if $worktree_path == "" then null else $worktree_path end),
+      prompt_file: $prompt_file,
+      status: "pending",
+      scheduler: $scheduler,
+      plist_label: (if $plist_label == "" then null else $plist_label end)
+    }' > "${STATE_DIR}/jobs/${job_id}.json"
+
+  _success "Scheduled job: $job_id"
+  _info "  At: $scheduled_at"
+  _info "  Model: $model"
+  if [[ -n "$branch" ]]; then
+    _info "  Branch: $branch"
+    _info "  Worktree: $worktree_path"
+  fi
+  _info "  Prompt: $(head -c 60 "$prompt_file")"
+}
+
+cmd_list() {
+  local json_mode=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --json) json_mode=true; shift ;;
+      *) shift ;;
+    esac
+  done
+
+  local jobs_dir="${STATE_DIR}/jobs"
+  if [[ ! -d "$jobs_dir" ]] || [[ -z "$(ls -A "$jobs_dir" 2>/dev/null)" ]]; then
+    if [[ "$json_mode" == true ]]; then
+      echo "[]"
+    else
+      _info "No scheduled jobs"
+    fi
+    return 0
+  fi
+
+  if [[ "$json_mode" == true ]]; then
+    local first=true
+    echo "["
+    for job_file in "$jobs_dir"/*.json; do
+      [[ -f "$job_file" ]] || continue
+      if [[ "$first" == true ]]; then
+        first=false
+      else
+        echo ","
+      fi
+      cat "$job_file"
+    done
+    echo "]"
+    return 0
+  fi
+
+  # Table format
+  printf '%-28s %-10s %-18s %-20s %s\n' "ID" "STATUS" "SCHEDULED" "BRANCH" "PROMPT"
+  printf '%-28s %-10s %-18s %-20s %s\n' "---" "------" "---------" "------" "------"
+
+  for job_file in "$jobs_dir"/*.json; do
+    [[ -f "$job_file" ]] || continue
+    local id status scheduled_at branch_val prompt_file prompt_head
+    id="$(jq -r '.id' "$job_file")"
+    status="$(jq -r '.status' "$job_file")"
+    scheduled_at="$(jq -r '.scheduled_at' "$job_file")"
+    branch_val="$(jq -r '.branch // "-"' "$job_file")"
+    prompt_file="$(jq -r '.prompt_file' "$job_file")"
+    if [[ -f "$prompt_file" ]]; then
+      prompt_head="$(head -c 30 "$prompt_file" | tr '\n' ' ')"
+    else
+      prompt_head="(file missing)"
+    fi
+    printf '%-28s %-10s %-18s %-20s %s\n' "$id" "$status" "$scheduled_at" "$branch_val" "$prompt_head"
+  done
+}
+
+cmd_cancel() {
+  local cancel_all=false
+  local job_id=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --all) cancel_all=true; shift ;;
+      *) job_id="$1"; shift ;;
+    esac
+  done
+
+  if [[ "$cancel_all" == true ]]; then
+    local jobs_dir="${STATE_DIR}/jobs"
+    [[ -d "$jobs_dir" ]] || { _info "No jobs to cancel"; return 0; }
+    local cancelled=0
+    for job_file in "$jobs_dir"/*.json; do
+      [[ -f "$job_file" ]] || continue
+      local id status
+      id="$(jq -r '.id' "$job_file")"
+      status="$(jq -r '.status' "$job_file")"
+      [[ "$status" == "pending" ]] || continue
+      _cancel_job "$id"
+      cancelled=$((cancelled + 1))
+    done
+    _success "Cancelled $cancelled job(s)"
+    return 0
+  fi
+
+  [[ -z "$job_id" ]] && { _error "Usage: ralph-schedule cancel <job-id> | --all"; return 1; }
+  _cancel_job "$job_id"
+}
+
+_cancel_job() {
+  local job_id="$1"
+  local job_file="${STATE_DIR}/jobs/${job_id}.json"
+
+  if [[ ! -f "$job_file" ]]; then
+    _error "Job not found: $job_id"
+    return 1
+  fi
+
+  local scheduler status
+  scheduler="$(jq -r '.scheduler' "$job_file")"
+  status="$(jq -r '.status' "$job_file")"
+
+  if [[ "$status" != "pending" ]]; then
+    _error "Job $job_id is not pending (status: $status)"
+    return 1
+  fi
+
+  # Unregister from scheduler
+  if [[ "$scheduler" == "launchd" ]]; then
+    local plist_label
+    plist_label="$(jq -r '.plist_label' "$job_file")"
+    local plist_path="$HOME/Library/LaunchAgents/${plist_label}.plist"
+    launchctl bootout "gui/$(id -u)/${plist_label}" 2>/dev/null || true
+    rm -f "$plist_path"
+  fi
+
+  # Update status
+  jq '.status = "cancelled"' "$job_file" > "${job_file}.tmp" \
+    && mv "${job_file}.tmp" "$job_file"
+
+  _success "Cancelled job: $job_id"
+}
+
+# --- Main ---
+
+case "${1:-}" in
+  list)    shift; cmd_list "$@" ;;
+  cancel)  shift; cmd_cancel "$@" ;;
+  help|-h|--help)
+    cat <<EOF
+ralph-schedule - One-shot scheduled Claude TUI execution
+
+Usage:
+  ralph-schedule <prompt> --at <time-spec> [options]
+  ralph-schedule list [--json]
+  ralph-schedule cancel <job-id>
+  ralph-schedule cancel --all
+
+Time formats:
+  +Nh, +Nm, +NhMm    Relative (e.g. +2h, +30m, +1h30m)
+  HH:MM               Today (rolls to tomorrow if past)
+  YYYY-MM-DD HH:MM    Absolute datetime
+
+Options:
+  --branch <name>    Create worktree + tmux window for branch
+  --base <ref>       Base ref for new branch (default: HEAD)
+  --model <model>    Claude model (default: sonnet)
+EOF
+    ;;
+  *)       cmd_add "$@" ;;
+esac
