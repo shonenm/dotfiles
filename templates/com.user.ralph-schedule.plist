@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>__LABEL__</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>__HOME__/dotfiles/scripts/ralph-schedule-exec.sh</string>
+        <string>__JOB_ID__</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>__HOME__</string>
+    </dict>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Month</key>
+        <integer>__MONTH__</integer>
+        <key>Day</key>
+        <integer>__DAY__</integer>
+        <key>Hour</key>
+        <integer>__HOUR__</integer>
+        <key>Minute</key>
+        <integer>__MINUTE__</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/ralph-schedule/logs/__JOB_ID__.out</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/ralph-schedule/logs/__JOB_ID__.err</string>
+</dict>
+</plist>
