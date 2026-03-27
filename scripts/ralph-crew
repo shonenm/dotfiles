@@ -232,6 +232,8 @@ _dispatch_task() {
 
   local ts
   ts="$(date +%Y%m%d-%H%M%S)"
+  local default_branch
+  default_branch="$(_detect_default_branch)"
   local branch="crew/${task_id}-${ts}"
   local worktree="${STATE_DIR}/fix/${task_id}-${ts}"
 
@@ -259,7 +261,7 @@ ${prompt}
 ## Action: fix (worktree isolation)
 If issues are found, fix them in an isolated worktree:
 \`\`\`bash
-git worktree add ${worktree} -b ${branch} HEAD
+git worktree add ${worktree} -b ${branch} origin/${default_branch}
 cd ${worktree}
 # ... fix issues ...
 git add <files> && git commit -m "fix(<scope>): <description>"
@@ -333,6 +335,82 @@ _cleanup_old_prompts() {
   find "${STATE_DIR}/prompts" -type f -mmin +1440 -delete 2>/dev/null || true
 }
 
+_rotate_log() {
+  [[ -f "$LOG_FILE" ]] || return 0
+  local max_bytes=1048576  # 1MB
+  local size
+  # macOS stat vs GNU stat
+  size="$(stat -f%z "$LOG_FILE" 2>/dev/null || stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)"
+  if [[ "$size" -gt "$max_bytes" ]]; then
+    tail -n 1000 "$LOG_FILE" > "${LOG_FILE}.tmp" && mv "${LOG_FILE}.tmp" "$LOG_FILE"
+    _log "log rotated (was ${size} bytes)"
+  fi
+}
+
+_cleanup_orphaned_worktrees() {
+  local fix_dir="${STATE_DIR}/fix"
+  [[ -d "$fix_dir" ]] || return 0
+
+  local cleaned=0
+  for wt_dir in "$fix_dir"/*/; do
+    [[ -d "$wt_dir" ]] || continue
+    # Check if this worktree is registered in git
+    if ! git -C "$PROJECT_DIR" worktree list --porcelain 2>/dev/null | grep -qF "$wt_dir"; then
+      # Not a registered worktree, just remove the directory
+      rm -rf "$wt_dir"
+      cleaned=$((cleaned + 1))
+      continue
+    fi
+    # Registered worktree: remove via git
+    if git -C "$PROJECT_DIR" worktree remove "$wt_dir" 2>/dev/null; then
+      cleaned=$((cleaned + 1))
+    fi
+  done
+
+  if [[ "$cleaned" -gt 0 ]]; then
+    git -C "$PROJECT_DIR" worktree prune 2>/dev/null || true
+    _log "cleanup: removed $cleaned orphaned worktree(s)"
+  fi
+}
+
+_cleanup_orphaned_branches() {
+  # Remove crew/* branches not associated with any active worktree
+  local worktree_branches
+  worktree_branches="$(git -C "$PROJECT_DIR" worktree list --porcelain 2>/dev/null \
+    | grep '^branch ' | sed 's|^branch refs/heads/||' || true)"
+
+  local cleaned=0
+  while IFS= read -r branch; do
+    [[ -z "$branch" ]] && continue
+    # Skip if branch is in use by a worktree
+    if echo "$worktree_branches" | grep -qxF "$branch"; then
+      continue
+    fi
+    if git -C "$PROJECT_DIR" branch -D "$branch" 2>/dev/null; then
+      cleaned=$((cleaned + 1))
+    fi
+  done < <(git -C "$PROJECT_DIR" branch --list 'crew/*' 2>/dev/null | sed 's/^[* ]*//')
+
+  if [[ "$cleaned" -gt 0 ]]; then
+    _log "cleanup: removed $cleaned orphaned crew/* branch(es)"
+  fi
+}
+
+# --- Git sync ---
+
+_detect_default_branch() {
+  git -C "$PROJECT_DIR" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
+    | sed 's@^refs/remotes/origin/@@' || echo "main"
+}
+
+_sync_remote() {
+  if git -C "$PROJECT_DIR" fetch --prune origin 2>/dev/null; then
+    _log "fetched latest from origin"
+  else
+    _log "warning: git fetch failed (continuing with current HEAD)"
+  fi
+}
+
 # === Subcommands ===
 
 cmd_init() {
@@ -394,8 +472,12 @@ cmd_dispatch() {
     return 0
   fi
 
-  # Cleanup old prompt files
+  # Pre-dispatch maintenance
+  _sync_remote
+  _rotate_log
   _cleanup_old_prompts
+  _cleanup_orphaned_worktrees
+  _cleanup_orphaned_branches
 
   # Check session exists
   if ! tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
@@ -600,6 +682,25 @@ cmd_restart() {
   _log "worker=$worker_id manually restarted"
 }
 
+cmd_cleanup() {
+  local config_file="$DEFAULT_CONFIG"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config) config_file="${2:-}"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  _load_config "$config_file" || return 1
+
+  _info "Cleaning up: $STATE_DIR"
+  _cleanup_old_prompts
+  _rotate_log
+  _cleanup_orphaned_worktrees
+  _cleanup_orphaned_branches
+  _success "Cleanup completed"
+}
+
 cmd_teardown() {
   local config_file="$DEFAULT_CONFIG"
   while [[ $# -gt 0 ]]; do
@@ -633,6 +734,7 @@ case "${1:-}" in
   status)    shift; cmd_status "$@" ;;
   send)      shift; cmd_send "$@" ;;
   restart)   shift; cmd_restart "$@" ;;
+  cleanup)   shift; cmd_cleanup "$@" ;;
   teardown)  shift; cmd_teardown "$@" ;;
   help|*)
     cat <<EOF
@@ -646,6 +748,7 @@ Usage:
                                                 Send manual message to worker
   ralph-crew restart <worker-id> [--config <path>]
                                                 Restart a worker
+  ralph-crew cleanup [--config <path>]          Remove orphaned worktrees, branches, old logs
   ralph-crew teardown [--config <path>]         Stop all workers and cleanup
 
 Config file default: \$PWD/$DEFAULT_CONFIG
