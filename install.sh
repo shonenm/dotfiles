@@ -128,7 +128,7 @@ stow_package() {
 
   # dry-runでコンフリクトを検出
   local conflicts
-  conflicts=$(stow -n -d "$pkg_dir" -t "$HOME" "$pkg_name" 2>&1 | \
+  conflicts=$(stow -n --no-folding -d "$pkg_dir" -t "$HOME" "$pkg_name" 2>&1 | \
     grep "existing target" | sed 's/.*over existing target //' | sed 's/ since.*//' || true)
 
   # コンフリクトファイルをバックアップ
@@ -147,8 +147,8 @@ stow_package() {
     done <<< "$conflicts"
   fi
 
-  # stow実行（--adoptで残りの差分を吸収）
-  if ! stow -d "$pkg_dir" -t "$HOME" --adopt "$pkg_name" 2>/dev/null; then
+  # stow実行（--adoptで残りの差分を吸収、--no-foldingでディレクトリ全体のシンリンクを防止）
+  if ! stow --no-folding -d "$pkg_dir" -t "$HOME" --adopt "$pkg_name" 2>/dev/null; then
     log_warn "  Failed to link $pkg_name"
   fi
   return 0

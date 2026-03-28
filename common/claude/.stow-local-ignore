@@ -1,0 +1,20 @@
+# Ignore Claude Code runtime files (credentials, caches, session state)
+# These should NOT be stowed - they are generated at runtime by Claude Code
+
+\.claude/\.credentials\.json
+\.claude/backups
+\.claude/cache
+\.claude/file-history
+\.claude/history\.jsonl
+\.claude/mcp-needs-auth-cache\.json
+\.claude/paste-cache
+\.claude/plans
+\.claude/plugins
+\.claude/projects
+\.claude/session-env
+\.claude/sessions
+\.claude/shell-snapshots
+\.claude/telemetry
+
+# User-specific news profile (contains personal info)
+\.claude/news-profile\.yaml
