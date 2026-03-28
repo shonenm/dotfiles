@@ -1,0 +1,18 @@
+# Claude Code runtime files (should never be committed)
+.credentials.json
+backups/
+cache/
+file-history/
+history.jsonl
+mcp-needs-auth-cache.json
+paste-cache/
+plans/
+plugins/
+projects/
+session-env/
+sessions/
+shell-snapshots/
+telemetry/
+
+# User-specific news profile
+news-profile.yaml

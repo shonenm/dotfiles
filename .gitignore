@@ -28,5 +28,5 @@ common/org.qgroundcontrol/
 mac/zsh/.zshrc.local
 linux/zsh/.zshrc.local
 
-# News profile (contains personal info)
-common/claude/.claude/news-profile.yaml
+# Claude runtime state (managed by common/claude/.claude/.gitignore)
+# Note: .stow-local-ignore prevents stow from linking these files

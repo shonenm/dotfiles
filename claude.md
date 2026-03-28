@@ -80,6 +80,18 @@ ls -la ~/.config/<tool>
 
 OS固有の設定は`mac/<tool>/`または`linux/<tool>/`に配置。
 
+### ランタイムファイルの扱い
+
+ツールがランタイムファイル（認証情報、キャッシュ、履歴等）を生成する場合:
+
+1. `.stow-local-ignore` を使用してランタイムファイルを stow の対象から除外
+   - 例: `common/claude/.stow-local-ignore`
+2. `.gitignore` でランタイムファイルを無視
+   - パッケージ内に `.gitignore` を配置（例: `common/claude/.claude/.gitignore`）
+3. `install.sh` は `--no-folding` オプションを使用し、ディレクトリ全体がシンリンクされることを防止
+
+これにより、設定ファイルのみがシンリンクされ、ランタイムファイルは `~/.config/tool/` に直接作成されます。
+
 ## Git Merge/Rebase コンフリクト解決
 
 merge/rebase のコンフリクト解決は `/conflict-resolve` スキルを使用すること。
