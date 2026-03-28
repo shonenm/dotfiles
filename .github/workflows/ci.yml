@@ -16,6 +16,10 @@ jobs:
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: ./scripts
+          # SC1090: Can't follow non-constant source
+          # SC1091: Not following external sources
+          ignore_paths: ""
+          shellcheck_opts: -e SC1090 -e SC1091
 
   stow-dry-run:
     name: Stow Dry Run
