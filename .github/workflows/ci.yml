@@ -15,10 +15,9 @@ jobs:
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
         with:
-          scandir: ./scripts
-          # SC1090: Can't follow non-constant source
-          # SC1091: Not following external sources
-          ignore_paths: ""
+          scandir: .
+          ignore_paths: node_modules .git
+          # SC1090/SC1091: External sources (info-level, safe to ignore)
           shellcheck_opts: -e SC1090 -e SC1091
 
   stow-dry-run:
