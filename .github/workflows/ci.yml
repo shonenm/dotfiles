@@ -18,8 +18,9 @@ jobs:
           scandir: .
           # Exclude: zsh config files, p10k, config definitions, .git, node_modules
           ignore_paths: common/zsh linux/zsh mac/zsh config .git node_modules
+        env:
           # SC1090/SC1091: External sources (info-level, safe to ignore)
-          shellcheck_opts: -e SC1090 -e SC1091
+          SHELLCHECK_OPTS: -e SC1090 -e SC1091
 
   stow-dry-run:
     name: Stow Dry Run
