@@ -223,3 +223,220 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   end,
 })
 
+-- Cache cleanup on startup
+-- Prevents performance degradation from accumulated logs, undo files, and compiled caches
+vim.api.nvim_create_autocmd("VimEnter", {
+  group = vim.api.nvim_create_augroup("cache_cleanup", { clear = true }),
+  callback = function()
+    vim.schedule(function()
+      local uv = vim.uv or vim.loop
+      local state_dir = vim.fn.stdpath("state")
+      local cache_dir = vim.fn.stdpath("cache")
+
+      -- Rotate LSP/Mason logs (compress if > 1MB, delete compressed files > 30 days old)
+      local function rotate_log(log_path)
+        local stat = uv.fs_stat(log_path)
+        if not stat then
+          return
+        end
+
+        local max_size = 1024 * 1024 -- 1MB
+        if stat.size > max_size then
+          local timestamp = os.date("%Y%m%d_%H%M%S")
+          local rotated = log_path .. "." .. timestamp .. ".gz"
+          -- Compress and truncate
+          vim.fn.system(string.format("gzip -c %s > %s && : > %s", log_path, rotated, log_path))
+        end
+
+        -- Delete old compressed logs (> 30 days)
+        local dir = vim.fn.fnamemodify(log_path, ":h")
+        local pattern = vim.fn.fnamemodify(log_path, ":t") .. ".*.gz"
+        local handle = uv.fs_scandir(dir)
+        if handle then
+          while true do
+            local name, type = uv.fs_scandir_next(handle)
+            if not name then
+              break
+            end
+            if type == "file" and name:match(vim.pesc(vim.fn.fnamemodify(log_path, ":t")) .. "%.%d+_%d+%.gz$") then
+              local file_path = dir .. "/" .. name
+              local file_stat = uv.fs_stat(file_path)
+              if file_stat then
+                local age_days = (os.time() - file_stat.mtime.sec) / 86400
+                if age_days > 30 then
+                  uv.fs_unlink(file_path)
+                end
+              end
+            end
+          end
+        end
+      end
+
+      rotate_log(state_dir .. "/lsp.log")
+      rotate_log(state_dir .. "/mason.log")
+
+      -- Delete old undo files (> 30 days)
+      local undo_dir = state_dir .. "/undo"
+      local undo_handle = uv.fs_scandir(undo_dir)
+      if undo_handle then
+        while true do
+          local name, type = uv.fs_scandir_next(undo_handle)
+          if not name then
+            break
+          end
+          if type == "file" then
+            local undo_path = undo_dir .. "/" .. name
+            local undo_stat = uv.fs_stat(undo_path)
+            if undo_stat then
+              local age_days = (os.time() - undo_stat.mtime.sec) / 86400
+              if age_days > 30 then
+                uv.fs_unlink(undo_path)
+              end
+            end
+          end
+        end
+      end
+
+      -- Delete old luac cache (> 3 days)
+      -- Ref: https://github.com/neovim/neovim/issues/31165
+      local luac_dir = cache_dir .. "/luac"
+      local function cleanup_luac_recursive(dir)
+        local handle = uv.fs_scandir(dir)
+        if not handle then
+          return
+        end
+        while true do
+          local name, type = uv.fs_scandir_next(handle)
+          if not name then
+            break
+          end
+          local path = dir .. "/" .. name
+          if type == "directory" then
+            cleanup_luac_recursive(path)
+          elseif type == "file" and name:match("%.luac$") then
+            local stat = uv.fs_stat(path)
+            if stat then
+              local age_days = (os.time() - stat.mtime.sec) / 86400
+              if age_days > 3 then
+                uv.fs_unlink(path)
+              end
+            end
+          end
+        end
+      end
+      cleanup_luac_recursive(luac_dir)
+    end)
+  end,
+})
+
+-- Manual cache cleanup command
+vim.api.nvim_create_user_command("CleanupCache", function()
+  vim.notify("Starting cache cleanup...", vim.log.levels.INFO)
+
+  local uv = vim.uv or vim.loop
+  local state_dir = vim.fn.stdpath("state")
+  local cache_dir = vim.fn.stdpath("cache")
+  local stats = { logs_rotated = 0, undo_deleted = 0, luac_deleted = 0 }
+
+  -- Rotate LSP/Mason logs
+  local function rotate_log(log_path)
+    local stat = uv.fs_stat(log_path)
+    if not stat then
+      return
+    end
+    local max_size = 1024 * 1024 -- 1MB
+    if stat.size > max_size then
+      local timestamp = os.date("%Y%m%d_%H%M%S")
+      local rotated = log_path .. "." .. timestamp .. ".gz"
+      vim.fn.system(string.format("gzip -c %s > %s && : > %s", log_path, rotated, log_path))
+      stats.logs_rotated = stats.logs_rotated + 1
+    end
+    -- Delete old compressed logs
+    local dir = vim.fn.fnamemodify(log_path, ":h")
+    local handle = uv.fs_scandir(dir)
+    if handle then
+      while true do
+        local name, type = uv.fs_scandir_next(handle)
+        if not name then
+          break
+        end
+        if type == "file" and name:match(vim.pesc(vim.fn.fnamemodify(log_path, ":t")) .. "%.%d+_%d+%.gz$") then
+          local file_path = dir .. "/" .. name
+          local file_stat = uv.fs_stat(file_path)
+          if file_stat then
+            local age_days = (os.time() - file_stat.mtime.sec) / 86400
+            if age_days > 30 then
+              uv.fs_unlink(file_path)
+            end
+          end
+        end
+      end
+    end
+  end
+
+  rotate_log(state_dir .. "/lsp.log")
+  rotate_log(state_dir .. "/mason.log")
+
+  -- Delete old undo files
+  local undo_dir = state_dir .. "/undo"
+  local undo_handle = uv.fs_scandir(undo_dir)
+  if undo_handle then
+    while true do
+      local name, type = uv.fs_scandir_next(undo_handle)
+      if not name then
+        break
+      end
+      if type == "file" then
+        local undo_path = undo_dir .. "/" .. name
+        local undo_stat = uv.fs_stat(undo_path)
+        if undo_stat then
+          local age_days = (os.time() - undo_stat.mtime.sec) / 86400
+          if age_days > 30 then
+            uv.fs_unlink(undo_path)
+            stats.undo_deleted = stats.undo_deleted + 1
+          end
+        end
+      end
+    end
+  end
+
+  -- Delete old luac cache
+  local luac_dir = cache_dir .. "/luac"
+  local function cleanup_luac_recursive(dir)
+    local handle = uv.fs_scandir(dir)
+    if not handle then
+      return
+    end
+    while true do
+      local name, type = uv.fs_scandir_next(handle)
+      if not name then
+        break
+      end
+      local path = dir .. "/" .. name
+      if type == "directory" then
+        cleanup_luac_recursive(path)
+      elseif type == "file" and name:match("%.luac$") then
+        local stat = uv.fs_stat(path)
+        if stat then
+          local age_days = (os.time() - stat.mtime.sec) / 86400
+          if age_days > 7 then
+            uv.fs_unlink(path)
+            stats.luac_deleted = stats.luac_deleted + 1
+          end
+        end
+      end
+    end
+  end
+  cleanup_luac_recursive(luac_dir)
+
+  vim.notify(
+    string.format(
+      "Cache cleanup complete: %d logs rotated, %d undo files deleted, %d luac files deleted",
+      stats.logs_rotated,
+      stats.undo_deleted,
+      stats.luac_deleted
+    ),
+    vim.log.levels.INFO
+  )
+end, { desc = "Clean up Neovim cache, logs, and old files" })
+

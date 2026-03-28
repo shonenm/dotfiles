@@ -555,6 +555,27 @@ DBUI 内での操作:
 - `:ProfileStart` / `:ProfileStop` でカーソル移動等のプロファイリング（`/tmp/nvim-profile.log` に出力）
 - LazyVim デフォルトの `lazyvim_wrap_spell` を無効化（日本語テキストが SpellBad 扱いされるのを防止）
 - **大きいファイル最適化**: 100KB 以上のファイルを開いた際、syntax / filetype / swapfile / undofile / fold を自動無効化（リモート環境での遅延対策）
+- **キャッシュ自動クリーンアップ**: Neovim起動時に古いキャッシュ・ログ・undoファイルを自動削除し、パフォーマンス低下を防止
+  - LSP/Masonログ: 1MB超過時に圧縮・ローテーション（30日以上前のgzファイルを削除）
+  - undoファイル: 30日以上前のファイルを削除
+  - luacキャッシュ: 3日以上前のコンパイル済みLuaファイルを削除
+  - 手動実行: `:CleanupCache` でクリーンアップ実行 + 統計表示
+
+### キャッシュクリーンアップ詳細
+
+Neovimの長時間使用により、以下のファイルが肥大化してパフォーマンス低下を引き起こします:
+
+1. **LSP/Masonログ** (`~/.local/state/nvim/lsp.log`, `mason.log`): ローテーションなしで蓄積
+2. **undoファイル** (`~/.local/state/nvim/undo/`): 古いundoファイルが削除されない
+3. **luacキャッシュ** (`~/.cache/nvim/luac/`): プラグイン更新後も古いキャッシュが残る（[Issue #31165](https://github.com/neovim/neovim/issues/31165)）
+
+`VimEnter` autocmdで以下を自動実行:
+- ログファイルが1MB超過時に `gzip` で圧縮・ローテーション
+- 圧縮済みログの30日以上前のファイルを削除
+- 30日以上前のundoファイルを削除
+- 3日以上前のluacキャッシュを削除
+
+手動で即座にクリーンアップしたい場合は `:CleanupCache` を実行。削除されたファイル数が通知されます。
 
 ## カーソル視認性
 
