@@ -16,7 +16,8 @@ jobs:
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: .
-          ignore_paths: node_modules .git
+          # Exclude: zsh config files, p10k, config definitions, .git, node_modules
+          ignore_paths: common/zsh linux/zsh mac/zsh config .git node_modules
           # SC1090/SC1091: External sources (info-level, safe to ignore)
           shellcheck_opts: -e SC1090 -e SC1091
 
