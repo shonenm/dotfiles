@@ -12,7 +12,7 @@ main() {
 
   # Check if ~/.claude is a directory symlink
   if [ -L ~/.claude ]; then
-    log_warn "~/.claude is a directory symlink (stow folding detected)"
+    log_warn "$HOME/.claude is a directory symlink (stow folding detected)"
     log_info "This will be migrated to individual file symlinks"
     echo
 
@@ -22,7 +22,8 @@ main() {
     log_info "Current target: $target"
 
     # Backup runtime files
-    local backup_dir="/tmp/claude-migration-$(date +%s)"
+    local backup_dir
+    backup_dir="/tmp/claude-migration-$(date +%s)"
     mkdir -p "$backup_dir"
 
     log_info "Backing up runtime files to $backup_dir..."
@@ -82,7 +83,7 @@ main() {
     log_info "Verifying structure..."
 
   elif [ -d ~/.claude ]; then
-    log_success "~/.claude is already a directory (not a symlink)"
+    log_success "$HOME/.claude is already a directory (not a symlink)"
     log_info "Checking individual files..."
 
     # Check if individual files are symlinks
@@ -104,7 +105,7 @@ main() {
     fi
 
   else
-    log_warn "~/.claude does not exist"
+    log_warn "$HOME/.claude does not exist"
     log_info "Running stow to create it..."
     cd "$DOTFILES_DIR"
     stow --no-folding -d common -t ~ claude
@@ -113,7 +114,7 @@ main() {
 
   echo
   log_success "=== Structure Verification ==="
-  echo "~/.claude type: $([ -L ~/.claude ] && echo "symlink" || echo "directory")"
+  echo "$HOME/.claude type: $([ -L ~/.claude ] && echo "symlink" || echo "directory")"
   for item in agents hooks rules skills .gitignore; do
     if [ -e ~/.claude/"$item" ]; then
       if [ -L ~/.claude/"$item" ]; then

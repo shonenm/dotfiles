@@ -15,7 +15,8 @@ done
 
 # --- 0. 1Password CLI Check (Required) ---
 install_1password_cli() {
-  local os=$(detect_os)
+  local os
+  os=$(detect_os)
 
   if [[ "$os" == "mac" ]]; then
     if command_exists brew; then
@@ -93,7 +94,8 @@ install_homebrew() {
 
 # --- 2. Setup Environment (Delegate to scripts/) ---
 setup_environment() {
-  local os=$(detect_os)
+  local os
+  os=$(detect_os)
   log_info "Detected OS: $os"
 
   case "$os" in
@@ -206,7 +208,8 @@ fixup_bind_mounts() {
   fi
 
   # .ssh/config: prepend Include to pull in dotfiles ssh config
-  local os=$(detect_os)
+  local os
+  os=$(detect_os)
   local dotfiles_ssh="$DOTFILES_DIR/$os/ssh/.ssh/config"
   if [[ -f "$HOME/.ssh/config" && ! -L "$HOME/.ssh/config" && -f "$dotfiles_ssh" ]]; then
     if ! grep -qF "Include $dotfiles_ssh" "$HOME/.ssh/config" 2>/dev/null; then
@@ -251,7 +254,8 @@ link_dotfiles() {
   fi
 
   # Stow OS-specific packages
-  local os=$(detect_os)
+  local os
+  os=$(detect_os)
   if [[ -d "$DOTFILES_DIR/$os" ]]; then
     log_info "Linking $os-specific dotfiles..."
     for pkg in "$DOTFILES_DIR/$os"/*/; do
@@ -364,7 +368,8 @@ generate_ai_cli_configs() {
       local all_linked=true
       for file in "$skill_dir"*; do
         [[ -f "$file" ]] || continue
-        local target_file="$target_dir/$(basename "$file")"
+        local target_file
+        target_file="$target_dir/$(basename "$file")"
         # Stow がファイル単位でシンボリックリンクにしている場合はスキップ
         if [[ -L "$target_file" ]]; then
           continue
@@ -468,7 +473,8 @@ main() {
 
 # --- Installation Summary (reads from config files) ---
 print_install_summary() {
-  local os=$(detect_os)
+  local os
+  os=$(detect_os)
   local CONFIG_DIR="$DOTFILES_DIR/config"
 
   echo
