@@ -77,6 +77,8 @@ This saves a mapping in `~/.local/share/claude/workspace_map.json`:
 - When starting Claude in a new git repository for the first time
 - Anytime you want notifications to appear on the correct workspace
 
+For details on the `/beacon` skill, see [`claude-skills.md`](claude-skills.md).
+
 ## Supported Environments
 
 | Environment | Editor | Method |
@@ -571,84 +573,22 @@ claude-status.sh set my-project complete 3
 claude-status.sh cleanup
 ```
 
-### Workspace Registration (Claude Code)
+### Workspace Registration
 
-In Claude Code, use the `/beacon` command to manually map the current environment to a workspace:
-
+In Claude Code:
 ```
 /beacon 3
 ```
 
 Or run the script directly:
-
-### Git Commit (Claude Code)
-
-The `/commit` skill creates commits with proper message formatting:
-
 ```bash
-/commit                      # Session changes only
-/commit all                  # All uncommitted changes
-/commit src/                 # Session changes in src/ only
-/commit all src/             # All changes in src/
-/commit file.ts utils.ts     # Specific files (session)
-/commit all common/nvim/     # All changes in directory
+beacon 3
 ```
 
-Commit message format: `prefix(scope): description`
-
-| Prefix | Usage |
-|--------|-------|
-| `feat` | New feature |
-| `imprv` | Enhancement |
-| `fix` | Bug fix |
-| `rfac` | Refactoring |
-| `docs` | Documentation |
-| `chore` | Build/CI/misc |
-
+Check current mappings:
 ```bash
-# Register current git repository to workspace 3
-beacon 3
-
-# Check current mappings
 cat ~/.local/share/claude/workspace_map.json | jq .
 ```
-
-### News Digest (Claude Code)
-
-The `/news` skill fetches personalized news based on `~/.claude/news-profile.yaml`:
-
-```
-/news           # Past week (default)
-/news day       # Past 24 hours
-/news month     # Past month
-```
-
-Profile (`~/.claude/news-profile.yaml`):
-
-```yaml
-personal:
-  name: "Name"
-  company: "Company"
-  role: "Backend Engineer"
-  location: "Tokyo, Japan"
-
-interests:
-  technical:
-    - "Rust language"
-    - "Neovim ecosystem"
-  industry:
-    - "developer tools"
-  companies:
-    - "Anthropic"
-```
-
-Processing flow:
-1. Read profile -> generate 5-8 search queries per interest category
-2. WebSearch to collect sources -> filter by relevance
-3. WebFetch top 5-8 articles for summaries
-4. Output categorized digest (Technical / Industry / Companies / Serendipity)
-
-Constraints: WebSearch 5-10 calls, WebFetch 5-8 calls per session. Profile missing -> shows template and exits.
 
 ### Service Mode Commands
 
@@ -734,7 +674,6 @@ dotfiles/
 │   ├── ai-notify.sh                # Main notification script (CLAUDE_CONTEXT support)
 │   ├── claude-status.sh            # State management (workspace-based)
 │   ├── claude-status-watch.sh      # Remote monitoring (SSH + inotifywait)
-│   ├── claude-status-local-watch.sh # Local container monitoring (launchd WatchPaths)
 │   ├── beacon                      # Manual workspace registration
 │   ├── tmux-claude-badge.sh        # tmux badge display
 │   └── tmux-claude-focus.sh        # tmux focus processing
@@ -744,52 +683,16 @@ dotfiles/
 │       └── claude.sh               # SketchyBar plugin (workspace-based)
 ├── common/tmux/.config/tmux/
 │   └── claude-hooks.tmux           # tmux hooks configuration
-├── common/claude/.claude/news-profile.example.yaml  # /news profile template
-├── common/claude/.claude/hooks/    # Claude Code hooks (stow managed)
-│   ├── ralph-stop-hook.sh          # Ralph loop control (Stop hook)
-│   └── ralph-backpressure.sh       # Ralph type check/lint (PostToolUse hook)
-├── common/claude/.claude/skills/   # Claude Code skills (stow managed)
-│   ├── beacon/SKILL.md             # /beacon workspace registration
-│   ├── commit/SKILL.md             # /commit git commit (all, <path> support)
-│   ├── news/SKILL.md               # /news personalized news digest
-│   ├── update-md/SKILL.md          # /update-md documentation update
-│   ├── ralph/SKILL.md              # /ralph autonomous development loop
-│   ├── ralph-cancel/SKILL.md       # /ralph-cancel loop cancellation
-│   └── ralph-parallel/SKILL.md     # /ralph-parallel parallel execution
-├── common/claude/.claude/agents/   # Claude Code agents (stow managed)
-│   └── ralph-worker/ralph-worker.md  # Worktree-isolated worker agent
-├── common/claude/.claude/rules/    # Global rules (stow managed)
-│   ├── problem-solving.md          # Root cause first, research best practices
-│   ├── implementation.md           # Scope control, no over-engineering
-│   ├── communication.md            # Japanese responses, no emoji
-│   └── autonomy.md                 # Confirm before running scripts/push
 ├── templates/
 │   └── com.user.claude-status-watch.plist  # launchd template
 └── docs/
     └── claude-beacon.md            # This documentation
 ```
 
-## Related Configuration
+## Related Documentation
 
-- `~/.claude/settings.json` - Claude Code hooks configuration
-- `~/.claude/hooks/` → `~/dotfiles/common/claude/.claude/hooks/` (stow symlink)
-  - `ralph-stop-hook.sh` - Ralph loop control
-  - `ralph-backpressure.sh` - Ralph type check/lint backpressure
-- `~/.claude/skills/` → `~/dotfiles/common/claude/.claude/skills/` (stow symlink)
-  - `beacon/` - Workspace registration skill
-  - `commit/` - Git commit skill (supports `all` and `<path>` arguments)
-  - `news/` - Personalized news digest (profile-based WebSearch/WebFetch)
-  - `update-md/` - Documentation update skill
-  - `ralph/` - Autonomous development loop
-  - `ralph-cancel/` - Loop cancellation
-  - `ralph-parallel/` - Parallel task execution
-- `~/.claude/agents/` → `~/dotfiles/common/claude/.claude/agents/` (stow symlink)
-  - `ralph-worker/` - Worktree-isolated worker agent
-- `~/.claude/rules/` → `~/dotfiles/common/claude/.claude/rules/` (stow symlink)
-  - `problem-solving.md` - Root cause analysis, best practices research
-  - `implementation.md` - Scope control, no over-engineering
-  - `communication.md` - Japanese responses, no emoji
-  - `autonomy.md` - Confirm before running scripts/push
-- `~/.local/share/ai-notify/` - Webhook cache
-- `/tmp/claude/status/` - State files
-- `~/.local/share/claude/workspace_map.json` - Workspace mappings
+- [Claude Skills](claude-skills.md) - Skills reference (`/beacon`, `/commit`, `/news`, `/update-md`)
+- [Claude Development](claude-development.md) - Development environment, hooks, agents, session management
+- [Ralph Pattern](ralph.md) - Autonomous development loop
+- [Claude Neovim](claude-neovim.md) - Neovim integration
+- [Claude Fallback](claude-fallback.md) - API fallback
