@@ -135,6 +135,46 @@ sketchybar --add item pomodoro right \
            click_script="$HOME/dotfiles/scripts/pomodoro.sh toggle"
 
 
+##### Claude Code Usage (right side) #####
+# Unicode 半ブロック文字で上下2段ゲージを1行に表現
+# 上半分 = セッション残量、下半分 = 週間残量
+sketchybar --add item claude_usage right \
+           --subscribe claude_usage mode_color_changed \
+           --set claude_usage \
+           icon.drawing=off \
+           label="  0%/0%" \
+           label.font="Hack Nerd Font:Bold:10.0" \
+           label.color=0xffffffff \
+           label.padding_left=8 \
+           label.padding_right=8 \
+           background.color=0xff1e1f29 \
+           background.border_color="$ACCENT_COLOR" \
+           background.border_width=2 \
+           background.corner_radius=5 \
+           background.height=24 \
+           background.drawing=on \
+           update_freq=300 \
+           script="$PLUGIN_DIR/claude_usage.sh"
+
+##### Input Method Indicator (right side) #####
+sketchybar --add item input_method right \
+           --subscribe input_method mode_color_changed \
+           --set input_method \
+           icon.drawing=off \
+           label="EN" \
+           label.font="Hack Nerd Font:Bold:10.0" \
+           label.color=0xff6c757d \
+           label.padding_left=10 \
+           label.padding_right=10 \
+           background.color=0xff1e1f29 \
+           background.border_color="$ACCENT_COLOR" \
+           background.border_width=2 \
+           background.corner_radius=5 \
+           background.height=24 \
+           background.drawing=on \
+           update_freq=2 \
+           script="$PLUGIN_DIR/input_method.sh"
+
 ##### Layout Popup Anchor (invisible, center position) #####
 sketchybar --add item layout_anchor center \
            --set layout_anchor \
