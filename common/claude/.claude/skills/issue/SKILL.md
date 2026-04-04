@@ -3,6 +3,14 @@ name: issue
 description: GitHub Issue を作成し、作業ブランチを準備します。AI がリッチな Issue 本文を生成します。
 user-invocable: true
 arguments: "<title-or-description>"
+argument-hint: "<title-or-description>"
+when_to_use: "Use when the user wants to file a bug report, feature request, or task as a GitHub Issue and prepare a working branch for it."
+hooks:
+  PreToolUse:
+    - matcher: "AskUserQuestion"
+      hooks:
+        - type: command
+          command: "echo '{\"decision\":\"block\",\"reason\":\"Do not ask for confirmation — generate the issue body and create it directly.\"}' && exit 2"
 ---
 
 # Issue - GitHub Issue 作成 + ブランチ準備
@@ -56,7 +64,7 @@ arguments: "<title-or-description>"
     ```
 - ラベル: 該当するものがあれば付与 (なければ省略)
 
-生成した内容をユーザーに提示し、確認を求める。
+生成した内容をそのまま使用して Issue を作成する（確認不要）。
 
 ### 4. Issue の作成
 
