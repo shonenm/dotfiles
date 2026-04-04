@@ -121,33 +121,25 @@ if [[ "$iteration" -ge "$max_iterations" ]]; then
   exit 0
 fi
 
-# 判定 5: stall detection (stall_hashes 配列で管理)
-compute_diff_hash() {
-  local hash
-  hash="$(git diff --stat 2>/dev/null | md5sum 2>/dev/null | cut -d' ' -f1 || true)"
-  if [[ -z "$hash" ]]; then
-    hash="$(git diff --stat 2>/dev/null | md5 2>/dev/null || echo "unknown")"
-  fi
-  echo "$hash"
-}
+# 判定 5: stall detection (task 完了数の変化で判定)
+# git diff --stat ベースの旧実装は read-only タスク (research/verification) で
+# コード変更がなくても stall と誤判定していた。task_graph の完了数を見ることで
+# 「タスクが進んでいるか」という本質的な進捗を正確に捉える。
+current_done_count="$(echo "$state" | jq '[.task_graph[]? | select(.status == "done")] | length')"
+last_done_count="$(echo "$state" | jq '.last_done_count // 0')"
+stall_count="$(echo "$state" | jq '.stall_hashes | length')"
 
-current_diff_hash="$(compute_diff_hash)"
-stall_hashes="$(echo "$state" | jq -r '.stall_hashes // []')"
-stall_count="$(echo "$stall_hashes" | jq 'length')"
-last_hash="$(echo "$stall_hashes" | jq -r '.[-1] // ""')"
-
-if [[ "$current_diff_hash" == "$last_hash" ]]; then
-  # 同一ハッシュ → stall_hashes に追加
-  state="$(echo "$state" | jq --arg h "$current_diff_hash" '.stall_hashes += [$h]')"
-  stall_count=$((stall_count + 1))
+if [[ "$current_done_count" -gt "$last_done_count" ]]; then
+  # タスク完了数が増加 → 進捗あり、stall_hashes リセット
+  state="$(echo "$state" | jq --argjson n "$current_done_count" '.last_done_count = $n | .stall_hashes = []')"
+  stall_count=0
 else
-  # 変化あり → stall_hashes リセット
-  state="$(echo "$state" | jq --arg h "$current_diff_hash" '.stall_hashes = [$h]')"
-  stall_count=1
+  # 変化なし → stall カウント増加
+  state="$(echo "$state" | jq '.stall_hashes += ["stall"]')"
+  stall_count=$((stall_count + 1))
 fi
 
-if [[ "$stall_count" -ge 4 ]]; then
-  # 4エントリ = 3回連続同一 (初回+3回)
+if [[ "$stall_count" -ge 3 ]]; then
   state="$(echo "$state" | jq '.errors += ["No progress detected for 3 consecutive iterations"]')"
   update_state "$state"
   archive

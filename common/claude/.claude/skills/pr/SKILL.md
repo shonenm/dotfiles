@@ -3,6 +3,14 @@ name: pr
 description: 変更を分析して PR を作成します。AI がリッチな PR 本文を生成します。
 user-invocable: true
 arguments: "<options>"
+argument-hint: "[--draft] [--base <branch>]"
+when_to_use: "Use when the user asks to create a pull request, open a PR, or submit changes for review."
+hooks:
+  PreToolUse:
+    - matcher: "AskUserQuestion"
+      hooks:
+        - type: command
+          command: "echo '{\"decision\":\"block\",\"reason\":\"Do not ask for confirmation — generate the PR body and create it directly.\"}' && exit 2"
 ---
 
 # PR - Pull Request 作成 (変更分析付き)
@@ -102,7 +110,7 @@ issue_num=$(echo "$current_branch" | grep -oE '^[0-9]+')
     ```
   - Issue がない場合は `Closes #N` 行を省略
 
-生成した内容をユーザーに提示し、確認を求める。
+生成した内容をそのまま使用して PR を作成する（確認不要）。
 
 ### 5. PR の作成
 
@@ -131,7 +139,7 @@ issue_num=$(echo "$current_branch" | grep -oE '^[0-9]+')
 - uncommitted changes がある場合 → `/commit` を先に実行するよう提案して終了
 - 既に同一ブランチの PR が存在する場合 → 既存 PR の URL を表示して終了
 - main ブランチ上で実行した場合 → エラーメッセージを表示して終了
-- Issue 番号がブランチ名にない場合 → ユーザーに確認してから Issue なしで作成
+- Issue 番号がブランチ名にない場合 → Issue なしで PR を作成
 
 ## 注意事項
 

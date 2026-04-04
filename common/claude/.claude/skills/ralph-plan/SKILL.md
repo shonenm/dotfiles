@@ -168,6 +168,22 @@ echo "$STATE_FILE"
 echo "$STATE_FILE" > /tmp/ralph/state/latest
 ```
 
+4. TaskCreate ツールで各タスクを Claude Code UI に登録し、`tool_task_id` を状態ファイルに書き戻す:
+
+   - 各タスクに対して TaskCreate を呼ぶ:
+     - `subject`: task_graph[N].name
+     - `description`: task_graph[N].completion_condition（あれば）
+     - `activeForm`: 現在進行形（例: task_graph[N].name から "Implementing ..." の形に変換）
+   - deps が存在するタスクは TaskUpdate で `addBlockedBy: [tool_task_id_of_dep]` を設定
+   - 返ってきた task ID を `tool_task_id` として状態ファイルに書き込む:
+
+```bash
+jq '.task_graph |= map(if .id == "T-N" then .tool_task_id = "<TaskCreate で返ったID>" else . end)' \
+  "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
+```
+
+   TaskCreate が使えない環境（`isTodoV2Enabled()` が false）ではスキップしてよい。
+
 状態ファイルのスキーマ:
 
 ```jsonc
@@ -181,14 +197,27 @@ echo "$STATE_FILE" > /tmp/ralph/state/latest
     {"id": "AC-1", "description": "...", "verified": false, "verification_command": "..."}
   ],
   "task_graph": [
-    {"id": "T-1", "name": "...", "deps": [], "status": "pending", "completion_condition": "...", "files": ["..."]}
+    {
+      "id": "T-1",
+      "name": "...",
+      "type": "research",
+      "deps": [],
+      "status": "pending",
+      "completion_condition": "...",
+      "files": ["..."],
+      "tool_task_id": "<TaskCreate で登録した UI タスク ID>"
+    }
   ],
   "context_report": "<Phase 0 の調査結果サマリー>",
   "stall_hashes": [],
+  "last_done_count": 0,
   "completion_token": "RALPH_COMPLETE",
   "errors": []
 }
 ```
+
+`type` フィールド: `"research"` | `"implementation"` | `"verification"` のいずれか。
+read-only タスクは `"research"`、コード変更を伴うタスクは `"implementation"` とする。
 
 --- GATE: Phase 3 完了 (最終) ---
 状態ファイル生成後、以下のメッセージのみ出力してこのスキルを終了する。

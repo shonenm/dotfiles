@@ -133,6 +133,27 @@ Ralph loop started (skip-plan mode).
 
 ### 3. タスク実行
 
+各タスクを実装する前に必ず **Synthesis ステップ** を行う:
+
+#### Synthesis ステップ（着手前に必須）
+
+実装に着手する前に以下を確認し、「どのファイルのどの部分をどう変更するか」を1〜3文で具体的にまとめる:
+
+1. 対象ファイルの現在のコードを読む
+2. 既存パターン・命名規則・依存関係を確認する
+3. 変更方針を自分の言葉で明示する（ファイルパス・関数名・行番号まで特定する）
+
+例（良い）:
+> `src/auth/middleware.ts` の `validateToken` 関数（L42）に null チェックを追加する。
+> `Session.user` が undefined の場合は 401 を返す。既存の `isExpired` チェック（L38）の直後に挿入する。
+
+例（悪い）:
+> コンテキストレポートに基づいて認証モジュールを修正する。
+
+Synthesis を書いてから実装に着手する。
+
+---
+
 以下のガイドラインに従って実装する:
 
 - task_graph が存在する場合: 依存関係 (`deps`) に従い、`status: "pending"` のタスクから順に実装
@@ -156,6 +177,11 @@ STATE_FILE="$(cat "/tmp/ralph/state/active_${SESSION_HASH}")"
 jq '.task_graph |= map(if .id == "T-N" then .status = "done" else . end)' \
   "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
 ```
+
+2. task_graph に `tool_task_id` が記録されている場合、TaskUpdate ツールで UI タスクも完了にする:
+   - `taskId`: 状態ファイルの `task_graph[N].tool_task_id`
+   - `status`: `"completed"`
+   - `tool_task_id` がない場合はスキップ（Task ツール未使用環境での後方互換性のため）
 
 ### 5. 検証フェーズ
 
