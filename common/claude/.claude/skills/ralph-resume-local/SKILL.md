@@ -1,5 +1,5 @@
 ---
-name: ralph-resume
+name: ralph-resume-local
 description: 完了した Ralph セッションのアーカイブから状態を復元し、追加タスクを定義して再実行可能にします。
 user-invocable: true
 disable-model-invocation: true
@@ -19,9 +19,9 @@ arguments: "<prompt>"
 ### 使用例
 
 ```
-/ralph-resume
-/ralph-resume "エラーハンドリングを追加する"
-/ralph-resume "テストカバレッジを改善する" --max-iterations 10
+/ralph-resume-local
+/ralph-resume-local "エラーハンドリングを追加する"
+/ralph-resume-local "テストカバレッジを改善する" --max-iterations 10
 ```
 
 ## 手順
@@ -113,5 +113,5 @@ echo "$STATE_FILE" > /tmp/ralph/state/latest
 - 新規タスク: M 件
 - 受入条件: X 件 (既存) + Y 件 (新規)
 
-`/ralph` で実装を開始できます。
+`/ralph-local` で実装を開始できます。
 ```

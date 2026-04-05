@@ -1,5 +1,5 @@
 ---
-name: issue
+name: issue-local
 description: GitHub Issue を作成し、作業ブランチを準備します。AI がリッチな Issue 本文を生成します。
 user-invocable: true
 arguments: "<title-or-description>"
@@ -89,12 +89,12 @@ gh issue create --title "<title>" --body "<body>" --assignee @me [--label "<labe
 
 - Issue URL
 - ブランチ名
-- 次のステップの案内 (実装 → `/commit` → `/pr`)
+- 次のステップの案内 (実装 → `/commit-local` → `/pr-local`)
 
 ## エッジケース
 
 - `gh auth status` で認証チェック → 未認証なら `gh auth login` を案内して終了
-- uncommitted changes がある場合 → stash するか `/commit` を先に実行するよう提案
+- uncommitted changes がある場合 → stash するか `/commit-local` を先に実行するよう提案
 - 既にデフォルトブランチ以外にいる場合 → `gh issue develop` はリモートのデフォルトブランチから作成するため問題なし
 
 ## 注意事項
