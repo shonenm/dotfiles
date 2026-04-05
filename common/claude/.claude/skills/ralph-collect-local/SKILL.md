@@ -1,5 +1,5 @@
 ---
-name: ralph-collect
+name: ralph-collect-local
 description: ralph-parallel で完了した worker の成果物を回収します。worker への指示送信、変更の保存、結果表示を行います。
 user-invocable: true
 disable-model-invocation: true
@@ -9,7 +9,7 @@ allowed-tools: Bash, Read
 
 # Ralph Collect - 成果物回収
 
-`/ralph-parallel` で完了した worker の成果物を回収するスキル。ユーザーがレビュー後に呼び出す。
+`/ralph-parallel-local` で完了した worker の成果物を回収するスキル。ユーザーがレビュー後に呼び出す。
 
 自動 merge は行わない。worker に PR 作成を指示するか、ユーザーが手動で merge する。
 
@@ -25,9 +25,9 @@ ralph-orchestrate send <task-id> "<message>"
 
 使用例:
 ```
-/ralph-collect send T-1 "変更のサマリーを出力して"
-/ralph-collect send T-2 "この関数のエッジケースのテストを追加して"
-/ralph-collect send T-3 "git diff を見せて"
+/ralph-collect-local send T-1 "変更のサマリーを出力して"
+/ralph-collect-local send T-2 "この関数のエッジケースのテストを追加して"
+/ralph-collect-local send T-3 "git diff を見せて"
 ```
 
 ### save / save-all - 変更を保存

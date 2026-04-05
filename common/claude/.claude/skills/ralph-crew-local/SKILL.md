@@ -1,5 +1,5 @@
 ---
-name: ralph-crew
+name: ralph-crew-local
 description: 常駐ワーカーの初期化・ディスパッチ・状態確認を行います。launchd と連携して定期的にタスクを注入する自律ワーカー管理システムです。
 user-invocable: true
 disable-model-invocation: true
@@ -14,12 +14,12 @@ allowed-tools: Bash, Read, Write, Glob, Grep
 ## 使い方
 
 ```
-/ralph-crew init                          # ワーカー起動
-/ralph-crew dispatch                      # スケジュール評価 + タスク注入
-/ralph-crew status                        # 全ワーカー状態表示
-/ralph-crew send <worker-id> "<message>"  # 手動メッセージ送信
-/ralph-crew restart <worker-id>           # ワーカー再起動
-/ralph-crew teardown                      # 全停止 + cleanup
+/ralph-crew-local init                          # ワーカー起動
+/ralph-crew-local dispatch                      # スケジュール評価 + タスク注入
+/ralph-crew-local status                        # 全ワーカー状態表示
+/ralph-crew-local send <worker-id> "<message>"  # 手動メッセージ送信
+/ralph-crew-local restart <worker-id>           # ワーカー再起動
+/ralph-crew-local teardown                      # 全停止 + cleanup
 ```
 
 ## 手順

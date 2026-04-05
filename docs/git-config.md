@@ -823,7 +823,7 @@ gf done
 
 ### gf との使い分け
 
-| 観点 | `gf` | `/issue` + `/pr` |
+| 観点 | `gf` | `/issue-local` + `/pr-local` |
 |------|-------|-------------------|
 | 前提 | ターミナルのみ | Claude Code セッション内 |
 | Issue 本文 | 空 | AI が生成 (Overview + AC) |
@@ -831,7 +831,7 @@ gf done
 | 速度 | 高速 (ワンコマンド) | 確認ステップあり |
 | 用途 | 小さな変更、素早い作業 | 記録を残したい変更 |
 
-両者は同じブランチ命名規約を使うため、`gf start` で始めた作業を `/pr` で PR 作成したり、`/issue` で始めた作業を `gf pr` で PR 作成することも可能。
+両者は同じブランチ命名規約を使うため、`gf start` で始めた作業を `/pr-local` で PR 作成したり、`/issue-local` で始めた作業を `gf pr` で PR 作成することも可能。
 
 ## gh-dash (GitHub Dashboard TUI)
 

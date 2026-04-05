@@ -1,5 +1,5 @@
 ---
-name: ralph-parallel
+name: ralph-parallel-local
 description: 状態ファイルのタスクグラフから依存関係を分析し、wt-lib + tmux で可視化された独立 claude プロセスとして並列実行します。
 user-invocable: true
 disable-model-invocation: true
@@ -9,9 +9,9 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task
 
 # Ralph Parallel - 並列タスク実行オーケストレーター
 
-状態ファイルのタスクグラフまたは PRD/タスクリストから依存関係を分析し、各タスクを独立した claude プロセスとして並列実行する。各ワーカーは git worktree + tmux window で分離され、`/ralph` スキルで起動するため Stop hook による自律ループ + backpressure hook による品質ゲートが適用される。
+状態ファイルのタスクグラフまたは PRD/タスクリストから依存関係を分析し、各タスクを独立した claude プロセスとして並列実行する。各ワーカーは git worktree + tmux window で分離され、`/ralph-local` スキルで起動するため Stop hook による自律ループ + backpressure hook による品質ゲートが適用される。
 
-実装フェーズのみを担当する。merge、cleanup、PR 作成は行わない。全 worker 完了後は結果サマリーを出力して停止する。ユーザーは tmux window を行き来して各 worker の diff を確認し、`/ralph-collect` で成果物を回収、`/ralph-cleanup` で後片付けを行う。
+実装フェーズのみを担当する。merge、cleanup、PR 作成は行わない。全 worker 完了後は結果サマリーを出力して停止する。ユーザーは tmux window を行き来して各 worker の diff を確認し、`/ralph-collect-local` で成果物を回収、`/ralph-cleanup-local` で後片付けを行う。
 
 ## 自律実行ルール
 
@@ -28,9 +28,9 @@ Step 4-5 は一切中断せず完了まで走ること。
 ### 使用例
 
 ```
-/ralph-parallel                                    # 状態ファイルの task_graph を使用
-/ralph-parallel docs/prd.md                        # PRD ファイルからタスク分割
-/ralph-parallel "Add login page, Add signup page"  # カンマ区切りタスクリスト
+/ralph-parallel-local                                    # 状態ファイルの task_graph を使用
+/ralph-parallel-local docs/prd.md                        # PRD ファイルからタスク分割
+/ralph-parallel-local "Add login page, Add signup page"  # カンマ区切りタスクリスト
 ```
 
 ## 手順
@@ -102,7 +102,7 @@ ralph-orchestrate launch <task-id> /tmp/ralph/prompts/<task-id>.md --model sonne
 各起動により:
 - git worktree が作成される (`ralph/<task-id>` ブランチ)
 - tmux window が作成され、split pane で review (nvim) + claude TUI が配置される
-- claude TUI が起動し、capture-pane で起動確認後 `/ralph` が send-keys で送信される
+- claude TUI が起動し、capture-pane で起動確認後 `/ralph-local` が send-keys で送信される
 - Stop hook による自律ループ + backpressure hook による品質ゲートが適用される
 - 完了時: RALPH_COMPLETE -> Stop hook exit 0 -> claude が入力待ちに戻る
 
@@ -147,14 +147,14 @@ ralph-orchestrate results
 
 次のステップはユーザーが判断する:
 - tmux window で各 worker の diff を直接確認
-- `/ralph-collect send T-1 "変更のサマリーを出力して"` で worker に指示
-- `/ralph-collect save-all` で変更を保存
-- `/ralph-cleanup` で後片付け
+- `/ralph-collect-local send T-1 "変更のサマリーを出力して"` で worker に指示
+- `/ralph-collect-local save-all` で変更を保存
+- `/ralph-cleanup-local` で後片付け
 
 ## 注意事項
 
 - 各ワーカーは独立した git worktree + tmux window で動作
-- ワーカーは `/ralph` スキルで起動し、Stop hook + backpressure hook が適用される
+- ワーカーは `/ralph-local` スキルで起動し、Stop hook + backpressure hook が適用される
 - `--dangerously-skip-permissions` は使用しない (初回確認問題を回避)
 - ワーカーは sonnet モデルで動作する (コスト最適化)
 - 同時実行ワーカー数の上限は4 (リソース制約)

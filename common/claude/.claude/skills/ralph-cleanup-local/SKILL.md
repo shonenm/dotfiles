@@ -1,5 +1,5 @@
 ---
-name: ralph-cleanup
+name: ralph-cleanup-local
 description: ralph-parallel で作成された worktree、tmux window、ブランチを削除します。
 user-invocable: true
 disable-model-invocation: true
@@ -9,14 +9,14 @@ allowed-tools: Bash
 
 # Ralph Cleanup - クリーンアップ
 
-`/ralph-parallel` で作成された worktree、tmux window、`ralph/*` ブランチ、結果ファイルを削除するスキル。全ての作業が終わった後にユーザーが呼び出す。
+`/ralph-parallel-local` で作成された worktree、tmux window、`ralph/*` ブランチ、結果ファイルを削除するスキル。全ての作業が終わった後にユーザーが呼び出す。
 
 ## 使い方
 
 ```
-/ralph-cleanup                    # 全削除 (worktree + window + branch + results + prompts + checkpoint)
-/ralph-cleanup --keep-results     # results ディレクトリを保持
-/ralph-cleanup T-1 T-3            # 指定タスクのみ cleanup
+/ralph-cleanup-local                    # 全削除 (worktree + window + branch + results + prompts + checkpoint)
+/ralph-cleanup-local --keep-results     # results ディレクトリを保持
+/ralph-cleanup-local T-1 T-3            # 指定タスクのみ cleanup
 ```
 
 ## 手順

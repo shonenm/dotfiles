@@ -1,5 +1,5 @@
 ---
-name: pr
+name: pr-local
 description: 変更を分析して PR を作成します。AI がリッチな PR 本文を生成します。
 user-invocable: true
 arguments: "<options>"
@@ -50,7 +50,7 @@ hooks:
    ```
    ベースブランチ上なら「作業ブランチ上で実行してください」とエラー
 3. uncommitted changes がないこと (`git status --porcelain`):
-   未コミットの変更がある場合 → `/commit` を先に実行するよう提案して終了
+   未コミットの変更がある場合 → `/commit-local` を先に実行するよう提案して終了
 4. 既存 PR の確認:
    ```bash
    gh pr view --json url 2>/dev/null
@@ -136,7 +136,7 @@ issue_num=$(echo "$current_branch" | grep -oE '^[0-9]+')
 ## エッジケース
 
 - `gh auth status` で認証チェック → 未認証なら `gh auth login` を案内して終了
-- uncommitted changes がある場合 → `/commit` を先に実行するよう提案して終了
+- uncommitted changes がある場合 → `/commit-local` を先に実行するよう提案して終了
 - 既に同一ブランチの PR が存在する場合 → 既存 PR の URL を表示して終了
 - main ブランチ上で実行した場合 → エラーメッセージを表示して終了
 - Issue 番号がブランチ名にない場合 → Issue なしで PR を作成

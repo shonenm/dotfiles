@@ -1,11 +1,11 @@
 ---
-name: commit
+name: commit-local
 description: 現在のセッションで行った変更を論理単位ごとに分割し、適切なコミットメッセージで複数コミットを作成します。
 user-invocable: true
 model: haiku
 arguments: "[all] [<path>...]"
 argument-hint: "[all] [<path>...]"
-when_to_use: "Use when the user asks to commit, save, or checkpoint their work. Also use proactively after completing a feature or bug fix within the session. Do NOT use when the user asks to push or create a PR — use /pr for that."
+when_to_use: "Use when the user asks to commit, save, or checkpoint their work. Also use proactively after completing a feature or bug fix within the session. Do NOT use when the user asks to push or create a PR — use /pr-local for that."
 ---
 
 # Commit - Git コミット作成
@@ -23,17 +23,17 @@ when_to_use: "Use when the user asks to commit, save, or checkpoint their work. 
 ### 使用例
 
 ```bash
-/commit                      # セッション内の全変更
-/commit all                  # すべての未コミット変更
-/commit src/                 # セッション内の src/ 以下のみ
-/commit all src/             # src/ 以下のすべての変更
-/commit file.ts utils.ts     # 指定ファイルのみ（セッション内）
-/commit all common/nvim/     # common/nvim/ 以下のすべての変更
+/commit-local                      # セッション内の全変更
+/commit-local all                  # すべての未コミット変更
+/commit-local src/                 # セッション内の src/ 以下のみ
+/commit-local all src/             # src/ 以下のすべての変更
+/commit-local file.ts utils.ts     # 指定ファイルのみ（セッション内）
+/commit-local all common/nvim/     # common/nvim/ 以下のすべての変更
 ```
 
 ## 重要: 対象範囲
 
-### デフォルトモード (`/commit`, `/commit <path>`)
+### デフォルトモード (`/commit-local`, `/commit-local <path>`)
 
 このスキルは**現在の会話で自分（Claude）が行った変更のみ**をコミットします。
 - 会話履歴から Edit/Write ツールで変更したファイルを特定する
@@ -42,7 +42,7 @@ when_to_use: "Use when the user asks to commit, save, or checkpoint their work. 
 - 不明な変更がある場合はユーザーに確認する
 - `<path>` 指定時は、セッション内変更かつ指定パスに含まれるもののみ
 
-### 全変更モード (`/commit all`, `/commit all <path>`)
+### 全変更モード (`/commit-local all`, `/commit-local all <path>`)
 
 **すべての未コミット変更**を対象にコミットします。
 - セッション内外を問わず、すべての変更をコミット対象とする
@@ -55,7 +55,7 @@ when_to_use: "Use when the user asks to commit, save, or checkpoint their work. 
 1. **引数の解析**:
    - `all` が含まれているか → 全変更モード
    - `all` 以外の引数があるか → パスフィルタとして扱う
-   - 例: `/commit all src/ lib/` → 全変更モード + `src/`, `lib/` のみ対象
+   - 例: `/commit-local all src/ lib/` → 全変更モード + `src/`, `lib/` のみ対象
 
 2. **対象変更の特定**:
    - **デフォルトモード**: セッション内で変更したファイルは既に把握済み（Edit/Write ツールで変更したファイル）
