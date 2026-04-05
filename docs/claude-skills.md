@@ -6,27 +6,27 @@ Claude Code で使用可能なカスタムスキルのリファレンス。
 
 | スキル | 説明 |
 |--------|------|
-| `/beacon` | Aerospace ワークスペースに環境を紐付け |
-| `/commit` | セッション内の変更を分析してコミット作成 |
-| `/news` | プロファイルベースのパーソナライズドニュース収集 |
-| `/update-md` | セッション内の変更に関連するドキュメント更新 |
+| `/beacon-local` | Aerospace ワークスペースに環境を紐付け |
+| `/commit-local` | セッション内の変更を分析してコミット作成 |
+| `/news-local` | プロファイルベースのパーソナライズドニュース収集 |
+| `/update-md-local` | セッション内の変更に関連するドキュメント更新 |
 
 Ralph 系スキルは [`ralph.md`](ralph.md) を参照。
 
-## /beacon
+## /beacon-local
 
 現在の環境を Aerospace ワークスペースに紐付けます。通知バッジを正しいワークスペースに表示するために使用します。
 
 ### 使い方
 
 ```
-/beacon <workspace_number>
+/beacon-local <workspace_number>
 ```
 
 ### 例
 
 ```
-/beacon 3
+/beacon-local 3
 ```
 
 現在の git リポジトリ（または pwd）をワークスペース 3 に登録します。
@@ -51,19 +51,19 @@ Ralph 系スキルは [`ralph.md`](ralph.md) を参照。
 
 詳細は [`claude-beacon.md`](claude-beacon.md) を参照。
 
-## /commit
+## /commit-local
 
 現在のセッションで行った変更を分析し、適切なコミットメッセージで git commit を作成します。
 
 ### 使い方
 
 ```bash
-/commit                      # セッション内の変更のみ
-/commit all                  # 全ての未コミット変更
-/commit src/                 # セッション内の src/ の変更のみ
-/commit all src/             # src/ の全変更
-/commit file.ts utils.ts     # 特定ファイル（セッション内）
-/commit all common/nvim/     # ディレクトリの全変更
+/commit-local                      # セッション内の変更のみ
+/commit-local all                  # 全ての未コミット変更
+/commit-local src/                 # セッション内の src/ の変更のみ
+/commit-local all src/             # src/ の全変更
+/commit-local file.ts utils.ts     # 特定ファイル（セッション内）
+/commit-local all common/nvim/     # ディレクトリの全変更
 ```
 
 ### コミットメッセージフォーマット
@@ -91,16 +91,16 @@ Ralph 系スキルは [`ralph.md`](ralph.md) を参照。
 - `.env`, `credentials.json` 等のシークレットファイルは自動で除外
 - `git push` は実行しない（手動で push が必要）
 
-## /news
+## /news-local
 
 `~/.claude/news-profile.yaml` に基づいてパーソナライズドニュースを収集します。
 
 ### 使い方
 
 ```
-/news           # 過去1週間（デフォルト）
-/news day       # 過去24時間
-/news month     # 過去1ヶ月
+/news-local           # 過去1週間（デフォルト）
+/news-local day       # 過去24時間
+/news-local month     # 過去1ヶ月
 ```
 
 ### プロファイル設定
@@ -141,14 +141,14 @@ interests:
 
 `common/claude/.claude/news-profile.example.yaml` を `~/.claude/news-profile.yaml` にコピーして編集。
 
-## /update-md
+## /update-md-local
 
 現在のセッションで行った変更に関連する markdown ドキュメントを更新または作成します。
 
 ### 使い方
 
 ```
-/update-md
+/update-md-local
 ```
 
 引数なし。セッション内の変更を自動で分析します。
@@ -201,6 +201,6 @@ interests:
 
 ## 関連ドキュメント
 
-- [Ralph Pattern](ralph.md) - 自律開発ループ (`/ralph`, `/ralph-plan`, `/ralph-cancel`, `/ralph-resume`, `/ralph-parallel`)
+- [Ralph Pattern](ralph.md) - 自律開発ループ (`/ralph-local`, `/ralph-plan-local`, `/ralph-cancel-local`, `/ralph-resume-local`, `/ralph-parallel-local`)
 - [Claude Development](claude-development.md) - 開発環境・ツール全般
 - [Claude Beacon](claude-beacon.md) - 通知システム

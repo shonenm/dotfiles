@@ -1,5 +1,5 @@
 ---
-name: update-md
+name: update-md-local
 description: 現在のセッションで行った変更に関連するmdファイルを更新または作成します。更新不要な場合は理由を説明して終了します。
 user-invocable: true
 model: haiku
