@@ -25,7 +25,8 @@ print(d['claudeAiOauth']['accessToken'])
 " 2>/dev/null)
   [[ -z "$token" ]] && return 1
 
-  curl -sf --max-time 5 \
+  local tmp
+  tmp=$(curl -sf --max-time 5 \
     -H "Authorization: Bearer $token" \
     -H "anthropic-beta: oauth-2025-04-20" \
     "https://api.anthropic.com/api/oauth/usage" 2>/dev/null | \
@@ -39,7 +40,8 @@ try:
   print(max(0, min(100, w)))
 except Exception:
   sys.exit(1)
-" > "$USAGE_FILE" 2>/dev/null
+" 2>/dev/null)
+  [[ -n "$tmp" ]] && echo "$tmp" > "$USAGE_FILE"
 }
 
 # 同期で取得（--max-time 5 なので最大5秒、失敗時は既存キャッシュを使用）
