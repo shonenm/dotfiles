@@ -1,13 +1,37 @@
 {
-  "mcpServers": {
-    "syntopic": {
-      "type": "http",
-      "url": "https://mcp.sandbox.syntopic.io/mcp"
-    }
-  },
   "permissions": {
     "allow": [
-      "mcp__syntopic__*"
+      "mcp__syntopic__*",
+      "mcp__notion__*",
+      "mcp__tmux__*",
+      "Skill",
+      "Read",
+      "Glob",
+      "Grep",
+      "Agent",
+      "WebSearch",
+      "WebFetch",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(echo:*)",
+      "Bash(printf:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(which:*)",
+      "Bash(type:*)",
+      "Bash(env:*)",
+      "Bash(printenv:*)",
+      "Bash(date:*)",
+      "Bash(jq:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(cut:*)",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)"
     ]
   },
   "hooks": {
