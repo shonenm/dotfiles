@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "tmux": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "tmux-mcp"]
+    },
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "NOTION_TOKEN": "${NOTION_TOKEN}"
+      }
+    },
+    "syntopic": {
+      "type": "http",
+      "url": "https://mcp.sandbox.syntopic.io/mcp"
+    }
+  }
+}

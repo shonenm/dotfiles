@@ -350,6 +350,34 @@ generate_ai_cli_configs() {
     log_success "  Generated ~/.claude/settings.json"
   fi
 
+  # Claude MCP servers (from mcp.json, secrets resolved via 1Password)
+  local mcp_config="$DOTFILES_DIR/common/claude/.config/claude/mcp.json"
+  if [[ -f "$mcp_config" ]] && command -v claude &>/dev/null; then
+    local notion_token=""
+    if command -v op &>/dev/null; then
+      notion_token=$(op read "op://Personal/Notion MCP/credential" 2>/dev/null || true)
+    fi
+    # Read each server from mcp.json and register via claude mcp add-json
+    python3 -c "
+import json, sys
+with open('$mcp_config') as f:
+    servers = json.load(f)['mcpServers']
+for name, config in servers.items():
+    print(json.dumps({'name': name, 'config': config}))
+" | while IFS= read -r entry; do
+      local name config
+      name=$(echo "$entry" | python3 -c "import json,sys; print(json.load(sys.stdin)['name'])")
+      config=$(echo "$entry" | python3 -c "import json,sys; d=json.load(sys.stdin)['config']; print(json.dumps(d))")
+      # Resolve ${NOTION_TOKEN} placeholder
+      if [[ -n "$notion_token" ]]; then
+        config="${config//\$\{NOTION_TOKEN\}/$notion_token}"
+      fi
+      claude mcp add-json --scope user "$name" "$config" >/dev/null 2>&1 && \
+        log_success "  Registered MCP server: $name" || \
+        log_warn "  Failed to register MCP server: $name"
+    done
+  fi
+
   # Claude Code skills (from common/claude, skip if Stow symlinks exist)
   local skills_src="$DOTFILES_DIR/common/claude/.claude/skills"
   if [[ -d "$skills_src" ]]; then
