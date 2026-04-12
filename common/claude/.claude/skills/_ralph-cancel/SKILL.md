@@ -1,5 +1,5 @@
 ---
-name: ralph-cancel-local
+name: _ralph-cancel
 description: 実行中の Ralph ループを中断します。状態ファイルのアーカイブを保存してからクリーンアップします。
 user-invocable: true
 disable-model-invocation: true

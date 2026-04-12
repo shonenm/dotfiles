@@ -1,5 +1,5 @@
 ---
-name: ralph-local
+name: _ralph
 description: 自律的反復開発ループを開始します。状態ファイルがあればタスクグラフに従い、なければ skip-plan モードで実行します。
 user-invocable: true
 disable-model-invocation: true
@@ -47,9 +47,9 @@ Ralph ループ内では以下のグローバルルールを上書きする:
 ### 使用例
 
 ```
-/ralph-local                                           # ralph-plan-local で生成済みの状態ファイルを使用
-/ralph-local "Fix the authentication bug in src/auth.ts"  # skip-plan モード
-/ralph-local "Add unit tests for the utils module" --max-iterations 10
+/_ralph                                           # _ralph-plan で生成済みの状態ファイルを使用
+/_ralph "Fix the authentication bug in src/auth.ts"  # skip-plan モード
+/_ralph "Add unit tests for the utils module" --max-iterations 10
 ```
 
 ## 手順
@@ -217,4 +217,4 @@ Ralph は Claude Code の Stop hook を使用してループを実現する:
 
 ## 中断
 
-ループを中断するには `/ralph-cancel-local` を実行する。
+ループを中断するには `/_ralph-cancel` を実行する。
