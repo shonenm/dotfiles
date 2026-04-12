@@ -29,6 +29,10 @@ NERD_FONT_URL="https://github.com/yuru7/udev-gothic/releases/download/${NERD_FON
 # curl-pipe installs
 # ════════════════════════════════════════
 
+TOOL_bun_check_cmd="bun"
+TOOL_bun_method="curl_pipe"
+TOOL_bun_curl_cmd='curl -fsSL https://bun.sh/install | bash'
+
 TOOL_starship_check_cmd="starship"
 TOOL_starship_method="curl_pipe"
 TOOL_starship_curl_cmd='curl -sS https://starship.rs/install.sh | sh -s -- -y'
@@ -328,7 +332,7 @@ TOOL_pgcli_depends_on="uv"
 
 LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
-  starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
+  bun starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
   fzf fastfetch delta lazygit ghq dops yazi rainfrog typst
   just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex
