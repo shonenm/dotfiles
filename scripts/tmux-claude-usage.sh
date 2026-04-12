@@ -1,29 +1,58 @@
 #!/bin/bash
 # Claude Code 使用量表示 (tmux status-right 用)
-# キーチェーンの OAuth トークンで使用量を取得しキャッシュ
+# OAuth トークンで使用量を取得しキャッシュ
+# macOS: Keychain, Linux: ~/.claude/.credentials.json
 # 出力: "󰧑 ▃▅ 42%/67%" 形式のプレーンテキスト
 
 CACHE_FILE="/tmp/tmux_claude_usage"
 CACHE_TTL=300  # 5分
 
+# クロスプラットフォーム mtime 取得
+get_mtime() {
+  case "$(uname -s)" in
+    Darwin) stat -f %m "$1" 2>/dev/null || echo 0 ;;
+    *)      stat -c %Y "$1" 2>/dev/null || echo 0 ;;
+  esac
+}
+
 # キャッシュが有効ならそのまま出力
 if [[ -f "$CACHE_FILE" ]]; then
-  age=$(( $(date +%s) - $(stat -f %m "$CACHE_FILE" 2>/dev/null || echo 0) ))
+  age=$(( $(date +%s) - $(get_mtime "$CACHE_FILE") ))
   if (( age < CACHE_TTL )); then
     cat "$CACHE_FILE"
     exit 0
   fi
 fi
 
-# キーチェーンからOAuthアクセストークンを取得
-creds_json=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null)
-[[ -z "$creds_json" ]] && echo "󰧑 --" && exit 0
-
-token=$(echo "$creds_json" | python3 -c "
+# OAuth アクセストークンを取得
+get_token() {
+  case "$(uname -s)" in
+    Darwin)
+      # macOS: Keychain
+      local creds_json
+      creds_json=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null)
+      [[ -z "$creds_json" ]] && return 1
+      echo "$creds_json" | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
 print(d['claudeAiOauth']['accessToken'])
-" 2>/dev/null)
+" 2>/dev/null
+      ;;
+    *)
+      # Linux: ~/.claude/.credentials.json
+      local creds_file="$HOME/.claude/.credentials.json"
+      [[ -f "$creds_file" ]] || return 1
+      python3 -c "
+import json
+with open('$creds_file') as f:
+    d = json.load(f)
+print(d['claudeAiOauth']['accessToken'])
+" 2>/dev/null
+      ;;
+  esac
+}
+
+token=$(get_token)
 [[ -z "$token" ]] && echo "󰧑 --" && exit 0
 
 # 使用量を取得
