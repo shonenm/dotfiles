@@ -1,0 +1,10 @@
+{
+  "plugins": [],
+  "theme": "tokyo-night",
+  "sidebarPosition": "left",
+  "sidebarWidth": 30,
+  "sessionFilter": "active",
+  "detailPanelHeights": {
+    "MAIN": 30
+  }
+}
