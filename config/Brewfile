@@ -17,6 +17,7 @@ brew "aerc"
 
 # --- Image Processing ---
 brew "imagemagick"
+brew "qrencode"
 
 # --- Development ---
 brew "neovim"
