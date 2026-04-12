@@ -11,8 +11,8 @@ CACHE_TTL=3  # seconds
 # pill background (TokyoNight bg_highlight)
 BG="#292e42"
 
-# Nerd Font: memory icon (U+EFF5)
-RAM_ICON=$'\xee\xbf\xb5'
+# Nerd Font: memory icon (nf-md-memory, U+F035B)
+RAM_ICON=$'\xf3\xb0\x8d\x9b'
 
 mkdir -p "$CACHE_DIR"
 
