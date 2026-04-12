@@ -34,6 +34,10 @@ export PATH="$HOME/dotfiles/scripts:$PATH"
 export DENO_INSTALL="$HOME/.deno"
 [[ -d "$DENO_INSTALL/bin" ]] && export PATH="$DENO_INSTALL/bin:$PATH"
 
+# SynTopic CLI
+[[ -x "$HOME/syntopic/tools/packages/syntopic/bin/syntopic" ]] && \
+  export PATH="$HOME/syntopic/tools/packages/syntopic/bin:$PATH"
+
 # User bin
 [[ -d "$HOME/bin" ]] && export PATH="$PATH:$HOME/bin"
 
