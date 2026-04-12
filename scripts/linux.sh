@@ -480,6 +480,24 @@ install_gh_extensions() {
   fi
 }
 
+install_ghostty_terminfo() {
+  if infocmp xterm-ghostty &>/dev/null; then
+    log_success "xterm-ghostty terminfo already installed"
+    return
+  fi
+
+  local terminfo_src="$CONFIG_DIR/xterm-ghostty.terminfo"
+  if [[ ! -f "$terminfo_src" ]]; then
+    log_warn "xterm-ghostty.terminfo not found in config/"
+    return
+  fi
+
+  log_info "Installing xterm-ghostty terminfo..."
+  mkdir -p "$HOME/.terminfo"
+  tic -x -o "$HOME/.terminfo" "$terminfo_src" 2>/dev/null
+  log_success "xterm-ghostty terminfo installed"
+}
+
 install_fancy_cat() {
   if command_exists fancy-cat; then
     log_success "fancy-cat already installed"
@@ -517,6 +535,7 @@ install_modern_tools
 install_npm_packages
 link_ai_scripts
 install_gh_extensions
+install_ghostty_terminfo
 install_fancy_cat
 install_1password_cli
 check_1password
