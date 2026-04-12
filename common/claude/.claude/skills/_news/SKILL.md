@@ -1,5 +1,5 @@
 ---
-name: news-local
+name: _news
 description: プロファイルに基づいてパーソナライズされたニュースを取得・提示します
 user-invocable: true
 disable-model-invocation: true

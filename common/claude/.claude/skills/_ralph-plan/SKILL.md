@@ -1,5 +1,5 @@
 ---
-name: ralph-plan-local
+name: _ralph-plan
 description: タスクの要件定義・設計・タスク分解をインタラクティブに行い、Ralph実装ループ用の状態ファイルを生成します。
 user-invocable: true
 disable-model-invocation: true
@@ -9,7 +9,7 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task, WebFetch, WebSearch, AskUser
 
 # Ralph Plan - インタラクティブ計画セッション
 
-ユーザーとの対話を通じて要件定義・受入条件・設計・タスク分解を行い、`/ralph-local` で使用する状態ファイルを生成します。
+ユーザーとの対話を通じて要件定義・受入条件・設計・タスク分解を行い、`/_ralph` で使用する状態ファイルを生成します。
 
 このスキルは通常の対話セッションとして動作します（自律ループ機構は使用しません）。
 
@@ -17,7 +17,7 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task, WebFetch, WebSearch, AskUser
 
 1. 各フェーズの末尾でユーザーの明示的な承認を得るまで次のフェーズに進んではならない。「OK」「承認」「LGTM」「進めて」等の承認発言があるまで待機すること。承認なしにフェーズを跨ぐのは禁止。
 2. Phase 2 の承認は「Phase 3（状態ファイル生成）に進んでよい」という意味であり、「実装を開始してよい」ではない。Phase 2 承認後は必ず Phase 3 を実行すること。Phase 3 をスキップして実装に進むことは禁止。
-3. Phase 3 で状態ファイルを生成したら、このスキルは終了する。実装作業は一切行わない。コードの変更、ファイルの作成・編集は禁止。実装は別セッションで `/ralph-local` を実行して行う。
+3. Phase 3 で状態ファイルを生成したら、このスキルは終了する。実装作業は一切行わない。コードの変更、ファイルの作成・編集は禁止。実装は別セッションで `/_ralph` を実行して行う。
 4. Edit/MultiEdit ツールはこのスキルでは使用不可。Write ツールは Phase 3 の状態ファイル生成にのみ使用可。コード変更は一切行えない。
 5. task_graph にコミットタスクを含めない。ユーザーが明示的にコミットを要求した場合のみ含める。
 
@@ -30,9 +30,9 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task, WebFetch, WebSearch, AskUser
 ### 使用例
 
 ```
-/ralph-plan-local "ユーザー認証機能を追加する"
-/ralph-plan-local "APIのレスポンスキャッシュ層を実装する"
-/ralph-plan-local docs/prd.md
+/_ralph-plan "ユーザー認証機能を追加する"
+/_ralph-plan "APIのレスポンスキャッシュ層を実装する"
+/_ralph-plan docs/prd.md
 ```
 
 ## 手順
@@ -225,5 +225,5 @@ read-only タスクは `"research"`、コード変更を伴うタスクは `"imp
 
 ```
 [ralph-plan 完了] 状態ファイルを生成しました: <STATE_FILE>
-`/ralph-local` で実装を開始できます。
+`/_ralph` で実装を開始できます。
 ```

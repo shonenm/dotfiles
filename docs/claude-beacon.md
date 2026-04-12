@@ -12,7 +12,7 @@ A system that visualizes Claude Code events (completion, approval pending, input
 
 ## Workspace-Based Architecture
 
-This system uses **workspace-based** notification management. Rather than trying to auto-detect which aerospace window you're running in, you manually register your git repository to a workspace using the `/beacon-local` command.
+This system uses **workspace-based** notification management. Rather than trying to auto-detect which aerospace window you're running in, you manually register your git repository to a workspace using the `/_beacon` command.
 
 ### Why Manual Registration?
 
@@ -43,7 +43,7 @@ Aerospace workspace numbers are not accessible from CLI applications — there i
 
 ## Manual Workspace Registration
 
-### The `/beacon-local` Command
+### The `/_beacon` Command
 
 Use this command in Claude Code to register the current environment to a specific workspace:
 
@@ -77,7 +77,7 @@ This saves a mapping in `~/.local/share/claude/workspace_map.json`:
 - When starting Claude in a new git repository for the first time
 - Anytime you want notifications to appear on the correct workspace
 
-For details on the `/beacon-local` skill, see [`claude-skills.md`](claude-skills.md).
+For details on the `/_beacon` skill, see [`claude-skills.md`](claude-skills.md).
 
 ## Supported Environments
 
@@ -407,7 +407,7 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
 ### 1. Local (Mac directly)
 
 No additional configuration needed. Only the common configuration above is required.
-Remember to use `/beacon-local` to map your environment to the correct workspace.
+Remember to use `/_beacon` to map your environment to the correct workspace.
 
 ---
 
@@ -691,7 +691,7 @@ dotfiles/
 
 ## Related Documentation
 
-- [Claude Skills](claude-skills.md) - Skills reference (`/beacon-local`, `/commit-local`, `/news-local`, `/update-md-local`)
+- [Claude Skills](claude-skills.md) - Skills reference (`/_beacon`, `/_commit`, `/_news`, `/_update-md`)
 - [Claude Development](claude-development.md) - Development environment, hooks, agents, session management
 - [Ralph Pattern](ralph.md) - Autonomous development loop
 - [Claude Neovim](claude-neovim.md) - Neovim integration
