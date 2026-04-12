@@ -1,4 +1,15 @@
 {
+  "mcpServers": {
+    "syntopic": {
+      "type": "http",
+      "url": "https://mcp.sandbox.syntopic.io/mcp"
+    }
+  },
+  "permissions": {
+    "allow": [
+      "mcp__syntopic__*"
+    ]
+  },
   "hooks": {
     "Stop": [
       {
