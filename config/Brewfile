@@ -5,6 +5,7 @@
 tap "dotenvx/brew"
 tap "FelixKratz/formulae"
 tap "trasta298/tap"
+tap "oven-sh/bun"
 
 # --- Shell & Terminal ---
 brew "tmux"
@@ -32,6 +33,7 @@ brew "ghq"
 brew "mise"
 brew "uv"
 brew "rust"
+brew "oven-sh/bun/bun"
 brew "dotenvx/brew/dotenvx"
 
 # --- Development Workflow ---
