@@ -74,6 +74,7 @@ launchctl load ~/Library/LaunchAgents/com.user.ralph-crew.plist
 /ralph-crew status
 /ralph-crew send qa "Run npm test and report results"
 /ralph-crew restart qa
+/ralph-crew cleanup
 /ralph-crew teardown
 ```
 
@@ -85,6 +86,7 @@ launchctl load ~/Library/LaunchAgents/com.user.ralph-crew.plist
 |--------|-----------|------|
 | `fix` | Yes | 問題検出 → worktree で修正 → commit → push → PR 作成。修正不能なら issue にフォールバック |
 | `issue-only` | No | 問題検出 → GitHub issue 作成のみ。修正は試みない |
+| `none` | No | プロンプトをそのまま注入 (wrapper 無し)。ドライラン・レポートのみ等、タスクプロンプト自体が終端挙動を定義しているケース向け |
 
 ### fix モードのワークフロー
 

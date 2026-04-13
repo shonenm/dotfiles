@@ -67,8 +67,8 @@ _crew_worker_status() {
   local worker_file="${STATE_DIR}/workers/${worker_id}.json"
 
   # Check pane existence
+  local pane_id=""
   if [[ -f "$worker_file" ]]; then
-    local pane_id
     pane_id="$(jq -r '.pane_id // empty' "$worker_file")"
     if [[ -n "$pane_id" ]] && ! tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane_id"; then
       echo "dead"
@@ -77,11 +77,38 @@ _crew_worker_status() {
   fi
 
   # Status file based detection
+  local status="unknown"
   if [[ -f "$status_file" ]]; then
-    cat "$status_file"
-  else
-    echo "unknown"
+    status="$(cat "$status_file")"
   fi
+
+  # Fallback: Claude's Notification(idle_prompt) hook does not fire on every
+  # task completion, so a running worker can stay stuck at "running" forever.
+  # Inspect the Claude TUI footer: the "esc to interrupt" marker is only
+  # present while a tool/thinking step is in flight. Its absence means idle.
+  #
+  # A 15s grace period after the last dispatch avoids racing the TUI before
+  # it has had a chance to render "esc to interrupt".
+  if [[ "$status" == "running" && -n "$pane_id" ]]; then
+    local last_dispatch_file="${STATE_DIR}/workers/${worker_id}.last_dispatch"
+    local elapsed=999
+    if [[ -f "$last_dispatch_file" ]]; then
+      local now_epoch last_epoch
+      now_epoch="$(date +%s)"
+      last_epoch="$(cat "$last_dispatch_file")"
+      elapsed=$(( now_epoch - last_epoch ))
+    fi
+    if [[ "$elapsed" -ge 15 ]]; then
+      local pane_tail
+      pane_tail="$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | tail -5)"
+      if ! echo "$pane_tail" | grep -q 'esc to interrupt'; then
+        status="idle"
+        echo "$status" > "$status_file"
+      fi
+    fi
+  fi
+
+  echo "$status"
 }
 
 # --- Worker lifecycle ---
@@ -143,10 +170,11 @@ _start_worker() {
   if tmux list-windows -t "$TMUX_SESSION" -F '#{window_name}' 2>/dev/null | grep -qxF "$window_name"; then
     tmux kill-window -t "${TMUX_SESSION}:${window_name}" 2>/dev/null || true
   fi
-  tmux new-window -t "$TMUX_SESSION" -n "$window_name" -c "$PROJECT_DIR"
-
+  # Capture the new window's initial pane id directly.
+  # Using -P -F is robust against after-new-window hooks that split the window
+  # (e.g. the opensessions sidebar) and shift active-pane focus.
   local pane_id
-  pane_id="$(tmux display-message -t "${TMUX_SESSION}:${window_name}" -p '#{pane_id}')"
+  pane_id="$(tmux new-window -t "$TMUX_SESSION" -n "$window_name" -c "$PROJECT_DIR" -P -F '#{pane_id}')"
 
   # Setup permissions + Notification hook
   local hook_json
@@ -180,8 +208,17 @@ _start_worker() {
     printf '%s' "$system_prompt" > "$system_prompt_file"
   fi
 
-  # Build claude command
-  local cmd="claude --model ${model}"
+  # Build claude command.
+  # --dangerously-skip-permissions is required for fully unattended operation:
+  # without it, Claude TUI prompts the user on any tool not in the allow list,
+  # which deadlocks the launchd-driven dispatch loop.
+  # Note: --permission-mode bypassPermissions has the same runtime effect but
+  # shows a first-time warning dialog that requires manual confirmation, which
+  # blocks autonomous launchd invocations on a fresh project. The
+  # --dangerously-skip-permissions flag launches directly into bypass mode
+  # with no dialog. The deny list in the worker's .claude/settings.local.json
+  # remains authoritative for safety boundaries.
+  local cmd="claude --model ${model} --dangerously-skip-permissions"
   if [[ -n "$mcp_config" ]]; then
     cmd+=" --mcp-config $(printf '%q' "$mcp_config")"
   fi
@@ -241,7 +278,16 @@ _dispatch_task() {
   mkdir -p "${STATE_DIR}/prompts"
   local prompt_file="${STATE_DIR}/prompts/${task_id}.md"
 
-  if [[ "$action" == "issue-only" ]]; then
+  if [[ "$action" == "none" ]]; then
+    # Raw prompt: no action wrapper. Use this when the task prompt itself
+    # specifies the desired end behavior and the fix/issue-only wrappers
+    # would conflict with it (e.g. dry-run / report-only tests).
+    cat > "$prompt_file" <<PROMPT_EOF
+# Task: ${task_id}
+
+${prompt}
+PROMPT_EOF
+  elif [[ "$action" == "issue-only" ]]; then
     cat > "$prompt_file" <<PROMPT_EOF
 # Task: ${task_id}
 
@@ -274,8 +320,12 @@ If no issues found, report: all checks passed.
 PROMPT_EOF
   fi
 
-  # Update status to running
+  # Update status to running; also stamp per-worker dispatch time so that
+  # the idle fallback in _crew_worker_status waits out a grace period before
+  # trusting the pane-content check (the TUI needs a moment to render the
+  # "esc to interrupt" marker after send-keys).
   echo "running" > "${STATE_DIR}/workers/${worker_id}.status"
+  date +%s > "${STATE_DIR}/workers/${worker_id}.last_dispatch"
 
   # Inject task via file reference (fixed string, no escaping issues)
   tmux send-keys -t "$pane_id" "Read ${prompt_file} and follow the instructions." Enter
@@ -720,10 +770,29 @@ cmd_teardown() {
     _info "No tmux session: $TMUX_SESSION"
   fi
 
+  # Restore the project's original .claude/settings.local.json that
+  # ralph_setup_worker_settings snapshotted on init. If there was no
+  # pre-existing file, remove the worker-scoped settings entirely so
+  # the user's normal Claude sessions do not inherit worker permissions
+  # or the now-dangling Notification hook path.
+  local settings_file="${PROJECT_DIR}/.claude/settings.local.json"
+  local backup_file="${settings_file}.pre-ralph-crew"
+  if [[ -f "$backup_file" ]]; then
+    mv -f "$backup_file" "$settings_file"
+    _success "Restored original settings.local.json"
+  elif [[ -f "$settings_file" ]]; then
+    rm -f "$settings_file"
+    _success "Removed worker-scoped settings.local.json"
+  fi
+
+  # Log the completion BEFORE wiping the state dir, otherwise _log
+  # re-creates the state dir (via mkdir in _log) immediately after rm -rf,
+  # leaving an empty logs/dispatch.log stub behind on every teardown.
+  _log "teardown completed"
+
   # Cleanup state
   rm -rf "$STATE_DIR"
   _success "Cleaned up state: $STATE_DIR"
-  _log "teardown completed"
 }
 
 # --- Main ---
