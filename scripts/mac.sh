@@ -42,6 +42,21 @@ install_npm_packages() {
   done < <(read_package_list "$npm_file")
 }
 
+install_claude_mem() {
+  if ! command_exists npx; then
+    log_warn "npx not found, skipping claude-mem"
+    return
+  fi
+
+  if [[ -f "$HOME/.claude-mem/settings.json" ]]; then
+    log_success "claude-mem already installed"
+    return
+  fi
+
+  log_info "Installing claude-mem..."
+  npx -y claude-mem install
+}
+
 install_dops() {
   if command_exists dops; then
     log_success "dops already installed"
@@ -153,6 +168,7 @@ link_ai_scripts() {
 install_brew_bundle
 install_mise_tools
 install_npm_packages
+install_claude_mem
 install_dops
 install_quay
 install_cargo_update
