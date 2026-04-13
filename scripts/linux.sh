@@ -443,6 +443,21 @@ install_npm_packages() {
   done < <(read_package_list "$npm_file")
 }
 
+install_claude_mem() {
+  if ! command_exists npx; then
+    log_warn "npx not found, skipping claude-mem"
+    return
+  fi
+
+  if [[ -f "$HOME/.claude-mem/settings.json" ]]; then
+    log_success "claude-mem already installed"
+    return
+  fi
+
+  log_info "Installing claude-mem..."
+  npx -y claude-mem install
+}
+
 install_1password_cli() {
   if command_exists op; then
     log_success "1Password CLI already installed"
@@ -609,6 +624,7 @@ check_requirements
 install_system_packages
 install_modern_tools
 install_npm_packages
+install_claude_mem
 link_ai_scripts
 install_gh_extensions
 install_ghostty_terminfo
