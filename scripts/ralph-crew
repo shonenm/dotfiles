@@ -208,8 +208,17 @@ _start_worker() {
     printf '%s' "$system_prompt" > "$system_prompt_file"
   fi
 
-  # Build claude command
-  local cmd="claude --model ${model}"
+  # Build claude command.
+  # --dangerously-skip-permissions is required for fully unattended operation:
+  # without it, Claude TUI prompts the user on any tool not in the allow list,
+  # which deadlocks the launchd-driven dispatch loop.
+  # Note: --permission-mode bypassPermissions has the same runtime effect but
+  # shows a first-time warning dialog that requires manual confirmation, which
+  # blocks autonomous launchd invocations on a fresh project. The
+  # --dangerously-skip-permissions flag launches directly into bypass mode
+  # with no dialog. The deny list in the worker's .claude/settings.local.json
+  # remains authoritative for safety boundaries.
+  local cmd="claude --model ${model} --dangerously-skip-permissions"
   if [[ -n "$mcp_config" ]]; then
     cmd+=" --mcp-config $(printf '%q' "$mcp_config")"
   fi
