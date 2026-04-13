@@ -138,7 +138,7 @@ set -g pane-border-format " #P: #{?pane_title,#{pane_title},#{pane_current_comma
 set -g pane-border-indicators both
 
 # --- Window Style ---
-set -g window-style 'fg=colour244,bg=default'
+set -g window-style 'fg=colour248,bg=default'
 set -g window-active-style 'fg=colour255,bg=default'
 
 # --- Status Bar (transparent) ---
