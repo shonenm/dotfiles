@@ -352,8 +352,8 @@ rcon() {
   fi
 
   if [[ -n "$container" ]]; then
-    TERM=xterm-256color ssh -t "$host" "docker exec -it -e TERM=xterm-256color -e CLAUDE_CONTEXT='$context' $container sh -c '$tmux_cmd'"
+    ssh -t "$host" "docker exec -it -e TERM=\"\$TERM\" -e CLAUDE_CONTEXT='$context' $container sh -c '$tmux_cmd'"
   else
-    TERM=xterm-256color ssh -t "$host" "export CLAUDE_CONTEXT='$context' && $tmux_cmd"
+    ssh -t "$host" "export CLAUDE_CONTEXT='$context' && $tmux_cmd"
   fi
 }
