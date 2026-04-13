@@ -9,9 +9,26 @@ source "$DOTFILES_DIR/scripts/utils.sh"
 
 # --- Argument Parsing ---
 SKIP_PROMPT=false
+NO_SUDO="auto"  # auto | true | false
 for arg in "$@"; do
-  [[ "$arg" == "-y" ]] && SKIP_PROMPT=true
+  case "$arg" in
+    -y)          SKIP_PROMPT=true ;;
+    --no-sudo)   NO_SUDO=true ;;
+    --with-sudo) NO_SUDO=false ;;
+  esac
 done
+
+# Auto-detect sudo availability on Linux unless explicitly set
+if [[ "$NO_SUDO" == "auto" ]]; then
+  if [[ "$(detect_os)" == "linux" ]] && ! detect_sudo_mode; then
+    NO_SUDO=false
+  elif [[ "$(detect_os)" == "linux" ]]; then
+    NO_SUDO=true
+  else
+    NO_SUDO=false  # mac: sudo path
+  fi
+fi
+export NO_SUDO
 
 # --- 0. 1Password CLI Check (Required) ---
 install_1password_cli() {
@@ -27,7 +44,9 @@ install_1password_cli() {
       exit 1
     fi
   elif [[ "$os" == "linux" ]]; then
-    if command_exists apt; then
+    if [[ "$NO_SUDO" == "true" ]]; then
+      _install_1password_cli_user_scope
+    elif command_exists apt; then
       log_info "Installing 1Password CLI via apt..."
       # Setup SUDO
       local SUDO=""
@@ -51,6 +70,37 @@ install_1password_cli() {
     log_error "Unsupported OS. Please install 1Password CLI manually."
     exit 1
   fi
+}
+
+# Install 1Password CLI to ~/.local/bin without sudo (tarball from downloads.1password.com)
+_install_1password_cli_user_scope() {
+  local arch
+  case "$(uname -m)" in
+    x86_64)         arch="amd64" ;;
+    aarch64|arm64)  arch="arm64" ;;
+    *)              log_error "Unsupported arch for 1Password CLI: $(uname -m)"; return 1 ;;
+  esac
+
+  local version="${OP_CLI_VERSION:-2.34.0}"
+  local zip="/tmp/op.zip"
+  local url="https://cache.agilebits.com/dist/1P/op2/pkg/v${version}/op_linux_${arch}_v${version}.zip"
+
+  log_info "Installing 1Password CLI v${version} (user-scope, no sudo)..."
+  mkdir -p "$HOME/.local/bin"
+  if ! curl -fsSL "$url" -o "$zip"; then
+    log_error "Failed to download 1Password CLI from $url"
+    return 1
+  fi
+  if ! command_exists unzip; then
+    log_error "unzip not found. Install via pixi first: pixi global install unzip"
+    rm -f "$zip"
+    return 1
+  fi
+  unzip -o "$zip" op -d "$HOME/.local/bin" >/dev/null
+  chmod +x "$HOME/.local/bin/op"
+  rm -f "$zip"
+  export PATH="$HOME/.local/bin:$PATH"
+  log_success "1Password CLI installed to ~/.local/bin/op"
 }
 
 check_1password_cli() {
@@ -452,6 +502,13 @@ main() {
   log_info "=== Dotfiles Installation Start ==="
   log_info "OS: $(detect_os)"
   log_info "Dotfiles: $DOTFILES_DIR"
+  if [[ "$(detect_os)" == "linux" ]]; then
+    if [[ "$NO_SUDO" == "true" ]]; then
+      log_info "Mode: no-sudo (pixi-based user-scope install)"
+    else
+      log_info "Mode: sudo (apt + system-wide install)"
+    fi
+  fi
   echo
 
   # 0. Check 1Password CLI first
