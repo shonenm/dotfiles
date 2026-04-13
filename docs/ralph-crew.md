@@ -74,6 +74,7 @@ launchctl load ~/Library/LaunchAgents/com.user.ralph-crew.plist
 /ralph-crew status
 /ralph-crew send qa "Run npm test and report results"
 /ralph-crew restart qa
+/ralph-crew cleanup
 /ralph-crew teardown
 ```
 
