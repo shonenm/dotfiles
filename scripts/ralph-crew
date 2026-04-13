@@ -67,8 +67,8 @@ _crew_worker_status() {
   local worker_file="${STATE_DIR}/workers/${worker_id}.json"
 
   # Check pane existence
+  local pane_id=""
   if [[ -f "$worker_file" ]]; then
-    local pane_id
     pane_id="$(jq -r '.pane_id // empty' "$worker_file")"
     if [[ -n "$pane_id" ]] && ! tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane_id"; then
       echo "dead"
@@ -77,11 +77,38 @@ _crew_worker_status() {
   fi
 
   # Status file based detection
+  local status="unknown"
   if [[ -f "$status_file" ]]; then
-    cat "$status_file"
-  else
-    echo "unknown"
+    status="$(cat "$status_file")"
   fi
+
+  # Fallback: Claude's Notification(idle_prompt) hook does not fire on every
+  # task completion, so a running worker can stay stuck at "running" forever.
+  # Inspect the Claude TUI footer: the "esc to interrupt" marker is only
+  # present while a tool/thinking step is in flight. Its absence means idle.
+  #
+  # A 15s grace period after the last dispatch avoids racing the TUI before
+  # it has had a chance to render "esc to interrupt".
+  if [[ "$status" == "running" && -n "$pane_id" ]]; then
+    local last_dispatch_file="${STATE_DIR}/workers/${worker_id}.last_dispatch"
+    local elapsed=999
+    if [[ -f "$last_dispatch_file" ]]; then
+      local now_epoch last_epoch
+      now_epoch="$(date +%s)"
+      last_epoch="$(cat "$last_dispatch_file")"
+      elapsed=$(( now_epoch - last_epoch ))
+    fi
+    if [[ "$elapsed" -ge 15 ]]; then
+      local pane_tail
+      pane_tail="$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | tail -5)"
+      if ! echo "$pane_tail" | grep -q 'esc to interrupt'; then
+        status="idle"
+        echo "$status" > "$status_file"
+      fi
+    fi
+  fi
+
+  echo "$status"
 }
 
 # --- Worker lifecycle ---
@@ -275,8 +302,12 @@ If no issues found, report: all checks passed.
 PROMPT_EOF
   fi
 
-  # Update status to running
+  # Update status to running; also stamp per-worker dispatch time so that
+  # the idle fallback in _crew_worker_status waits out a grace period before
+  # trusting the pane-content check (the TUI needs a moment to render the
+  # "esc to interrupt" marker after send-keys).
   echo "running" > "${STATE_DIR}/workers/${worker_id}.status"
+  date +%s > "${STATE_DIR}/workers/${worker_id}.last_dispatch"
 
   # Inject task via file reference (fixed string, no escaping issues)
   tmux send-keys -t "$pane_id" "Read ${prompt_file} and follow the instructions." Enter
