@@ -496,6 +496,7 @@ set_default_shell() {
     if [[ -f "$profile" ]] && grep -qF "$marker" "$profile"; then
       log_success "zsh exec marker already present in ~/.profile"
     else
+      # shellcheck disable=SC2016 # intentionally written as literal sh into ~/.profile
       {
         echo ""
         echo "$marker"
