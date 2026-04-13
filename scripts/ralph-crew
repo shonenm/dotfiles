@@ -463,17 +463,13 @@ _sync_remote() {
 
 # === Subcommands ===
 
-cmd_init() {
-  local config_file="$DEFAULT_CONFIG"
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --config) config_file="${2:-}"; shift 2 ;;
-      *) shift ;;
-    esac
-  done
-
-  _load_config "$config_file" || return 1
-  config_file="$CONFIG_FILE"
+# Idempotent initialization: create state dirs, tmux session, and all workers.
+# Safe to call repeatedly - has-session / window-exists checks make each step
+# a no-op if already done. Extracted from cmd_init so cmd_dispatch can recover
+# from a missing session (e.g. after a reboot) without requiring a separate
+# launchd plist for init.
+_run_init() {
+  local config_file="$1"
 
   # Create state directories
   mkdir -p "${STATE_DIR}"/{workers,dispatch,prompts,system-prompts,logs}
@@ -499,6 +495,21 @@ cmd_init() {
 
   _success "Initialized $worker_count worker(s) in session: $TMUX_SESSION"
   _log "init completed: $worker_count workers"
+}
+
+cmd_init() {
+  local config_file="$DEFAULT_CONFIG"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config) config_file="${2:-}"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  _load_config "$config_file" || return 1
+  config_file="$CONFIG_FILE"
+
+  _run_init "$config_file"
 }
 
 cmd_dispatch() {
@@ -529,10 +540,12 @@ cmd_dispatch() {
   _cleanup_orphaned_worktrees
   _cleanup_orphaned_branches
 
-  # Check session exists
+  # Auto-init when the tmux session is missing. This lets a single launchd
+  # plist (dispatch-only, StartInterval N) recover from reboots and cover the
+  # first-time install case, without a separate init plist.
   if ! tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
-    _log "tmux session not found: $TMUX_SESSION (run init first)"
-    return 1
+    _log "tmux session $TMUX_SESSION missing - running init to restore workers"
+    _run_init "$config_file" || { _log "auto-init failed"; return 1; }
   fi
 
   # Process each task
