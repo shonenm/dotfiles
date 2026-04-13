@@ -3,6 +3,14 @@
 # Skip for non-interactive shells
 [[ -o interactive ]] || return
 
+# --- Ghostty Shell Integration (tmux-safe) ---
+# Ghostty auto-loads integration only in directly-spawned shells. Re-source it
+# here so it also activates inside tmux, giving us the ssh wrapper (ssh-env,
+# ssh-terminfo) that propagates TERM=xterm-ghostty to remote hosts.
+if [[ -n $GHOSTTY_RESOURCES_DIR ]]; then
+  source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
+fi
+
 # --- Mac Tools Init ---
 command -v sheldon &>/dev/null && eval "$(sheldon source)"
 command -v atuin &>/dev/null && eval "$(atuin init zsh)"
