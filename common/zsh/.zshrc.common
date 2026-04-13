@@ -258,7 +258,7 @@ dexec() {
   # 既存の CLAUDE_CONTEXT があれば継承、なければ新規生成
   local context="${CLAUDE_CONTEXT:-$(_claude_context)}"
 
-  docker exec -it -e CLAUDE_CONTEXT="$context" "$container" "${@:-bash}"
+  docker exec -it -e TERM="$TERM" -e COLORTERM="$COLORTERM" -e CLAUDE_CONTEXT="$context" "$container" "${@:-bash}"
 }
 
 # リモートSSH接続 (CLAUDE_CONTEXT 自動設定)
