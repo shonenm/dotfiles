@@ -102,6 +102,19 @@ eval $(op signin)
 ./install.sh
 ```
 
+### Linux (sudo 権限のないリモートホスト)
+
+共有サーバーや管理された開発環境等、`apt` が使えない環境向け。pixi (conda-forge) でシステムパッケージを user-scope に展開:
+
+```bash
+# 前提: curl, git, bash, unzip がホスト側に既にある前提 (通常の開発ホストには揃っている)
+git clone https://github.com/shonenm/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+./install.sh --no-sudo
+```
+
+詳細は [`docs/install-no-sudo.md`](docs/install-no-sudo.md)。
+
 ### Docker環境
 
 ```bash
@@ -226,7 +239,7 @@ git pull
 
 - 1Password SSH Agentを使用
 - ホスト固有の設定は `~/.ssh/config.d/` に配置
-- `rcon` でリモート接続（SSH + Docker + tmux）をワンコマンド実行（引数なしで fzf 選択、`rcon host:container` で直接指定、既存セッションに自動アタッチ）
+- `rcon` でリモート接続（SSH + ホスト集約 tmux + docker exec）をワンコマンド実行。引数なしで fzf 選択、`rcon host:container` で直接指定、既存セッションに自動アタッチ。pane 分割/新 window で自動的に docker exec (cwd 引き継ぎ) される。セットアップ手順は [`docs/rcon-setup.md`](docs/rcon-setup.md)、動作原理は [`docs/rcon.md`](docs/rcon.md) を参照
 
 ## カスタマイズ
 
