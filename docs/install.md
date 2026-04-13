@@ -5,16 +5,22 @@ dotfiles のセットアップスクリプト。
 ## 使い方
 
 ```bash
-./install.sh      # 対話モード
-./install.sh -y   # 自動モード（確認スキップ）
+./install.sh            # 対話モード (sudo 利用可前提)
+./install.sh -y         # 自動モード（確認スキップ）
+./install.sh --no-sudo  # sudoless 環境 (pixi ベースの user-scope install)
 ```
+
+sudoless 環境 (共有サーバー等) での運用詳細は [install-no-sudo.md](./install-no-sudo.md) を参照。
 
 ## 実行内容
 
 ### 1. 1Password CLI チェック
 
 - `op` コマンドがインストールされているか確認
-- 未インストールの場合は自動インストール（Mac: Homebrew / Linux: apt）
+- 未インストールの場合は自動インストール
+  - Mac: Homebrew
+  - Linux + sudo: apt
+  - Linux + `--no-sudo`: tarball を `~/.local/bin/op` に展開 (`cache.agilebits.com` から最新版取得、失敗時は 2.33.1 fallback)
 - サインイン状態を確認（未サインインの場合は中断）
 
 ### 2. Homebrew インストール (Mac のみ)
@@ -28,7 +34,8 @@ OS に応じたセットアップスクリプトを実行:
 | OS | スクリプト | 内容 |
 |----|-----------|------|
 | Mac | `scripts/mac.sh` | Homebrew パッケージ (Brewfile)、cargo ツール (quay, cargo-update)、gh 拡張機能、Aerospace、SketchyBar 等 |
-| Linux | `scripts/linux.sh` | apt/apk パッケージ、GitHub release バイナリ、cargo ツール等（`config/tools.linux.bash` で定義） |
+| Linux (sudo) | `scripts/linux.sh` | apt/apk パッケージ、GitHub release バイナリを `/usr/local/bin` に、cargo ツール等 |
+| Linux (`--no-sudo`) | `scripts/linux.sh` | **pixi (conda-forge) でシステムパッケージ** (`config/pixi-packages.txt`)、GitHub release バイナリを `~/.local/bin` に、その他は curl_pipe や user-scope cargo 等 |
 
 ### 4. Dotfiles リンク (stow)
 

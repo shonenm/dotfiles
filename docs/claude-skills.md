@@ -9,6 +9,7 @@ Claude Code で使用可能なカスタムスキルのリファレンス。
 | `/_beacon` | Aerospace ワークスペースに環境を紐付け |
 | `/_commit` | セッション内の変更を分析してコミット作成 |
 | `/_news` | プロファイルベースのパーソナライズドニュース収集 |
+| `/_setup-rcon-target` | rcon ターゲットの登録 + 接続検証 + docker mount スニペット生成 |
 | `/_update-md` | セッション内の変更に関連するドキュメント更新 |
 
 Ralph 系スキルは [`ralph.md`](ralph.md) を参照。
@@ -140,6 +141,34 @@ interests:
 ### プロファイルテンプレート
 
 `common/claude/.claude/news-profile.example.yaml` を `~/.claude/news-profile.yaml` にコピーして編集。
+
+## /_setup-rcon-target
+
+新しい rcon ターゲット (リモートホスト or ホスト + docker container) を登録し、接続前提条件を検証する。
+
+### 使い方
+
+```
+/_setup-rcon-target chronos
+/_setup-rcon-target chronos:syntopic-dev
+/_setup-rcon-target ailab:another-container
+```
+
+### 動作
+
+1. `~/.config/rcon/targets` に target を追記 (冪等)
+2. SSH 疎通確認 (`ssh -o BatchMode=yes <host> true`)
+3. リモート側の dotfiles / tmux / `scripts/tmux-docker-enter` の存在確認
+4. container 指定時: docker 上の存在確認 + 必須 volume mount (`~/.claude`, `~/.codex`, `~/.local/share/amp`, プロジェクトパス) の diff
+5. 不足している mount は docker-compose / docker run の追記スニペットとして出力
+
+### 前提
+
+- Mac: zsh + `rcon` コマンドが有効 (`common/zsh/.zshrc.common`)
+- リモート: dotfiles install済 (`~/dotfiles` に clone + `./install.sh [--no-sudo]`)
+- container: docker daemon と docker CLI 利用可能
+
+詳細は [rcon-setup.md](./rcon-setup.md)。
 
 ## /_update-md
 
