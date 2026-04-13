@@ -1,0 +1,47 @@
+#!/bin/bash
+# tmux-docker-enter — enter a docker container from a tmux pane with cwd propagation
+#
+# Usage (via tmux default-command / new-session / split-window):
+#   docker-enter <container> [shell]
+#
+# Behavior:
+#   - If current pane cwd exists inside the container → docker exec -w <cwd>
+#   - Otherwise → docker exec without -w (use container's default WORKDIR)
+#   - If docker exec fails (container stopped / removed) → fall back to host shell
+#     so the tmux pane stays alive for re-entry after docker restart.
+#
+# Environment:
+#   CLAUDE_CONTEXT — propagated into the container for AI CLI integration
+
+set -u
+
+container="${1:-}"
+shell="${2:-zsh}"
+
+if [[ -z "$container" ]]; then
+  echo "usage: tmux-docker-enter <container> [shell]" >&2
+  exec "${SHELL:-/bin/bash}" -l
+fi
+
+cwd="$(pwd 2>/dev/null || echo)"
+
+# Build docker exec args
+args=(exec -it)
+[[ -n "${TERM:-}" ]]           && args+=(-e "TERM=$TERM")
+[[ -n "${COLORTERM:-}" ]]      && args+=(-e "COLORTERM=$COLORTERM")
+[[ -n "${CLAUDE_CONTEXT:-}" ]] && args+=(-e "CLAUDE_CONTEXT=$CLAUDE_CONTEXT")
+
+if [[ -n "$cwd" ]] && docker exec "$container" test -d "$cwd" 2>/dev/null; then
+  args+=(-w "$cwd")
+fi
+
+args+=("$container" "$shell")
+
+# Try docker exec, fall back to host shell on failure (container stopped / not found)
+if ! docker exec "$container" true 2>/dev/null; then
+  echo "tmux-docker-enter: container '$container' not running — host shell fallback" >&2
+  echo "  (exit this shell to retry docker exec)" >&2
+  exec "${SHELL:-/bin/bash}" -l
+fi
+
+exec docker "${args[@]}"

@@ -8,14 +8,26 @@ CONFIG_DIR="$DOTFILES_DIR/config"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/utils.sh"
 
-# Setup SUDO variable
-if [[ $EUID -eq 0 ]]; then
+# NO_SUDO mode is decided by install.sh (--no-sudo flag). Default false when run standalone.
+: "${NO_SUDO:=false}"
+export NO_SUDO
+
+# Setup SUDO variable (empty in NO_SUDO mode so $SUDO-prefixed commands run as user)
+if [[ "$NO_SUDO" == "true" ]]; then
+  SUDO=""
+elif [[ $EUID -eq 0 ]]; then
   SUDO=""
 elif command_exists sudo; then
   SUDO="sudo"
 else
-  log_warn "sudo not found, some installations may fail"
-  SUDO=""
+  log_error "sudo not found. Re-run with --no-sudo for user-scope installation."
+  exit 1
+fi
+
+# Load pixi library for NO_SUDO mode
+if [[ "$NO_SUDO" == "true" ]]; then
+  # shellcheck source=/dev/null
+  source "$SCRIPT_DIR/pixi-lib.sh"
 fi
 
 # Source tool definitions from config
@@ -25,26 +37,25 @@ source "$CONFIG_DIR/tools.linux.bash"
 # --- 1. Pre-flight Check ---
 check_requirements() {
   local missing_requirements=()
-  local has_package_manager=false
 
   log_info "Checking prerequisites..."
 
-  if command_exists apk || command_exists apt; then
-    has_package_manager=true
-  fi
+  # In NO_SUDO mode, only curl + git are hard requirements (pixi bootstraps the rest)
+  # In sudo mode, apt or apk must be available as well
+  if [[ "$NO_SUDO" != "true" ]]; then
+    if ! command_exists apk && ! command_exists apt; then
+      log_error "No supported package manager found (apt or apk required)."
+      log_error "This script supports Debian/Ubuntu or Alpine Linux."
+      log_error "For sudoless environments, re-run with --no-sudo."
+      exit 1
+    fi
 
-  if [ "$has_package_manager" = false ]; then
-    log_error "No supported package manager found (apt or apk required)."
-    log_error "This script supports Debian/Ubuntu or Alpine Linux."
-    exit 1
+    if [ "$(id -u)" -ne 0 ] && ! command_exists sudo; then
+      missing_requirements+=("sudo")
+    fi
   fi
 
   local required_cmds=("curl" "git")
-
-  if [ "$(id -u)" -ne 0 ] && ! command_exists sudo; then
-    missing_requirements+=("sudo")
-  fi
-
   for cmd in "${required_cmds[@]}"; do
     if ! command_exists "$cmd"; then
       missing_requirements+=("$cmd")
@@ -59,7 +70,9 @@ check_requirements() {
     done
     echo "  ----------------------------------------"
 
-    if command_exists apk; then
+    if [[ "$NO_SUDO" == "true" ]]; then
+      echo "In no-sudo mode, please ask your admin to install: ${missing_requirements[*]}"
+    elif command_exists apk; then
       echo "Please run: apk add ${missing_requirements[*]}"
     elif command_exists apt; then
       echo "Please run: apt update && apt install -y ${missing_requirements[*]}"
@@ -97,6 +110,14 @@ check_1password() {
 # --- 2. Install Functions ---
 
 install_system_packages() {
+  # NO_SUDO mode: bootstrap pixi and install system packages via conda-forge (user-scope)
+  if [[ "$NO_SUDO" == "true" ]]; then
+    log_info "No-sudo mode: installing system packages via pixi..."
+    install_pixi || { log_error "pixi bootstrap failed"; return 1; }
+    install_pixi_packages "$CONFIG_DIR/pixi-packages.txt" || true
+    return
+  fi
+
   if command_exists apk; then
     log_info "Alpine Linux detected. Using apk..."
     local _sudo=""
@@ -202,8 +223,30 @@ _install_github_release() {
     else
       tar xf "/tmp/$archive_pattern" -C /tmp
     fi
-    $SUDO install "/tmp/$binary_path" /usr/local/bin/
+    # Target dir: ~/.local/bin in NO_SUDO mode, else /usr/local/bin
+    if [[ "$NO_SUDO" == "true" ]]; then
+      mkdir -p "$HOME/.local/bin"
+      install "/tmp/$binary_path" "$HOME/.local/bin/"
+    else
+      $SUDO install "/tmp/$binary_path" /usr/local/bin/
+    fi
     rm -rf "/tmp/$archive_pattern" "/tmp/${binary_path%/*}"
+  fi
+}
+
+# Install neovim tarball (extracted to ~/.local/opt in NO_SUDO mode, /opt otherwise)
+_install_neovim_tarball() {
+  local archive="$1" arch="$2"
+  if [[ "$NO_SUDO" == "true" ]]; then
+    local opt="$HOME/.local/opt"
+    mkdir -p "$opt" "$HOME/.local/bin"
+    rm -rf "$opt/nvim-linux-${arch}"
+    tar -C "$opt" -xzf "$archive"
+    ln -sf "$opt/nvim-linux-${arch}/bin/nvim" "$HOME/.local/bin/nvim"
+  else
+    $SUDO rm -rf "/opt/nvim-linux-${arch}"
+    $SUDO tar -C /opt -xzf "$archive"
+    $SUDO ln -sf "/opt/nvim-linux-${arch}/bin/nvim" /usr/local/bin/nvim
   fi
 }
 
@@ -284,6 +327,11 @@ install_modern_tools() {
 
     # Skip apt-only tools on Alpine
     if [[ "$apt_only" == "true" ]] && ! command_exists apt; then
+      continue
+    fi
+
+    # In NO_SUDO mode, skip apt_repo tools (they come from pixi-packages.txt instead)
+    if [[ "$NO_SUDO" == "true" ]] && [[ "$method" == "apt_repo" ]]; then
       continue
     fi
 
@@ -401,7 +449,13 @@ install_1password_cli() {
     return
   fi
 
-  # Debian/Ubuntu only
+  # NO_SUDO path: install.sh's check_1password_cli() → _install_1password_cli_user_scope() handles it
+  if [[ "$NO_SUDO" == "true" ]]; then
+    log_info "No-sudo mode: 1Password CLI install is handled by install.sh"
+    return
+  fi
+
+  # Debian/Ubuntu only (sudo path)
   if ! command_exists apt; then
     log_warn "1Password CLI installation only supported on Debian/Ubuntu"
     return
@@ -435,6 +489,28 @@ set_default_shell() {
     return
   fi
 
+  # NO_SUDO path: inject `exec zsh -l` into ~/.profile so login shells hand off to zsh
+  if [[ "$NO_SUDO" == "true" ]]; then
+    local profile="$HOME/.profile"
+    local marker='# dotfiles: exec zsh -l (no-sudo mode)'
+    if [[ -f "$profile" ]] && grep -qF "$marker" "$profile"; then
+      log_success "zsh exec marker already present in ~/.profile"
+    else
+      # shellcheck disable=SC2016 # intentionally written as literal sh into ~/.profile
+      {
+        echo ""
+        echo "$marker"
+        echo 'if [ -z "$ZSH_VERSION" ] && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then'
+        echo '  exec zsh -l'
+        echo 'fi'
+      } >> "$profile"
+      log_success "Injected 'exec zsh -l' into ~/.profile (no-sudo mode)"
+    fi
+    log_info "  New login shells will switch to zsh automatically (sudo not available for chsh)"
+    return
+  fi
+
+  # sudo path: /etc/shells + chsh
   if ! grep -q "$zsh_path" /etc/shells 2>/dev/null; then
     echo "$zsh_path" | $SUDO tee -a /etc/shells >/dev/null
   fi

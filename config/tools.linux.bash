@@ -120,7 +120,7 @@ TOOL_neovim_method="github_release"
 TOOL_neovim_github_repo="neovim/neovim"
 TOOL_neovim_archive_pattern='nvim-linux-${ARCH}.tar.gz'
 TOOL_neovim_arch_map='x86_64:x86_64 aarch64:arm64'
-TOOL_neovim_install_cmd='$SUDO rm -rf "/opt/nvim-linux-${ARCH}" && $SUDO tar -C /opt -xzf "$archive" && $SUDO ln -sf "/opt/nvim-linux-${ARCH}/bin/nvim" /usr/local/bin/nvim'
+TOOL_neovim_install_cmd='_install_neovim_tarball "$archive" "$ARCH"'
 TOOL_neovim_apt_only="true"
 
 # ════════════════════════════════════════
