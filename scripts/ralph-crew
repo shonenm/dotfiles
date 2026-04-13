@@ -143,10 +143,11 @@ _start_worker() {
   if tmux list-windows -t "$TMUX_SESSION" -F '#{window_name}' 2>/dev/null | grep -qxF "$window_name"; then
     tmux kill-window -t "${TMUX_SESSION}:${window_name}" 2>/dev/null || true
   fi
-  tmux new-window -t "$TMUX_SESSION" -n "$window_name" -c "$PROJECT_DIR"
-
+  # Capture the new window's initial pane id directly.
+  # Using -P -F is robust against after-new-window hooks that split the window
+  # (e.g. the opensessions sidebar) and shift active-pane focus.
   local pane_id
-  pane_id="$(tmux display-message -t "${TMUX_SESSION}:${window_name}" -p '#{pane_id}')"
+  pane_id="$(tmux new-window -t "$TMUX_SESSION" -n "$window_name" -c "$PROJECT_DIR" -P -F '#{pane_id}')"
 
   # Setup permissions + Notification hook
   local hook_json
