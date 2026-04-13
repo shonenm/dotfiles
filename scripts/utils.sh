@@ -24,6 +24,26 @@ detect_os() {
   esac
 }
 
+# sudo が実質的に利用可能かを非対話で判定する
+# 戻り値: 0 = NO_SUDO (sudo使えない or 不要), 1 = SUDO利用可
+# 判定順:
+#   1. EUID=0 (既に root) → sudo不要だが従来パスで進める → return 1
+#   2. sudo バイナリなし → NO_SUDO → return 0
+#   3. `sudo -n true` 成功 (NOPASSWD or ticket有効) → SUDO利用可 → return 1
+#   4. それ以外 (sudoあるがパスワード要求) → NO_SUDO → return 0
+detect_sudo_mode() {
+  if [[ $EUID -eq 0 ]]; then
+    return 1
+  fi
+  if ! command -v sudo >/dev/null 2>&1; then
+    return 0
+  fi
+  if sudo -n true 2>/dev/null; then
+    return 1
+  fi
+  return 0
+}
+
 # Read a newline-delimited package list file, stripping comments and blank lines
 # Usage: readarray -t MY_ARRAY < <(read_package_list "$file")
 read_package_list() {

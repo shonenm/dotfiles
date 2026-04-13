@@ -1,0 +1,36 @@
+# Packages installed via pixi global (no-sudo mode)
+# Format: 1 package per line, # for comments
+# All packages come from conda-forge (default channel)
+# Installed into ~/.pixi/bin (user-scope, no sudo required)
+#
+# Only include packages that:
+#   1. Are otherwise installed via apt/apk/apt_repo (system-level)
+#   2. Cannot be installed via curl_pipe / github_release_binary self-installer
+# Tools with their own user-scope installer (bun, mise, rust, uv, ...) stay in tools.linux.bash
+
+# --- Core shell & terminal ---
+tmux
+zsh
+gnu-stow
+
+# --- Archive / transfer ---
+unzip
+rsync
+
+# --- Text processing ---
+jq
+ripgrep
+fd-find
+
+# --- Media (neovim image.nvim, etc) ---
+imagemagick
+
+# --- Git / GitHub ---
+gh
+
+# --- Modern CLI tools (apt_repo replacement) ---
+eza
+bat
+
+# --- Database client (psql only; pgcli comes via uv tool) ---
+postgresql
