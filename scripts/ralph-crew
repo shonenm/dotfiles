@@ -269,7 +269,16 @@ _dispatch_task() {
   mkdir -p "${STATE_DIR}/prompts"
   local prompt_file="${STATE_DIR}/prompts/${task_id}.md"
 
-  if [[ "$action" == "issue-only" ]]; then
+  if [[ "$action" == "none" ]]; then
+    # Raw prompt: no action wrapper. Use this when the task prompt itself
+    # specifies the desired end behavior and the fix/issue-only wrappers
+    # would conflict with it (e.g. dry-run / report-only tests).
+    cat > "$prompt_file" <<PROMPT_EOF
+# Task: ${task_id}
+
+${prompt}
+PROMPT_EOF
+  elif [[ "$action" == "issue-only" ]]; then
     cat > "$prompt_file" <<PROMPT_EOF
 # Task: ${task_id}
 
