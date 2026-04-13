@@ -770,10 +770,29 @@ cmd_teardown() {
     _info "No tmux session: $TMUX_SESSION"
   fi
 
+  # Restore the project's original .claude/settings.local.json that
+  # ralph_setup_worker_settings snapshotted on init. If there was no
+  # pre-existing file, remove the worker-scoped settings entirely so
+  # the user's normal Claude sessions do not inherit worker permissions
+  # or the now-dangling Notification hook path.
+  local settings_file="${PROJECT_DIR}/.claude/settings.local.json"
+  local backup_file="${settings_file}.pre-ralph-crew"
+  if [[ -f "$backup_file" ]]; then
+    mv -f "$backup_file" "$settings_file"
+    _success "Restored original settings.local.json"
+  elif [[ -f "$settings_file" ]]; then
+    rm -f "$settings_file"
+    _success "Removed worker-scoped settings.local.json"
+  fi
+
+  # Log the completion BEFORE wiping the state dir, otherwise _log
+  # re-creates the state dir (via mkdir in _log) immediately after rm -rf,
+  # leaving an empty logs/dispatch.log stub behind on every teardown.
+  _log "teardown completed"
+
   # Cleanup state
   rm -rf "$STATE_DIR"
   _success "Cleaned up state: $STATE_DIR"
-  _log "teardown completed"
 }
 
 # --- Main ---
