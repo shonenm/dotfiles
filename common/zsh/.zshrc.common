@@ -362,6 +362,7 @@ rcon() {
     # - absolute path so tmux's /bin/sh can locate the wrapper without PATH hacks
     ssh -t "$host" "
       set -e
+      export PATH=\"\$HOME/.pixi/bin:\$HOME/.local/bin:\$PATH\"
       export CLAUDE_CONTEXT='$context'
       cmd=\"\$HOME/dotfiles/scripts/tmux-docker-enter '$container'\"
       tmux new-session -A -d -s '$sess' \"\$cmd\" 2>/dev/null || true
@@ -372,6 +373,7 @@ rcon() {
     # Host-only: attach or create a plain host tmux session (no docker)
     local sess="${session:-main}"
     ssh -t "$host" "
+      export PATH=\"\$HOME/.pixi/bin:\$HOME/.local/bin:\$PATH\"
       export CLAUDE_CONTEXT='$context'
       exec tmux new-session -A -s '$sess'
     "
