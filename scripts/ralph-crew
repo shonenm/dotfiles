@@ -208,6 +208,11 @@ _start_worker() {
     printf '%s' "$system_prompt" > "$system_prompt_file"
   fi
 
+  # Pre-accept Claude's trust dialog for this project so the worker does not
+  # block on the first-launch "Quick safety check" prompt. This is essential
+  # for unattended launchd operation on fresh project directories.
+  ralph_preaccept_trust "$PROJECT_DIR" || _info "trust pre-accept failed (continuing)"
+
   # Build claude command.
   # --dangerously-skip-permissions is required for fully unattended operation:
   # without it, Claude TUI prompts the user on any tool not in the allow list,

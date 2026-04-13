@@ -82,3 +82,44 @@ ralph_setup_worker_settings() {
     jq -n --argjson perms "$permissions_json" '{"permissions": $perms}' > "$settings_file"
   fi
 }
+
+# Pre-populate Claude Code's project-local trust state so a freshly-launched
+# worker does not block on the interactive "Quick safety check" trust dialog.
+#
+# Claude records trust acceptance per absolute (real) project path in
+# ~/.claude.json under .projects[<abs_path>].hasTrustDialogAccepted = true.
+# --dangerously-skip-permissions does NOT suppress this dialog, so unattended
+# launchd operation requires writing the acceptance up-front.
+#
+# Usage:
+#   ralph_preaccept_trust <project_dir>
+#
+# No-ops when ~/.claude.json does not exist (Claude will create it on first
+# launch with trust already set), or when the project entry already has
+# hasTrustDialogAccepted = true.
+ralph_preaccept_trust() {
+  local project_dir="$1"
+  local claude_config="${HOME}/.claude.json"
+
+  [[ -f "$claude_config" ]] || return 0
+
+  local abs_dir
+  abs_dir="$(cd "$project_dir" 2>/dev/null && pwd -P)" || return 1
+
+  local accepted
+  accepted="$(jq -r --arg d "$abs_dir" '.projects[$d].hasTrustDialogAccepted // false' "$claude_config" 2>/dev/null)"
+  [[ "$accepted" == "true" ]] && return 0
+
+  local tmp="${claude_config}.ralph-tmp.$$"
+  if jq --arg d "$abs_dir" '
+    .projects[$d] = ((.projects[$d] // {}) + {
+      hasTrustDialogAccepted: true,
+      hasCompletedProjectOnboarding: true
+    })
+  ' "$claude_config" > "$tmp" 2>/dev/null; then
+    mv -f "$tmp" "$claude_config"
+  else
+    rm -f "$tmp"
+    return 1
+  fi
+}
