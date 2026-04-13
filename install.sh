@@ -523,6 +523,13 @@ main() {
     fi
   fi
 
+  # 2.5. Pick up tools installed by setup_environment (subshell PATH doesn't
+  # propagate back). Prepend user-scope bin dirs so subsequent steps
+  # (link_dotfiles → stow, sheldon, etc) can find them.
+  for d in "$HOME/.pixi/bin" "$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/.bun/bin"; do
+    [[ -d "$d" ]] && export PATH="$d:$PATH"
+  done
+
   # 3. Link dotfiles (stow)
   link_dotfiles
 
