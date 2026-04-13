@@ -62,7 +62,7 @@ install_1password_cli() {
   fi
 }
 
-# Install 1Password CLI to ~/.local/bin without sudo (tarball from downloads.1password.com)
+# Install 1Password CLI to ~/.local/bin without sudo (tarball from cache.agilebits.com)
 _install_1password_cli_user_scope() {
   local arch
   case "$(uname -m)" in
@@ -71,7 +71,15 @@ _install_1password_cli_user_scope() {
     *)              log_error "Unsupported arch for 1Password CLI: $(uname -m)"; return 1 ;;
   esac
 
-  local version="${OP_CLI_VERSION:-2.34.0}"
+  # Resolve latest version from AgileBits update API (fall back to known-good if API/json fails)
+  local version="${OP_CLI_VERSION:-}"
+  if [[ -z "$version" ]]; then
+    version=$(curl -fsSL 'https://app-updates.agilebits.com/check/1/0/CLI2/en/0/N' 2>/dev/null \
+      | python3 -c 'import sys,json; print(json.load(sys.stdin).get("version",""))' 2>/dev/null \
+      || true)
+  fi
+  version="${version:-2.33.1}"
+
   local zip="/tmp/op.zip"
   local url="https://cache.agilebits.com/dist/1P/op2/pkg/v${version}/op_linux_${arch}_v${version}.zip"
 
@@ -79,6 +87,7 @@ _install_1password_cli_user_scope() {
   mkdir -p "$HOME/.local/bin"
   if ! curl -fsSL "$url" -o "$zip"; then
     log_error "Failed to download 1Password CLI from $url"
+    log_error "Override version with OP_CLI_VERSION env var (see https://app-updates.agilebits.com/product_history/CLI2)"
     return 1
   fi
   if ! command_exists unzip; then
