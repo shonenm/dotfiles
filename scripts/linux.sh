@@ -8,15 +8,8 @@ CONFIG_DIR="$DOTFILES_DIR/config"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/utils.sh"
 
-# NO_SUDO mode is decided by install.sh; default to auto-detect if run standalone
-: "${NO_SUDO:=auto}"
-if [[ "$NO_SUDO" == "auto" ]]; then
-  if detect_sudo_mode; then
-    NO_SUDO=true
-  else
-    NO_SUDO=false
-  fi
-fi
+# NO_SUDO mode is decided by install.sh (--no-sudo flag). Default false when run standalone.
+: "${NO_SUDO:=false}"
 export NO_SUDO
 
 # Setup SUDO variable (empty in NO_SUDO mode so $SUDO-prefixed commands run as user)
@@ -27,9 +20,8 @@ elif [[ $EUID -eq 0 ]]; then
 elif command_exists sudo; then
   SUDO="sudo"
 else
-  log_warn "sudo not found, falling back to no-sudo mode"
-  NO_SUDO=true
-  SUDO=""
+  log_error "sudo not found. Re-run with --no-sudo for user-scope installation."
+  exit 1
 fi
 
 # Load pixi library for NO_SUDO mode

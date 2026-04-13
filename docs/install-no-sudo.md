@@ -5,25 +5,16 @@ sudo 権限のないリモート Linux ホスト (共有サーバー、管理さ
 ## Usage
 
 ```bash
-# 明示的に no-sudo モードで実行
-./install.sh --no-sudo
-
-# sudo モードを強制 (自動検出を上書き)
-./install.sh --with-sudo
-
-# デフォルト: auto-detect
+# 通常の install (sudo 経路)
 ./install.sh
+
+# sudoless 環境向け (pixi 経由のユーザー scope install)
+./install.sh --no-sudo
 ```
 
-## 自動検出の仕組み
+デフォルトは sudo 経路。明示的に `--no-sudo` を付けたときだけ pixi ベースの user-scope install に切り替わる。自動検出は行わない (silent な挙動変化を避けるため)。
 
-`scripts/utils.sh` の `detect_sudo_mode` が以下の順でチェック:
-
-1. `EUID == 0` (既に root) → sudo モード (root で apt 実行可能)
-2. `sudo` バイナリが PATH にあるか → 無ければ NO_SUDO
-3. `sudo -n true` が成功するか (非対話で sudo が通るか: NOPASSWD or ticket 有効) → 通らなければ NO_SUDO
-
-いずれも `install.sh` から明示フラグが渡されていなければ自動判定に任せる。
+`scripts/utils.sh` には `detect_sudo_mode` 関数 (EUID / sudo binary / `sudo -n true` の3段チェック) があり、他のスクリプトから sudo 利用可否を判定したい場合の utility として残してある。
 
 ## NO_SUDO モードでの動作差分
 
@@ -122,10 +113,6 @@ echo $ZSH_VERSION  # 空でない値が出れば OK
 ### pixi が PATH に出ない
 
 `install.sh` 実行後は新しいシェルを開くか `source ~/.zshrc` で PATH を再ロード。`export PATH="$HOME/.pixi/bin:$PATH"` を手動で追加することも可。
-
-### `sudo -n true` が意図せず成功する (誤検出)
-
-sudo ticket が前のコマンドで有効化されていると auto-detect が「sudo 使える」と判定する。`sudo -k` で ticket を破棄してから再実行、または `--no-sudo` を明示。
 
 ### 1Password CLI のダウンロードが失敗
 

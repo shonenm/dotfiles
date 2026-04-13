@@ -8,26 +8,16 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DOTFILES_DIR/scripts/utils.sh"
 
 # --- Argument Parsing ---
+# NO_SUDO defaults to false (use sudo/system path).
+# Pass --no-sudo to opt into pixi-based user-scope install on sudoless hosts.
 SKIP_PROMPT=false
-NO_SUDO="auto"  # auto | true | false
+NO_SUDO=false
 for arg in "$@"; do
   case "$arg" in
-    -y)          SKIP_PROMPT=true ;;
-    --no-sudo)   NO_SUDO=true ;;
-    --with-sudo) NO_SUDO=false ;;
+    -y)        SKIP_PROMPT=true ;;
+    --no-sudo) NO_SUDO=true ;;
   esac
 done
-
-# Auto-detect sudo availability on Linux unless explicitly set
-if [[ "$NO_SUDO" == "auto" ]]; then
-  if [[ "$(detect_os)" == "linux" ]] && ! detect_sudo_mode; then
-    NO_SUDO=false
-  elif [[ "$(detect_os)" == "linux" ]]; then
-    NO_SUDO=true
-  else
-    NO_SUDO=false  # mac: sudo path
-  fi
-fi
 export NO_SUDO
 
 # --- 0. 1Password CLI Check (Required) ---
@@ -502,12 +492,8 @@ main() {
   log_info "=== Dotfiles Installation Start ==="
   log_info "OS: $(detect_os)"
   log_info "Dotfiles: $DOTFILES_DIR"
-  if [[ "$(detect_os)" == "linux" ]]; then
-    if [[ "$NO_SUDO" == "true" ]]; then
-      log_info "Mode: no-sudo (pixi-based user-scope install)"
-    else
-      log_info "Mode: sudo (apt + system-wide install)"
-    fi
+  if [[ "$(detect_os)" == "linux" && "$NO_SUDO" == "true" ]]; then
+    log_info "Mode: no-sudo (pixi-based user-scope install)"
   fi
   echo
 
