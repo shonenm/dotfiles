@@ -35,7 +35,7 @@ TOOL_bun_curl_cmd='curl -fsSL https://bun.sh/install | bash'
 
 TOOL_starship_check_cmd="starship"
 TOOL_starship_method="curl_pipe"
-TOOL_starship_curl_cmd='curl -sS https://starship.rs/install.sh | sh -s -- -y'
+TOOL_starship_curl_cmd='curl -sS https://starship.rs/install.sh | sh -s -- -y $([[ "$NO_SUDO" == "true" ]] && echo "-b $HOME/.local/bin")'
 
 TOOL_mise_check_cmd="mise"
 TOOL_mise_method="curl_pipe"

@@ -11,7 +11,7 @@
 # --- Core shell & terminal ---
 tmux
 zsh
-gnu-stow
+stow
 
 # --- Archive / transfer ---
 unzip

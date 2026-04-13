@@ -70,10 +70,13 @@ install_pixi_packages() {
       continue
     fi
     log_info "Installing $pkg via pixi..."
-    if pixi global install "$pkg" >/dev/null 2>&1; then
+    # Capture stderr to surface the actual failure reason (wrong package name, etc)
+    local err
+    if err=$(pixi global install "$pkg" 2>&1 >/dev/null); then
       _new+=("$pkg")
     else
-      log_warn "  Failed to install $pkg via pixi"
+      log_warn "  Failed to install $pkg via pixi:"
+      printf '    %s\n' "${err//$'\n'/$'\n    '}" >&2
       _failed+=("$pkg")
     fi
   done < <(read_package_list "$pkg_file")
