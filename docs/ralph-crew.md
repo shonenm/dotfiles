@@ -66,6 +66,8 @@ launchctl load ~/Library/LaunchAgents/com.user.ralph-crew.plist
 
 `__INTERVAL__` を crew.json の最短 `schedule.minutes` に合わせて設定すること。dispatch 側でタスクごとの間隔を個別に評価するため、launchd の発火間隔は最短タスク以下であれば良い。
 
+`dispatch` は tmux セッションが存在しない場合 (再起動後・初回インストール・teardown 後) に自動で `init` 相当の処理を実行するため、launchd plist は `dispatch` のみをスケジュールすれば復旧を含めて無人運用可能。別途 `RunAtLoad` init plist を用意する必要はない。
+
 ### スキル経由
 
 ```
@@ -119,6 +121,16 @@ Notification hook ベースの状態検出:
 3. タスク注入時に `running` に更新
 
 状態: `idle` / `running` / `dead` / `unknown`
+
+## Trust Dialog Pre-accept
+
+`_start_worker` は worker 起動前に `~/.claude.json` の `projects[<abs_path>].hasTrustDialogAccepted = true` を書き込む (`ralph_preaccept_trust`)。
+
+- `--dangerously-skip-permissions` では Claude の "Quick safety check" 信頼ダイアログは抑止されないため
+- 既に accepted 済みであれば no-op
+- `~/.claude.json` が存在しない場合も no-op (Claude 起動時に自動生成されるため)
+
+これにより新規プロジェクト (launchd 初回起動時) でも対話ブロックなしで worker 起動が完了する。
 
 ## Auto-restart
 
