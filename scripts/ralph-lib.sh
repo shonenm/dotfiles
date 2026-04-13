@@ -62,6 +62,14 @@ ralph_setup_worker_settings() {
   mkdir -p "$settings_dir"
 
   local settings_file="${settings_dir}/settings.local.json"
+  local backup_file="${settings_file}.pre-ralph-crew"
+
+  # Preserve any pre-existing user settings so teardown can restore them.
+  # Only snapshot on the first overwrite (restart/re-init must not clobber
+  # the original backup with an already-worker-scoped settings file).
+  if [[ -f "$settings_file" && ! -f "$backup_file" ]]; then
+    cp "$settings_file" "$backup_file"
+  fi
 
   if [[ -n "$extra_settings_json" ]]; then
     # Merge permissions + extra settings

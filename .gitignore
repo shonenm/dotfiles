@@ -30,3 +30,6 @@ linux/zsh/.zshrc.local
 
 # Claude runtime state (managed by common/claude/.claude/.gitignore)
 # Note: .stow-local-ignore prevents stow from linking these files
+
+# Ralph crew test config (personal, not stowed)
+.claude/crew.json
