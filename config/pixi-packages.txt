@@ -9,7 +9,9 @@
 # Tools with their own user-scope installer (bun, mise, rust, uv, ...) stay in tools.linux.bash
 
 # --- Core shell & terminal ---
-tmux
+# tmux intentionally NOT via pixi: conda-forge's tmux 3.6 build crashes on
+# attach (server exited unexpectedly, xterm-ghostty + real PTY). Built from
+# source instead via install_tmux_source in scripts/linux.sh.
 zsh
 stow
 

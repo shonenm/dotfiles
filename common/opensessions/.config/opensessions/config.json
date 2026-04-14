@@ -3,7 +3,7 @@
   "theme": "tokyo-night",
   "sidebarPosition": "left",
   "sidebarWidth": 30,
-  "sessionFilter": "active",
+  "sessionFilter": "all",
   "detailPanelHeights": {
     "MAIN": 30
   }

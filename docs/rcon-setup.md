@@ -93,6 +93,11 @@ services:
       - ~/.codex:/home/devuser/.codex
       - ~/.local/share/amp:/home/devuser/.local/share/amp
 
+      # pane-cwd state (host tmux popup wrapper が container 内 cwd を解決するため)
+      # ホスト側ディレクトリは container ごとに分ける:
+      #   ~/.cache/tmux-pane-state-<container>:/tmp/tmux-pane-state
+      - ~/.cache/tmux-pane-state-syntopic-dev:/tmp/tmux-pane-state
+
       # プロジェクトファイル (cwd 引き継ぎを動かすため、ホストとパス揃える)
       - ~/proj/syntopic:/home/devuser/proj/syntopic
 
@@ -100,6 +105,10 @@ services:
 ```
 
 container 内 user が `root` なら `/root/.claude` 等。
+
+`~/.cache/tmux-pane-state-<container>` ホストディレクトリは mount 時に自動作成される (無ければ docker が作る)。ファイル内容は container-side zshrc の chpwd hook が書き出し、ホスト側 `tmux-popup-in-container` wrapper と `tmux-pane-context` helper が読む。worktree ごとに window を切って `cd` する運用で、各 window の正確な container cwd が popup (`prefix+g` lazygit 等) に伝わるようになる。
+
+mount を省略した場合は機能が degrade するだけ (lazygit 等は container の `Config.WorkingDir` で開く、ユーザー cd 反映なし)。
 
 反映:
 ```bash
@@ -115,6 +124,7 @@ docker run -d \
   --name syntopic-dev \
   -v ~/.claude:/root/.claude \
   -v ~/.codex:/root/.codex \
+  -v ~/.cache/tmux-pane-state-syntopic-dev:/tmp/tmux-pane-state \
   -v ~/proj/syntopic:/root/proj/syntopic \
   --workdir /root/proj/syntopic \
   <image>
