@@ -205,6 +205,12 @@ fi
 # Anthropic API障害時にOpenRouter経由で動作させる
 # 切替: claude-fallback.sh on/off
 claude() {
+  # Disable bracketed paste while claude runs so Cmd+V in its auth prompts
+  # (`claude auth login`, `claude setup-token`) delivers plain keystrokes
+  # — the raw-mode reader there rejects \e[200~...\e[201~ markers.
+  # Restore after so the zsh prompt keeps bracketed-paste protections.
+  printf '\033[?2004l'
+  local rc
   if [[ -f "$HOME/.local/share/claude-fallback/active" ]]; then
     local fallback_env="$HOME/.local/share/claude-fallback/env"
     source "$fallback_env"
@@ -214,6 +220,9 @@ claude() {
   else
     command claude "$@"
   fi
+  rc=$?
+  printf '\033[?2004h'
+  return $rc
 }
 
 # --- Local bin ---
@@ -360,13 +369,23 @@ rcon() {
     # - new-session -A: attach if exists, create otherwise
     # - set-option default-command: subsequent pane splits / new windows also run the wrapper
     # - absolute path so tmux's /bin/sh can locate the wrapper without PATH hacks
+    # PATH picks up the source-built tmux 3.6a from ~/.local/bin (no-sudo
+    # install path via install_tmux_source), or /usr/bin/tmux in sudo mode.
+    # We deliberately avoid pixi's conda-forge tmux 3.6 because it crashes
+    # on attach under xterm-ghostty ("server exited unexpectedly"), and the
+    # Ubuntu 22.04 system tmux 3.2a lacks allow-passthrough / 3.3+ options.
     ssh -t "$host" "
       set -e
-      export PATH=\"\$HOME/.pixi/bin:\$HOME/.local/bin:\$PATH\"
+      export PATH=\"\$HOME/.local/bin:\$PATH\"
       export TERMINFO_DIRS=\"\$HOME/.terminfo:/usr/share/terminfo:/lib/terminfo\"
       export CLAUDE_CONTEXT='$context'
       cmd=\"\$HOME/dotfiles/scripts/tmux-docker-enter '$container'\"
-      tmux new-session -A -d -s '$sess' \"\$cmd\" 2>/dev/null || true
+      # Set session dir to container's WorkingDir so opensessions watchers
+      # (Claude/Codex/Amp) can match JSONL project dirs (which are encoded
+      # from container-side cwd). tmux accepts non-existent -c paths.
+      container_wd=\$(docker inspect '$container' --format '{{.Config.WorkingDir}}' 2>/dev/null)
+      [ -z \"\$container_wd\" ] && container_wd=\"/\"
+      tmux new-session -A -d -s '$sess' -c \"\$container_wd\" \"\$cmd\" 2>/dev/null || true
       tmux set-option -t '$sess' default-command \"\$cmd\"
       exec tmux attach-session -t '$sess'
     "
@@ -374,10 +393,31 @@ rcon() {
     # Host-only: attach or create a plain host tmux session (no docker)
     local sess="${session:-main}"
     ssh -t "$host" "
-      export PATH=\"\$HOME/.pixi/bin:\$HOME/.local/bin:\$PATH\"
+      export PATH=\"\$HOME/.local/bin:\$PATH\"
       export TERMINFO_DIRS=\"\$HOME/.terminfo:/usr/share/terminfo:/lib/terminfo\"
       export CLAUDE_CONTEXT='$context'
       exec tmux new-session -A -s '$sess'
     "
   fi
 }
+
+# ----------------------------------------------------------------------------
+# Container pane cwd tracking (for host-tmux + docker-exec pattern)
+# ----------------------------------------------------------------------------
+# When this shell runs inside a docker container whose tmux pane was opened
+# via tmux-docker-enter (host-side tmux-pane-context uses these files), write
+# the current cwd to a per-pane state file on every chpwd. The host-side
+# helper resolves /tmp/tmux-pane-state-<container>/cwd-<pane-num> (via bind
+# mount from /tmp/tmux-pane-state inside the container).
+#
+# If the mount is missing the hook silently no-ops — graceful degradation.
+if [[ -f /.dockerenv ]] && [[ -n "${TMUX_PANE:-}" ]] && [[ -d /tmp/tmux-pane-state ]]; then
+  _tmux_track_container_cwd() {
+    local num="${TMUX_PANE#%}"
+    print -r -- "$PWD" > "/tmp/tmux-pane-state/cwd-${num}" 2>/dev/null
+  }
+  typeset -ga chpwd_functions
+  chpwd_functions+=(_tmux_track_container_cwd)
+  # Record initial cwd so the state file exists before the first chpwd
+  _tmux_track_container_cwd
+fi

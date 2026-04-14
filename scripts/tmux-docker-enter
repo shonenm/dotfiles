@@ -30,6 +30,8 @@ args=(exec -it)
 [[ -n "${TERM:-}" ]]           && args+=(-e "TERM=$TERM")
 [[ -n "${COLORTERM:-}" ]]      && args+=(-e "COLORTERM=$COLORTERM")
 [[ -n "${CLAUDE_CONTEXT:-}" ]] && args+=(-e "CLAUDE_CONTEXT=$CLAUDE_CONTEXT")
+# Pass TMUX_PANE so container-side zshrc chpwd hook can write per-pane cwd state
+[[ -n "${TMUX_PANE:-}" ]]      && args+=(-e "TMUX_PANE=$TMUX_PANE")
 
 if [[ -n "$cwd" ]] && docker exec "$container" test -d "$cwd" 2>/dev/null; then
   args+=(-w "$cwd")
