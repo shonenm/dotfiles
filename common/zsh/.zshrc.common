@@ -402,6 +402,29 @@ rcon() {
 }
 
 # ----------------------------------------------------------------------------
+# dotsync: push local dotfiles + pull on ailab in one shot
+# ----------------------------------------------------------------------------
+# Mac is the source of truth; ailab is the only Linux git clone (containers
+# read ailab's clone via bind mount, no separate pull needed). post-merge
+# git hook on ailab broadcasts `tmux source-file` to all running servers, so
+# tmux config edits propagate without manual prefix+r on remote.
+#
+# Usage: dotsync           # push current branch + ailab pull
+#        dotsync --no-pull # push only (skip ailab pull, useful when offline)
+dotsync() {
+  local skip_pull=false
+  [[ "$1" == "--no-pull" ]] && skip_pull=true
+
+  local repo_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+  ( cd "$repo_dir" && git push ) || { echo "dotsync: push failed" >&2; return 1; }
+
+  if [[ "$skip_pull" == "false" ]]; then
+    ssh -o ConnectTimeout=5 ailab 'cd ~/dotfiles && git pull --ff-only' \
+      || { echo "dotsync: ailab pull failed (push succeeded)" >&2; return 1; }
+  fi
+}
+
+# ----------------------------------------------------------------------------
 # Container pane cwd tracking (for host-tmux + docker-exec pattern)
 # ----------------------------------------------------------------------------
 # When this shell runs inside a docker container whose tmux pane was opened
