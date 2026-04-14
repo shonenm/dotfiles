@@ -1,0 +1,32 @@
+#!/bin/bash
+# tmux-popup-in-container — run a command inside the current tmux session's
+# docker container when the session is wired via tmux-docker-enter; otherwise
+# run it on the host.
+#
+# Used from popup-manager definitions so that popups like lazygit / lazydocker
+# operate on the container-side project instead of the host cwd (which often
+# isn't even a git repo / doesn't have the right credentials).
+#
+# Usage:
+#   tmux-popup-in-container lazygit
+#   tmux-popup-in-container gh dash
+#   tmux-popup-in-container psql "$DATABASE_URL"
+
+set -eu
+
+[[ $# -ge 1 ]] || { echo "usage: $(basename "$0") <cmd> [args...]" >&2; exit 2; }
+
+# Resolve pane context (CONTAINER, CWD, SESSION, PANE_ID)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+eval "$("$SCRIPT_DIR/tmux-pane-context")"
+
+if [[ -n "${CONTAINER:-}" ]]; then
+  args=(exec -it)
+  [[ -n "${TERM:-}" ]] && args+=(-e "TERM=$TERM")
+  [[ -n "${CWD:-}" ]]  && args+=(-w "$CWD")
+  args+=("$CONTAINER" "$@")
+  exec docker "${args[@]}"
+fi
+
+# Fallback: run on host
+exec "$@"

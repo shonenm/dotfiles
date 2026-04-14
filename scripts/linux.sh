@@ -618,10 +618,73 @@ install_fancy_cat() {
   log_success "fancy-cat installed to ~/.local/bin"
 }
 
+# Build tmux from source in --no-sudo mode.
+# Rationale: on sudoless hosts we lose access to apt's tmux 3.2+, and pixi's
+# conda-forge tmux 3.6 crashes on attach in this environment (xterm-ghostty +
+# real PTY combination). The system tmux 3.2a is too old to forward bracketed
+# paste properly to TUIs (allow-passthrough is missing). Source build of
+# upstream tmux 3.6a against system libevent/ncurses works reliably.
+install_tmux_source() {
+  [[ "$NO_SUDO" == "true" ]] || return 0
+
+  local target_version="3.6a"
+  local current_bin="$HOME/.local/bin/tmux"
+
+  # Skip if already at target version (idempotent)
+  if [[ -x "$current_bin" ]]; then
+    local have
+    have=$("$current_bin" -V 2>/dev/null | awk '{print $2}')
+    if [[ "$have" == "$target_version" ]]; then
+      log_success "tmux $target_version already installed (~/.local/bin/tmux)"
+      return 0
+    fi
+  fi
+
+  # Check build dependencies
+  local missing=()
+  for cmd in gcc make wget tar; do
+    command_exists "$cmd" || missing+=("$cmd")
+  done
+  # Header check: libevent and ncurses headers required
+  local lib_missing=()
+  [[ -f /usr/include/event2/event.h ]] || [[ -f /usr/include/event.h ]] || lib_missing+=("libevent-dev")
+  [[ -f /usr/include/ncurses.h ]] || [[ -f /usr/include/ncurses/ncurses.h ]] || lib_missing+=("libncurses-dev")
+
+  if [[ ${#missing[@]} -gt 0 || ${#lib_missing[@]} -gt 0 ]]; then
+    log_warn "tmux source build skipped — missing: ${missing[*]:-} ${lib_missing[*]:-}"
+    log_warn "  Ask host admin to install: ${missing[*]} ${lib_missing[*]}"
+    return 0
+  fi
+
+  log_info "Building tmux $target_version from source..."
+  local src_dir="/tmp/tmux-$target_version"
+  local url="https://github.com/tmux/tmux/releases/download/$target_version/tmux-$target_version.tar.gz"
+  rm -rf "$src_dir" "/tmp/tmux-$target_version.tar.gz"
+  (
+    set -e
+    cd /tmp
+    wget -q "$url" -O "tmux-$target_version.tar.gz"
+    tar xf "tmux-$target_version.tar.gz"
+    cd "tmux-$target_version"
+    ./configure --prefix="$HOME/.local" >/dev/null 2>&1
+    make -j4 >/dev/null 2>&1
+    make install >/dev/null 2>&1
+  )
+  rm -rf "$src_dir" "/tmp/tmux-$target_version.tar.gz"
+
+  if [[ -x "$current_bin" ]]; then
+    log_success "tmux $("$current_bin" -V) installed to ~/.local/bin/tmux"
+  else
+    log_error "tmux source build failed"
+    return 1
+  fi
+}
+
 # --- Main Execution ---
 
 check_requirements
 install_system_packages
+install_tmux_source
 install_modern_tools
 install_npm_packages
 install_claude_mem

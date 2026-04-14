@@ -1,0 +1,75 @@
+#!/bin/bash
+# tmux-pane-context — resolve the docker / cwd context of a tmux pane.
+#
+# Used by host-side helpers (popup wrappers, status bar scripts) that need
+# to route commands into the container backing a rcon-managed tmux session.
+#
+# Usage:
+#   eval "$(tmux-pane-context)"          # auto-detect active pane
+#   eval "$(tmux-pane-context '%42')"    # explicit pane id
+#
+# Output (shell-eval-able; all vars are always defined, empty if N/A):
+#   CONTAINER=<container-name>        — empty when session is not docker-backed
+#   CWD=<container-side cwd>          — empty when no cwd can be resolved
+#   SESSION=<tmux session name>
+#   PANE_ID=<tmux pane id, e.g. %42>
+#
+# Empty CONTAINER means the caller should run its command on the host.
+
+set -eu
+
+pane_id="${1:-}"
+
+# Resolve pane info via tmux
+if [[ -z "$pane_id" ]]; then
+  pane_id=$(tmux display-message -p '#{pane_id}' 2>/dev/null || true)
+fi
+session=$(tmux display-message -p -t "${pane_id:-}" '#{session_name}' 2>/dev/null || true)
+pane_cwd=$(tmux display-message -p -t "${pane_id:-}" '#{pane_current_path}' 2>/dev/null || true)
+
+container=""
+cwd=""
+
+if [[ -n "$session" ]]; then
+  default_cmd=$(tmux show-option -t "$session" -qv default-command 2>/dev/null || true)
+  if [[ "$default_cmd" == *tmux-docker-enter* ]]; then
+    # Extract container name from default-command: "... tmux-docker-enter '<name>' ..."
+    container=$(printf '%s' "$default_cmd" | sed -n "s/.*tmux-docker-enter '\\([^']*\\)'.*/\\1/p")
+  fi
+fi
+
+# Resolve container-side cwd if docker-backed
+if [[ -n "$container" ]] && docker exec "$container" true 2>/dev/null; then
+  # Priority 1: Phase 4 — container shell precmd hook writes per-pane cwd file
+  if [[ -n "$pane_id" ]]; then
+    pane_num="${pane_id#%}"
+    state_file="${HOME}/.cache/tmux-pane-state-${container}/cwd-${pane_num}"
+    if [[ -r "$state_file" ]]; then
+      candidate=$(head -1 "$state_file" 2>/dev/null | tr -d '\r\n')
+      if [[ -n "$candidate" ]] && docker exec "$container" test -d "$candidate" 2>/dev/null; then
+        cwd="$candidate"
+      fi
+    fi
+  fi
+
+  # Priority 2: host pane_current_path if it happens to exist inside container
+  if [[ -z "$cwd" ]] && [[ -n "$pane_cwd" ]] && docker exec "$container" test -d "$pane_cwd" 2>/dev/null; then
+    cwd="$pane_cwd"
+  fi
+
+  # Priority 3: container's configured WorkingDir
+  if [[ -z "$cwd" ]]; then
+    wd=$(docker inspect "$container" --format '{{.Config.WorkingDir}}' 2>/dev/null || true)
+    if [[ -n "$wd" ]] && docker exec "$container" test -d "$wd" 2>/dev/null; then
+      cwd="$wd"
+    fi
+  fi
+else
+  # Non-docker session: use host pane cwd as-is
+  container=""
+  cwd="$pane_cwd"
+fi
+
+# Emit shell-eval output
+printf 'CONTAINER=%q\nCWD=%q\nSESSION=%q\nPANE_ID=%q\n' \
+  "$container" "$cwd" "${session:-}" "${pane_id:-}"
