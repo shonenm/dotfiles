@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Post-merge hook for dotfiles repo.
+#
+# After a `git pull` (which ends in a merge), broadcast `tmux source-file`
+# to every running tmux server so live sessions pick up tmux.conf edits
+# without requiring manual prefix+r on each.
+#
+# This hook is OS-agnostic: works on both Mac (~/.tmux conf path) and
+# Linux (where ailab pulls dotfiles after `dotsync` is run from Mac).
+#
+# Linked into .git/hooks/post-merge by install.sh.
+
+set -eu
+
+command -v tmux >/dev/null 2>&1 || exit 0
+
+CONF="$HOME/.config/tmux/tmux.conf"
+[ -r "$CONF" ] || exit 0
+
+# Iterate every tmux server socket owned by the current user.
+# tmux stores sockets under $TMUX_TMPDIR (default /tmp) in tmux-<uid>/<name>.
+shopt -s nullglob 2>/dev/null || true
+sockets=( /tmp/tmux-*/* "${TMPDIR:-/tmp}"/tmux-*/* )
+
+reloaded=0
+for sock in "${sockets[@]}"; do
+  [ -S "$sock" ] || continue
+  # Quietly source-file; ignore failures (server may have just exited).
+  if tmux -S "$sock" source-file "$CONF" >/dev/null 2>&1; then
+    reloaded=$((reloaded + 1))
+  fi
+done
+
+[ "$reloaded" -gt 0 ] && echo "dotfiles post-merge: reloaded tmux config on $reloaded server(s)"
+exit 0
