@@ -377,6 +377,26 @@ setup_tmux_plugins() {
   log_success "tmux plugins installed"
 }
 
+# --- 3.8. Link dotfiles repo's git hooks ---
+# scripts/git-hooks/* are committed in the repo. Link them into .git/hooks/
+# so they run on git operations against the dotfiles repo itself. Currently:
+#   - post-merge: broadcasts `tmux source-file` to all running tmux servers
+#                 after `git pull`, so config edits propagate live.
+setup_git_hooks() {
+  local hooks_src="$DOTFILES_DIR/scripts/git-hooks"
+  local hooks_dst="$DOTFILES_DIR/.git/hooks"
+
+  [[ -d "$hooks_src" ]] || return 0
+  [[ -d "$hooks_dst" ]] || return 0
+
+  for hook in "$hooks_src"/*; do
+    [[ -f "$hook" ]] || continue
+    local name; name="$(basename "$hook")"
+    ln -sf "$hook" "$hooks_dst/$name"
+    log_info "Linked git hook: $name"
+  done
+}
+
 # --- 4. Generate AI CLI configs from templates ---
 # These configs need absolute paths for hooks to work in non-interactive shells
 generate_ai_cli_configs() {
@@ -548,6 +568,9 @@ main() {
 
   # 3.7. Install TPM plugins and setup tmux-which-key
   setup_tmux_plugins
+
+  # 3.8. Link git hooks into .git/hooks (post-merge → tmux reload broadcast)
+  setup_git_hooks
 
   # 4. Generate AI CLI configs (with absolute paths)
   generate_ai_cli_configs
