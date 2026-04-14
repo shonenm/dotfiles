@@ -108,7 +108,7 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | GPU |  | 閾値別（緑/黄/赤） | GPU 使用率（macOS: macmon / Linux: nvidia-smi） |
 | Storage |  | 閾値別（紫/黄/赤） | ディスク使用率（80% 以上で表示） |
 | モード | なし | モード別 | OFF / COPY / SYNC / PREFIX / NORMAL |
-| Git branch |  | 緑 `#9ece6a` | カレントディレクトリのブランチ名 |
+| Git status |  | 緑 `#9ece6a` | ブランチ名 + ahead/behind (`⇡N⇣M`) + 差分統計 (`Nf +A/-D`、HEAD と working tree 比較) |
 | 日時 |  | 青 `#7aa2f7` | `MM/DD HH:MM` |
 | ホスト |  | 水色 `#7dcfff` | ホスト名（太字） |
 
@@ -328,7 +328,8 @@ scripts/
 ├── tmux-ram.sh               # RAM 使用率取得（macOS: vm_stat / Linux: /proc/meminfo、3秒キャッシュ）
 ├── tmux-gpu.sh               # GPU 使用率取得（macmon / nvidia-smi、3秒キャッシュ）
 ├── tmux-storage.sh           # ストレージ使用率取得（閾値超過時のみ表示、3秒キャッシュ）
-├── tmux-git-branch.sh        # Git ブランチ名取得（パスごとに3秒キャッシュ）
+├── tmux-git-branch.sh        # Git ブランチ名取得（パスごとに3秒キャッシュ、単独利用）
+├── tmux-git-status.sh        # Git ブランチ + ahead/behind(⇡⇣) + 差分統計(Nf +A/-D)（5秒キャッシュ、status-right 用）
 ├── tmux-claude-badge.sh      # 通知バッジ表示
 ├── tmux-claude-focus.sh      # 通知自動消去
 ├── tmux-session-color.sh     # Per-session アクセントカラー（apply / refresh / fzf-sessions）
