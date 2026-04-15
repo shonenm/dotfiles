@@ -24,6 +24,10 @@ export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 # Pixi global bin (no-sudo install: eza, bat, gh, fd, jq, rg, ...)
 [[ -d "$HOME/.pixi/bin" ]] && export PATH="$HOME/.pixi/bin:$PATH"
 
+# Bun (installed via curl_pipe into ~/.bun; installer exports this in .bashrc but
+# not in .zshrc, so zsh sessions miss it without this line)
+[[ -d "$HOME/.bun/bin" ]] && export PATH="$HOME/.bun/bin:$PATH"
+
 # Atuin
 [[ -d "$HOME/.atuin/bin" ]] && export PATH="$HOME/.atuin/bin:$PATH"
 
