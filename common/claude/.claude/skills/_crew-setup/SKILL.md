@@ -2,8 +2,8 @@
 name: _crew-setup
 description: 対話的に新規プロジェクトの ralph-crew + launchd を構築する。worker 構成・タスク・スケジュールをヒアリングし crew.json と plist を生成、bootstrap までを案内。
 user-invocable: true
-arguments: "[project-path]"
-argument-hint: "[<project-absolute-path>]"
+arguments: "[<path>]"
+argument-hint: "[<path>]"
 when_to_use: "Use when the user wants to set up ralph-crew autonomous dispatch on a new project (creating .claude/crew.json and the macOS launchd plist), especially when they say things like 'set up cron for ralph-crew', 'configure crew on this project', or '別 project で crew を試したい'."
 ---
 
