@@ -169,6 +169,7 @@ install_brew_bundle
 install_mise_tools
 install_npm_packages
 install_claude_mem
+configure_claude_remote_control_autostart
 install_dops
 install_quay
 install_cargo_update
