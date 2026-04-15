@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# tmux-swap-picker — pick two panes via fzf popup and swap their contents.
+# Slot sizes are preserved (tmux swap-pane exchanges pane contents at the same
+# positions in the layout tree); only pane contents swap.
+#
+# Wired via tmux bind:
+#   bind m display-popup -E "~/dotfiles/scripts/tmux-swap-picker"
+#
+# fzf is used instead of `display-panes` because small panes (below tmux's
+# big-digit render threshold) don't show their pane number on screen, making
+# them unselectable in dense layouts.
+set -eu
+
+list_panes() {
+  tmux list-panes -F \
+    "#{pane_id}	#{window_index}.#{pane_index}	#{pane_width}x#{pane_height}	#{?pane_title,#{pane_title},-}	#{pane_current_command}"
+}
+
+pick() {
+  local prompt="$1"
+  local exclude="${2:-}"
+  local list
+  list="$(list_panes)"
+  if [ -n "$exclude" ]; then
+    list="$(printf '%s\n' "$list" | awk -F '\t' -v ex="$exclude" '$1 != ex')"
+  fi
+  printf '%s\n' "$list" |
+    fzf \
+      --prompt="$prompt" \
+      --delimiter=$'\t' \
+      --with-nth=2,3,4,5 \
+      --header="Enter=select  Esc=cancel" |
+    cut -f1
+}
+
+if ! command -v fzf >/dev/null 2>&1; then
+  echo "fzf is required" >&2
+  read -rp "Press Enter to close..." _
+  exit 1
+fi
+
+first="$(pick 'swap src > ')"
+if [ -z "$first" ]; then
+  exit 0
+fi
+
+second="$(pick 'swap dst > ' "$first")"
+if [ -z "$second" ]; then
+  exit 0
+fi
+
+tmux swap-pane -s "$first" -t "$second"
+tmux display-message "tmux-swap-picker: swapped"
