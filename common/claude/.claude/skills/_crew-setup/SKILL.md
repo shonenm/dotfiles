@@ -30,7 +30,7 @@ when_to_use: "Use when the user wants to set up ralph-crew autonomous dispatch o
 
 ## 手順
 
-### 1. プロジェクトパスの解決
+### 1. プロジェクトパスの解決 + 環境コンテキスト
 
 引数があれば絶対パスに正規化、無ければ `pwd -P` をデフォルトに。
 存在しないディレクトリなら即終了し作成を促す。
@@ -39,7 +39,31 @@ when_to_use: "Use when the user wants to set up ralph-crew autonomous dispatch o
 PROJECT="$(cd "${1:-$PWD}" 2>/dev/null && pwd -P)" \
   || { echo "directory not found"; exit 1; }
 PROJECT_NAME="$(basename "$PROJECT")"
+eval "$(${DOTFILES_DIR:-$HOME/dotfiles}/scripts/env-context)"
 ```
+
+`env-context` 出力の `$ENV_TYPE` と `$TMUX_LOCATION` / `$TMUX_ACCESS_CMD` でその後の分岐を決める。
+
+### 1.5. container 内で呼ばれた場合は host にリダイレクト
+
+`$ENV_TYPE == "linux-container"` (= `/.dockerenv` あり) の場合、`ralph-crew init` を **container-local tmux** に着地させてはいけない (opensessions が観察できず、container 再起動で消える)。以下の案内だけ出してスキルは終了する:
+
+```
+このプロジェクトは container 内にあります (container=$CONTAINER_NAME).
+ralph-crew は $HOST_MACHINE の host tmux で起動する必要があります。
+
+次のコマンドを host で実行してください:
+  ssh $HOST_MACHINE '
+    cd <project path on host> &&
+    ~/dotfiles/scripts/ralph-crew init --config <path>/.claude/crew.json &&
+    tmux new-window -d -t crew-$PROJECT_NAME -n scheduler \
+      "exec ralph-crew daemon --interval <sec> --config <path>/.claude/crew.json"
+  '
+```
+
+crew.json 自体は container 内 (bind mount 経由で host からも見える) に置いて構わない。起動だけが host で行われれば OK。
+
+**このステップで止まれば以降の step 2-8 はスキップ**。
 
 ### 2. 前提チェック (並列実行)
 

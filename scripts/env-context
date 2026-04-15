@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# env-context — authoritative "where am I?" resolver for dotfiles tooling.
+#
+# Emits shell-eval'able variables so any tool can:
+#   eval "$(env-context)"
+# and get a consistent, source-of-truth answer to questions like:
+#   - What kind of environment is this? (mac / linux-host / linux-container)
+#   - Which machine hosts the "canonical" tmux server?
+#   - How do I invoke that tmux from here?
+#   - Where is the container's $HOME vs. the host's $HOME?
+#   - Where does ~/.claude/projects live from my perspective?
+#
+# Design principle: each tool should NOT reinvent environment detection.
+# This script is the single place that makes those judgments; tools
+# consume its output and stay narrow.
+#
+# Information flow for rcon-managed docker containers:
+#   rcon (Mac) → ssh remote → docker exec (-e RCON_*)
+# The RCON_* env vars propagate the origin context into the container so
+# env-context inside the container can reconstruct "I am syntopic-dev
+# on ailab, the tmux I should target is ailab's host tmux". Without those
+# vars (e.g. someone ran `docker exec` manually), env-context reports
+# `unknown` for the missing dimensions — tools should fail loudly rather
+# than silently guess.
+#
+# Output format: one KEY=VALUE per line, shell-quoted. Always safe to
+# `eval "$(env-context)"`. All keys are always present; empty string
+# means "not applicable / unknown".
+
+set -euo pipefail
+
+# --- detection ---
+
+os_name="$(uname -s)"
+
+env_type=""
+host_machine=""
+container_name=""
+container_home=""
+host_home=""
+project_root=""
+claude_projects_dir=""
+tmux_location=""
+tmux_access_cmd=""
+dotfiles_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+
+# --- case: docker container (Linux with /.dockerenv marker file) ---
+if [[ -f /.dockerenv ]] || [[ -n "${DEVCONTAINER_NAME:-}" ]]; then
+  env_type="linux-container"
+  container_home="$HOME"
+  container_name="${RCON_CONTAINER:-${DEVCONTAINER_NAME:-$(cat /etc/hostname 2>/dev/null || true)}}"
+  host_machine="${RCON_HOST_MACHINE:-unknown}"
+  host_home="${RCON_HOST_HOME:-unknown}"
+  claude_projects_dir="$HOME/.claude/projects"
+
+  if [[ "$host_machine" == "unknown" ]]; then
+    tmux_location="unknown"
+    tmux_access_cmd="unknown"
+  elif [[ "$host_machine" == "local" ]]; then
+    # Shouldn't normally happen (container has no "local" parent tmux) but
+    # handle for completeness.
+    tmux_location="local"
+    tmux_access_cmd="tmux"
+  else
+    tmux_location="$host_machine"
+    tmux_access_cmd="ssh $host_machine ${RCON_TMUX_BIN:-tmux}"
+  fi
+
+# --- case: macOS (always local) ---
+elif [[ "$os_name" == "Darwin" ]]; then
+  env_type="mac"
+  host_machine="local"
+  host_home="$HOME"
+  tmux_location="local"
+  tmux_access_cmd="tmux"
+  claude_projects_dir="$HOME/.claude/projects"
+
+# --- case: Linux host (e.g. ailab, run directly) ---
+else
+  env_type="linux-host"
+  host_machine="$(hostname -s 2>/dev/null || hostname || echo "unknown")"
+  host_home="$HOME"
+  # On the linux host, the canonical tmux is this very machine's tmux.
+  tmux_location="local"
+  tmux_access_cmd="tmux"
+  claude_projects_dir="$HOME/.claude/projects"
+fi
+
+# Project root: git toplevel if in a repo, else cwd.
+if project_root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  :
+else
+  project_root="$PWD"
+fi
+
+# --- emit ---
+printf 'ENV_TYPE=%q\n'                 "$env_type"
+printf 'HOST_MACHINE=%q\n'             "$host_machine"
+printf 'CONTAINER_NAME=%q\n'           "$container_name"
+printf 'CONTAINER_HOME=%q\n'           "$container_home"
+printf 'HOST_HOME=%q\n'                "$host_home"
+printf 'PROJECT_ROOT=%q\n'             "$project_root"
+printf 'CLAUDE_PROJECTS_DIR=%q\n'      "$claude_projects_dir"
+printf 'TMUX_LOCATION=%q\n'            "$tmux_location"
+printf 'TMUX_ACCESS_CMD=%q\n'          "$tmux_access_cmd"
+printf 'DOTFILES_DIR=%q\n'             "$dotfiles_dir"
