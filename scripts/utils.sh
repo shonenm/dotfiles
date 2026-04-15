@@ -54,3 +54,35 @@ read_package_list() {
   fi
   grep -v '^\s*#' "$file" | grep -v '^\s*$'
 }
+
+# Enable Claude Code Remote Control auto-start by patching ~/.claude.json.
+# ~/.claude.json is a runtime file (not dotfile-managed), so this is applied at
+# install time to make mobile control work on every fresh environment.
+configure_claude_remote_control_autostart() {
+  local claude_json="$HOME/.claude.json"
+
+  if ! command_exists jq; then
+    log_warn "jq not found; skipping Claude remote control auto-start"
+    return
+  fi
+
+  if [[ ! -f "$claude_json" ]]; then
+    log_info "$claude_json not present yet; run 'claude' once, then rerun install"
+    return
+  fi
+
+  local current
+  current="$(jq -r '.remoteControlAtStartup // false' "$claude_json" 2>/dev/null)"
+  if [[ "$current" == "true" ]]; then
+    log_success "Claude remote control auto-start already enabled"
+    return
+  fi
+
+  local tmp="${claude_json}.tmp.$$"
+  if jq '.remoteControlAtStartup = true' "$claude_json" > "$tmp" && mv "$tmp" "$claude_json"; then
+    log_success "Claude remote control auto-start enabled"
+  else
+    rm -f "$tmp"
+    log_warn "Failed to patch $claude_json"
+  fi
+}
