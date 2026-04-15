@@ -1,0 +1,349 @@
+#!/usr/bin/env python3
+"""tmux pane layout preset manager.
+
+Saves named presets of the current window layout (split structure + sizes) and
+restores them by resizing existing panes rather than creating/destroying any.
+Matching is done by topology signature so the same preset can apply across
+windows with identical split structure but different window dimensions.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+LAYOUT_DIR = Path(
+    os.environ.get("TMUX_LAYOUT_DIR")
+    or os.path.expanduser("~/.local/share/tmux-layout")
+)
+
+
+def run(cmd: list[str]) -> str:
+    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    return result.stdout.strip()
+
+
+def tmux_checksum(body: str) -> int:
+    csum = 0
+    for ch in body:
+        csum = ((csum >> 1) + ((csum & 1) << 15)) & 0xFFFF
+        csum = (csum + ord(ch)) & 0xFFFF
+    return csum
+
+
+def with_checksum(body: str) -> str:
+    return f"{tmux_checksum(body):04x},{body}"
+
+
+def strip_checksum(layout: str) -> str:
+    return layout.split(",", 1)[1] if "," in layout else layout
+
+
+_HEAD_RE = re.compile(r"(\d+)x(\d+),(\d+),(\d+)")
+
+
+class Node:
+    __slots__ = ("type", "w", "h", "x", "y", "pane_id", "children")
+
+    def __init__(self, type_: str, w: int, h: int, x: int, y: int) -> None:
+        self.type = type_  # 'leaf' | 'hsplit' | 'vsplit'
+        self.w = w
+        self.h = h
+        self.x = x
+        self.y = y
+        self.pane_id: int | None = None
+        self.children: list[Node] = []
+
+
+def parse_layout(body: str) -> Node:
+    idx = [0]
+
+    def peek() -> str:
+        return body[idx[0]] if idx[0] < len(body) else ""
+
+    def node() -> Node:
+        m = _HEAD_RE.match(body, idx[0])
+        if not m:
+            raise ValueError(f"bad layout at {idx[0]}: {body[idx[0]:idx[0]+20]!r}")
+        w, h, x, y = map(int, m.groups())
+        idx[0] = m.end()
+
+        ch = peek()
+        if ch == "{":
+            n = Node("hsplit", w, h, x, y)
+            idx[0] += 1
+            n.children.append(node())
+            while peek() == ",":
+                idx[0] += 1
+                n.children.append(node())
+            if peek() != "}":
+                raise ValueError(f"expected }} at {idx[0]}")
+            idx[0] += 1
+            return n
+        if ch == "[":
+            n = Node("vsplit", w, h, x, y)
+            idx[0] += 1
+            n.children.append(node())
+            while peek() == ",":
+                idx[0] += 1
+                n.children.append(node())
+            if peek() != "]":
+                raise ValueError(f"expected ] at {idx[0]}")
+            idx[0] += 1
+            return n
+        if ch == ",":
+            idx[0] += 1
+            m2 = re.match(r"\d+", body[idx[0]:])
+            if not m2:
+                raise ValueError(f"expected pane id at {idx[0]}")
+            n = Node("leaf", w, h, x, y)
+            n.pane_id = int(m2.group())
+            idx[0] += m2.end()
+            return n
+        raise ValueError(f"unexpected {ch!r} at {idx[0]}")
+
+    root = node()
+    if idx[0] != len(body):
+        raise ValueError(f"trailing input at {idx[0]}: {body[idx[0]:]!r}")
+    return root
+
+
+def serialize(node: Node) -> str:
+    head = f"{node.w}x{node.h},{node.x},{node.y}"
+    if node.type == "leaf":
+        return f"{head},{node.pane_id}"
+    inner = ",".join(serialize(c) for c in node.children)
+    if node.type == "hsplit":
+        return f"{head}{{{inner}}}"
+    return f"{head}[{inner}]"
+
+
+def topology(node: Node) -> str:
+    if node.type == "leaf":
+        return "L"
+    sym = "H" if node.type == "hsplit" else "V"
+    return f"{sym}({','.join(topology(c) for c in node.children)})"
+
+
+def leaves(node: Node) -> list[Node]:
+    if node.type == "leaf":
+        return [node]
+    out: list[Node] = []
+    for c in node.children:
+        out.extend(leaves(c))
+    return out
+
+
+def rescale(node: Node, new_w: int, new_h: int, base_x: int, base_y: int) -> None:
+    """Rewrite node dims so root is (new_w, new_h) while preserving child ratios.
+
+    tmux reserves one cell between siblings for the separator, so child sizes
+    plus (n-1) separators must equal the parent size exactly.
+    """
+    node.w = new_w
+    node.h = new_h
+    node.x = base_x
+    node.y = base_y
+    if node.type == "leaf":
+        return
+
+    n = len(node.children)
+    sep = n - 1
+    if node.type == "hsplit":
+        avail = max(n, new_w - sep)
+        olds = [c.w for c in node.children]
+        total = sum(olds) or n
+        widths = [max(1, (o * avail) // total) for o in olds]
+        widths[-1] = max(1, avail - sum(widths[:-1]))
+        cur = base_x
+        for child, cw in zip(node.children, widths):
+            rescale(child, cw, new_h, cur, base_y)
+            cur += cw + 1
+    else:
+        avail = max(n, new_h - sep)
+        olds = [c.h for c in node.children]
+        total = sum(olds) or n
+        heights = [max(1, (o * avail) // total) for o in olds]
+        heights[-1] = max(1, avail - sum(heights[:-1]))
+        cur = base_y
+        for child, ch in zip(node.children, heights):
+            rescale(child, new_w, ch, base_x, cur)
+            cur += ch + 1
+
+
+def tmux_get(fmt: str, target: str | None = None) -> str:
+    cmd = ["tmux", "display-message", "-p"]
+    if target:
+        cmd += ["-t", target]
+    cmd.append(fmt)
+    return run(cmd)
+
+
+def current_window_id(pane: str | None) -> str:
+    target = pane or os.environ.get("TMUX_PANE") or ""
+    return tmux_get("#{window_id}", target or None)
+
+
+def ensure_dir() -> None:
+    LAYOUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def cmd_save(args: argparse.Namespace) -> int:
+    ensure_dir()
+    win = current_window_id(args.pane)
+    layout = tmux_get("#{window_layout}", win)
+    path = LAYOUT_DIR / f"{args.name}.layout"
+    if path.exists() and not args.force:
+        print(f"preset {args.name!r} already exists (use --force to overwrite)", file=sys.stderr)
+        return 1
+    path.write_text(layout + "\n", encoding="utf-8")
+    body = strip_checksum(layout)
+    sig = topology(parse_layout(body))
+    print(f"saved {args.name} -> {path}")
+    print(f"  signature: {sig}")
+    return 0
+
+
+def cmd_list(_args: argparse.Namespace) -> int:
+    ensure_dir()
+    files = sorted(LAYOUT_DIR.glob("*.layout"))
+    if not files:
+        print("(no presets)")
+        return 0
+    for f in files:
+        name = f.stem
+        try:
+            body = strip_checksum(f.read_text(encoding="utf-8").strip())
+            sig = topology(parse_layout(body))
+        except Exception as e:
+            sig = f"<parse error: {e}>"
+        print(f"{name}\t{sig}")
+    return 0
+
+
+def cmd_delete(args: argparse.Namespace) -> int:
+    ensure_dir()
+    path = LAYOUT_DIR / f"{args.name}.layout"
+    if not path.exists():
+        print(f"preset {args.name!r} not found", file=sys.stderr)
+        return 1
+    path.unlink()
+    print(f"deleted {args.name}")
+    return 0
+
+
+def find_siblings(sig: str) -> list[str]:
+    out = []
+    for f in sorted(LAYOUT_DIR.glob("*.layout")):
+        try:
+            body = strip_checksum(f.read_text(encoding="utf-8").strip())
+            if topology(parse_layout(body)) == sig:
+                out.append(f.stem)
+        except Exception:
+            continue
+    return out
+
+
+def cmd_apply(args: argparse.Namespace) -> int:
+    ensure_dir()
+    path = LAYOUT_DIR / f"{args.name}.layout"
+    if not path.exists():
+        print(f"preset {args.name!r} not found", file=sys.stderr)
+        return 1
+    preset_raw = path.read_text(encoding="utf-8").strip()
+    preset_tree = parse_layout(strip_checksum(preset_raw))
+
+    win = current_window_id(args.pane)
+    current_raw = tmux_get("#{window_layout}", win)
+    current_tree = parse_layout(strip_checksum(current_raw))
+
+    preset_sig = topology(preset_tree)
+    current_sig = topology(current_tree)
+
+    if preset_sig != current_sig:
+        print(f"topology mismatch — cannot apply without creating/destroying panes", file=sys.stderr)
+        print(f"  current:  {current_sig}", file=sys.stderr)
+        print(f"  preset:   {preset_sig}", file=sys.stderr)
+        alts = find_siblings(current_sig)
+        if alts:
+            print(f"  presets matching current topology: {', '.join(alts)}", file=sys.stderr)
+        else:
+            print(f"  no preset matches current topology", file=sys.stderr)
+        return 2
+
+    cur_leaves = leaves(current_tree)
+    pre_leaves = leaves(preset_tree)
+    for src, dst in zip(pre_leaves, cur_leaves):
+        src.pane_id = dst.pane_id
+
+    rescale(preset_tree, current_tree.w, current_tree.h, current_tree.x, current_tree.y)
+
+    body = serialize(preset_tree)
+    new_layout = with_checksum(body)
+    run(["tmux", "select-layout", "-t", win, new_layout])
+    print(f"applied {args.name} to {win}")
+    return 0
+
+
+def cmd_menu(args: argparse.Namespace) -> int:
+    wrapper = Path(__file__).resolve().parent / "tmux-layout-menu.sh"
+    if not wrapper.exists():
+        print(f"menu wrapper not found: {wrapper}", file=sys.stderr)
+        return 1
+    os.execv(str(wrapper), [str(wrapper)])
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="tmux-layout", description=__doc__)
+    p.add_argument("--pane", help="override TMUX_PANE (target pane/window id)")
+    sub = p.add_subparsers(dest="subcmd", required=True)
+
+    s = sub.add_parser("save", help="save current window layout as <name>")
+    s.add_argument("name")
+    s.add_argument("-f", "--force", action="store_true", help="overwrite existing preset")
+    s.set_defaults(func=cmd_save)
+
+    a = sub.add_parser("apply", help="apply preset <name> to current window")
+    a.add_argument("name")
+    a.set_defaults(func=cmd_apply)
+
+    sub.add_parser("list", help="list saved presets with topology signature").set_defaults(func=cmd_list)
+
+    d = sub.add_parser("delete", help="delete preset <name>")
+    d.add_argument("name")
+    d.set_defaults(func=cmd_delete)
+
+    sub.add_parser("menu", help="fzf popup to pick and apply a preset").set_defaults(func=cmd_menu)
+
+    cs = sub.add_parser("_current-sig", help=argparse.SUPPRESS)
+    cs.set_defaults(func=cmd_current_sig)
+    return p
+
+
+def cmd_current_sig(args: argparse.Namespace) -> int:
+    win = current_window_id(args.pane)
+    body = strip_checksum(tmux_get("#{window_layout}", win))
+    print(topology(parse_layout(body)))
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        return args.func(args)
+    except subprocess.CalledProcessError as e:
+        stderr = (e.stderr or "").strip()
+        print(f"tmux command failed ({e.returncode}): {stderr}", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
