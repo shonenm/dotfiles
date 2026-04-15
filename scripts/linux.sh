@@ -86,6 +86,12 @@ check_requirements() {
 
 # --- 1.5. 1Password CLI Check ---
 check_1password() {
+  # SKIP_1P propagated from install.sh --skip-1p (container/ephemeral env)
+  if [[ "${SKIP_1P:-false}" == "true" ]]; then
+    log_warn "1Password CLI check skipped (--skip-1p). Secret-dependent steps will no-op."
+    return 0
+  fi
+
   if ! command_exists op; then
     log_error "1Password CLI not installed."
     log_error "Install: https://developer.1password.com/docs/cli/get-started/"
@@ -106,7 +112,6 @@ check_1password() {
     exit 1
   fi
 }
-
 # --- 2. Install Functions ---
 
 install_system_packages() {
