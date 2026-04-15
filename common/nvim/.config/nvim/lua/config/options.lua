@@ -9,7 +9,14 @@ vim.g.root_spec = { ".git", "lsp", "cwd" }
 vim.opt.clipboard = "unnamedplus"
 
 -- OSC 52: copy only (READ応答がtmux経由で壊れるため paste は内部レジスタを使用)
-if vim.env.SSH_CONNECTION or vim.env.SSH_TTY then
+-- Trigger conditions:
+--   - SSH_CONNECTION / SSH_TTY: 直接 ssh 越しに開いた nvim
+--   - TMUX / TMUX_PANE: tmux pane 内 (Mac local + ailab tmux 両対応)
+--     特に rcon → docker exec 経由の container 内 nvim では SSH 系 env が
+--     伝播しないので、tmux-docker-enter が forward する TMUX_PANE を
+--     "tmux 配下にいる" 判定として使う。OSC 52 → ailab tmux (passthrough) →
+--     ssh → Ghostty (clipboard-write allow) → Mac clipboard の経路で届く。
+if vim.env.SSH_CONNECTION or vim.env.SSH_TTY or vim.env.TMUX or vim.env.TMUX_PANE then
   vim.g.clipboard = {
     name = "OSC 52",
     copy = {
