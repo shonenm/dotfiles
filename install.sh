@@ -12,13 +12,15 @@ source "$DOTFILES_DIR/scripts/utils.sh"
 # Pass --no-sudo to opt into pixi-based user-scope install on sudoless hosts.
 SKIP_PROMPT=false
 NO_SUDO=false
+SKIP_1P=false
 for arg in "$@"; do
   case "$arg" in
-    -y)        SKIP_PROMPT=true ;;
-    --no-sudo) NO_SUDO=true ;;
+    -y|--skip-prompt) SKIP_PROMPT=true ;;
+    --no-sudo)        NO_SUDO=true ;;
+    --skip-1p)        SKIP_1P=true ;;
   esac
 done
-export NO_SUDO
+export NO_SUDO SKIP_1P
 
 # --- 0. 1Password CLI Check (Required) ---
 install_1password_cli() {
@@ -103,6 +105,14 @@ _install_1password_cli_user_scope() {
 }
 
 check_1password_cli() {
+  # --skip-1p: container / ephemeral env で secret lookup が不要な時。
+  # Notion MCP 等を使うステップは対応する op read が no-op fallback するので
+  # 警告だけ出して続行する。
+  if [[ "$SKIP_1P" == "true" ]]; then
+    log_warn "1Password CLI check skipped (--skip-1p). Secret-dependent steps will no-op."
+    return 0
+  fi
+
   # Check if op is installed, install if not
   if ! command_exists op; then
     log_warn "1Password CLI is not installed."
@@ -116,7 +126,9 @@ check_1password_cli() {
     echo "  Run the following command to sign in:"
     echo "    eval \$(op signin)"
     echo
-    echo "  Then re-run this script."
+    echo "  Or skip 1Password secrets entirely:"
+    echo "    $0 --skip-1p (combine with --skip-prompt --no-sudo as needed)"
+    echo
     exit 1
   fi
 
