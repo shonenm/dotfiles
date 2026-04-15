@@ -1,10 +1,10 @@
 ---
 name: _setup-rcon-target
-description: 新しい rcon ターゲット (host もしくは host:container) をセットアップする。targets ファイル追加、SSH/dotfiles/tmux 接続検証、Docker volume mount スニペット生成を半自動化。
+description: 新しい rcon ターゲット (host もしくは host:container) をセットアップする。targets ファイル追加、SSH/dotfiles/tmux 接続検証、Docker volume mount スニペット生成を半自動化。--apply で compose 編集 + container recreate + container 内 dotfiles install まで完遂。
 user-invocable: true
-arguments: "<host> | <host>:<container>"
-argument-hint: "<host>[:<container>]"
-when_to_use: "Use when the user wants to register a new rcon target (remote host or remote-host:container pair) and verify everything is wired up for host-tmux + docker-exec operation. Automates the process described in docs/rcon-setup.md."
+arguments: "<host> | <host>:<container> [--apply]"
+argument-hint: "<host>[:<container>] [--apply]"
+when_to_use: "Use when the user wants to register a new rcon target (remote host or remote-host:container pair) and verify everything is wired up for host-tmux + docker-exec operation. Automates the process described in docs/rcon-setup.md. Pass --apply to also execute compose mount edit + force-recreate + container-side dotfiles install automatically."
 ---
 
 # Setup rcon Target
@@ -17,13 +17,14 @@ when_to_use: "Use when the user wants to register a new rcon target (remote host
 |------|------|
 | `<host>` | SSH 接続可能な host 名 (~/.ssh/config で解決可能) |
 | `<host>:<container>` | 上記 + docker container 指定 |
+| `--apply` | snippet 生成で止めず、実際に compose.yml 編集 / container recreate / install-in-container.sh 実行まで行う |
 
 ### 使用例
 
 ```
 /_setup-rcon-target chronos
 /_setup-rcon-target chronos:syntopic-dev
-/_setup-rcon-target ailab:another-container
+/_setup-rcon-target ailab:another-container --apply
 ```
 
 ## 手順
@@ -157,7 +158,64 @@ Next steps:
 
 ## 注意事項
 
-- container 作成 / recreate はスキルでは行わない (ユーザー責任で compose 設定 or 起動スクリプトを調整)
-- 既存 container の volume mount を変更するには recreate が必要 (差分更新不可) — ユーザーに明示
+- `--apply` なしのデフォルト: container 作成 / recreate は行わない (ユーザー責任で compose 設定 or 起動スクリプトを調整)
+- `--apply` 指定時: 下記「--apply 実行フロー」に従い、破壊的操作を含めて自動実行する
+- 既存 container の volume mount を変更するには recreate が必要 (差分更新不可) — `--apply` では force-recreate で実行
 - target が既に存在する場合はスキップしつつ、残りの検証は実施
 - `/_setup-rcon-target` は冪等: 何度実行しても安全
+
+## --apply 実行フロー (container target のみ)
+
+`--apply` を付けて呼び出された時、ステップ 5 の後に以下を追加実行する:
+
+### 5.1 compose.yml の特定
+
+1. `ssh <host> 'ls ~/*/compose.yml ~/*/docker-compose.yml ~/ws-*/compose.yml 2>/dev/null'` で候補を列挙
+2. `docker inspect <container> --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}'` で compose project dir を取得 (container 稼働中の場合)
+3. 両方を突き合わせて 1 ファイルに絞り込み、ユーザーに `<path>` を報告
+
+### 5.2 dotfiles bind mount の追加
+
+```bash
+# compose.yml の対象 service volumes に追記 (末尾ではなく、目視しやすい位置)
+- $HOME/dotfiles:/home/${USERNAME:-devuser}/dotfiles:ro
+```
+
+- `grep -qF "dotfiles:/home" <path>` で既存チェック、冪等に
+- `.bak-bindmount` として元を退避
+
+### 5.3 container force-recreate
+
+```bash
+ssh <host> "cd <compose_dir> && docker compose up -d --force-recreate <service_name>"
+```
+
+`service_name` は `docker inspect <container> --format '{{index .Config.Labels "com.docker.compose.service"}}'` で取得 (container_name とは別物)
+
+### 5.4 container 内で dotfiles install を 1 発
+
+```bash
+ssh <host> "docker exec <container> ~/dotfiles/scripts/install-in-container.sh"
+```
+
+このスクリプトは:
+- sudo apt で `build-essential pkg-config libssl-dev luarocks` を install
+- `~/dotfiles/install.sh --no-sudo --skip-prompt --skip-1p` を実行
+- symlinks と主要 tool の検証
+
+出力は行数が多いので、末尾 30 行だけ表示し、エラーあれば全文表示する判断にすること。
+
+### 5.5 検証
+
+```bash
+ssh <host> "docker exec <container> zsh -i -c 'command -v starship eza mise bun' 2>&1 | grep -v 'zle'"
+```
+
+すべて path が返れば OK。欠けていれば `exec zsh` で再読み込みしてから再検証、それでも駄目なら install-in-container.sh のログを再表示。
+
+## --apply 失敗時の挙動
+
+- 5.1 で compose.yml 特定失敗: snippet 生成モードへ fallback (手動適用を案内)
+- 5.2 で既に mount 済み: skip + 続行
+- 5.3 で recreate 失敗: container 状態そのまま / エラー全文表示 / 停止
+- 5.4 で install 失敗: エラー表示 / container は残す / 5.5 skip
