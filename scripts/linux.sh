@@ -693,6 +693,7 @@ install_tmux_source
 install_modern_tools
 install_npm_packages
 install_claude_mem
+configure_claude_remote_control_autostart
 link_ai_scripts
 install_gh_extensions
 install_ghostty_terminfo
