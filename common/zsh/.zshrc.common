@@ -381,23 +381,26 @@ rcon() {
     # We deliberately avoid pixi's conda-forge tmux 3.6 because it crashes
     # on attach under xterm-ghostty ("server exited unexpectedly"), and the
     # Ubuntu 22.04 system tmux 3.2a lacks allow-passthrough / 3.3+ options.
+    # Propagate rcon provenance so downstream tools (env-context inside
+    # container, tmux-pane-context on host, opensessions, etc.) never have
+    # to guess:
+    #   - RCON_* env vars travel with ssh → docker exec into the container.
+    #   - tmux user options @rcon-* attach to the session for host-side
+    #     tools that don't inherit env (popup wrappers, pane-context).
     ssh -t "$host" "
       set -e
       export PATH=\"\$HOME/.local/bin:\$PATH\"
       export TERMINFO_DIRS=\"\$HOME/.terminfo:/usr/share/terminfo:/lib/terminfo\"
       export CLAUDE_CONTEXT='$context'
+      export RCON_HOST_MACHINE='$host'
+      export RCON_CONTAINER='$container'
+      export RCON_HOST_HOME=\"\$HOME\"
       cmd=\"\$HOME/dotfiles/scripts/tmux-docker-enter '$container'\"
-      # Set session dir to container's WorkingDir so opensessions watchers
-      # (Claude/Codex/Amp) can match JSONL project dirs (which are encoded
-      # from container-side cwd). tmux accepts non-existent -c paths.
       container_wd=\$(docker inspect '$container' --format '{{.Config.WorkingDir}}' 2>/dev/null)
       [ -z \"\$container_wd\" ] && container_wd=\"/\"
-      # Drift guard: tmux new-session -A attaches to an existing session without
-      # updating session_path. If a prior invocation (older dotfiles version or
-      # manual creation) left session_path pointing somewhere other than the
-      # container cwd, opensessions' resolveSession silently stops matching the
-      # container's claude JSONL dir. Kill+recreate in that case so the state
-      # is always correct regardless of how the session was first born.
+      # Drift guard: kill+recreate if session_path mismatches container cwd.
+      # tmux new-session -A attaches without updating session_path, so
+      # opensessions' resolveSession silently stops matching. See env-context.
       existing_path=\$(tmux list-sessions -F '#{session_path}' -f \"#{==:#{session_name},$sess}\" 2>/dev/null | head -1 || true)
       if [ -n \"\$existing_path\" ] && [ \"\$existing_path\" != \"\$container_wd\" ]; then
         echo \"rcon: recreating session '$sess' (session_path was '\$existing_path', should be '\$container_wd')\" >&2
@@ -405,6 +408,9 @@ rcon() {
       fi
       tmux new-session -A -d -s '$sess' -c \"\$container_wd\" \"\$cmd\" 2>/dev/null || true
       tmux set-option -t '$sess' default-command \"\$cmd\"
+      tmux set-option -t '$sess' '@rcon-host' '$host'
+      tmux set-option -t '$sess' '@rcon-container' '$container'
+      tmux set-option -t '$sess' '@rcon-container-home' \"\$container_wd\"
       exec tmux attach-session -t '$sess'
     "
   else

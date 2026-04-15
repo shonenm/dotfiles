@@ -32,6 +32,13 @@ args=(exec -it)
 [[ -n "${CLAUDE_CONTEXT:-}" ]] && args+=(-e "CLAUDE_CONTEXT=$CLAUDE_CONTEXT")
 # Pass TMUX_PANE so container-side zshrc chpwd hook can write per-pane cwd state
 [[ -n "${TMUX_PANE:-}" ]]      && args+=(-e "TMUX_PANE=$TMUX_PANE")
+# Propagate rcon provenance so env-context inside the container can reconstruct
+# where it came from (host machine, container name, host $HOME). Without these
+# the container-side env-context returns "unknown" and tools fail loudly
+# rather than silently misroute.
+args+=(-e "RCON_HOST_MACHINE=${RCON_HOST_MACHINE:-$(hostname -s 2>/dev/null || hostname || echo unknown)}")
+args+=(-e "RCON_CONTAINER=$container")
+[[ -n "${RCON_HOST_HOME:-}" ]] && args+=(-e "RCON_HOST_HOME=$RCON_HOST_HOME")
 
 if [[ -n "$cwd" ]] && docker exec "$container" test -d "$cwd" 2>/dev/null; then
   args+=(-w "$cwd")

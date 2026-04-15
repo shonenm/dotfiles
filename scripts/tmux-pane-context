@@ -38,10 +38,18 @@ container=""
 cwd=""
 
 if [[ -n "$session" ]]; then
-  default_cmd=$(tmux show-option -t "$session" -qv default-command 2>/dev/null || true)
-  if [[ "$default_cmd" == *tmux-docker-enter* ]]; then
-    # Extract container name from default-command: "... tmux-docker-enter '<name>' ..."
-    container=$(printf '%s' "$default_cmd" | sed -n "s/.*tmux-docker-enter '\\([^']*\\)'.*/\\1/p")
+  # Primary signal: tmux user option @rcon-container, set by rcon at session
+  # creation. This is the authoritative source — keeps host-side tools out of
+  # the business of parsing default-command strings (brittle to format changes).
+  container=$(tmux show-option -t "$session" -qv '@rcon-container' 2>/dev/null || true)
+
+  # Backcompat: older sessions created before @rcon-container was set still
+  # have the container name embedded in default-command. Fall through to that.
+  if [[ -z "$container" ]]; then
+    default_cmd=$(tmux show-option -t "$session" -qv default-command 2>/dev/null || true)
+    if [[ "$default_cmd" == *tmux-docker-enter* ]]; then
+      container=$(printf '%s' "$default_cmd" | sed -n "s/.*tmux-docker-enter '\\([^']*\\)'.*/\\1/p")
+    fi
   fi
 fi
 
@@ -64,9 +72,14 @@ if [[ -n "$container" ]] && docker exec "$container" true 2>/dev/null; then
     cwd="$pane_cwd"
   fi
 
-  # Priority 3: container's configured WorkingDir
+  # Priority 3: @rcon-container-home tmux option (captured at rcon time from
+  # docker inspect WorkingDir). Falls through to fresh docker inspect if the
+  # option isn't set (e.g. older sessions pre env-context migration).
   if [[ -z "$cwd" ]]; then
-    wd=$(docker inspect "$container" --format '{{.Config.WorkingDir}}' 2>/dev/null || true)
+    wd=$(tmux show-option -t "$session" -qv '@rcon-container-home' 2>/dev/null || true)
+    if [[ -z "$wd" ]]; then
+      wd=$(docker inspect "$container" --format '{{.Config.WorkingDir}}' 2>/dev/null || true)
+    fi
     if [[ -n "$wd" ]] && docker exec "$container" test -d "$wd" 2>/dev/null; then
       cwd="$wd"
     fi
