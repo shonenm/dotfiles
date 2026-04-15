@@ -139,6 +139,15 @@ items:
         command: display-message
 
   - separator: true
+  - name: +Theme
+    key: T
+    menu:
+      - name: tokyonight
+        key: t
+        command: "run-shell '~/dotfiles/scripts/tmux-theme-toggle.sh tokyonight'"
+      - name: syntopic
+        key: s
+        command: "run-shell '~/dotfiles/scripts/tmux-theme-toggle.sh syntopic'"
   - name: Reload config
     key: r
     macro: reload-config
