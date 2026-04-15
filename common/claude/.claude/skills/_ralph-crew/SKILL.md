@@ -1,6 +1,6 @@
 ---
 name: _ralph-crew
-description: 常駐ワーカーの初期化・ディスパッチ・状態確認を行います。launchd と連携して定期的にタスクを注入する自律ワーカー管理システムです。
+description: 常駐ワーカーの初期化・ディスパッチ・状態確認を行います。ralph-crew daemon が tmux session 内で定期的にタスクを注入する自律ワーカー管理システムです。
 user-invocable: true
 disable-model-invocation: true
 arguments: "<subcommand> [args...]"
@@ -50,18 +50,19 @@ ralph-crew init
 # または: ralph-crew init --config /path/to/crew.json
 ```
 
-### 3. launchd で定期実行 (任意)
+### 3. daemon で定期実行
+
+`ralph-crew daemon` を tmux の専用 window に常駐させる。外部 scheduler (launchd/cron) は不要。
 
 ```bash
-# plist テンプレートをコピーしてプレースホルダーを置換
-# __INTERVAL__ は秒数 (例: 900 = 15分, 1800 = 30分, 3600 = 1時間)
-# __PROJECT__ はプロジェクトの絶対パス
-cp ~/dotfiles/templates/com.user.ralph-crew.plist ~/Library/LaunchAgents/
-sed -i '' "s|__HOME__|$HOME|g; s|__PROJECT__|/path/to/project|g; s|__INTERVAL__|900|g" ~/Library/LaunchAgents/com.user.ralph-crew.plist
-
-# 登録
-launchctl load ~/Library/LaunchAgents/com.user.ralph-crew.plist
+# ralph-crew init で tmux session (default: ralph-crew) と worker を立てておく
+tmux new-window -d -t ralph-crew -n scheduler \
+  "exec ralph-crew daemon --interval 60 --config /path/to/project/.claude/crew.json"
 ```
+
+- `--interval` は秒単位の tick (60 秒推奨)。per-task interval は crew.json の `schedule.minutes` で別途評価される。
+- tmux-continuum (`@continuum-restore on`) が session を復元。daemon コマンドも含めて復元したい場合は `@resurrect-processes` に `'~ralph-crew daemon'` を追加。
+- 停止: `tmux kill-window -t ralph-crew:scheduler` または `kill -TERM $(cat /tmp/ralph-crew/<project-name>/daemon.pid)`。
 
 ### 4. 手動ディスパッチ
 
