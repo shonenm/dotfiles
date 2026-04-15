@@ -24,14 +24,16 @@ if [[ -n "${CONTAINER:-}" ]]; then
   args=(exec -it)
   [[ -n "${TERM:-}" ]] && args+=(-e "TERM=$TERM")
   [[ -n "${CWD:-}" ]]  && args+=(-w "$CWD")
-  # Run via zsh -c so the container's $HOME/.zshenv is sourced and PATH picks
-  # up ~/.local/bin / ~/.pixi/bin / ~/.bun/bin etc. Image-level ENV PATH
-  # differs across container Dockerfiles (e.g. fluid-sbi only has /opt/venv/bin
-  # in PATH whereas syntopic-dev includes ~/.local/bin) — relying on zsh init
-  # keeps the wrapper image-agnostic.
+  # Run via `zsh -ic` (interactive) so the container's full shell init
+  # executes: .zshenv PATH additions, mise activate (which makes
+  # mise-managed tools like `gh` discoverable), dotfiles aliases, etc.
+  # Image-level ENV PATH varies across Dockerfiles and mise shims are
+  # absent in non-interactive zsh — `zsh -ic` is the minimum that
+  # reliably sees every tool the user has in their zshrc.
   # `printf %q` requotes argv safely so zsh re-parses to the same words.
+  # zle warnings on stderr are harmless (zle line editor not usable in -c).
   cmd_str=$(printf '%q ' "$@")
-  args+=("$CONTAINER" zsh -c "exec $cmd_str")
+  args+=("$CONTAINER" zsh -ic "exec $cmd_str")
   exec docker "${args[@]}"
 fi
 
