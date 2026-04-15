@@ -392,6 +392,17 @@ rcon() {
       # from container-side cwd). tmux accepts non-existent -c paths.
       container_wd=\$(docker inspect '$container' --format '{{.Config.WorkingDir}}' 2>/dev/null)
       [ -z \"\$container_wd\" ] && container_wd=\"/\"
+      # Drift guard: tmux new-session -A attaches to an existing session without
+      # updating session_path. If a prior invocation (older dotfiles version or
+      # manual creation) left session_path pointing somewhere other than the
+      # container cwd, opensessions' resolveSession silently stops matching the
+      # container's claude JSONL dir. Kill+recreate in that case so the state
+      # is always correct regardless of how the session was first born.
+      existing_path=\$(tmux list-sessions -F '#{session_path}' -f \"#{==:#{session_name},$sess}\" 2>/dev/null | head -1 || true)
+      if [ -n \"\$existing_path\" ] && [ \"\$existing_path\" != \"\$container_wd\" ]; then
+        echo \"rcon: recreating session '$sess' (session_path was '\$existing_path', should be '\$container_wd')\" >&2
+        tmux kill-session -t '$sess' 2>/dev/null || true
+      fi
       tmux new-session -A -d -s '$sess' -c \"\$container_wd\" \"\$cmd\" 2>/dev/null || true
       tmux set-option -t '$sess' default-command \"\$cmd\"
       exec tmux attach-session -t '$sess'
