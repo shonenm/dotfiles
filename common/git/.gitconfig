@@ -34,7 +34,10 @@
 
 # === Merge ===
 [merge]
-    conflictstyle = zdiff3
+    # `diff3` (not `zdiff3`) for portability: Ubuntu 22.04 ships git 2.34
+    # which rejects `zdiff3` as unknown. zdiff3 (2.35+) only adds common-edit
+    # elision on top of diff3 — small win, not worth breaking git on LTS hosts.
+    conflictstyle = diff3
 
 [merge "conflict-driver"]
     name = Claude-powered conflict resolver
