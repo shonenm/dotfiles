@@ -419,8 +419,13 @@ rcon() {
     # host, use it as -c so the session opens at the project root. This
     # makes `rcon ailab syntopic` land in ~/syntopic without manual cd.
     local sess="${session:-main}"
+    # PATH order: .local/bin BEFORE .pixi/bin so that the source-built
+    # tmux 3.6a at ~/.local/bin/tmux wins over pixi's conda-forge tmux 3.6.
+    # The conda-forge build crashes on attach under xterm-ghostty (same
+    # reason documented in the container branch above). pixi stays on PATH
+    # for tools that only live there (e.g. zsh on no-sudo hosts).
     ssh -t "$host" "
-      export PATH=\"\$HOME/.pixi/bin:\$HOME/.local/bin:\$PATH\"
+      export PATH=\"\$HOME/.local/bin:\$HOME/.pixi/bin:\$PATH\"
       export TERMINFO_DIRS=\"\$HOME/.terminfo:/usr/share/terminfo:/lib/terminfo\"
       export CLAUDE_CONTEXT='$context'
       export RCON_HOST_MACHINE='$host'
