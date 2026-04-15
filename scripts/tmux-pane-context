@@ -21,6 +21,13 @@ set -eu
 pane_id="${1:-}"
 
 # Resolve pane info via tmux
+# Priority: explicit arg → $TMUX_PANE env (set by tmux for child processes,
+# preserved through display-popup) → display-message fallback (ambiguous when
+# multiple sessions exist; popups in particular need TMUX_PANE to identify the
+# pane that triggered them, not the active client pane).
+if [[ -z "$pane_id" ]]; then
+  pane_id="${TMUX_PANE:-}"
+fi
 if [[ -z "$pane_id" ]]; then
   pane_id=$(tmux display-message -p '#{pane_id}' 2>/dev/null || true)
 fi
