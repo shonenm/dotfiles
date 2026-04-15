@@ -813,11 +813,80 @@ cmd_teardown() {
   _success "Cleaned up state: $STATE_DIR"
 }
 
+# Long-running scheduler: invokes `dispatch` every --interval seconds in the
+# current shell's lifetime. Designed to run inside a dedicated tmux window so
+# that tmux-continuum persists it across tmux server restarts. Replaces the
+# previous launchd/cron integration so ralph-crew runs portably without any
+# OS-level scheduler dependency.
+cmd_daemon() {
+  local config_file="$DEFAULT_CONFIG"
+  local interval_seconds=60
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config) config_file="${2:-}"; shift 2 ;;
+      --interval) interval_seconds="${2:-60}"; shift 2 ;;
+      *) _error "unknown arg: $1"; return 2 ;;
+    esac
+  done
+
+  _load_config "$config_file" || return 1
+  config_file="$CONFIG_FILE"
+
+  if ! [[ "$interval_seconds" =~ ^[0-9]+$ ]] || (( interval_seconds < 1 )); then
+    _error "invalid --interval: $interval_seconds (must be positive integer seconds)"
+    return 1
+  fi
+
+  mkdir -p "$STATE_DIR"
+  local pidfile="${STATE_DIR}/daemon.pid"
+  if [[ -f "$pidfile" ]]; then
+    local existing_pid
+    existing_pid="$(cat "$pidfile" 2>/dev/null || true)"
+    if [[ -n "$existing_pid" ]] && kill -0 "$existing_pid" 2>/dev/null; then
+      _error "daemon already running (pid=$existing_pid, pidfile=$pidfile)"
+      return 1
+    fi
+    _log "stale pidfile removed (pid=$existing_pid not alive)"
+    rm -f "$pidfile"
+  fi
+  echo "$$" > "$pidfile"
+
+  _stop_daemon() {
+    _log "daemon stopping (signal received, pid=$$)"
+    # Kill any in-flight backgrounded sleep so the loop exits immediately
+    # rather than blocking until the current tick ends.
+    [[ -n "${sleep_pid:-}" ]] && kill "$sleep_pid" 2>/dev/null || true
+    rm -f "$pidfile"
+    exit 0
+  }
+  trap _stop_daemon INT TERM
+  trap 'rm -f "$pidfile"' EXIT
+
+  _log "daemon starting (pid=$$, interval=${interval_seconds}s, config=$config_file)"
+  local sleep_pid=""
+  while true; do
+    # Run dispatch as a child process so its internal flock/fd state does not
+    # leak into the daemon loop. A non-zero exit is logged but never kills the
+    # loop — the next tick retries.
+    if ! "$0" dispatch --config "$config_file"; then
+      _log "dispatch iteration exited non-zero (continuing)"
+    fi
+    # Backgrounded sleep + wait is interrupted immediately by SIGTERM/SIGINT.
+    # A foreground `sleep` delays signal handling until the sleep finishes,
+    # which would make daemon stop lag up to $interval_seconds.
+    sleep "$interval_seconds" &
+    sleep_pid=$!
+    wait "$sleep_pid" 2>/dev/null || true
+    sleep_pid=""
+  done
+}
+
 # --- Main ---
 
 case "${1:-}" in
   init)      shift; cmd_init "$@" ;;
   dispatch)  shift; cmd_dispatch "$@" ;;
+  daemon)    shift; cmd_daemon "$@" ;;
   status)    shift; cmd_status "$@" ;;
   send)      shift; cmd_send "$@" ;;
   restart)   shift; cmd_restart "$@" ;;
@@ -829,7 +898,11 @@ ralph-crew - Persistent worker management with periodic task dispatch
 
 Usage:
   ralph-crew init [--config <path>]           Create tmux session and start all workers
-  ralph-crew dispatch [--config <path>]        Evaluate schedules and dispatch tasks
+  ralph-crew dispatch [--config <path>]        Evaluate schedules and dispatch tasks once
+  ralph-crew daemon [--interval <sec>] [--config <path>]
+                                                Long-running loop: call dispatch every N seconds.
+                                                Intended to run inside a dedicated tmux window so
+                                                tmux-continuum persists it across restarts.
   ralph-crew status [--json] [--config <path>] Show worker status
   ralph-crew send <worker-id> "<message>" [--config <path>]
                                                 Send manual message to worker
