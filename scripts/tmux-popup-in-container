@@ -24,7 +24,14 @@ if [[ -n "${CONTAINER:-}" ]]; then
   args=(exec -it)
   [[ -n "${TERM:-}" ]] && args+=(-e "TERM=$TERM")
   [[ -n "${CWD:-}" ]]  && args+=(-w "$CWD")
-  args+=("$CONTAINER" "$@")
+  # Run via zsh -c so the container's $HOME/.zshenv is sourced and PATH picks
+  # up ~/.local/bin / ~/.pixi/bin / ~/.bun/bin etc. Image-level ENV PATH
+  # differs across container Dockerfiles (e.g. fluid-sbi only has /opt/venv/bin
+  # in PATH whereas syntopic-dev includes ~/.local/bin) — relying on zsh init
+  # keeps the wrapper image-agnostic.
+  # `printf %q` requotes argv safely so zsh re-parses to the same words.
+  cmd_str=$(printf '%q ' "$@")
+  args+=("$CONTAINER" zsh -c "exec $cmd_str")
   exec docker "${args[@]}"
 fi
 
