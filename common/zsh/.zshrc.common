@@ -414,13 +414,35 @@ rcon() {
       exec tmux attach-session -t '$sess'
     "
   else
-    # Host-only: attach or create a plain host tmux session (no docker)
+    # Host-only: attach or create a plain host tmux session (no docker).
+    # If the session name matches a directory under $HOME on the remote
+    # host, use it as -c so the session opens at the project root. This
+    # makes `rcon ailab syntopic` land in ~/syntopic without manual cd.
     local sess="${session:-main}"
     ssh -t "$host" "
-      export PATH=\"\$HOME/.local/bin:\$PATH\"
+      export PATH=\"\$HOME/.pixi/bin:\$HOME/.local/bin:\$PATH\"
       export TERMINFO_DIRS=\"\$HOME/.terminfo:/usr/share/terminfo:/lib/terminfo\"
       export CLAUDE_CONTEXT='$context'
-      exec tmux new-session -A -s '$sess'
+      export RCON_HOST_MACHINE='$host'
+      # tmux.conf sets default-command to \${SHELL}, but ssh-t exec's in bash
+      # (login shell from /etc/passwd in no-sudo envs). Force SHELL to zsh
+      # if available so new panes open zsh, not bash.
+      zsh_bin=\$(command -v zsh 2>/dev/null) && export SHELL=\"\$zsh_bin\"
+      cwd=\"\$HOME\"
+      [ -d \"\$HOME/$sess\" ] && cwd=\"\$HOME/$sess\"
+      tmux new-session -A -d -s '$sess' -c \"\$cwd\" 2>/dev/null || true
+      # Fix already-running server: tmux config evaluated default-command /
+      # default-shell at server startup with whatever SHELL was then. Override
+      # both so:
+      #   - new panes (default-command) run zsh
+      #   - display-popup -E commands (default-shell) run via zsh, which
+      #     sources .zshenv and gets PATH right (lazygit / gh / keifu etc.)
+      if [ -n \"\$zsh_bin\" ]; then
+        tmux set-option -g default-command \"\$zsh_bin\" 2>/dev/null
+        tmux set-option -g default-shell   \"\$zsh_bin\" 2>/dev/null
+      fi
+      tmux set-option -t '$sess' '@rcon-host' '$host'
+      exec tmux attach-session -t '$sess'
     "
   fi
 }
