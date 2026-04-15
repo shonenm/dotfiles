@@ -502,7 +502,33 @@ _run_init() {
   _log "init completed: $worker_count workers"
 }
 
+_ensure_host_tmux_or_die() {
+  # ralph-crew creates long-lived tmux sessions that opensessions observes
+  # and that survive across reboots. These MUST live on the canonical host
+  # tmux (typically ailab) — NOT on a container-local tmux server, which
+  # would be invisible to opensessions and die with the container.
+  #
+  # If we detect we're inside a container, refuse with an actionable error
+  # unless the user explicitly opts in via RCON_ALLOW_CONTAINER_TMUX=1.
+  [[ -f /.dockerenv ]] || return 0
+  [[ "${RCON_ALLOW_CONTAINER_TMUX:-0}" == "1" ]] && return 0
+
+  local host="${RCON_HOST_MACHINE:-<host>}"
+  _error "ralph-crew must be invoked from the canonical host tmux, not inside a container."
+  cat >&2 <<EOF
+
+  Run this on ${host} instead:
+    ssh ${host} 'env RCON_CONTAINER=<container> ralph-crew $_orig_subcmd <args>'
+
+  Or override (not recommended — session will be invisible to opensessions):
+    RCON_ALLOW_CONTAINER_TMUX=1 ralph-crew $_orig_subcmd <args>
+EOF
+  return 2
+}
+
 cmd_init() {
+  local _orig_subcmd="init"
+  _ensure_host_tmux_or_die || return $?
   local config_file="$DEFAULT_CONFIG"
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -819,6 +845,8 @@ cmd_teardown() {
 # previous launchd/cron integration so ralph-crew runs portably without any
 # OS-level scheduler dependency.
 cmd_daemon() {
+  local _orig_subcmd="daemon"
+  _ensure_host_tmux_or_die || return $?
   local config_file="$DEFAULT_CONFIG"
   local interval_seconds=60
   while [[ $# -gt 0 ]]; do
