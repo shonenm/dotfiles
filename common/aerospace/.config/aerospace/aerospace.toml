@@ -167,7 +167,7 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     # alt-w = 'workspace W'
     # alt-x = 'workspace X'
     # alt-y = 'workspace Y'
-    # alt-z = 'workspace Z'
+    alt-z = 'workspace Z'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
     alt-shift-1 = 'move-node-to-workspace 1'
@@ -200,7 +200,7 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     # alt-shift-w = 'move-node-to-workspace W'
     # alt-shift-x = 'move-node-to-workspace X'
     # alt-shift-y = 'move-node-to-workspace Y'
-    # alt-shift-z = 'move-node-to-workspace Z'
+    alt-shift-z = 'move-node-to-workspace Z'
 
     alt-shift-f = 'fullscreen'
 
@@ -275,6 +275,10 @@ run = 'move-node-to-workspace C'
 [[on-window-detected]]
 if.app-id = 'com.todoist.mac.Todoist'
 run = 'move-node-to-workspace T'
+
+[[on-window-detected]]
+if.app-id = 'us.zoom.xos'
+run = 'move-node-to-workspace Z'
 
 # VS Code プロジェクトごとのワークスペース配置
 # 注意: より具体的なパターンを先に記述（syntopic-dev-review → syntopic-dev の順）
