@@ -1,2 +1,0 @@
-# ralph-crew:__PROJECT_NAME__
-__CRON_SCHEDULE__ PATH=/usr/local/bin:/usr/bin:/bin:__HOME__/.local/bin __HOME__/dotfiles/scripts/ralph-crew dispatch --config __PROJECT__/.claude/crew.json >> /tmp/ralph-crew/__PROJECT_NAME__/logs/cron.out 2>> /tmp/ralph-crew/__PROJECT_NAME__/logs/cron.err

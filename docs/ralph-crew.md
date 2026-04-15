@@ -5,10 +5,10 @@
 ## Architecture
 
 ```
-launchd (定期発火, e.g. 15分間隔)
+ralph-crew daemon (tmux window "scheduler" に常駐, --interval 秒ごと発火)
   |
   v
-ralph-crew dispatch (flock で排他制御)
+ralph-crew dispatch (flock で排他制御、子プロセス)
   |
   +-- crew.json を読み取り
   +-- 各タスクの schedule 評価 (interval 経過判定, epoch 比較)
@@ -22,12 +22,13 @@ ralph-crew dispatch (flock で排他制御)
   +-- 実行時刻を記録
   v
 tmux session: "ralph-crew"
-  +-- window "crew/<worker-id>" : claude TUI (persistent, Notification hook で状態通知)
+  +-- window "scheduler"         : ralph-crew daemon ループ
+  +-- window "crew/<worker-id>"  : claude TUI (persistent, Notification hook で状態通知)
 ```
 
 リーダー (Claude インスタンス) は置かない:
 - タスクルーティングは設定ファイルで静的に定義
-- シェルスクリプトのディスパッチャーなら launchd 統合が簡潔でデバッグも容易
+- シェルスクリプトのディスパッチャーと daemon ループで自己完結 (外部 scheduler 不要) なのでデバッグも容易
 - KB アクセスはワーカー自身が MCP 経由で実行
 
 ## Usage
@@ -53,20 +54,22 @@ ralph-crew status
 
 設定ファイルはプロジェクトの `.claude/crew.json` に配置する。プロジェクトディレクトリは config ファイルのパスから自動導出される。`tmux_session` と `state_dir` を省略するとプロジェクト名ベースのデフォルト値が使われる。
 
-### launchd で定期実行
+### daemon で定期実行
+
+`ralph-crew daemon` は `dispatch` を指定秒ごとに呼び続ける長寿命ループ。`ralph-crew init` で立てた tmux session (`ralph-crew`) 内の専用 window に常駐させる。
 
 ```bash
-# __INTERVAL__ は秒数 (例: 900 = 15分, 1800 = 30分, 3600 = 1時間)
-# __PROJECT__ はプロジェクトの絶対パス
-cp ~/dotfiles/templates/com.user.ralph-crew.plist ~/Library/LaunchAgents/
-sed -i '' "s|__HOME__|$HOME|g; s|__PROJECT__|/path/to/project|g; s|__INTERVAL__|900|g" ~/Library/LaunchAgents/com.user.ralph-crew.plist
-
-launchctl load ~/Library/LaunchAgents/com.user.ralph-crew.plist
+# 事前: ralph-crew init --config <path> でセッションと worker を立てる
+tmux new-window -d -t ralph-crew -n scheduler \
+  "exec ralph-crew daemon --interval 60 --config /path/to/project/.claude/crew.json"
 ```
 
-`__INTERVAL__` を crew.json の最短 `schedule.minutes` に合わせて設定すること。dispatch 側でタスクごとの間隔を個別に評価するため、launchd の発火間隔は最短タスク以下であれば良い。
+- `--interval` は daemon の tick (秒)。crew.json の最短 `schedule.minutes` より十分短く設定する (60 秒推奨)。
+- tick ごとに `dispatch` を子プロセスで呼び、`dispatch` 内の `_should_dispatch` が per-task interval を評価するため、daemon は「起動しておくだけ」でよい。
+- `daemon` は `${STATE_DIR}/daemon.pid` の pidfile で多重起動を拒否する。`Ctrl-C` / `kill -TERM` で綺麗に停止し、pidfile も自動削除される。
+- tmux-continuum (`@continuum-restore on`) が tmux server 再起動時に session layout を復元する。process までは復元されないため、コマンド自体も復元したい場合は `@resurrect-processes` に `'~ralph-crew daemon'` を追加する。
 
-`dispatch` は tmux セッションが存在しない場合 (再起動後・初回インストール・teardown 後) に自動で `init` 相当の処理を実行するため、launchd plist は `dispatch` のみをスケジュールすれば復旧を含めて無人運用可能。別途 `RunAtLoad` init plist を用意する必要はない。
+`dispatch` は tmux セッションが存在しない場合 (再起動後・初回インストール・teardown 後) に自動で `init` 相当の処理を実行するため、daemon が動いている限りは無人運用可能。
 
 ### スキル経由
 
@@ -130,7 +133,7 @@ Notification hook ベースの状態検出:
 - 既に accepted 済みであれば no-op
 - `~/.claude.json` が存在しない場合も no-op (Claude 起動時に自動生成されるため)
 
-これにより新規プロジェクト (launchd 初回起動時) でも対話ブロックなしで worker 起動が完了する。
+これにより新規プロジェクト (daemon 初回起動時) でも対話ブロックなしで worker 起動が完了する。
 
 ## Auto-restart
 
@@ -149,7 +152,8 @@ Notification hook ベースの状態検出:
   fix/               # fix モードの一時 worktree ({task_id}-{timestamp})
   prompts/           # タスクプロンプト一時ファイル (24h TTL で自動削除)
   system-prompts/    # ワーカー system_prompt ファイル
-  logs/              # dispatch.log, launchd.out, launchd.err
+  logs/              # dispatch.log
+  daemon.pid         # daemon 多重起動ガード用 pidfile
   dispatch.lock      # flock 用ロックファイル
 ```
 
@@ -198,7 +202,6 @@ dotfiles/
 |   +-- ralph-crew           # Crew management script
 +-- templates/
 |   +-- crew.example.json       # Config template
-|   +-- com.user.ralph-crew.plist  # launchd plist template
 +-- common/claude/.claude/
 |   +-- skills/
 |       +-- ralph-crew/SKILL.md # /ralph-crew skill
@@ -208,10 +211,11 @@ dotfiles/
 
 ## Design Decisions
 
-- リーダーレス: LLM リーダーを置かず、シェルスクリプト + launchd で静的ルーティング
+- リーダーレス: LLM リーダーを置かず、シェルスクリプト + daemon ループで静的ルーティング
 - Notification hook: capture-pane の `❯` 検出より信頼性が高い状態検出
 - ファイル経由タスク注入: tmux send-keys のエスケープ問題を完全に回避
-- flock 排他制御: launchd の重複発火を防止
+- flock 排他制御: daemon tick と手動 dispatch が重複した場合の排他を保証
+- 外部 scheduler 非依存: daemon を tmux window に常駐させ、tmux-continuum でセッションを復元。launchd/cron/systemd いずれも不要で Mac/Linux/container で同じ構成で動く
 - sliding window 再起動制限: 単純なカウンターではなく時間ベースで判定
 - `max_budget_usd` 非対応: persistent TUI では累積消費で予算到達時にフリーズするため
 - fix モードで worktree 分離: チェックは project_dir (read-only)、修正は一時 worktree で実施。ワーカー間の競合を防止
