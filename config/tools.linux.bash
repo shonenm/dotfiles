@@ -142,45 +142,62 @@ TOOL_tokei_method="cargo"
 TOOL_tokei_cargo_crate="tokei"
 TOOL_tokei_depends_on="rust"
 
+# tealdeer: single binary, renamed to `tldr` at $install_dir via check_cmd
 TOOL_tealdeer_check_cmd="tldr"
-TOOL_tealdeer_method="cargo"
-TOOL_tealdeer_cargo_crate="tealdeer"
-TOOL_tealdeer_depends_on="rust"
+TOOL_tealdeer_method="github_release_binary"
+TOOL_tealdeer_github_repo="tealdeer-rs/tealdeer"
+TOOL_tealdeer_binary_map='x86_64:tealdeer-linux-x86_64-musl aarch64:tealdeer-linux-aarch64-musl'
+TOOL_tealdeer_install_dir="$HOME/.local/bin"
 
 TOOL_procs_check_cmd="procs"
 TOOL_procs_method="cargo"
 TOOL_procs_cargo_crate="procs"
 TOOL_procs_depends_on="rust"
 
+# sd: tarball, binary under sd-VERSION-ARCH-unknown-linux-musl/sd
 TOOL_sd_check_cmd="sd"
-TOOL_sd_method="cargo"
-TOOL_sd_cargo_crate="sd"
-TOOL_sd_depends_on="rust"
+TOOL_sd_method="github_release"
+TOOL_sd_github_repo="chmln/sd"
+TOOL_sd_archive_pattern='sd-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
+TOOL_sd_binary_path='sd-${VERSION}-${ARCH}-unknown-linux-musl/sd'
+TOOL_sd_arch_map='x86_64:x86_64 aarch64:aarch64'
 
+# dust: tarball, binary under dust-VERSION-ARCH-unknown-linux-musl/dust
 TOOL_dust_check_cmd="dust"
-TOOL_dust_method="cargo"
-TOOL_dust_cargo_crate="du-dust"
-TOOL_dust_depends_on="rust"
+TOOL_dust_method="github_release"
+TOOL_dust_github_repo="bootandy/dust"
+TOOL_dust_archive_pattern='dust-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
+TOOL_dust_binary_path='dust-${VERSION}-${ARCH}-unknown-linux-musl/dust'
+TOOL_dust_arch_map='x86_64:x86_64 aarch64:aarch64'
 
+# bottom (btm): tarball is flat, binary name is `btm`
 TOOL_bottom_check_cmd="btm"
-TOOL_bottom_method="cargo"
-TOOL_bottom_cargo_crate="bottom"
-TOOL_bottom_depends_on="rust"
+TOOL_bottom_method="github_release"
+TOOL_bottom_github_repo="ClementTsang/bottom"
+TOOL_bottom_archive_pattern='bottom_${ARCH}-unknown-linux-musl.tar.gz'
+TOOL_bottom_binary_path='btm'
+TOOL_bottom_arch_map='x86_64:x86_64 aarch64:aarch64'
 
+# rip2 (rip): tarball is flat, binary name is `rip`
 TOOL_rip2_check_cmd="rip"
-TOOL_rip2_method="cargo"
-TOOL_rip2_cargo_crate="rm-improved"
-TOOL_rip2_depends_on="rust"
+TOOL_rip2_method="github_release"
+TOOL_rip2_github_repo="MilesCranmer/rip2"
+TOOL_rip2_archive_pattern='rip-Linux-${ARCH}-musl.tar.gz'
+TOOL_rip2_binary_path='rip'
+TOOL_rip2_arch_map='x86_64:x86_64 aarch64:aarch64'
 
 TOOL_quay_check_cmd="quay"
 TOOL_quay_method="cargo"
 TOOL_quay_cargo_crate="quay-tui"
 TOOL_quay_depends_on="rust"
 
+# lsd: tarball, binary under lsd-VERSION-ARCH-unknown-linux-musl/lsd
 TOOL_lsd_check_cmd="lsd"
-TOOL_lsd_method="cargo"
-TOOL_lsd_cargo_crate="lsd"
-TOOL_lsd_depends_on="rust"
+TOOL_lsd_method="github_release"
+TOOL_lsd_github_repo="lsd-rs/lsd"
+TOOL_lsd_archive_pattern='lsd-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
+TOOL_lsd_binary_path='lsd-${VERSION}-${ARCH}-unknown-linux-musl/lsd'
+TOOL_lsd_arch_map='x86_64:x86_64 aarch64:aarch64'
 
 TOOL_gitabsorb_check_cmd="git-absorb"
 TOOL_gitabsorb_method="cargo"
