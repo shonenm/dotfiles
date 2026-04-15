@@ -37,5 +37,9 @@ if [[ -n "${CONTAINER:-}" ]]; then
   exec docker "${args[@]}"
 fi
 
-# Fallback: run on host
-exec "$@"
+# Fallback: run on host. Use `zsh -ic` (interactive) so .zshrc init runs —
+# specifically `mise activate` which is what makes mise-managed tools (gh,
+# node, uv, ...) discoverable in PATH. Plain `exec "$@"` would only see
+# tools in static PATH (~/.local/bin via .zshenv) and miss everything else.
+host_cmd_str=$(printf '%q ' "$@")
+exec zsh -ic "exec $host_cmd_str"
