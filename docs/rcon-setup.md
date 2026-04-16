@@ -240,13 +240,13 @@ tmux 制限のため `rcon` 内で自動的に `-` に sanitize される (`synt
 
 ## 自動化
 
-`/_setup-rcon-target` skill を使うと target 追加 + 接続検証 + docker mount スニペット生成を半自動化できる。
+`/d-setup-rcon-target` skill を使うと target 追加 + 接続検証 + docker mount スニペット生成を半自動化できる。
 
 ```
-/_setup-rcon-target chronos:new-container
+/d-setup-rcon-target chronos:new-container
 ```
 
-詳細はスキル定義 (`common/claude/.claude/skills/_setup-rcon-target/SKILL.md`) 参照。
+詳細はスキル定義 (`common/claude/.claude/skills/d-setup-rcon-target/SKILL.md`) 参照。
 
 ## 関連ドキュメント
 
