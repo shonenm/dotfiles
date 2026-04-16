@@ -217,6 +217,42 @@ stow_package() {
   return 0
 }
 
+# Clean up orphaned (non-symlink) files left behind in stow-managed directories.
+# stow --adopt only handles files present in the stow package. Files that exist
+# only in the target directory are ignored, causing stale configs to persist.
+# Usage: cleanup_stow_orphans <pkg_dir> <relative_subdir>
+cleanup_stow_orphans() {
+  local pkg_dir="$1"     # e.g. /path/to/dotfiles/common
+  local subdir="$2"      # e.g. nvim/.config/nvim/lua/plugins
+  local pkg_name="${subdir%%/*}"  # e.g. nvim
+  local target_dir="$HOME/${subdir#*/}"  # e.g. ~/.config/nvim/lua/plugins
+  local source_dir="$pkg_dir/$subdir"
+
+  [[ -d "$target_dir" ]] || return 0
+  [[ -d "$source_dir" ]] || return 0
+
+  local orphans_found=false
+  for file in "$target_dir"/*.lua; do
+    [[ -e "$file" ]] || continue
+    # Skip symlinks (managed by stow) and backup files
+    [[ -L "$file" ]] && continue
+    [[ "$file" == *.dotfiles-bak ]] && continue
+
+    local basename
+    basename="$(basename "$file")"
+
+    # Only remove if there's no corresponding file in the stow source
+    if [[ ! -e "$source_dir/$basename" ]]; then
+      if ! $orphans_found; then
+        log_info "  Cleaning up orphaned files in ~/${subdir#*/}/"
+        orphans_found=true
+      fi
+      mv "$file" "$file.dotfiles-bak"
+      log_info "    Backed up orphan: $basename → $basename.dotfiles-bak"
+    fi
+  done
+}
+
 # Verify critical symlinks were created
 verify_stow() {
   local failed=()
@@ -333,6 +369,13 @@ link_dotfiles() {
   log_info "Restoring dotfiles from git..."
   git -C "$DOTFILES_DIR" checkout -- common/ 2>/dev/null || true
   [[ -d "$DOTFILES_DIR/$os" ]] && git -C "$DOTFILES_DIR" checkout -- "$os/" 2>/dev/null || true
+
+  # Clean up orphaned files in stow-managed directories
+  # stow --adopt only handles files that exist in both source and target.
+  # Files that exist only in the target (e.g. pre-stow nvim plugin configs) are left behind
+  # and can interfere with the dotfiles config (LazyVim loads all lua/plugins/*.lua files).
+  cleanup_stow_orphans "$DOTFILES_DIR/common" "nvim/.config/nvim/lua/plugins"
+  cleanup_stow_orphans "$DOTFILES_DIR/common" "nvim/.config/nvim/lua/config"
 
   # Create empty .gitconfig.local if not exists (for machine-specific git user settings)
   if [[ ! -f "$HOME/.gitconfig.local" ]]; then
