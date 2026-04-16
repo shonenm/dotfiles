@@ -1,6 +1,6 @@
 # Ralph Schedule - 予約投稿型 Claude TUI 実行
 
-指定時刻に Claude TUI を自動起動し、`/_ralph` で自律実行させるワンショットスケジューラー。セッション切れ時でもシェルスクリプトのみで予約の登録・実行が完結する。
+指定時刻に Claude TUI を自動起動し、`/d-ralph` で自律実行させるワンショットスケジューラー。セッション切れ時でもシェルスクリプトのみで予約の登録・実行が完結する。
 
 `ralph-crew` (常駐型定期ディスパッチ) とは異なり、一回限りのスケジュール実行に特化。
 
@@ -28,10 +28,10 @@ ralph-schedule-exec.sh <job-id>
   +-- ralph_setup_worker_settings (パーミッション設定)
   +-- claude --model <model> 起動
   +-- _wait_for_tui (ポーリングで TUI 準備待ち)
-  +-- /_ralph 'Read <prompt_file>...' --skip-plan 注入
+  +-- /d-ralph 'Read <prompt_file>...' --skip-plan 注入
   +-- status -> done
   v
-Claude TUI が /_ralph ループで自律実行
+Claude TUI が /d-ralph ループで自律実行
 ```
 
 ## Usage

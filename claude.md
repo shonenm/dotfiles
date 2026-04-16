@@ -94,4 +94,4 @@ OS固有の設定は`mac/<tool>/`または`linux/<tool>/`に配置。
 
 ## Git Merge/Rebase コンフリクト解決
 
-merge/rebase のコンフリクト解決は `/_conflict-resolve` スキルを使用すること。
+merge/rebase のコンフリクト解決は `/d-conflict-resolve` スキルを使用すること。

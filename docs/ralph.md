@@ -6,10 +6,10 @@ An autonomous development loop built entirely with Claude Code's official primit
 
 Ralph v2 splits the workflow into two independent commands:
 
-- `/_ralph-plan` -- Interactive planning session: requirements, acceptance criteria, design, task decomposition. Outputs a state file.
-- `/_ralph` -- Autonomous implementation loop: reads the state file, executes tasks, verifies ACs. Zero user interaction.
-- `/_ralph-cancel` -- Emergency stop with state archiving.
-- `/_ralph-resume` -- Resume from archive: load completed state, add new tasks, regenerate state file.
+- `/d-ralph-plan` -- Interactive planning session: requirements, acceptance criteria, design, task decomposition. Outputs a state file.
+- `/d-ralph` -- Autonomous implementation loop: reads the state file, executes tasks, verifies ACs. Zero user interaction.
+- `/d-ralph-cancel` -- Emergency stop with state archiving.
+- `/d-ralph-resume` -- Resume from archive: load completed state, add new tasks, regenerate state file.
 
 ### Key Components
 
@@ -21,7 +21,7 @@ Ralph v2 splits the workflow into two independent commands:
 ## Architecture
 
 ```
-/_ralph-plan "Add auth"          /_ralph                      /_ralph "Fix bug"
+/d-ralph-plan "Add auth"          /d-ralph                      /d-ralph "Fix bug"
   |                               |                           |
   v                               v                           v
 [Interactive dialog]            [Read active/latest]        [Skip-plan mode]
@@ -34,7 +34,7 @@ Phase 2: Design + tasks       [State file exists?]            |
 [Write latest_state]             v
   |                           [Implementation loop]
   v                             |
-"Run /_ralph to start"         [PreToolUse] Block AskUserQuestion/EnterPlanMode
+"Run /d-ralph to start"         [PreToolUse] Block AskUserQuestion/EnterPlanMode
                                 |
                               [PostToolUse] tsc, eslint, prettier, test, ruff
                                 |
@@ -45,7 +45,7 @@ Phase 2: Design + tasks       [State file exists?]            |
                               RALPH_COMPLETE + archive state file
                                 |
                                 v
-                     /_ralph-resume "Add feature"
+                     /d-ralph-resume "Add feature"
                                 |
                                 v
                      [Load latest archive]
@@ -54,7 +54,7 @@ Phase 2: Design + tasks       [State file exists?]            |
                      [Generate new state file with done tasks preserved]
                                 |
                                 v
-                     "Run /_ralph to start"
+                     "Run /d-ralph to start"
 ```
 
 ## Usage
@@ -62,17 +62,17 @@ Phase 2: Design + tasks       [State file exists?]            |
 ### Plan + Execute (Recommended)
 
 ```
-/_ralph-plan "Add user authentication with OAuth"
+/d-ralph-plan "Add user authentication with OAuth"
 # ... interactive dialog to define ACs and tasks ...
-/_ralph
+/d-ralph
 # ... autonomous loop ...
 ```
 
 ### Skip-plan (Quick Tasks)
 
 ```
-/_ralph "Fix the authentication bug in src/auth.ts"
-/_ralph "Add unit tests for the utils module" --max-iterations 10
+/d-ralph "Fix the authentication bug in src/auth.ts"
+/d-ralph "Add unit tests for the utils module" --max-iterations 10
 ```
 
 | Argument | Default | Description |
@@ -83,9 +83,9 @@ Phase 2: Design + tasks       [State file exists?]            |
 ### Resume (Continue After Completion)
 
 ```
-/_ralph-resume                              # Interactive: review archive, define new tasks
-/_ralph-resume "Add error handling"         # Auto-generate tasks from prompt
-/_ralph-resume "Improve tests" --max-iterations 10
+/d-ralph-resume                              # Interactive: review archive, define new tasks
+/d-ralph-resume "Add error handling"         # Auto-generate tasks from prompt
+/d-ralph-resume "Improve tests" --max-iterations 10
 ```
 
 Loads the latest archive, preserves completed tasks, adds new tasks, and generates a new state file.
@@ -93,7 +93,7 @@ Loads the latest archive, preserves completed tasks, adds new tasks, and generat
 ### Cancel Loop
 
 ```
-/_ralph-cancel
+/d-ralph-cancel
 ```
 
 Archives state file to `/tmp/ralph/state/archive_<timestamp>.json` before cleanup.
@@ -101,18 +101,18 @@ Archives state file to `/tmp/ralph/state/archive_<timestamp>.json` before cleanu
 ### Parallel Execution
 
 ```
-/_ralph-parallel                                    # Use state file task_graph
-/_ralph-parallel docs/prd.md                        # From PRD file
-/_ralph-parallel "Add login page, Add signup page"  # Comma-separated
+/d-ralph-parallel                                    # Use state file task_graph
+/d-ralph-parallel docs/prd.md                        # From PRD file
+/d-ralph-parallel "Add login page, Add signup page"  # Comma-separated
 ```
 
-Orchestrates up to 4 concurrent workers, each in a separate git worktree + tmux window. Workers are launched via `/_ralph` skill (Stop hook autonomous loop + backpressure hook quality gate). The orchestrator handles implementation only: init → gen-prompt → launch → wait → results summary → stop. Merge, cleanup, and PR creation are delegated to separate skills invoked by the user after review.
+Orchestrates up to 4 concurrent workers, each in a separate git worktree + tmux window. Workers are launched via `/d-ralph` skill (Stop hook autonomous loop + backpressure hook quality gate). The orchestrator handles implementation only: init → gen-prompt → launch → wait → results summary → stop. Merge, cleanup, and PR creation are delegated to separate skills invoked by the user after review.
 
 ```
-/_ralph-collect send T-1 "PRを作成して"             # Send instruction to worker
-/_ralph-collect save-all                            # Save all worker changes
-/_ralph-cleanup                                     # Remove worktrees + branches
-/_ralph-cleanup --keep-results                      # Keep results directory
+/d-ralph-collect send T-1 "PRを作成して"             # Send instruction to worker
+/d-ralph-collect save-all                            # Save all worker changes
+/d-ralph-cleanup                                     # Remove worktrees + branches
+/d-ralph-cleanup --keep-results                      # Keep results directory
 ```
 
 ## State File Schema
@@ -140,8 +140,8 @@ Orchestrates up to 4 concurrent workers, each in a separate git worktree + tmux 
 ```
 
 Discovery:
-- `/tmp/ralph/state/latest` -- Cross-session discovery (written by `/_ralph-plan` and `/_ralph-resume`, consumed by `/_ralph`)
-- `/tmp/ralph/state/active_<session_hash>` -- Session-scoped active marker (used by Stop hook and `/_ralph-cancel`)
+- `/tmp/ralph/state/latest` -- Cross-session discovery (written by `/d-ralph-plan` and `/d-ralph-resume`, consumed by `/d-ralph`)
+- `/tmp/ralph/state/active_<session_hash>` -- Session-scoped active marker (used by Stop hook and `/d-ralph-cancel`)
 
 ## How It Works
 
@@ -162,7 +162,7 @@ Blocks interactive tools that would break the autonomous loop:
 |---------|--------|--------|
 | `AskUserQuestion\|EnterPlanMode` | `exit 2` (deny) | Prevents questions mid-loop |
 
-`/_ralph-plan` uses `allowed-tools` to exclude Edit/MultiEdit, preventing code modifications during the planning session. Write is permitted only for Phase 3 state file generation (avoids shell escaping issues with jq).
+`/d-ralph-plan` uses `allowed-tools` to exclude Edit/MultiEdit, preventing code modifications during the planning session. Write is permitted only for Phase 3 state file generation (avoids shell escaping issues with jq).
 
 ### Stop Hook (`ralph-stop-hook.sh`)
 
@@ -193,7 +193,7 @@ Errors returned as `additionalContext`. eslint/prettier auto-fix before reportin
 
 ### Worker Agent (`ralph-worker`)
 
-Defined with `isolation: worktree` for use as Task() subagent in sequential `/_ralph` runs. Structured reporting format:
+Defined with `isolation: worktree` for use as Task() subagent in sequential `/d-ralph` runs. Structured reporting format:
 
 ```
 Status: DONE / PARTIAL / BLOCKED
@@ -205,37 +205,37 @@ Notes: ...
 
 ### Parallel Worker Architecture
 
-`/_ralph-parallel` uses a 3-skill phased model with human review between phases:
+`/d-ralph-parallel` uses a 3-skill phased model with human review between phases:
 
 ```
-Phase 1: /_ralph-parallel (implementation)
+Phase 1: /d-ralph-parallel (implementation)
   |
   +-- ralph-orchestrate init --force
   +-- ralph-orchestrate gen-prompt-batch task-spec.json
   +-- ralph-orchestrate launch T-1 ... --model sonnet
   |     +-- wt_create ralph/T-1      # git worktree + tmux window via wt-lib.sh
   |     +-- split-window -h          # Left: nvim (review), Right: claude TUI
-  |     +-- tmux send-keys "/_ralph 'Read prompt.md ...' --skip-plan"
+  |     +-- tmux send-keys "/d-ralph 'Read prompt.md ...' --skip-plan"
   +-- ralph-orchestrate status --json --wait 20  (loop until all_done)
   +-- ralph-orchestrate results   # Output summary, STOP
   |
   [Human reviews diffs in tmux windows]
   |
-Phase 2: /_ralph-collect (post-review)
+Phase 2: /d-ralph-collect (post-review)
   +-- ralph-orchestrate send T-1 "PRを作成して"
   +-- ralph-orchestrate save-all
   |
-Phase 3: /_ralph-cleanup
+Phase 3: /d-ralph-cleanup
   +-- ralph-orchestrate cleanup-all [--keep-results]
 ```
 
 Key design choices:
-- Workers launched via `/_ralph` skill (Stop hook loop + backpressure hook)
+- Workers launched via `/d-ralph` skill (Stop hook loop + backpressure hook)
 - No `--dangerously-skip-permissions` (avoids initial confirmation prompt)
 - TUI startup detected via `tmux capture-pane` loop (not `sleep`)
 - Completion detected via `RALPH_COMPLETE` in `tmux capture-pane -S -` (full history)
 - 3-state worker status: `done` / `dead` (pane gone, no result) / `running`
-- No auto-merge. User decides via `/_ralph-collect send` or manual merge
+- No auto-merge. User decides via `/d-ralph-collect send` or manual merge
 - Checkpoint-based resumable orchestration (`checkpoint-read` / `checkpoint`)
 
 ### Reviewer Agent (`ralph-reviewer`)
@@ -252,23 +252,23 @@ dotfiles/
 |   |   +-- ralph-backpressure.sh      # PostToolUse hook (tsc/eslint/prettier/test/ruff)
 |   |   +-- ralph-session-context.sh   # SessionStart hook (project context)
 |   +-- skills/
-|   |   +-- _ralph/SKILL.md             # /_ralph autonomous loop
-|   |   +-- _ralph-plan/SKILL.md        # /_ralph-plan interactive planning
-|   |   +-- _ralph-cancel/SKILL.md      # /_ralph-cancel with archive
-|   |   +-- _ralph-resume/SKILL.md      # /_ralph-resume from archive
-|   |   +-- _ralph-parallel/SKILL.md    # /_ralph-parallel orchestrator (implementation only)
-|   |   +-- _ralph-collect/SKILL.md     # /_ralph-collect post-review operations
-|   |   +-- _ralph-cleanup/SKILL.md     # /_ralph-cleanup worktree/branch removal
+|   |   +-- d-ralph/SKILL.md             # /d-ralph autonomous loop
+|   |   +-- d-ralph-plan/SKILL.md        # /d-ralph-plan interactive planning
+|   |   +-- d-ralph-cancel/SKILL.md      # /d-ralph-cancel with archive
+|   |   +-- d-ralph-resume/SKILL.md      # /d-ralph-resume from archive
+|   |   +-- d-ralph-parallel/SKILL.md    # /d-ralph-parallel orchestrator (implementation only)
+|   |   +-- d-ralph-collect/SKILL.md     # /d-ralph-collect post-review operations
+|   |   +-- d-ralph-cleanup/SKILL.md     # /d-ralph-cleanup worktree/branch removal
 |   +-- agents/
 |       +-- ralph-worker/ralph-worker.md    # Worktree-isolated worker (Task subagent)
 |       +-- ralph-reviewer/ralph-reviewer.md # Read-only code reviewer (sonnet)
 +-- templates/
 |   +-- claude-skills/
-|   |   +-- _ralph/SKILL.md
-|   |   +-- _ralph-plan/SKILL.md
-|   |   +-- _ralph-cancel/SKILL.md
-|   |   +-- _ralph-resume/SKILL.md
-|   |   +-- _ralph-parallel/SKILL.md
+|   |   +-- d-ralph/SKILL.md
+|   |   +-- d-ralph-plan/SKILL.md
+|   |   +-- d-ralph-cancel/SKILL.md
+|   |   +-- d-ralph-resume/SKILL.md
+|   |   +-- d-ralph-parallel/SKILL.md
 |   +-- claude-agents/
 |       +-- ralph-worker/ralph-worker.md
 |   +-- com.user.ralph-schedule.plist  # launchd plist for scheduled execution
@@ -298,8 +298,8 @@ dotfiles/
 
 ## Design Decisions
 
-- Plan/execute split: `/_ralph-plan` is interactive, `/_ralph` is autonomous. Completely independent commands
-- Skip-plan mode: `/_ralph "task"` auto-generates minimal state file for backward compatibility
+- Plan/execute split: `/d-ralph-plan` is interactive, `/d-ralph` is autonomous. Completely independent commands
+- Skip-plan mode: `/d-ralph "task"` auto-generates minimal state file for backward compatibility
 - Session-scoped manifest: `/tmp/ralph/state/active_<hash>` per session prevents cross-session interference. `/tmp/ralph/state/latest` for cross-session discovery (ralph-plan -> ralph handoff)
 - Phase-aware Stop hook: only blocks during `implementation`/`verification` phases
 - Stall detection via `stall_hashes` array in state file (replaces simple counter)
@@ -309,15 +309,15 @@ dotfiles/
 - Fail-open hooks: `jq` missing -> `exit 0` (don't break non-Ralph sessions)
 - Hooks in skill frontmatter: loaded globally (known constraint), session-scoped via `CLAUDE_SESSION_ID` in Stop hook
 - Zero interaction via PreToolUse hook: `AskUserQuestion`/`EnterPlanMode` denied at hook level
-- `/_ralph-plan` defense: `allowed-tools` (hide Edit/MultiEdit, Write は Phase 3 状態ファイル生成のみ許可) + prompt reinforcement. PreToolUse hook は skill frontmatter hooks がグローバルに読み込まれる制約により不採用
+- `/d-ralph-plan` defense: `allowed-tools` (hide Edit/MultiEdit, Write は Phase 3 状態ファイル生成のみ許可) + prompt reinforcement. PreToolUse hook は skill frontmatter hooks がグローバルに読み込まれる制約により不採用
 - Backpressure auto-fix: eslint/prettier/ruff fix before reporting remaining errors
-- Parallel execution max 4 workers: resource constraint. Workers launched via `/_ralph` skill in tmux panes for observability. No `--dangerously-skip-permissions` (avoids "Are you sure?" confirmation; Stop hook provides autonomous loop instead)
+- Parallel execution max 4 workers: resource constraint. Workers launched via `/d-ralph` skill in tmux panes for observability. No `--dangerously-skip-permissions` (avoids "Are you sure?" confirmation; Stop hook provides autonomous loop instead)
 - `wt-lib.sh` extracted from `wt` CLI: shared library for worktree+tmux management, used by both `wt` command and `ralph-orchestrate`
 - Parallel results via `/tmp/ralph/results/`: prevents orchestrator context bloat. Orchestrator reads 1-line summaries, not full worker output
 - Model mixing: orchestrator uses session model (Opus), workers and reviewer use sonnet
-- 3-skill phased parallel model: `/_ralph-parallel` (implementation) → human review → `/_ralph-collect` (save/send) → `/_ralph-cleanup`. Human review is mandatory between implementation and merge
-- No auto-merge in parallel mode: user sends PR instructions via `/_ralph-collect send` or merges manually
-- No auto-commit: ralph does not commit unless task_graph explicitly includes a commit task. _ralph-plan/_ralph-resume do not generate commit tasks unless the user explicitly requests it
+- 3-skill phased parallel model: `/d-ralph-parallel` (implementation) → human review → `/d-ralph-collect` (save/send) → `/d-ralph-cleanup`. Human review is mandatory between implementation and merge
+- No auto-merge in parallel mode: user sends PR instructions via `/d-ralph-collect send` or merges manually
+- No auto-commit: ralph does not commit unless task_graph explicitly includes a commit task. _ralph-plan/d-ralph-resume do not generate commit tasks unless the user explicitly requests it
 - SessionStart context hook: global in `settings.json`, provides project awareness to all sessions
 
 ## Hook Timeouts
@@ -332,13 +332,13 @@ dotfiles/
 ## Verification
 
 1. `stow -d common -t ~ claude` to create symlinks
-2. Planning: `/_ralph-plan "Create a hello world script"` -- verify 3-phase dialog and state file generation
-3. Plan execution: `/_ralph` -- verify state file loading and task-by-task execution
-4. Skip-plan: `/_ralph "Create a hello world script" --max-iterations 3` -- verify auto state file generation
+2. Planning: `/d-ralph-plan "Create a hello world script"` -- verify 3-phase dialog and state file generation
+3. Plan execution: `/d-ralph` -- verify state file loading and task-by-task execution
+4. Skip-plan: `/d-ralph "Create a hello world script" --max-iterations 3` -- verify auto state file generation
 5. Backpressure: Write TypeScript with type errors, verify PostToolUse returns errors + auto-fixes
 6. Stall detection: Intentionally stall, verify loop stops after 3 consecutive no-progress
-7. Cancel: `/_ralph-cancel` -- verify archive creation and cleanup
-8. Parallel: `/_ralph-parallel` -- verify up to 4 workers in separate worktrees
-9. Resume: `/_ralph-resume "Add error handling"` after completion -- verify archive loaded, done tasks preserved, new tasks added
+7. Cancel: `/d-ralph-cancel` -- verify archive creation and cleanup
+8. Parallel: `/d-ralph-parallel` -- verify up to 4 workers in separate worktrees
+9. Resume: `/d-ralph-resume "Add error handling"` after completion -- verify archive loaded, done tasks preserved, new tasks added
 10. Session context: New session, verify project info in additionalContext
 11. Linux: verify jq + git only dependencies
