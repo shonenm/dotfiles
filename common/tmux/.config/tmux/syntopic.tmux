@@ -4,28 +4,28 @@
 
 # Theme variables (consumed by tmux.conf and scripts at runtime)
 set -g @theme-name "syntopic"
-set -g @theme-bg-dark "#0F172A"
+set -g @theme-bg-dark "#0F1A15"
 set -g @theme-fg-subtle "#64748B"
-set -g @theme-border-inactive "#2d4a3e"
+set -g @theme-border-inactive "#1E2E28"
 set -g @theme-border-success "#22C55E"
 
 # Mode style (copy mode selection)
-set -g mode-style "fg=#0F172A,bg=#EF4444,bold"
+set -g mode-style "fg=#0F1A15,bg=#EF4444,bold"
 
 # Copy mode match highlighting
-set -g copy-mode-match-style "fg=#0F172A,bg=#22C55E"
-set -g copy-mode-current-match-style "fg=#0F172A,bg=#EF4444,bold"
-set -g copy-mode-mark-style "fg=#0F172A,bg=#A855F7"
+set -g copy-mode-match-style "fg=#0F1A15,bg=#22C55E"
+set -g copy-mode-current-match-style "fg=#0F1A15,bg=#EF4444,bold"
+set -g copy-mode-mark-style "fg=#0F1A15,bg=#A855F7"
 
 # Message style
 set -g message-style "fg=#047857,bg=default"
-set -g message-command-style "fg=#0F172A,bg=#A855F7,bold"
+set -g message-command-style "fg=#0F1A15,bg=#A855F7,bold"
 
 # --- Pane Border ---
 set -g pane-border-lines double
-set -g pane-border-style "fg=#2d4a3e,bg=default"
+set -g pane-border-style "fg=#1E2E28,bg=default"
 # off: subtle, reload: active, thumbs: info, copy: error, sync: success, prefix: warning, zoom: inactive, default: primary
-set -g pane-active-border-style '#{?#{==:#{client_key_table},off},fg=#64748B bg=#0F172A,#{?#{==:#{@reload_mode},1},fg=#F59E0B bg=#0F172A,#{?#{==:#{window_name},[thumbs]},fg=#3B82F6 bg=#0F172A,#{?pane_in_mode,fg=#EF4444 bg=#0F172A,#{?pane_synchronized,fg=#22C55E bg=#0F172A,#{?client_prefix,fg=#FACC15 bg=#0F172A,#{?window_zoomed_flag,fg=#A855F7 bg=#0F172A,fg=#047857 bg=#0F172A}}}}}}}'
+set -g pane-active-border-style '#{?#{==:#{client_key_table},off},fg=#64748B bg=#0F1A15,#{?#{==:#{@reload_mode},1},fg=#F59E0B bg=#0F1A15,#{?#{==:#{window_name},[thumbs]},fg=#3B82F6 bg=#0F1A15,#{?pane_in_mode,fg=#EF4444 bg=#0F1A15,#{?pane_synchronized,fg=#22C55E bg=#0F1A15,#{?client_prefix,fg=#FACC15 bg=#0F1A15,#{?window_zoomed_flag,fg=#A855F7 bg=#0F1A15,fg=#047857 bg=#0F1A15}}}}}}}'
 set -g pane-border-status top
 set -g pane-border-format " #P: #{?pane_title,#{pane_title},#{pane_current_command}} "
 set -g pane-border-indicators both
@@ -47,24 +47,24 @@ set -g status-left-style NONE
 set -g status-right-style NONE
 
 # Left: Session name
-set -g status-left "#[fg=#FFFFFF,bg=#047857,bold]  #S #[fg=#047857,bg=default] "
+set -g status-left "#[fg=#F8FAFC,bg=#047857,bold]  #S #[fg=#047857,bg=default] "
 
 # Right: Prefix押下時はヘルプ、それ以外は通常表示
 # 通常表示: [SYSSTAT] [MODE] [GIT] [DATE] [HOST]
 # Mode priority: OFF > RELOAD > THUMBS > COPY > SYNC > ZOOM > NORMAL
 # Note: カンマは #, でエスケープ（tmux conditional format内で必要）
-set -g status-right "#{?client_prefix,#[fg=#FACC15 bg=default]#[fg=#0F172A bg=#FACC15 bold]  #[fg=#FACC15 bg=default] -| split  g git  G gh  k keifu  j scratch  f sess  F proj  v copy  r reload  ? keys  Space menu,#[fg=#1e293b#,bg=default]#[fg=#a78bfa#,bg=#1e293b]#(~/dotfiles/scripts/tmux-claude-usage.sh)#[fg=#64748B#,bg=#1e293b]|#(~/dotfiles/scripts/tmux-cpu.sh)#[fg=#64748B#,bg=#1e293b]|#(~/dotfiles/scripts/tmux-ram.sh)#(~/dotfiles/scripts/tmux-gpu.sh)#(~/dotfiles/scripts/tmux-storage.sh)#[fg=#1e293b#,bg=default] #{?#{==:#{client_key_table},off},#[fg=#64748B]#[fg=#0F172A bg=#64748B bold]  OFF #[fg=#64748B bg=default],#{?#{==:#{@reload_mode},1},#[fg=#F59E0B]#[fg=#0F172A bg=#F59E0B bold]  RELOAD #[fg=#F59E0B bg=default],#{?#{==:#{window_name},[thumbs]},#[fg=#3B82F6]#[fg=#0F172A bg=#3B82F6 bold] 󰆤 THUMBS #[fg=#3B82F6 bg=default],#{?pane_in_mode,#[fg=#EF4444]#[fg=#0F172A bg=#EF4444 bold] COPY #[fg=#EF4444 bg=default],#{?pane_synchronized,#[fg=#22C55E]#[fg=#0F172A bg=#22C55E bold] SYNC #[fg=#22C55E bg=default],#{?window_zoomed_flag,#[fg=#A855F7]#[fg=#0F172A bg=#A855F7 bold]  ZOOM #P/#{window_panes} #[fg=#A855F7 bg=default],#[fg=#047857]#[fg=#0F172A bg=#047857] NORMAL #[fg=#047857 bg=default]}}}}}}#[fg=#22C55E#,bg=default]#[fg=#0F172A#,bg=#22C55E]  #(cd #{pane_current_path}; git branch --show-current 2>/dev/null || echo '-') #[fg=#22C55E#,bg=default]#[fg=#8B5A2B#,bg=default]#[fg=#FFFFFF#,bg=#8B5A2B]  %m/%d %H:%M #[fg=#8B5A2B#,bg=default]#[fg=#3B82F6#,bg=default]#[fg=#0F172A#,bg=#3B82F6#,bold]  #h #[fg=#3B82F6#,bg=default]}"
+set -g status-right "#{?client_prefix,#[fg=#FACC15 bg=default]#[fg=#0F1A15 bg=#FACC15 bold]  #[fg=#FACC15 bg=default] -| split  g git  G gh  k keifu  j scratch  f sess  F proj  v copy  r reload  ? keys  Space menu,#[fg=#1E2E28#,bg=default]#[fg=#a78bfa#,bg=#1E2E28]#(~/dotfiles/scripts/tmux-claude-usage.sh)#[fg=#64748B#,bg=#1E2E28]|#(~/dotfiles/scripts/tmux-cpu.sh)#[fg=#64748B#,bg=#1E2E28]|#(~/dotfiles/scripts/tmux-ram.sh)#(~/dotfiles/scripts/tmux-gpu.sh)#(~/dotfiles/scripts/tmux-storage.sh)#[fg=#1E2E28#,bg=default] #{?#{==:#{client_key_table},off},#[fg=#64748B]#[fg=#0F1A15 bg=#64748B bold]  OFF #[fg=#64748B bg=default],#{?#{==:#{@reload_mode},1},#[fg=#F59E0B]#[fg=#0F1A15 bg=#F59E0B bold]  RELOAD #[fg=#F59E0B bg=default],#{?#{==:#{window_name},[thumbs]},#[fg=#3B82F6]#[fg=#0F1A15 bg=#3B82F6 bold] 󰆤 THUMBS #[fg=#3B82F6 bg=default],#{?pane_in_mode,#[fg=#EF4444]#[fg=#0F1A15 bg=#EF4444 bold] COPY #[fg=#EF4444 bg=default],#{?pane_synchronized,#[fg=#22C55E]#[fg=#0F1A15 bg=#22C55E bold] SYNC #[fg=#22C55E bg=default],#{?window_zoomed_flag,#[fg=#A855F7]#[fg=#0F1A15 bg=#A855F7 bold]  ZOOM #P/#{window_panes} #[fg=#A855F7 bg=default],#[fg=#047857]#[fg=#0F1A15 bg=#047857] NORMAL #[fg=#047857 bg=default]}}}}}}#[fg=#22C55E#,bg=default]#[fg=#0F1A15#,bg=#22C55E]  #(cd #{pane_current_path}; git branch --show-current 2>/dev/null || echo '-') #[fg=#22C55E#,bg=default]#[fg=#8B5A2B#,bg=default]#[fg=#F8FAFC#,bg=#8B5A2B]  %m/%d %H:%M #[fg=#8B5A2B#,bg=default]#[fg=#3B82F6#,bg=default]#[fg=#0F1A15#,bg=#3B82F6#,bold]  #h #[fg=#3B82F6#,bg=default]}"
 
 # --- Window Status (Powerline style) ---
-setw -g window-status-activity-style "underscore,fg=#64748B,bg=default"
+setw -g window-status-activity-style "underscore,fg=#94A3B8,bg=default"
 setw -g window-status-separator ""
-setw -g window-status-style "NONE,fg=#64748B,bg=default"
+setw -g window-status-style "NONE,fg=#94A3B8,bg=default"
 
 # Inactive window (Rounded style) + Claude badge
-setw -g window-status-format "#[fg=#1e3a2f,bg=default]#[fg=#64748B,bg=#1e3a2f] #I #W #[fg=#1e3a2f,bg=default]#(~/dotfiles/scripts/tmux-claude-badge.sh window #{window_index} '' #S)"
+setw -g window-status-format "#[fg=#1E2E28,bg=default]#[fg=#94A3B8,bg=#1E2E28] #I #W #[fg=#1E2E28,bg=default]#(~/dotfiles/scripts/tmux-claude-badge.sh window #{window_index} '' #S)"
 
 # Active window (Rounded style with highlight) + Claude badge (dimmed)
-setw -g window-status-current-format "#[fg=#047857,bg=default]#[fg=#FFFFFF,bg=#047857,bold] #I #W #[fg=#047857,bg=default]#(~/dotfiles/scripts/tmux-claude-badge.sh window #{window_index} focused #S)"
+setw -g window-status-current-format "#[fg=#047857,bg=default]#[fg=#F8FAFC,bg=#047857,bold] #I #W #[fg=#047857,bg=default]#(~/dotfiles/scripts/tmux-claude-badge.sh window #{window_index} focused #S)"
 
 # Prefix highlight plugin settings (not used, kept for compatibility)
 set -g @prefix_highlight_output_prefix ""

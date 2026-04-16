@@ -45,27 +45,29 @@ case "$THEME" in
   syntopic)
     TARGET="${2:-$HOME/.config/tmux/syntopic.tmux}"
     THEME_LABEL="SynTopic"
-    BG_DARK="#0F172A"
-    FG_SUBTLE="#64748B"
-    FG_TEXT="#64748B"
-    BG_HIGHLIGHT="#1e293b"
-    BORDER_INACTIVE="#2d4a3e"
-    ACCENT_PRIMARY="#047857"
-    ACCENT_SESSION="#047857"
-    SESSION_FG="#FFFFFF"
-    COLOR_SUCCESS="#22C55E"
-    COLOR_ERROR="#EF4444"
-    COLOR_WARNING="#FACC15"
-    COLOR_RELOAD="#F59E0B"
-    COLOR_THUMBS="#3B82F6"
-    COLOR_ZOOM="#A855F7"
-    COLOR_GIT="#22C55E"
-    COLOR_DATE_BG="#8B5A2B"
-    COLOR_DATE_FG="#FFFFFF"
-    COLOR_HOST_BG="#3B82F6"
-    COLOR_MSG="#047857"
-    WINDOW_INACTIVE_BG="#1e3a2f"
-    WINDOW_INACTIVE_FG="#64748B"
+    # Palette derived from @syntopic/design-system token.js (dark mode CSS variables).
+    # HSL origin shown alongside hex for traceability; tmux needs hex literals.
+    BG_DARK="#0F1A15"          # topic-base    hsl(153 27% 8%)
+    FG_SUBTLE="#64748B"        # text-subtle   hsl(215 16% 47%)
+    FG_TEXT="#94A3B8"          # text-subtle lightened for window labels
+    BG_HIGHLIGHT="#1E2E28"     # topic-border  hsl(158 21% 15%)
+    BORDER_INACTIVE="#1E2E28"  # topic-border
+    ACCENT_PRIMARY="#047857"   # brand-green   hsl(163 94% 24%)
+    ACCENT_SESSION="#047857"   # brand-green
+    SESSION_FG="#F8FAFC"       # text-default (dark)  hsl(210 40% 98%)
+    COLOR_SUCCESS="#22C55E"    # status-success
+    COLOR_ERROR="#EF4444"      # status-error
+    COLOR_WARNING="#FACC15"    # status-warning
+    COLOR_RELOAD="#F59E0B"     # status-active
+    COLOR_THUMBS="#3B82F6"     # status-info
+    COLOR_ZOOM="#A855F7"       # status-inactive
+    COLOR_GIT="#22C55E"        # status-success
+    COLOR_DATE_BG="#8B5A2B"    # brand-brown   hsl(29 53% 36%)
+    COLOR_DATE_FG="#F8FAFC"    # text-default
+    COLOR_HOST_BG="#3B82F6"    # status-info
+    COLOR_MSG="#047857"        # brand-green
+    WINDOW_INACTIVE_BG="#1E2E28"  # topic-border
+    WINDOW_INACTIVE_FG="#94A3B8"  # text-subtle lightened
     ;;
   catppuccin)
     TARGET="${2:-$HOME/.config/tmux/catppuccin.tmux}"
