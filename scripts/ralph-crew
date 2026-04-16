@@ -133,6 +133,8 @@ _wait_for_tui() {
 _start_worker() {
   local config_file="$1"
   local worker_id="$2"
+  local pane_id="${3:-}"  # Optional: caller-provided pane (layout-aware placement).
+                          # When empty, fall back to one-window-per-worker (used by cmd_restart).
 
   # Read worker config
   local worker_json
@@ -148,7 +150,9 @@ _start_worker() {
   system_prompt="$(echo "$worker_json" | jq -r '.system_prompt // empty')"
   permissions_json="$(echo "$worker_json" | jq '.permissions // empty')"
 
-  # If worker has fix tasks, adjust permissions: allow git push, deny only force push
+  # If worker has fix tasks, adjust permissions: allow git push, deny only force push.
+  # Dedup both allow and deny to prevent duplicate entries accumulating across
+  # re-init or overlapping rules from the base config.
   local has_fix
   has_fix="$(jq --arg wid "$worker_id" \
     '[.tasks[] | select(.worker_id == $wid) | .action // "fix" | select(. == "fix")] | length' \
@@ -158,27 +162,21 @@ _start_worker() {
       permissions_json="$RALPH_DEFAULT_PERMISSIONS"
     fi
     permissions_json="$(echo "$permissions_json" | jq '
-      .deny = [.deny[]? | select(
+      .deny = ([.deny[]? | select(
         (. == "Bash(git push:*)" or . == "Bash(git push)") | not
-      )] + ["Bash(git push --force:*)", "Bash(git push -f:*)"] |
-      .allow = (.allow + ["Bash(git worktree:*)", "Bash(git push:*)", "Bash(gh pr:*)"]) | .allow |= unique
+      )] + ["Bash(git push --force:*)", "Bash(git push -f:*)"] | unique) |
+      .allow = ((.allow // []) + ["Bash(git worktree:*)", "Bash(git push:*)", "Bash(gh pr:*)"] | unique)
     ')"
   fi
 
-  # Create tmux window
-  local window_name="crew/${worker_id}"
-  if tmux list-windows -t "$TMUX_SESSION" -F '#{window_name}' 2>/dev/null | grep -qxF "$window_name"; then
-    tmux kill-window -t "${TMUX_SESSION}:${window_name}" 2>/dev/null || true
-  fi
-  # Capture the new window's initial pane id directly.
-  # Using -P -F is robust against after-new-window hooks that split the window
-  # (e.g. the opensessions sidebar) and shift active-pane focus.
-  local pane_id
-  pane_id="$(tmux new-window -t "$TMUX_SESSION" -n "$window_name" -c "$PROJECT_DIR" -P -F '#{pane_id}')"
-
-  # Setup permissions + Notification hook
+  # Setup permissions + Notification hook.
+  # The hook command is worker-agnostic: it looks up which worker owns the
+  # current pane via $TMUX_PANE and writes to the matching status file. This
+  # lets the settings.local.json (shared across workers, last-write-wins) stay
+  # correct regardless of which worker was initialized last.
+  local idle_hook_script="${STATE_DIR}/bin/idle-hook.sh"
   local hook_json
-  hook_json="$(jq -n --arg worker_id "$worker_id" --arg state_dir "$STATE_DIR" '{
+  hook_json="$(jq -n --arg script "$idle_hook_script" --arg state_dir "$STATE_DIR" '{
     "hooks": {
       "Notification": [
         {
@@ -186,7 +184,7 @@ _start_worker() {
           "hooks": [
             {
               "type": "command",
-              "command": ("bash -c " + ("echo idle > " + $state_dir + "/workers/" + $worker_id + ".status" | @sh))
+              "command": ("bash " + ($script | @sh) + " " + ($state_dir | @sh))
             }
           ]
         }
@@ -208,21 +206,17 @@ _start_worker() {
     printf '%s' "$system_prompt" > "$system_prompt_file"
   fi
 
-  # Pre-accept Claude's trust dialog for this project so the worker does not
-  # block on the first-launch "Quick safety check" prompt. This is essential
-  # for unattended launchd operation on fresh project directories.
+  # Pre-accept Claude's trust + MCP + bypass-permissions dialogs up-front so
+  # the worker never blocks on a first-launch modal. Must run BEFORE claude
+  # starts (the worker process reads ~/.claude.json on startup).
   ralph_preaccept_trust "$PROJECT_DIR" || _info "trust pre-accept failed (continuing)"
 
   # Build claude command.
-  # --dangerously-skip-permissions is required for fully unattended operation:
-  # without it, Claude TUI prompts the user on any tool not in the allow list,
-  # which deadlocks the launchd-driven dispatch loop.
-  # Note: --permission-mode bypassPermissions has the same runtime effect but
-  # shows a first-time warning dialog that requires manual confirmation, which
-  # blocks autonomous launchd invocations on a fresh project. The
-  # --dangerously-skip-permissions flag launches directly into bypass mode
-  # with no dialog. The deny list in the worker's .claude/settings.local.json
-  # remains authoritative for safety boundaries.
+  # --dangerously-skip-permissions requests bypass mode. Modern Claude CLI still
+  # shows a one-time "Bypass Permissions mode" warning unless
+  # .bypassPermissionsModeAccepted is pre-set to true in ~/.claude.json — which
+  # ralph_preaccept_trust now writes. Runtime safety is still enforced by the
+  # per-worker deny list in .claude/settings.local.json.
   local cmd="claude --model ${model} --dangerously-skip-permissions"
   if [[ -n "$mcp_config" ]]; then
     cmd+=" --mcp-config $(printf '%q' "$mcp_config")"
@@ -231,8 +225,50 @@ _start_worker() {
     cmd+=" --append-system-prompt \"\$(cat $(printf '%q' "$system_prompt_file"))\""
   fi
 
-  # Launch Claude TUI
-  tmux send-keys -t "$pane_id" "$cmd" Enter
+  # Write a per-worker launch script. We then run it directly via tmux (either
+  # as the pane's initial command or via respawn-pane), which avoids two shell-
+  # level races that were corrupting workers:
+  #   1. send-keys arriving before the freshly-split shell finished processing
+  #      terminal queries (DA2 / kitty graphics handshake) — the responses bled
+  #      into the typed command and caused zsh parse errors.
+  #   2. user $SHELL rc files (zsh plugins, mise, etc.) adding unpredictable
+  #      startup latency between pane creation and the command landing.
+  # Bypassing the shell makes worker launch deterministic.
+  local launch_script="${STATE_DIR}/bin/launch-${worker_id}.sh"
+  mkdir -p "$(dirname "$launch_script")"
+  cat > "$launch_script" <<LAUNCH_EOF
+#!/usr/bin/env bash
+# Generated by ralph-crew. Regenerated on every worker start.
+set -eu
+cd $(printf '%q' "$PROJECT_DIR")
+exec ${cmd}
+LAUNCH_EOF
+  chmod +x "$launch_script"
+
+  # Place the command into the pane. Two paths:
+  #   - cmd_restart (no pane_id passed): create a fresh window running the
+  #     launch script directly so there is no shell to race with.
+  #   - _run_init (pane_id provided from new-window/split-window): the pane was
+  #     created with a default shell. respawn-pane -k replaces that shell with
+  #     our launch script, killing the stale shell. This is atomic and avoids
+  #     the send-keys race entirely.
+  if [[ -z "$pane_id" ]]; then
+    local window_name="crew/${worker_id}"
+    if tmux list-windows -t "$TMUX_SESSION" -F '#{window_name}' 2>/dev/null | grep -qxF "$window_name"; then
+      tmux kill-window -t "${TMUX_SESSION}:${window_name}" 2>/dev/null || true
+    fi
+    # Using -P -F is robust against after-new-window hooks that split the window
+    # (e.g. the opensessions sidebar) and shift active-pane focus.
+    pane_id="$(tmux new-window -t "$TMUX_SESSION" -n "$window_name" -c "$PROJECT_DIR" -P -F '#{pane_id}' "bash $(printf '%q' "$launch_script")")"
+  else
+    tmux respawn-pane -k -t "$pane_id" "bash $(printf '%q' "$launch_script")" 2>/dev/null || {
+      _log "worker=$worker_id respawn-pane failed (continuing)"
+    }
+  fi
+
+  # Name the pane after the worker so `tmux list-panes -F '#{pane_title}'` is
+  # navigable in consolidated (multi-pane) windows.
+  tmux select-pane -t "$pane_id" -T "$worker_id" 2>/dev/null || true
 
   # Wait for TUI to be ready
   if ! _wait_for_tui "$pane_id" 30; then
@@ -272,21 +308,20 @@ _dispatch_task() {
   local action="${5:-fix}"
   local project_dir="${6:-}"
 
-  local ts
-  ts="$(date +%Y%m%d-%H%M%S)"
   local default_branch
   default_branch="$(_detect_default_branch)"
-  local branch="crew/${task_id}-${ts}"
-  local worktree="${STATE_DIR}/fix/${task_id}-${ts}"
+
+  # Persistent branch per worker: one branch accumulates commits across
+  # dispatches, producing a single Draft PR that grows over time. The PR is
+  # only cleaned up when a human merges or closes it.
+  local branch="crew/${worker_id}"
+  local worktree="${STATE_DIR}/fix/${worker_id}"
 
   # Build prompt with action mode wrapper
   mkdir -p "${STATE_DIR}/prompts"
   local prompt_file="${STATE_DIR}/prompts/${task_id}.md"
 
   if [[ "$action" == "none" ]]; then
-    # Raw prompt: no action wrapper. Use this when the task prompt itself
-    # specifies the desired end behavior and the fix/issue-only wrappers
-    # would conflict with it (e.g. dry-run / report-only tests).
     cat > "$prompt_file" <<PROMPT_EOF
 # Task: ${task_id}
 
@@ -304,25 +339,75 @@ Do not attempt to fix the issues directly.
 If no issues found, report: all checks passed.
 PROMPT_EOF
   else
-    cat > "$prompt_file" <<PROMPT_EOF
+    # Detect existing open PR on this worker's branch
+    local existing_pr=""
+    existing_pr="$(gh pr list --repo "$(git -C "$PROJECT_DIR" remote get-url origin 2>/dev/null)" \
+      --head "$branch" --state open --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+
+    # If no open PR and no remote branch, previous PR was merged/closed.
+    # Clean stale local worktree + branch so next dispatch starts fresh.
+    if [[ -z "$existing_pr" ]]; then
+      local remote_exists=""
+      remote_exists="$(git -C "$PROJECT_DIR" ls-remote --heads origin "refs/heads/${branch}" 2>/dev/null | head -1)"
+      if [[ -z "$remote_exists" ]]; then
+        git -C "$PROJECT_DIR" worktree remove "$worktree" 2>/dev/null || true
+        git -C "$PROJECT_DIR" branch -D "$branch" 2>/dev/null || true
+      fi
+    fi
+
+    if [[ -n "$existing_pr" ]]; then
+      # Continue existing PR: rebase onto develop + add commits
+      cat > "$prompt_file" <<PROMPT_EOF
 # Task: ${task_id}
 
 ${prompt}
 
-## Action: fix (worktree isolation)
-If issues are found, fix them in an isolated worktree:
+## Action: fix (continue PR #${existing_pr} on branch ${branch})
+An open Draft PR #${existing_pr} exists. Add your changes as new commits.
+
+\`\`\`bash
+# Set up worktree (reuse if exists, recreate if not)
+if [ -d "${worktree}" ]; then
+  cd ${worktree}
+else
+  git fetch origin
+  git worktree add ${worktree} ${branch} 2>/dev/null \\
+    || git worktree add ${worktree} --track -b ${branch} origin/${branch}
+  cd ${worktree}
+fi
+git fetch origin
+git rebase origin/${default_branch}
+# ... find and fix issues ...
+git add <files> && git commit -m "<type>(<scope>): <description>"
+git push origin ${branch}
+\`\`\`
+PR #${existing_pr} updates automatically on push. Do NOT create a new PR.
+Do NOT remove the worktree when done (it persists across dispatches).
+If no issues found this run, report: all checks passed.
+PROMPT_EOF
+    else
+      # New branch + new Draft PR
+      cat > "$prompt_file" <<PROMPT_EOF
+# Task: ${task_id}
+
+${prompt}
+
+## Action: fix (new branch ${branch})
+Create a new branch and Draft PR for your changes.
+
 \`\`\`bash
 git worktree add ${worktree} -b ${branch} origin/${default_branch}
 cd ${worktree}
-# ... fix issues ...
-git add <files> && git commit -m "fix(<scope>): <description>"
+# ... find and fix issues ...
+git add <files> && git commit -m "<type>(<scope>): <description>"
 git push -u origin ${branch}
-gh pr create --title "fix(<scope>): <description>" --body "<analysis>"
-cd ${project_dir} && git worktree remove ${worktree}
+gh pr create --draft --title "<type>(<scope>): <description>" --body "<analysis>"
 \`\`\`
+Do NOT remove the worktree when done (it persists across dispatches).
 If auto-fix fails or issues are too complex, create a GitHub issue instead.
 If no issues found, report: all checks passed.
 PROMPT_EOF
+    fi
   fi
 
   # Update status to running; also stamp per-worker dispatch time so that
@@ -473,11 +558,43 @@ _sync_remote() {
 # a no-op if already done. Extracted from cmd_init so cmd_dispatch can recover
 # from a missing session (e.g. after a reboot) without requiring a separate
 # launchd plist for init.
+# Write (or refresh) the shared idle-hook script used by every worker's
+# Notification hook. Script is worker-agnostic: it reads $TMUX_PANE from the
+# hook invocation and updates the status file of whichever worker owns that
+# pane. Written idempotently on every init so dotfiles-level fixes propagate.
+_write_idle_hook_script() {
+  local script_path="${STATE_DIR}/bin/idle-hook.sh"
+  mkdir -p "$(dirname "$script_path")"
+  cat > "$script_path" <<'HOOK_EOF'
+#!/usr/bin/env bash
+# Generated by ralph-crew. Do not edit; regenerated on every init.
+# Marks the worker associated with the currently-executing Claude TUI pane
+# as idle by writing "idle" into its status file. Looks up pane_id in worker
+# JSON and updates the matching worker. Safe to run when no worker matches.
+set -eu
+STATE_DIR="${1:?state_dir required}"
+PANE="${TMUX_PANE:-}"
+[[ -z "$PANE" ]] && exit 0
+shopt -s nullglob
+for f in "$STATE_DIR"/workers/*.json; do
+  wid="$(jq -r --arg p "$PANE" 'select(.pane_id == $p) | .id // empty' "$f" 2>/dev/null)" || continue
+  if [[ -n "$wid" ]]; then
+    echo idle > "$STATE_DIR/workers/$wid.status"
+    exit 0
+  fi
+done
+HOOK_EOF
+  chmod +x "$script_path"
+}
+
 _run_init() {
   local config_file="$1"
 
   # Create state directories
-  mkdir -p "${STATE_DIR}"/{workers,dispatch,prompts,system-prompts,logs}
+  mkdir -p "${STATE_DIR}"/{workers,dispatch,prompts,system-prompts,logs,bin}
+
+  # Write the shared idle-hook script (idempotent).
+  _write_idle_hook_script
 
   # Create or attach to tmux session
   if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
@@ -487,6 +604,16 @@ _run_init() {
     _success "Created tmux session: $TMUX_SESSION"
   fi
 
+  # Layout: how many worker panes per window. Configurable via
+  # .layout.panes_per_window in crew.json. Default 1 preserves the legacy
+  # one-window-per-worker layout. Larger values pack workers into fewer
+  # windows (tiled layout) to reduce tmux window clutter.
+  local panes_per_window
+  panes_per_window="$(jq -r '.layout.panes_per_window // 1' "$config_file")"
+  if ! [[ "$panes_per_window" =~ ^[0-9]+$ ]] || (( panes_per_window < 1 )); then
+    panes_per_window=1
+  fi
+
   # Start all workers
   local worker_count
   worker_count="$(jq '.workers | length' "$config_file")"
@@ -494,12 +621,31 @@ _run_init() {
   while [[ "$i" -lt "$worker_count" ]]; do
     local worker_id
     worker_id="$(jq -r ".workers[$i].id" "$config_file")"
-    _start_worker "$config_file" "$worker_id"
+
+    local window_idx=$(( i / panes_per_window ))
+    local pane_idx_in_window=$(( i % panes_per_window ))
+    local window_name
+    window_name="crew-$(printf '%02d' $((window_idx + 1)))"
+
+    local pane_id
+    if (( pane_idx_in_window == 0 )); then
+      # First worker in this window: create (or recreate) the window.
+      if tmux list-windows -t "$TMUX_SESSION" -F '#{window_name}' 2>/dev/null | grep -qxF "$window_name"; then
+        tmux kill-window -t "${TMUX_SESSION}:${window_name}" 2>/dev/null || true
+      fi
+      pane_id="$(tmux new-window -t "$TMUX_SESSION" -n "$window_name" -c "$PROJECT_DIR" -P -F '#{pane_id}')"
+    else
+      # Subsequent workers split the existing window and re-tile for space.
+      pane_id="$(tmux split-window -t "${TMUX_SESSION}:${window_name}" -c "$PROJECT_DIR" -P -F '#{pane_id}')"
+      tmux select-layout -t "${TMUX_SESSION}:${window_name}" tiled >/dev/null 2>&1 || true
+    fi
+
+    _start_worker "$config_file" "$worker_id" "$pane_id"
     i=$((i + 1))
   done
 
-  _success "Initialized $worker_count worker(s) in session: $TMUX_SESSION"
-  _log "init completed: $worker_count workers"
+  _success "Initialized $worker_count worker(s) in session: $TMUX_SESSION (panes_per_window=$panes_per_window)"
+  _log "init completed: $worker_count workers, panes_per_window=$panes_per_window"
 }
 
 _ensure_host_tmux_or_die() {
@@ -878,6 +1024,17 @@ cmd_daemon() {
     rm -f "$pidfile"
   fi
   echo "$$" > "$pidfile"
+
+  # On every daemon start, re-initialize workers. This handles two cases:
+  #   (a) fresh start: session does not exist yet, init creates it + workers
+  #   (b) tmux-continuum resurrect: session exists but was restored from a
+  #       snapshot — pane_ids are new, stored worker metadata references stale
+  #       pane_ids, and the claude TUI processes are not running.
+  # _run_init is idempotent: it kills and re-creates crew-NN windows + panes,
+  # regenerates the idle-hook script, and respawns workers with fresh launch
+  # scripts. Running it unconditionally ensures workers are always consistent
+  # with the current session state when the daemon starts.
+  _run_init "$config_file" || _log "daemon startup: _run_init failed (continuing)"
 
   _stop_daemon() {
     _log "daemon stopping (signal received, pid=$$)"
