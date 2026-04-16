@@ -84,19 +84,23 @@ ralph_setup_worker_settings() {
 }
 
 # Pre-populate Claude Code's project-local trust state so a freshly-launched
-# worker does not block on the interactive "Quick safety check" trust dialog.
+# worker does not block on any first-launch interactive dialog. Covers both:
 #
-# Claude records trust acceptance per absolute (real) project path in
-# ~/.claude.json under .projects[<abs_path>].hasTrustDialogAccepted = true.
-# --dangerously-skip-permissions does NOT suppress this dialog, so unattended
-# launchd operation requires writing the acceptance up-front.
+#   1. "Quick safety check" project trust dialog
+#      -> .projects[<abs_path>].hasTrustDialogAccepted = true
+#
+#   2. "New MCP server found in .mcp.json: <name>" approval dialog
+#      -> .projects[<abs_path>].enabledMcpjsonServers += [<name>...]
+#
+# --dangerously-skip-permissions does NOT suppress either dialog, so unattended
+# operation (launchd / tmux-resident ralph-crew daemon) requires writing both
+# acceptances up-front.
 #
 # Usage:
 #   ralph_preaccept_trust <project_dir>
 #
-# No-ops when ~/.claude.json does not exist (Claude will create it on first
-# launch with trust already set), or when the project entry already has
-# hasTrustDialogAccepted = true.
+# Idempotent. No-ops when ~/.claude.json does not exist (Claude will create it
+# on first launch with trust already set by this function's output).
 ralph_preaccept_trust() {
   local project_dir="$1"
   local claude_config="${HOME}/.claude.json"
@@ -106,16 +110,27 @@ ralph_preaccept_trust() {
   local abs_dir
   abs_dir="$(cd "$project_dir" 2>/dev/null && pwd -P)" || return 1
 
-  local accepted
-  accepted="$(jq -r --arg d "$abs_dir" '.projects[$d].hasTrustDialogAccepted // false' "$claude_config" 2>/dev/null)"
-  [[ "$accepted" == "true" ]] && return 0
+  # Collect MCP server names declared in the project's .mcp.json so they can be
+  # pre-approved. Empty array when the project has no .mcp.json.
+  local mcp_servers_json='[]'
+  local mcp_file="${abs_dir}/.mcp.json"
+  if [[ -f "$mcp_file" ]]; then
+    mcp_servers_json="$(jq -c '(.mcpServers // {}) | keys' "$mcp_file" 2>/dev/null || echo '[]')"
+  fi
 
   local tmp="${claude_config}.ralph-tmp.$$"
-  if jq --arg d "$abs_dir" '
+  if jq --arg d "$abs_dir" --argjson servers "$mcp_servers_json" '
+    .bypassPermissionsModeAccepted = true |
     .projects[$d] = ((.projects[$d] // {}) + {
       hasTrustDialogAccepted: true,
       hasCompletedProjectOnboarding: true
-    })
+    }) |
+    .projects[$d].enabledMcpjsonServers = (
+      ((.projects[$d].enabledMcpjsonServers // []) + $servers) | unique
+    ) |
+    .projects[$d].disabledMcpjsonServers = (
+      ((.projects[$d].disabledMcpjsonServers // []) - $servers) | unique
+    )
   ' "$claude_config" > "$tmp" 2>/dev/null; then
     mv -f "$tmp" "$claude_config"
   else
