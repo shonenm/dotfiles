@@ -145,6 +145,15 @@ items:
       - name: tokyonight
         key: t
         command: "run-shell '~/dotfiles/scripts/tmux-theme-toggle.sh tokyonight'"
+      - name: catppuccin
+        key: c
+        command: "run-shell '~/dotfiles/scripts/tmux-theme-toggle.sh catppuccin'"
+      - name: gruvbox
+        key: g
+        command: "run-shell '~/dotfiles/scripts/tmux-theme-toggle.sh gruvbox'"
+      - name: rosepine
+        key: r
+        command: "run-shell '~/dotfiles/scripts/tmux-theme-toggle.sh rosepine'"
       - name: syntopic
         key: s
         command: "run-shell '~/dotfiles/scripts/tmux-theme-toggle.sh syntopic'"
