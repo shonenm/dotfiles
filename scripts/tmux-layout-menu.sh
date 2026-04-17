@@ -14,51 +14,68 @@ if ! command -v fzf >/dev/null 2>&1; then
   exit 1
 fi
 
-# Build menu: first line = save action, rest = existing presets
-CURRENT_SIG="$("$TMUX_LAYOUT" _current-sig 2>/dev/null || echo "?")"
 SAVE_TAG="<save current layout as...>"
 
-lines=()
-lines+=("$(printf '+\t%s\t%s' "$SAVE_TAG" "$CURRENT_SIG")")
-while IFS=$'\t' read -r name sig; do
-  if [ "$sig" = "$CURRENT_SIG" ]; then
-    marker="*"
-  else
-    marker=" "
+while true; do
+  CURRENT_SIG="$("$TMUX_LAYOUT" _current-sig 2>/dev/null || echo "?")"
+
+  lines=()
+  lines+=("$(printf '+\t%s\t%s' "$SAVE_TAG" "$CURRENT_SIG")")
+  while IFS=$'\t' read -r name sig; do
+    if [ "$sig" = "$CURRENT_SIG" ]; then
+      marker="*"
+    else
+      marker=" "
+    fi
+    lines+=("$(printf '%s\t%s\t%s' "$marker" "$name" "$sig")")
+  done < <("$TMUX_LAYOUT" list 2>/dev/null)
+
+  selected="$(
+    printf '%s\n' "${lines[@]}" |
+      fzf \
+        --prompt='layout> ' \
+        --header='enter=apply/save   ctrl-d=delete   esc=close   * matches current   + save' \
+        --delimiter=$'\t' \
+        --with-nth=1,2,3 \
+        --expect=ctrl-d
+  )" || exit 0
+
+  [ -z "$selected" ] && exit 0
+
+  key="$(printf '%s\n' "$selected" | sed -n '1p')"
+  row="$(printf '%s\n' "$selected" | sed -n '2p')"
+  [ -z "$row" ] && exit 0
+
+  picked_name="$(printf '%s' "$row" | awk -F '\t' '{print $2}')"
+
+  if [ "$key" = "ctrl-d" ]; then
+    if [ "$picked_name" = "$SAVE_TAG" ]; then
+      continue
+    fi
+    printf 'delete preset %q? [y/N]: ' "$picked_name"
+    read -r answer
+    case "${answer:-}" in
+      y|Y|yes|YES)
+        "$TMUX_LAYOUT" delete "$picked_name" || true
+        ;;
+    esac
+    continue
   fi
-  lines+=("$(printf '%s\t%s\t%s' "$marker" "$name" "$sig")")
-done < <("$TMUX_LAYOUT" list 2>/dev/null)
 
-selected="$(
-  printf '%s\n' "${lines[@]}" |
-    fzf \
-      --prompt='layout> ' \
-      --header='* = matches current topology   + = save current' \
-      --delimiter=$'\t' \
-      --with-nth=1,2,3
-)" || exit 0
-
-[ -z "$selected" ] && exit 0
-
-picked_name="$(printf '%s' "$selected" | awk -F '\t' '{print $2}')"
-
-if [ "$picked_name" = "$SAVE_TAG" ]; then
-  # stdin is the popup PTY — plain `read` works
-  printf 'preset name: '
-  read -r new_name
-  if [ -z "${new_name:-}" ]; then
+  if [ "$picked_name" = "$SAVE_TAG" ]; then
+    printf 'preset name (empty to cancel): '
+    read -r new_name
+    if [ -z "${new_name:-}" ]; then
+      continue
+    fi
+    "$TMUX_LAYOUT" save -f "$new_name"
     exit 0
   fi
-  "$TMUX_LAYOUT" save -f "$new_name"
+
+  if "$TMUX_LAYOUT" apply "$picked_name"; then
+    exit 0
+  fi
   echo
   read -rp "Press Enter to close..." _
-  exit 0
-fi
-
-if "$TMUX_LAYOUT" apply "$picked_name"; then
-  exit 0
-fi
-# Apply failed — let user read the error
-echo
-read -rp "Press Enter to close..." _
-exit 1
+  exit 1
+done
