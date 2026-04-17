@@ -8,6 +8,7 @@ abbr gb="git branch"
 abbr gsh="git stash push -m"
 abbr gsp="git stash pop"
 abbr gco="git checkout"
+abbr gcod='git checkout $(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d/ -f2-)'
 abbr gf="git fetch"
 abbr gc="git commit"
 abbr gpl="git pull"
