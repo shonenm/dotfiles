@@ -505,6 +505,26 @@ install_genshijin() {
   log_success "genshijin SessionStart hook registered"
 }
 
+install_auto_mode() {
+  if ! command_exists jq; then
+    log_warn "jq not found, skipping auto mode default"
+    return
+  fi
+
+  local settings="$HOME/.claude/settings.json"
+  [[ -f "$settings" ]] || echo '{}' > "$settings"
+
+  if [[ "$(jq -r '.permissions.defaultMode // ""' "$settings" 2>/dev/null)" == "auto" ]]; then
+    log_success "Claude auto mode already set as default"
+    return
+  fi
+
+  log_info "Setting Claude auto mode as default..."
+  local tmp="${settings}.tmp"
+  jq '.permissions //= {} | .permissions.defaultMode = "auto"' "$settings" > "$tmp" && mv "$tmp" "$settings"
+  log_success "Claude auto mode set as default"
+}
+
 install_1password_cli() {
   if command_exists op; then
     log_success "1Password CLI already installed"
@@ -736,6 +756,7 @@ install_modern_tools
 install_npm_packages
 install_claude_mem
 install_genshijin
+install_auto_mode
 configure_claude_remote_control_autostart
 link_ai_scripts
 install_gh_extensions
