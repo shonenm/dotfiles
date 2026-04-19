@@ -57,6 +57,17 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | `S` | SYNC モード切替 |
 | `F12` | ネストセッション切替（**prefix 不要**） |
 
+### Session 操作
+
+| キー | 動作 |
+|------|------|
+| `s` | セッション選択（choose-tree、**名前順固定**） |
+| `Tab` | 直前のセッションへトグル切替（`switch-client -l`） |
+| `(` | 前のセッション（名前順、リピート可） |
+| `)` | 次のセッション（名前順、リピート可） |
+
+`choose-tree` と `( / )` は共に名前順で巡回するため、後述の命名規約 (`rcon-*`, `proj-*`, `pers-*`, `ops-*`) に従うとカテゴリ単位で束ねて見える／辿れる。
+
 ### Floating Window (display-popup)
 
 | キー | 動作 | サイズ |
@@ -227,6 +238,21 @@ OFF 中の視覚的変化:
 - Window タブがグレー一色
 
 参考: [samoshkin/tmux-config](https://github.com/samoshkin/tmux-config)
+
+## Session 命名規約
+
+セッションが増えた際に `choose-tree -O name` と `switch-client -p/-n` がカテゴリ単位で束ねて見える／辿れるようにするための規約。tmux 本体に session tag / group の概念はないため、名前のプレフィックスでグルーピングを表現する。
+
+| プレフィックス | 用途 | 例 |
+|---------------|------|-----|
+| `rcon-` | `rcon host[:container]` で起動したリモート/コンテナ作業 | `rcon-ailab-syntopic-dev`、`rcon-prod1` |
+| `proj-` | ローカルのプロジェクト作業 | `proj-syntopic-api`、`proj-growth` |
+| `pers-` | dotfiles / 雑務 / 個人メモ | `pers-dotfiles`、`pers-notes` |
+| `ops-` | 監視・運用・インシデント対応 | `ops-grafana`、`ops-oncall` |
+
+プレフィックスがアルファベット順で並ぶため、`prefix s` の choose-tree でも `prefix+( / )` の巡回でも近い用途のセッションが隣接する。rcon 由来のセッション名は既に `host-container` 形式で sanitize されているため `rcon-` プレフィックスを足すだけで整合する。
+
+固定セッション（`scratch`、`MAIN`）はプレフィックスなしで運用しても構わないが、choose-tree ではリスト末尾にまとめて並ぶ（大文字 → 小文字、プレフィックスあり → なしの順で分かれる）。
 
 ## Per-session アクセントカラー
 
