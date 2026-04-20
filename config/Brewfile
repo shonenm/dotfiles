@@ -13,6 +13,7 @@ brew "starship"
 brew "sheldon"
 brew "atuin"
 brew "zoxide"
+brew "joshmedeski/sesh/sesh"  # Smart tmux session manager (fuzzy finder + zoxide/ghq integration)
 brew "stow"
 brew "aerc"
 
