@@ -205,7 +205,10 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     alt-shift-f = 'fullscreen'
 
     # Toggle sketchybar visibility with dynamic padding
-    alt-s = 'exec-and-forget ~/.config/sketchybar/plugins/toggle_bar.sh'
+    # NOTE: alt-s was moved to alt-shift-s to free Alt-s for the zsh sesh widget
+    # (see common/zsh/.zshrc.common). aerospace's alt-shift-s was unused (only
+    # the commented move-node-to-workspace S).
+    alt-shift-s = 'exec-and-forget ~/.config/sketchybar/plugins/toggle_bar.sh'
 
     # Swap windows between monitors
     alt-m = 'exec-and-forget ~/dotfiles/scripts/swap-monitors.sh'
