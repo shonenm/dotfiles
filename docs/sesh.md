@@ -95,6 +95,36 @@ pattern = "~/ghq/github.com/*/*"
 pattern = "~/workspace/*"
 ```
 
+### startup_script によるプロジェクトブートストラップ
+
+`startup_command` は session が新規作成されたときに実行される1行コマンド、または実行可能スクリプトへのパス。`common/sesh/.config/sesh/scripts/` に典型的なレイアウト用スクリプトを用意している (新規シェル script は `chmod +x` 必須)。
+
+| スクリプト | 用途 |
+|-----------|------|
+| `generic-project.sh` | Git 状態を表示してから nvim を起動（単一ペイン、軽量） |
+| `node-project.sh`    | 上下 2 ペイン: 上 nvim / 下 30% で `npm run dev` 待機 |
+
+設定例:
+
+```toml
+# 全ての dotfiles セッションでは generic-project.sh を走らせる
+[[session]]
+name = "pers-dotfiles"
+path = "~/dotfiles"
+startup_command = "~/.config/sesh/scripts/generic-project.sh"
+
+# 特定の Node プロジェクトだけ node-project.sh を適用
+[[wildcard]]
+pattern = "~/ghq/github.com/shonenm/my-node-app"
+startup_command = "~/.config/sesh/scripts/node-project.sh"
+```
+
+ポイント:
+
+- **再 attach では走らない**: `startup_command` は "create" 時のみ。既存セッションに戻っても副作用なし
+- **`--command/-c` 経由では走らない**: `sesh connect -c "..."` のように `--command` を渡すとスキップされるため、picker から普通に接続するのが前提
+- **より重いセットアップは別スクリプト化**: `scripts/` 配下に複数テンプレートを置いて使い分ける。プロジェクト固有のセットアップが必要になったら `[[session]]` で `startup_command` を指定
+
 ### zoxide を育てる
 
 sesh の `zoxide` ソースは `zoxide` の頻度スコア順で並ぶため、zoxide のデータベースを意図的に育てると picker の有用性が上がる:
