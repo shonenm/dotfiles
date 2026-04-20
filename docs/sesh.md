@@ -4,7 +4,8 @@
 
 - Plugin: [joshmedeski/sesh](https://github.com/joshmedeski/sesh)
 - Config: `common/sesh/.config/sesh/sesh.toml`
-- Install: `brew "joshmedeski/sesh/sesh"` (Brewfile)
+- Install (Mac): `brew "joshmedeski/sesh/sesh"` (`config/Brewfile`)
+- Install (Linux): `TOOL_sesh_*` in `config/tools.linux.bash` — GitHub release tarball を `~/.local/bin` (NO_SUDO モード) or `/usr/local/bin` に展開
 
 ## 役割分担
 
