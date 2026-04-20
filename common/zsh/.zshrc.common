@@ -208,6 +208,25 @@ if command -v ghq &>/dev/null && command -v fzf &>/dev/null; then
   }
 fi
 
+# --- sesh (smart tmux session manager) ---
+# Alt-s でシェル (tmux 内外) から sesh picker を起動する widget。
+# tmux 内: prefix+C-f と同じ体験を prefix なしで
+# tmux 外: 新規ターミナル起動直後の素の zsh から既存 tmux session に直接 attach
+if command -v sesh &>/dev/null && command -v fzf &>/dev/null; then
+  sesh-sessions() {
+    exec </dev/tty
+    exec <&1
+    local session
+    session=$(sesh list -i | fzf --height 40% --reverse \
+      --border-label ' sesh ' --border --prompt '⚡  ' --ansi)
+    [[ -z "$session" ]] && { zle reset-prompt 2>/dev/null; return; }
+    sesh connect "$session"
+    zle reset-prompt 2>/dev/null
+  }
+  zle -N sesh-sessions
+  bindkey '\es' sesh-sessions  # Alt-s (ESC + s)
+fi
+
 # --- Claude Code fallback wrapper ---
 # Anthropic API障害時にOpenRouter経由で動作させる
 # 切替: claude-fallback.sh on/off
