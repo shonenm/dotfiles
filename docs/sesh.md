@@ -143,6 +143,40 @@ bindkey '\es' sesh-sessions  # Alt-s
 - tmux 内: `prefix+C-f` と同じ体験を prefix なしで (1 チョード)
 - tmux 外: ターミナルを新規で開いた直後、`tmux attach` 前に `Alt-s` で直接 sesh picker → 既存 session に attach
 
+## git worktree + Claude Code 並列実行
+
+dotfiles には [`scripts/wt`](../scripts/wt) (git worktree + tmux window 統合 CLI) が同梱されている。`wt new feat/login` で `<main>--wt--<slug>` 形式のサイドカーディレクトリを作り、現在 session の **新規 window** を開いてそこに cd する仕組み。
+
+sesh 側には下記のワイルドカードを入れており、既存の `wt` で作られた worktree ディレクトリはそのまま sesh picker に現れる:
+
+```toml
+[[wildcard]]
+pattern = "~/*--wt--*"
+
+[[wildcard]]
+pattern = "~/ghq/github.com/*/*--wt--*"
+```
+
+### 運用パターン
+
+| 目的 | 手順 |
+|------|------|
+| 同一 session で並列作業 (window per worktree) | `wt new <branch>` — 既存の `wt` フロー、高速。opensessions サイドバーでは 1 session として集約 |
+| 独立 session で並列 Claude Code | `wt new <branch>` で worktree を作った後、`prefix C-f` → ワイルドカード経由で **別 session** として attach。各 worktree が独立した opensessions 行になる |
+| worktree から親プロジェクトへ戻る | `prefix 9` → `sesh connect --root`。現在の `pane_current_path` を sesh に渡し、親相当の session にジャンプ |
+
+### Claude Code 自動起動 (opt-in)
+
+特定の worktree で Claude を毎回自動起動したい場合、sesh.toml に `startup_command = "claude"` を付けたワイルドカードを追加する:
+
+```toml
+[[wildcard]]
+pattern = "~/*--wt--*"
+startup_command = "claude"
+```
+
+ただし全 worktree で強制されると非 Claude ワークでも claude プロセスが立つため、デフォルトでは未適用 (コメント例のみ)。`ralph-parallel` 等で強制したい場合だけ opt-in。
+
 ## rcon との関係
 
 sesh はローカル tmux サーバーでのみ動作する。rcon で接続する remote tmux のセッションは local sesh の対象外。remote 側でも sesh を使いたい場合は、接続先ホストに個別に sesh をインストールする (別 Phase)。
