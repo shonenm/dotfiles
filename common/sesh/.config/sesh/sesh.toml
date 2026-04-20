@@ -1,0 +1,42 @@
+#:schema https://github.com/joshmedeski/sesh/raw/main/sesh.schema.json
+#
+# sesh - smart tmux session manager
+# https://github.com/joshmedeski/sesh
+#
+# 選択ソース順序:
+#   config  — 下記 [[session]] / [[wildcard]] の定義に合致した path
+#   tmux    — 既にアクティブなローカル tmux セッション
+#   zoxide  — 最近 cd したディレクトリ (ghq 配下も含む)
+#
+# 命名規約は Phase 1 で定義: rcon- / proj- / pers- / ops-
+# zoxide 経由で起動したセッション名は basename が使われるため命名規約から外れる。
+# 頻用プロジェクトは [[session]] に事前登録、プロジェクト群は [[wildcard]] で拾う。
+
+sort_order = ["config", "tmux", "zoxide"]
+dir_length = 2
+cache = true
+
+# popup / scratch など一時セッションはリストから除外
+blacklist = ["scratch"]
+
+[default_session]
+preview_command = "eza --all --git --icons --color=always {}"
+
+# --- 固定エントリ (特別扱いしたい path だけ) ---
+
+[[session]]
+name = "pers-dotfiles"
+path = "~/dotfiles"
+
+[[session]]
+name = "pers-config"
+path = "~/.config"
+
+# --- ワイルドカード (プロジェクト群を丸ごと拾う) ---
+# ghq 配下のリポジトリ = ~/ghq/github.com/<owner>/<repo>
+[[wildcard]]
+pattern = "~/ghq/github.com/*/*"
+
+# ~/workspace 配下の作業ディレクトリ
+[[wildcard]]
+pattern = "~/workspace/*"

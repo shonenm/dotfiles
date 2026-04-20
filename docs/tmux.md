@@ -62,11 +62,14 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | キー | 動作 |
 |------|------|
 | `s` | セッション選択（choose-tree、**名前順固定**） |
-| `Tab` | 直前のセッションへトグル切替（`switch-client -l`） |
+| `Tab` | 直前のセッションへトグル切替（`switch-client -l`、sesh 非依存） |
+| `L` | 直前のセッションへ（`sesh last`、picker 履歴を参照） |
 | `(` | 前のセッション（名前順、リピート可） |
 | `)` | 次のセッション（名前順、リピート可） |
+| `f` | 色付きセッション picker（既存 tmux session のみ、`tmux-session-color.sh`）|
+| `C-f` | sesh picker（多段フィルタ: `^a` all / `^t` tmux / `^g` config / `^x` zoxide / `^f` find / `^d` kill）|
 
-`choose-tree` と `( / )` は共に名前順で巡回するため、後述の命名規約 (`rcon-*`, `proj-*`, `pers-*`, `ops-*`) に従うとカテゴリ単位で束ねて見える／辿れる。
+`choose-tree` と `( / )` は共に名前順で巡回するため、後述の命名規約 (`rcon-*`, `proj-*`, `pers-*`, `ops-*`) に従うとカテゴリ単位で束ねて見える／辿れる。`prefix f` と `prefix C-f` の使い分けは [sesh.md](./sesh.md) 参照。
 
 ### Floating Window (display-popup)
 
