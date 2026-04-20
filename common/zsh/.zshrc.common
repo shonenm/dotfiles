@@ -211,6 +211,24 @@ fi
 # --- Claude Code fallback wrapper ---
 # Anthropic API障害時にOpenRouter経由で動作させる
 # 切替: claude-fallback.sh on/off
+# 対話セッション起動時にのみ --name を自動注入する判定
+# --name/--resume/--continue 指定時、または subcommand 実行時はスキップ
+_claude_should_auto_name() {
+  # 先頭が既知 subcommand ならスキップ
+  case "${1:-}" in
+    agents|auth|auto-mode|doctor|install|mcp|plugin|plugins|setup-token|update|upgrade)
+      return 1
+      ;;
+  esac
+  local arg
+  for arg in "$@"; do
+    case "$arg" in
+      -n|--name|--name=*|-r|--resume|--resume=*|--continue) return 1 ;;
+    esac
+  done
+  return 0
+}
+
 claude() {
   # Disable bracketed paste while claude runs so Cmd+V in its auth prompts
   # (`claude auth login`, `claude setup-token`) delivers plain keystrokes
@@ -218,14 +236,21 @@ claude() {
   # Restore after so the zsh prompt keeps bracketed-paste protections.
   printf '\033[?2004l'
   local rc
+  local -a name_args=()
+  if _claude_should_auto_name "$@"; then
+    local auto_name
+    auto_name="$(git -C "$PWD" branch --show-current 2>/dev/null)"
+    [[ -z "$auto_name" ]] && auto_name="$(basename "$PWD")"
+    [[ -n "$auto_name" ]] && name_args=(--name "$auto_name")
+  fi
   if [[ -f "$HOME/.local/share/claude-fallback/active" ]]; then
     local fallback_env="$HOME/.local/share/claude-fallback/env"
     source "$fallback_env"
     ANTHROPIC_BASE_URL="https://openrouter.ai/api" \
     ANTHROPIC_API_KEY="$OPENROUTER_API_KEY" \
-    command claude "$@"
+    command claude "${name_args[@]}" "$@"
   else
-    command claude "$@"
+    command claude "${name_args[@]}" "$@"
   fi
   rc=$?
   printf '\033[?2004h'

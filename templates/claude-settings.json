@@ -35,6 +35,16 @@
     ]
   },
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/common/claude/.claude/hooks/claude-session-title.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
