@@ -64,6 +64,7 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | `s` | セッション選択（choose-tree、**名前順固定**） |
 | `Tab` | 直前のセッションへトグル切替（`switch-client -l`、sesh 非依存） |
 | `L` | 直前のセッションへ（`sesh last`、picker 履歴を参照） |
+| `9` | 親プロジェクト session へジャンプ（`sesh connect --root`、worktree 等のネストから復帰） |
 | `(` | 前のセッション（名前順、リピート可） |
 | `)` | 次のセッション（名前順、リピート可） |
 | `f` | 色付きセッション picker（既存 tmux session のみ、`tmux-session-color.sh`）|

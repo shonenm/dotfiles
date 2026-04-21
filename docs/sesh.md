@@ -4,7 +4,8 @@
 
 - Plugin: [joshmedeski/sesh](https://github.com/joshmedeski/sesh)
 - Config: `common/sesh/.config/sesh/sesh.toml`
-- Install: `brew "joshmedeski/sesh/sesh"` (Brewfile)
+- Install (Mac): `brew "joshmedeski/sesh/sesh"` (`config/Brewfile`)
+- Install (Linux): `TOOL_sesh_*` in `config/tools.linux.bash` — GitHub release tarball を `~/.local/bin` (NO_SUDO モード) or `/usr/local/bin` に展開
 
 ## 役割分担
 
@@ -95,6 +96,36 @@ pattern = "~/ghq/github.com/*/*"
 pattern = "~/workspace/*"
 ```
 
+### startup_script によるプロジェクトブートストラップ
+
+`startup_command` は session が新規作成されたときに実行される1行コマンド、または実行可能スクリプトへのパス。`common/sesh/.config/sesh/scripts/` に典型的なレイアウト用スクリプトを用意している (新規シェル script は `chmod +x` 必須)。
+
+| スクリプト | 用途 |
+|-----------|------|
+| `generic-project.sh` | Git 状態を表示してから nvim を起動（単一ペイン、軽量） |
+| `node-project.sh`    | 上下 2 ペイン: 上 nvim / 下 30% で `npm run dev` 待機 |
+
+設定例:
+
+```toml
+# 全ての dotfiles セッションでは generic-project.sh を走らせる
+[[session]]
+name = "pers-dotfiles"
+path = "~/dotfiles"
+startup_command = "~/.config/sesh/scripts/generic-project.sh"
+
+# 特定の Node プロジェクトだけ node-project.sh を適用
+[[wildcard]]
+pattern = "~/ghq/github.com/shonenm/my-node-app"
+startup_command = "~/.config/sesh/scripts/node-project.sh"
+```
+
+ポイント:
+
+- **再 attach では走らない**: `startup_command` は "create" 時のみ。既存セッションに戻っても副作用なし
+- **`--command/-c` 経由では走らない**: `sesh connect -c "..."` のように `--command` を渡すとスキップされるため、picker から普通に接続するのが前提
+- **より重いセットアップは別スクリプト化**: `scripts/` 配下に複数テンプレートを置いて使い分ける。プロジェクト固有のセットアップが必要になったら `[[session]]` で `startup_command` を指定
+
 ### zoxide を育てる
 
 sesh の `zoxide` ソースは `zoxide` の頻度スコア順で並ぶため、zoxide のデータベースを意図的に育てると picker の有用性が上がる:
@@ -112,6 +143,40 @@ bindkey '\es' sesh-sessions  # Alt-s
 
 - tmux 内: `prefix+C-f` と同じ体験を prefix なしで (1 チョード)
 - tmux 外: ターミナルを新規で開いた直後、`tmux attach` 前に `Alt-s` で直接 sesh picker → 既存 session に attach
+
+## git worktree + Claude Code 並列実行
+
+dotfiles には [`scripts/wt`](../scripts/wt) (git worktree + tmux window 統合 CLI) が同梱されている。`wt new feat/login` で `<main>--wt--<slug>` 形式のサイドカーディレクトリを作り、現在 session の **新規 window** を開いてそこに cd する仕組み。
+
+sesh 側には下記のワイルドカードを入れており、既存の `wt` で作られた worktree ディレクトリはそのまま sesh picker に現れる:
+
+```toml
+[[wildcard]]
+pattern = "~/*--wt--*"
+
+[[wildcard]]
+pattern = "~/ghq/github.com/*/*--wt--*"
+```
+
+### 運用パターン
+
+| 目的 | 手順 |
+|------|------|
+| 同一 session で並列作業 (window per worktree) | `wt new <branch>` — 既存の `wt` フロー、高速。opensessions サイドバーでは 1 session として集約 |
+| 独立 session で並列 Claude Code | `wt new <branch>` で worktree を作った後、`prefix C-f` → ワイルドカード経由で **別 session** として attach。各 worktree が独立した opensessions 行になる |
+| worktree から親プロジェクトへ戻る | `prefix 9` → `sesh connect --root`。現在の `pane_current_path` を sesh に渡し、親相当の session にジャンプ |
+
+### Claude Code 自動起動 (opt-in)
+
+特定の worktree で Claude を毎回自動起動したい場合、sesh.toml に `startup_command = "claude"` を付けたワイルドカードを追加する:
+
+```toml
+[[wildcard]]
+pattern = "~/*--wt--*"
+startup_command = "claude"
+```
+
+ただし全 worktree で強制されると非 Claude ワークでも claude プロセスが立つため、デフォルトでは未適用 (コメント例のみ)。`ralph-parallel` 等で強制したい場合だけ opt-in。
 
 ## rcon との関係
 

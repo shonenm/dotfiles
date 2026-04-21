@@ -214,14 +214,17 @@ fi
 # tmux 外: 新規ターミナル起動直後の素の zsh から既存 tmux session に直接 attach
 if command -v sesh &>/dev/null && command -v fzf &>/dev/null; then
   sesh-sessions() {
-    exec </dev/tty
-    exec <&1
     local session
+    # fzf の stdin を明示的に tty にリダイレクト (zle 経由では stdin が widget の
+    # buffer になっていて fzf のインタラクション不可になる)
     session=$(sesh list -i | fzf --height 40% --reverse \
-      --border-label ' sesh ' --border --prompt '⚡  ' --ansi)
-    [[ -z "$session" ]] && { zle reset-prompt 2>/dev/null; return; }
-    sesh connect "$session"
-    zle reset-prompt 2>/dev/null
+      --border-label ' sesh ' --border --prompt '⚡  ' --ansi < /dev/tty)
+    if [[ -n "$session" ]]; then
+      BUFFER="sesh connect \"$session\""
+      zle accept-line
+    else
+      zle reset-prompt 2>/dev/null
+    fi
   }
   zle -N sesh-sessions
   bindkey '\es' sesh-sessions  # Alt-s (ESC + s)

@@ -284,6 +284,13 @@ TOOL_doggo_archive_pattern='doggo_${VERSION_NOTAG}_Linux_${ARCH}.tar.gz'
 TOOL_doggo_binary_path='doggo_${VERSION_NOTAG}_Linux_${ARCH}/doggo'
 TOOL_doggo_arch_map='x86_64:x86_64 aarch64:arm64'
 
+TOOL_sesh_check_cmd="sesh"
+TOOL_sesh_method="github_release"
+TOOL_sesh_github_repo="joshmedeski/sesh"
+TOOL_sesh_archive_pattern='sesh_Linux_${ARCH}.tar.gz'
+TOOL_sesh_binary_path='sesh'
+TOOL_sesh_arch_map='x86_64:x86_64 aarch64:arm64'
+
 TOOL_topgrade_check_cmd="topgrade"
 TOOL_topgrade_method="github_release"
 TOOL_topgrade_github_repo="topgrade-rs/topgrade"
@@ -352,7 +359,7 @@ LINUX_TOOL_ORDER=(
   bun starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
   fzf fastfetch delta lazygit ghq dops yazi rainfrog typst
-  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex
+  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh
   # APT-only (skipped on Alpine)
   gh neovim eza bat postgresql
   # Cargo tools (depend on rust)
