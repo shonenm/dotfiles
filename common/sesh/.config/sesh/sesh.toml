@@ -23,10 +23,14 @@ blacklist = ["scratch"]
 preview_command = "eza --all --git --icons --color=always {}"
 
 # --- 固定エントリ (特別扱いしたい path だけ) ---
+#
+# startup_command は session が新規作成されたときだけ走る (再 attach では再実行されない)。
+# ~/.config/sesh/scripts/ の bash スクリプトを呼び出してブートストラップレイアウトを組む。
 
 [[session]]
 name = "pers-dotfiles"
 path = "~/dotfiles"
+startup_command = "~/.config/sesh/scripts/generic-project.sh"
 
 [[session]]
 name = "pers-config"
@@ -40,3 +44,24 @@ pattern = "~/ghq/github.com/*/*"
 # ~/workspace 配下の作業ディレクトリ
 [[wildcard]]
 pattern = "~/workspace/*"
+
+# git worktree (scripts/wt で作成した `<main>--wt--<slug>` ディレクトリ)
+# ~/ 直下と ~/ghq/github.com/<owner>/ 直下の両方をカバー。
+# session 名は basename (`dotfiles--wt--feat-login` 等) となるため、
+# Claude Code 並列実行時に worker を session 単位で識別できる。
+[[wildcard]]
+pattern = "~/*--wt--*"
+
+[[wildcard]]
+pattern = "~/ghq/github.com/*/*--wt--*"
+
+# Example: Node.js プロジェクト専用のブートストラップを使いたいとき
+# 具体的な path を wildcard で絞って startup_command を上書きする。
+# [[wildcard]]
+# pattern = "~/ghq/github.com/shonenm/my-node-app"
+# startup_command = "~/.config/sesh/scripts/node-project.sh"
+
+# Example: worktree で Claude Code を自動起動したいとき
+# [[wildcard]]
+# pattern = "~/*--wt--*"
+# startup_command = "claude"
