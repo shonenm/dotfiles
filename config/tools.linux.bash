@@ -87,6 +87,14 @@ TOOL_fzf_archive_pattern='fzf-${VERSION_NOTAG}-linux_${ARCH}.tar.gz'
 TOOL_fzf_binary_path='fzf'
 TOOL_fzf_arch_map='x86_64:amd64 aarch64:arm64'
 
+# fzf-tmux は fzf の release tarball に含まれておらず、master ブランチの単体スクリプト。
+# 独立 tool として登録しておくと、fzf が既に入っている環境でも post-add でこれだけ
+# 補完インストールできる (sesh の popup prefix+C-f が依存)。
+TOOL_fzftmux_check_cmd="fzf-tmux"
+TOOL_fzftmux_method="curl_pipe"
+TOOL_fzftmux_depends_on="fzf"
+TOOL_fzftmux_curl_cmd='if [[ "$NO_SUDO" == "true" ]]; then mkdir -p "$HOME/.local/bin"; curl -fsSL https://raw.githubusercontent.com/junegunn/fzf/master/bin/fzf-tmux -o "$HOME/.local/bin/fzf-tmux" && chmod +x "$HOME/.local/bin/fzf-tmux"; else curl -fsSL https://raw.githubusercontent.com/junegunn/fzf/master/bin/fzf-tmux -o /tmp/fzf-tmux && $SUDO install -m 0755 /tmp/fzf-tmux /usr/local/bin/fzf-tmux && rm -f /tmp/fzf-tmux; fi'
+
 TOOL_fastfetch_check_cmd="fastfetch"
 TOOL_fastfetch_method="github_release"
 TOOL_fastfetch_github_repo="fastfetch-cli/fastfetch"
@@ -358,7 +366,7 @@ LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
   bun starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
-  fzf fastfetch delta lazygit ghq dops yazi rainfrog typst
+  fzf fzftmux fastfetch delta lazygit ghq dops yazi rainfrog typst
   just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh
   # APT-only (skipped on Alpine)
   gh neovim eza bat postgresql

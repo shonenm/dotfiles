@@ -332,10 +332,11 @@ _dispatch_task() {
   local default_branch
   default_branch="$(_detect_default_branch)"
 
-  # Persistent branch per worker: one branch accumulates commits across
-  # dispatches, producing a single Draft PR that grows over time. The PR is
-  # only cleaned up when a human merges or closes it.
-  local branch="crew/${worker_id}"
+  # Fresh branch per dispatch: each run produces an independent small PR stacked
+  # in parallel (base = origin/<default>), rather than a single persistent PR
+  # that hoards commits. The worker's own reconnaissance phase is responsible
+  # for reading prior same-worker PRs and avoiding scope overlap.
+  local branch="crew/${worker_id}-$(date +%Y%m%d%H%M)"
 
   # Read worker_cwd from worker JSON (set by _start_worker based on worktree_path)
   local worker_file="${STATE_DIR}/workers/${worker_id}.json"
@@ -364,72 +365,26 @@ Do not attempt to fix the issues directly.
 If no issues found, report: all checks passed.
 PROMPT_EOF
   else
-    # Detect existing open PR on this worker's branch
-    local existing_pr=""
-    existing_pr="$(gh pr list --repo "$(git -C "$worker_cwd" remote get-url origin 2>/dev/null)" \
-      --head "$branch" --state open --json number --jq '.[0].number // empty' 2>/dev/null || true)"
-
-    if [[ -n "$existing_pr" ]]; then
-      # Continue existing PR: rebase onto develop + add commits
-      cat > "$prompt_file" <<PROMPT_EOF
-# Task: ${task_id}
-
-${prompt}
-
-## Action: fix (continue PR #${existing_pr} on branch ${branch})
-An open Draft PR #${existing_pr} exists. Add your changes as new commits.
-You are already in the worktree. Work directly here.
-
-\`\`\`bash
-git fetch origin
-git rebase origin/${default_branch}
-# If rebase conflicts occur, resolve them before proceeding.
-# Abort with \`git rebase --abort\` only if conflicts are unresolvable.
-# ... find and fix issues ...
-git add <files> && git commit -m "<type>(<scope>): <description>"
-# MANDATORY CI gate before push (see below)
-bash scripts/ci-local.sh
-git push origin ${branch} --force-with-lease
-\`\`\`
-PR #${existing_pr} updates automatically on push. Do NOT create a new PR.
-If no issues found this run, report: all checks passed.
-
-## CI Gate (MANDATORY, non-negotiable)
-Exit code 0 from \`bash scripts/ci-local.sh\` is the ONLY condition under which
-\`git push\` is permitted. No other interpretation is valid.
-
-Forbidden rationalizations (do NOT push under any of these):
-- "The failing step is unrelated to my changes."
-- "The failure is from worktree / environment cross-contamination."
-- "Other workers' paths appear in the output, so it's not mine."
-- "The individual tool (ruff, pytest, tsc, etc.) passes when I run it directly,
-  so ci-local.sh must be wrong."
-- "This lint rule is a warning / style issue, not a real problem."
-- "The failure exists on develop already."
-
-If ci-local.sh exits non-zero, the only acceptable next actions are:
-1. Fix every reported failure in your own files and re-run until exit 0.
-2. If you genuinely cannot fix it in this session, stop and report BLOCKED
-   with the exact failing step name and its output. DO NOT push.
-
-Never use \`--no-verify\`, \`--force\` past this gate, or any flag that bypasses
-verification. Never mark the task complete while ci-local.sh is red.
-Never reason your way past a red gate — the gate is the verdict, not a suggestion.
-PROMPT_EOF
-    else
-      # New branch + new Draft PR
-      cat > "$prompt_file" <<PROMPT_EOF
+    # Always a fresh branch + new Draft PR. The worker's reconnaissance phase
+    # reads prior same-worker PRs (merged + open) to avoid scope overlap.
+    cat > "$prompt_file" <<PROMPT_EOF
 # Task: ${task_id}
 
 ${prompt}
 
 ## Action: fix (new branch ${branch})
-Create a new branch and Draft PR for your changes.
-You are already in the worktree. Work directly here.
+Create a new branch and a new Draft PR for this run. This is an independent
+small PR; do NOT reuse any earlier branch or PR.
 
 \`\`\`bash
 git fetch origin
+# The worktree may still be on an earlier branch from a previous dispatch.
+# Detach, create the timestamped branch from origin/${default_branch}, wipe
+# any leftover uncommitted state, then proceed.
+git checkout --detach origin/${default_branch}
 git checkout -b ${branch} origin/${default_branch}
+git reset --hard origin/${default_branch}
+git clean -fd
 # ... find and fix issues ...
 git add <files> && git commit -m "<type>(<scope>): <description>"
 # MANDATORY CI gate before push (see below)
@@ -440,6 +395,25 @@ gh pr create --draft --title "<type>(<scope>): <description>" --body "<analysis>
 If auto-fix fails or issues are too complex, create a GitHub issue instead.
 If no issues found, report: all checks passed.
 
+## Prior art check (MANDATORY before picking a candidate)
+
+Before enumerating candidates, read your worker's recent PRs to avoid
+duplicating or colliding with already-addressed scope:
+
+\`\`\`bash
+gh pr list --search "head:crew/${worker_id}-" --state all --limit 20 \\
+  --json number,title,state,body
+\`\`\`
+
+Build an exclusion set from:
+- Files touched by recently merged same-worker PRs (skip re-touching).
+- Scopes listed as "picked" in any recent PR's "## Candidates considered".
+- Scopes listed as "rejected" there — do not re-adopt without a new reason.
+
+Then pick from the remaining space. If you cannot find 5 non-overlapping
+High-impact candidates, exit with the usual top-3 rejection summary; signal
+that this module's low-hanging impact is exhausted for now.
+
 ## CI Gate (MANDATORY, non-negotiable)
 Exit code 0 from \`bash scripts/ci-local.sh\` is the ONLY condition under which
 \`git push\` is permitted. No other interpretation is valid.
@@ -462,7 +436,6 @@ Never use \`--no-verify\`, \`--force\` past this gate, or any flag that bypasses
 verification. Never mark the task complete while ci-local.sh is red.
 Never reason your way past a red gate — the gate is the verdict, not a suggestion.
 PROMPT_EOF
-    fi
   fi
 
   # Update status to running; also stamp per-worker dispatch time so that
