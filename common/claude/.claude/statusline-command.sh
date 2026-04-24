@@ -15,8 +15,6 @@ cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
 duration_ms=$(echo "$input" | jq -r '.cost.total_duration_ms // empty')
 lines_added=$(echo "$input" | jq -r '.cost.total_lines_added // empty')
 lines_removed=$(echo "$input" | jq -r '.cost.total_lines_removed // empty')
-rate5h_pct=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
-rate5h_reset=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
 
 # --- Directory: last 2 components ---
 if [ -n "$cwd" ]; then
@@ -73,26 +71,6 @@ if [ -n "$lines_added" ] && [ -n "$lines_removed" ]; then
   fi
 fi
 
-# --- Rate limit 5h ---
-rate_str=""
-if [ -n "$rate5h_pct" ]; then
-  rate_int=$(printf "%.0f" "$rate5h_pct")
-  if [ -n "$rate5h_reset" ] && [ "$rate5h_reset" != "null" ]; then
-    now=$(date +%s)
-    remaining_secs=$(( rate5h_reset - now ))
-    if [ "$remaining_secs" -gt 0 ]; then
-      rm_min=$(( remaining_secs / 60 ))
-      rate_str="5h:${rate_int}% (rst ${rm_min}m)"
-    else
-      rate_str="5h:${rate_int}%"
-    fi
-  else
-    rate_str="5h:${rate_int}%"
-  fi
-fi
-
-time_str=$(date +%H:%M)
-
 # --- Colors (Dracula) ---
 PINK='\033[38;2;255;121;198m'
 GREEN='\033[38;2;80;250;123m'
@@ -122,14 +100,30 @@ add_part "${PINK}${dir}${RESET}"                        "${dir}"
 add_part "${GREEN}${git_branch}${RESET}"                "${git_branch}"
 add_part "${CYAN}${model}${RESET}"                      "${model}"
 [ -n "$ctx_bar" ] && add_part "${PURPLE}ctx:${ctx_bar}${RESET}" "ctx:${ctx_bar}"
-add_part "${GREEN}${cost_str}${RESET}"                  "${cost_str}"
-add_part "${DIM}${duration_str}${RESET}"                "${duration_str}"
-add_part "${RED}${rate_str}${RESET}"                    "${rate_str}"
-[ -n "$lines_str" ] && add_part "${DIM}lines:${RESET} ${GREEN}+${lines_added}${RESET} ${RED}-${lines_removed}${RESET}" "lines: +${lines_added} -${lines_removed}"
+
+# Combined usage: cost + duration + diff lines
+usage_raw=""
+usage_plain=""
+append_usage() {
+  local raw="$1" plain="$2"
+  [ -z "$plain" ] && return
+  if [ -z "$usage_plain" ]; then
+    usage_raw="$raw"; usage_plain="$plain"
+  else
+    usage_raw="${usage_raw} ${raw}"
+    usage_plain="${usage_plain} ${plain}"
+  fi
+}
+append_usage "${GREEN}${cost_str}${RESET}"   "${cost_str}"
+append_usage "${DIM}${duration_str}${RESET}" "${duration_str}"
+if [ -n "$lines_str" ]; then
+  append_usage "${GREEN}+${lines_added}${RESET}${DIM}/${RESET}${RED}-${lines_removed}${RESET}" "+${lines_added}/-${lines_removed}"
+fi
+add_part "$usage_raw" "$usage_plain"
+
 [ -n "$worktree" ] && add_part "${ORANGE}wt:${worktree}${RESET}" "wt:${worktree}"
 [ -n "$agent" ]    && add_part "${YELLOW}agent:${agent}${RESET}" "agent:${agent}"
 [ -n "$vim_mode" ] && add_part "${YELLOW}${vim_mode}${RESET}"    "${vim_mode}"
-add_part "${DIM}${time_str}${RESET}"                    "${time_str}"
 
 # --- Pair parts into lines (2 per line) ---
 lines_raw=()
