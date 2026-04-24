@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code statusLine command — Dracula palette, 3-line layout
+# Claude Code statusLine command — Dracula palette, pair-per-line layout
 
 input=$(cat)
 echo "$input" > /tmp/statusline-input.json
@@ -81,8 +81,8 @@ if [ -n "$rate5h_pct" ]; then
     now=$(date +%s)
     remaining_secs=$(( rate5h_reset - now ))
     if [ "$remaining_secs" -gt 0 ]; then
-      rm=$(( remaining_secs / 60 ))
-      rate_str="5h:${rate_int}% (rst ${rm}m)"
+      rm_min=$(( remaining_secs / 60 ))
+      rate_str="5h:${rate_int}% (rst ${rm_min}m)"
     else
       rate_str="5h:${rate_int}%"
     fi
@@ -90,6 +90,8 @@ if [ -n "$rate5h_pct" ]; then
     rate_str="5h:${rate_int}%"
   fi
 fi
+
+time_str=$(date +%H:%M)
 
 # --- Colors (Dracula) ---
 PINK='\033[38;2;255;121;198m'
@@ -102,40 +104,66 @@ RED='\033[38;2;255;85;85m'
 DIM='\033[2m'
 RESET='\033[0m'
 
-sep=" ${DIM}|${RESET} "
+sep_raw=" ${DIM}|${RESET} "
+sep_plain=" | "
 
-# --- Line 1: location context ---
-line1="${PINK}${dir}${RESET}"
-[ -n "$git_branch" ]  && line1+="${sep}${GREEN}${git_branch}${RESET}"
-[ -n "$worktree" ]    && line1+="${sep}${ORANGE}wt:${worktree}${RESET}"
-[ -n "$agent" ]       && line1+="${sep}${YELLOW}agent:${agent}${RESET}"
-[ -n "$vim_mode" ]    && line1+="${sep}${YELLOW}${vim_mode}${RESET}"
+# --- Collect ordered parts: (colored, plain) pairs ---
+parts_raw=()
+parts_plain=()
 
-# --- Line 2: AI context ---
-line2_parts=()
-[ -n "$model" ]    && line2_parts+=("${CYAN}${model}${RESET}")
-[ -n "$ctx_bar" ]  && line2_parts+=("${PURPLE}ctx:${ctx_bar}${RESET}")
-[ -n "$cost_str" ] && line2_parts+=("${GREEN}${cost_str}${RESET}")
-[ -n "$duration_str" ] && line2_parts+=("${DIM}${duration_str}${RESET}")
-time_str=$(date +%H:%M)
-line2_parts+=("${DIM}${time_str}${RESET}")
+add_part() {
+  local raw="$1" plain="$2"
+  [ -z "$plain" ] && return
+  parts_raw+=("$raw")
+  parts_plain+=("$plain")
+}
 
-line2=""
-for part in "${line2_parts[@]}"; do
-  [ -z "$line2" ] && line2="$part" || line2+="${sep}${part}"
+add_part "${PINK}${dir}${RESET}"                        "${dir}"
+add_part "${GREEN}${git_branch}${RESET}"                "${git_branch}"
+add_part "${CYAN}${model}${RESET}"                      "${model}"
+[ -n "$ctx_bar" ] && add_part "${PURPLE}ctx:${ctx_bar}${RESET}" "ctx:${ctx_bar}"
+add_part "${GREEN}${cost_str}${RESET}"                  "${cost_str}"
+add_part "${DIM}${duration_str}${RESET}"                "${duration_str}"
+add_part "${RED}${rate_str}${RESET}"                    "${rate_str}"
+[ -n "$lines_str" ] && add_part "${DIM}lines:${RESET} ${GREEN}+${lines_added}${RESET} ${RED}-${lines_removed}${RESET}" "lines: +${lines_added} -${lines_removed}"
+[ -n "$worktree" ] && add_part "${ORANGE}wt:${worktree}${RESET}" "wt:${worktree}"
+[ -n "$agent" ]    && add_part "${YELLOW}agent:${agent}${RESET}" "agent:${agent}"
+[ -n "$vim_mode" ] && add_part "${YELLOW}${vim_mode}${RESET}"    "${vim_mode}"
+add_part "${DIM}${time_str}${RESET}"                    "${time_str}"
+
+# --- Pair parts into lines (2 per line) ---
+lines_raw=()
+lines_plain=()
+n=${#parts_raw[@]}
+i=0
+while [ "$i" -lt "$n" ]; do
+  j=$(( i + 1 ))
+  if [ "$j" -lt "$n" ]; then
+    lines_raw+=("${parts_raw[$i]}${sep_raw}${parts_raw[$j]}")
+    lines_plain+=("${parts_plain[$i]}${sep_plain}${parts_plain[$j]}")
+  else
+    lines_raw+=("${parts_raw[$i]}")
+    lines_plain+=("${parts_plain[$i]}")
+  fi
+  i=$(( i + 2 ))
 done
 
-# --- Line 3: limits & diffs (only if data exists) ---
-line3_parts=()
-[ -n "$rate_str" ]  && line3_parts+=("${RED}${rate_str}${RESET}")
-[ -n "$lines_str" ] && line3_parts+=("${DIM}lines:${RESET} ${GREEN}+${lines_added}${RESET} ${RED}-${lines_removed}${RESET}")
+# --- Pad lines to equal visible width ---
+max_len=0
+for p in "${lines_plain[@]}"; do
+  [ "${#p}" -gt "$max_len" ] && max_len=${#p}
+done
 
-if [ "${#line3_parts[@]}" -gt 0 ]; then
-  line3=""
-  for part in "${line3_parts[@]}"; do
-    [ -z "$line3" ] && line3="$part" || line3+="${sep}${part}"
-  done
-  printf "%b\n%b\n%b\n" "$line1" "$line2" "$line3"
-else
-  printf "%b\n%b\n" "$line1" "$line2"
-fi
+for idx in "${!lines_raw[@]}"; do
+  plain_len=${#lines_plain[$idx]}
+  pad=$(( max_len - plain_len ))
+  if [ "$pad" -gt 0 ]; then
+    spaces=$(printf '%*s' "$pad" '')
+    lines_raw[$idx]="${lines_raw[$idx]}${spaces}"
+  fi
+done
+
+# --- Output ---
+for line in "${lines_raw[@]}"; do
+  printf '%b\n' "$line"
+done
