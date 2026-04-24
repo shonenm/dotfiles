@@ -1,5 +1,6 @@
 # --- Font ---
-font-family = "UDEV Gothic NFLG"
+font-family = "PlemolJP Console NF"
+font-style = "Medium"
 font-size = 12
 font-feature = -calt
 font-feature = -liga
