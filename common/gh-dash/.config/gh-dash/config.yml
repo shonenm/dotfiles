@@ -33,6 +33,9 @@ keybindings:
     - key: v
       command: >
         gh pr view {{.PrNumber}} --repo {{.RepoName}}
+    - key: m
+      command: >
+        gh pr merge {{.PrNumber}} --repo {{.RepoName}} --squash --delete-branch
   issues:
     - key: b
       command: >
