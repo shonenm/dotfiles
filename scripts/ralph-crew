@@ -100,8 +100,15 @@ _crew_worker_status() {
     fi
     if [[ "$elapsed" -ge 15 ]]; then
       local pane_tail
-      pane_tail="$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | tail -5)"
-      if ! echo "$pane_tail" | grep -q 'esc to interrupt'; then
+      pane_tail="$(tmux capture-pane -t "$pane_id" -p 2>/dev/null | tail -8)"
+      # Detect rate limit dialog. Auto-confirm option 1 ("Stop and wait for limit
+      # to reset") so the TUI resumes automatically after the limit resets.
+      # The cursor is already on option 1, so Enter is sufficient.
+      if echo "$pane_tail" | grep -q 'hit your limit'; then
+        tmux send-keys -t "$pane_id" Enter 2>/dev/null || true
+        status="rate_limited"
+        echo "$status" > "$status_file"
+      elif ! echo "$pane_tail" | grep -q 'esc to interrupt'; then
         status="idle"
         echo "$status" > "$status_file"
       fi
@@ -826,8 +833,8 @@ cmd_dispatch() {
         _dispatch_task "$pane_id" "$task_id" "$prompt" "$worker_id" "$action" "$project_dir"
         dispatched=$((dispatched + 1))
         ;;
-      running)
-        _log "task=$task_id worker=$worker_id status=skipped (worker busy)"
+      running|rate_limited)
+        _log "task=$task_id worker=$worker_id status=skipped ($status)"
         ;;
       dead)
         _log "task=$task_id worker=$worker_id status=dead, attempting restart"
