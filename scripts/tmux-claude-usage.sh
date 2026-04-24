@@ -10,6 +10,8 @@
 
 CACHE_FILE="/tmp/tmux_claude_usage"
 CACHE_TTL=300  # 5分
+FAIL_FILE="${CACHE_FILE}.fail"
+FAIL_TTL=60    # API 失敗時のバックオフ秒数（tmux 再描画ごとの再試行を防ぐ）
 
 # クロスプラットフォーム mtime 取得
 get_mtime() {
@@ -63,6 +65,15 @@ if [[ -f "$CACHE_FILE" ]]; then
   fi
 fi
 
+# 直近で API 取得に失敗していたら再試行せず placeholder を返す
+if [[ -f "$FAIL_FILE" ]]; then
+  fail_age=$(( $(date +%s) - $(get_mtime "$FAIL_FILE") ))
+  if (( fail_age < FAIL_TTL )); then
+    echo "󰧑 --"
+    exit 0
+  fi
+fi
+
 # OAuth アクセストークンを取得
 get_token() {
   case "$(uname -s)" in
@@ -92,7 +103,11 @@ print(d['claudeAiOauth']['accessToken'])
 }
 
 token=$(get_token)
-[[ -z "$token" ]] && echo "󰧑 --" && exit 0
+if [[ -z "$token" ]]; then
+  touch "$FAIL_FILE"
+  echo "󰧑 --"
+  exit 0
+fi
 
 # 使用量を取得
 raw=$(curl -sf --max-time 5 \
@@ -101,6 +116,7 @@ raw=$(curl -sf --max-time 5 \
   "https://api.anthropic.com/api/oauth/usage" 2>/dev/null)
 
 if [[ -z "$raw" ]]; then
+  touch "$FAIL_FILE"
   echo "󰧑 --"
   exit 0
 fi
@@ -118,10 +134,12 @@ except Exception:
 " 2>/dev/null)
 
 if [[ -z "$parsed" ]]; then
+  touch "$FAIL_FILE"
   echo "󰧑 --"
   exit 0
 fi
 
 echo "$parsed" > "$CACHE_FILE"
+rm -f "$FAIL_FILE"
 IFS='|' read -r s w resets_at <<< "$parsed"
 render "$s" "$w" "$resets_at"
