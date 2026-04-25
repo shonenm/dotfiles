@@ -9,8 +9,11 @@ DG_NETWORK="${DG_NETWORK:-dev-edge}"
 DG_API_LOCAL_PORT="${DG_API_LOCAL_PORT:-48090}"
 
 # ssh exec helper. Quoted single-arg style to keep remote shell predictable.
+# Client-side expansion of $@ is intentional — callers compose remote commands
+# using DG_REMOTE_DIR / DG_NETWORK that already escape remote-side $HOME.
 dg_ssh() {
   local host="$1"; shift
+  # shellcheck disable=SC2029
   ssh "$host" "$@"
 }
 
