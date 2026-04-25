@@ -70,6 +70,14 @@ TOOL_lazydocker_check_cmd="lazydocker"
 TOOL_lazydocker_method="curl_pipe"
 TOOL_lazydocker_curl_cmd='curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash'
 
+# AI agent token compression CLI (60-90% reduction). GitHub release tarball.
+TOOL_rtk_check_cmd="rtk"
+TOOL_rtk_method="github_release"
+TOOL_rtk_github_repo="rtk-ai/rtk"
+TOOL_rtk_archive_pattern='rtk-${ARCH}.tar.gz'
+TOOL_rtk_binary_path='rtk'
+TOOL_rtk_arch_map='x86_64:x86_64-unknown-linux-musl aarch64:aarch64-unknown-linux-gnu'
+
 TOOL_direnv_check_cmd="direnv"
 TOOL_direnv_method="github_release_binary"
 TOOL_direnv_github_repo="direnv/direnv"
@@ -367,7 +375,7 @@ LINUX_TOOL_ORDER=(
   bun starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
   fzf fzftmux fastfetch delta lazygit ghq dops yazi rainfrog typst
-  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh
+  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh rtk
   # APT-only (skipped on Alpine)
   gh neovim eza bat postgresql
   # Cargo tools (depend on rust)
