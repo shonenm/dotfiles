@@ -630,12 +630,39 @@ main() {
   # 4. Generate AI CLI configs (with absolute paths)
   generate_ai_cli_configs
 
+  # 4.5. Configure rtk Claude Code hook (token compression)
+  configure_rtk_claude_hook
+
   echo
   log_success "=== Installation Complete! ==="
   log_info "Please restart your shell or run: source ~/.zshrc"
 
   # Unified summary (all config-driven)
   print_install_summary
+}
+
+# --- 4.5. Configure rtk Claude Code hook ---
+# rtk init -g registers a Bash hook in ~/.claude/settings.json that transparently
+# rewrites commands like `git status` -> `rtk git status` for 60-90% token reduction.
+# Idempotent: skips if hook already configured.
+configure_rtk_claude_hook() {
+  if ! command_exists rtk; then
+    log_warn "rtk not installed, skipping rtk Claude hook setup"
+    return 0
+  fi
+
+  local settings_file="$HOME/.claude/settings.json"
+  if [[ -f "$settings_file" ]] && grep -q '"rtk"' "$settings_file" 2>/dev/null; then
+    log_info "rtk Claude hook already configured"
+    return 0
+  fi
+
+  log_info "Configuring rtk Claude Code hook (token compression)..."
+  if rtk init -g; then
+    log_success "rtk Claude hook configured"
+  else
+    log_warn "rtk init -g failed (non-fatal)"
+  fi
 }
 
 # --- Installation Summary (reads from config files) ---

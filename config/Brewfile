@@ -36,6 +36,7 @@ brew "uv"
 brew "rust"
 brew "oven-sh/bun/bun"
 brew "dotenvx/brew/dotenvx"
+brew "rtk"           # AI agent token compression CLI (60-90% reduction on dev commands)
 
 # --- Development Workflow ---
 brew "direnv"
