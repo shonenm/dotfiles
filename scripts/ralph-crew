@@ -343,7 +343,8 @@ _dispatch_task() {
   # in parallel (base = origin/<default>), rather than a single persistent PR
   # that hoards commits. The worker's own reconnaissance phase is responsible
   # for reading prior same-worker PRs and avoiding scope overlap.
-  local branch="crew/${worker_id}-$(date +%Y%m%d%H%M)"
+  local branch
+  branch="crew/${worker_id}-$(date +%Y%m%d%H%M)"
 
   # Read worker_cwd from worker JSON (set by _start_worker based on worktree_path)
   local worker_file="${STATE_DIR}/workers/${worker_id}.json"

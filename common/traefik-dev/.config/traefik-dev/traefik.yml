@@ -1,0 +1,22 @@
+# Traefik static config (dev gateway)
+
+api:
+  dashboard: true
+  insecure: true   # bind は localhost only なので OK (compose.yml 参照)
+
+entryPoints:
+  websecure:
+    address: ":48080"
+  web:
+    address: ":48081"
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: dev-edge
+    watch: true
+
+log:
+  level: INFO
+
+accessLog: {}
