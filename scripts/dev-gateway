@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# dev-gateway - リモートホスト上の Traefik gateway を操作する CLI
+#
+# 使い方:
+#   dev-gateway up      [host]   # docker compose up -d
+#   dev-gateway down    [host]
+#   dev-gateway status  [host]
+#   dev-gateway logs    [host] [service]
+#   dev-gateway reload  [host]   # traefik container restart
+#   dev-gateway routes  [host]   # 現在の HTTP / TCP ルート一覧
+#
+# host は引数で指定するか、$DEV_GATEWAY_DEFAULT_HOST で既定値を設定する。
+#
+# 前提:
+#   - リモート host に dotfiles を stow 済 (~/.config/traefik-dev/ がある)
+#   - host から docker が使える (docker group)
+
+set -euo pipefail
+
+# shellcheck source=/dev/null
+source "$(dirname "$0")/dev-gateway-lib.sh"
+
+usage() {
+  cat <<USAGE
+dev-gateway - remote Traefik gateway management
+
+Usage:
+  dev-gateway <command> [host] [args]
+
+Commands:
+  up      [host]              docker compose up -d
+  down    [host]              docker compose down
+  status  [host]              container status
+  logs    [host] [service]    docker compose logs -f (default service: traefik)
+  reload  [host]              restart traefik container
+  routes  [host]              dump current HTTP/TCP routers
+
+Default host:
+  \$DEV_GATEWAY_DEFAULT_HOST が設定されていればそれを使う。
+
+Examples:
+  dev-gateway up myremote
+  DEV_GATEWAY_DEFAULT_HOST=myremote dev-gateway routes
+USAGE
+}
+
+cmd="${1:-}"
+host="${2:-${DEV_GATEWAY_DEFAULT_HOST:-}}"
+arg3="${3:-}"
+
+if [[ -z "$host" && "$cmd" != "" && "$cmd" != "-h" && "$cmd" != "--help" && "$cmd" != "help" ]]; then
+  echo "Error: host を引数で指定するか \$DEV_GATEWAY_DEFAULT_HOST を設定してください" >&2
+  exit 1
+fi
+
+case "$cmd" in
+  up)     dg_up     "$host" ;;
+  down)   dg_down   "$host" ;;
+  status) dg_status "$host" ;;
+  logs)   dg_logs   "$host" "$arg3" ;;
+  reload) dg_reload "$host" ;;
+  routes) dg_routes "$host" ;;
+  ""|-h|--help|help) usage ;;
+  *) echo "Unknown command: $cmd" >&2; usage; exit 1 ;;
+esac
