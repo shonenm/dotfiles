@@ -21,3 +21,4 @@ tealdeer
 dust
 bottom
 imagemagick
+autossh
