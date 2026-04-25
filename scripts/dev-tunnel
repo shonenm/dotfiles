@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# dev-tunnel - persistent autossh トンネル管理 CLI
+#
+# 使い方:
+#   dev-tunnel start [host]        # autossh 起動
+#   dev-tunnel stop  [host]
+#   dev-tunnel status [host]
+#   dev-tunnel restart [host]
+#   dev-tunnel health [host]       # 疎通確認
+#
+# host は引数で指定するか、$DEV_TUNNEL_DEFAULT_HOST で既定値を設定する。
+# 接続先 host の定義は ~/.ssh/config (Include 経由含む) に置く。
+# 推奨エントリは docs/dev-tunnel.md を参照。
+
+set -euo pipefail
+
+# shellcheck source=/dev/null
+source "$(dirname "$0")/dev-tunnel-lib.sh"
+
+usage() {
+  cat <<USAGE
+dev-tunnel - persistent autossh トンネル管理
+
+Usage:
+  dev-tunnel <command> [host]
+
+Commands:
+  start    [host]   autossh を起動
+  stop     [host]   autossh を停止
+  status   [host]   稼働状態と ControlMaster 健全性を表示
+  restart  [host]   stop + start
+  health   [host]   ssh で疎通確認
+
+Default host:
+  $DEV_TUNNEL_DEFAULT_HOST が設定されていればそれを使う。
+  未設定なら host 引数が必須。
+
+Examples:
+  dev-tunnel start myremote-dev
+  DEV_TUNNEL_DEFAULT_HOST=myremote-dev dev-tunnel status
+USAGE
+}
+
+cmd="${1:-}"
+host="${2:-${DEV_TUNNEL_DEFAULT_HOST:-}}"
+
+if [[ -z "$host" && "$cmd" != "" && "$cmd" != "-h" && "$cmd" != "--help" && "$cmd" != "help" ]]; then
+  echo "Error: host を引数で指定するか \$DEV_TUNNEL_DEFAULT_HOST を設定してください" >&2
+  exit 1
+fi
+
+case "$cmd" in
+  start)   dt_start "$host" ;;
+  stop)    dt_stop  "$host" ;;
+  status)  dt_status "$host" ;;
+  restart) dt_restart "$host" ;;
+  health)  dt_health "$host" ;;
+  ""|-h|--help|help) usage ;;
+  *) echo "Unknown command: $cmd" >&2; usage; exit 1 ;;
+esac

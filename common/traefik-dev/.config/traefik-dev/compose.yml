@@ -1,0 +1,32 @@
+# Dev Gateway: Traefik on remote host
+# 配置先: リモートホストの ~/.config/traefik-dev/compose.yml
+# 起動: ローカルから `dev-gateway up [host]` で操作する
+#
+# 役割:
+# - 同じ docker host 上のコンテナの Traefik label を docker socket 経由で watch
+# - HTTPS は upstream 側で TLS 終端 → Traefik は SNI ベースで TCP passthrough
+# - HTTP (管理 UI) は Traefik で HTTP router 集約
+#
+# 前提: `docker network create dev-edge` を 1 度だけ実行 (sudo 不要)
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: dev-traefik
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:48080:48080"   # 主入口: HTTPS TCP passthrough (wt 用)
+      - "127.0.0.1:48081:48081"   # 副入口: HTTP (管理 UI 用)
+      - "127.0.0.1:48090:8080"    # Traefik dashboard / API (insecure, localhost only)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+    networks:
+      - dev-edge
+    labels:
+      dev-gateway.role: "traefik"
+
+networks:
+  dev-edge:
+    name: dev-edge
+    external: true

@@ -12,3 +12,5 @@ fd-find
 rsync
 luarocks
 imagemagick
+autossh
+openssh-client

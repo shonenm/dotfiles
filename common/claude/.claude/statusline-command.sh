@@ -149,11 +149,11 @@ for p in "${lines_plain[@]}"; do
 done
 
 for idx in "${!lines_raw[@]}"; do
-  plain_len=${#lines_plain[$idx]}
+  plain_len=${#lines_plain[idx]}
   pad=$(( max_len - plain_len ))
   if [ "$pad" -gt 0 ]; then
     spaces=$(printf '%*s' "$pad" '')
-    lines_raw[$idx]="${lines_raw[$idx]}${spaces}"
+    lines_raw[idx]="${lines_raw[idx]}${spaces}"
   fi
 done
 

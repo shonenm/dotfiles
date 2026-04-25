@@ -42,6 +42,7 @@ brew "direnv"
 brew "just"
 brew "watchexec"
 brew "hyperfine"
+brew "autossh"   # persistent ssh tunnel (dev-tunnel)
 
 # --- Database ---
 brew "pgcli"         # PostgreSQL用インタラクティブクライアント（オートコンプリート・シンタックスハイライト）
