@@ -15,6 +15,19 @@
     "syntopic": {
       "type": "http",
       "url": "https://mcp.sandbox.syntopic.io/mcp"
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "serena",
+      "args": ["start-mcp-server", "--context", "claude-code", "--project-from-cwd"]
+    },
+    "token-optimizer": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "token-optimizer-mcp"],
+      "env": {
+        "TOKEN_OPTIMIZER_CACHE_DIR": "${HOME}/.cache/token-optimizer-mcp"
+      }
     }
   }
 }

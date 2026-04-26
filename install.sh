@@ -496,6 +496,8 @@ for name, config in servers.items():
       if [[ -n "$notion_token" ]]; then
         config="${config//\$\{NOTION_TOKEN\}/$notion_token}"
       fi
+      # Resolve ${HOME} placeholder (e.g. for cache dirs)
+      config="${config//\$\{HOME\}/$HOME}"
       if claude mcp add-json --scope user "$name" "$config" >/dev/null 2>&1; then
         log_success "  Registered MCP server: $name"
       else
