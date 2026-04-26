@@ -505,6 +505,57 @@ install_genshijin() {
   log_success "genshijin SessionStart hook registered"
 }
 
+install_serena() {
+  if ! command_exists uv; then
+    log_warn "uv not found, skipping serena"
+    return
+  fi
+
+  if command_exists serena; then
+    log_success "Serena MCP already installed"
+    return
+  fi
+
+  log_info "Installing Serena MCP (LSP-based semantic code search)..."
+  uv tool install -p 3.13 serena-agent@latest --prerelease=allow
+  log_success "Serena MCP installed"
+}
+
+install_context_mode() {
+  if ! command_exists claude; then
+    log_warn "claude CLI not found, skipping context-mode"
+    return
+  fi
+
+  if claude plugin list 2>/dev/null | grep -q "context-mode@context-mode"; then
+    log_success "context-mode plugin already installed"
+    return
+  fi
+
+  log_info "Installing Context Mode Claude Code plugin..."
+  if ! claude plugin marketplace list 2>/dev/null | grep -q "^  ❯ context-mode$"; then
+    claude plugin marketplace add mksglu/context-mode
+  fi
+  claude plugin install context-mode@context-mode
+  log_success "context-mode plugin installed"
+}
+
+install_code_review_graph() {
+  if ! command_exists uv; then
+    log_warn "uv not found, skipping code-review-graph"
+    return
+  fi
+
+  if command_exists code-review-graph; then
+    log_success "code-review-graph already installed"
+    return
+  fi
+
+  log_info "Installing code-review-graph (PR review blast-radius analyzer)..."
+  uv tool install code-review-graph
+  log_success "code-review-graph installed (run 'crg-daemon add <path>' per project to enable)"
+}
+
 install_auto_mode() {
   if ! command_exists jq; then
     log_warn "jq not found, skipping auto mode default"
@@ -756,6 +807,9 @@ install_modern_tools
 install_npm_packages
 install_claude_mem
 install_genshijin
+install_serena
+install_context_mode
+install_code_review_graph
 install_auto_mode
 configure_claude_remote_control_autostart
 link_ai_scripts

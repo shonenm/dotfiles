@@ -5,6 +5,9 @@
 @openai/codex
 @google/gemini-cli
 
+# Claude Code token usage analytics (local JSONL parser)
+ccusage
+
 # Neovim dependencies
 @mermaid-js/mermaid-cli
 @softwaretechnik/dbml-renderer
