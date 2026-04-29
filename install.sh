@@ -635,6 +635,9 @@ main() {
   # 4.5. Configure rtk Claude Code hook (token compression)
   configure_rtk_claude_hook
 
+  # 4.6. Disable Serena MCP dashboard auto-open
+  configure_serena_dashboard
+
   echo
   log_success "=== Installation Complete! ==="
   log_info "Please restart your shell or run: source ~/.zshrc"
@@ -665,6 +668,39 @@ configure_rtk_claude_hook() {
   else
     log_warn "rtk init -g failed (non-fatal)"
   fi
+}
+
+# --- 4.6. Disable Serena MCP dashboard auto-open ---
+# Serena auto-generates ~/.serena/serena_config.yml on first run with
+# web_dashboard_open_on_launch: true, which pops a browser tab on startup.
+# Idempotent: creates skeleton config if missing, otherwise flips the value.
+configure_serena_dashboard() {
+  local config_dir="$HOME/.serena"
+  local config_file="$config_dir/serena_config.yml"
+
+  mkdir -p "$config_dir"
+
+  if [[ ! -f "$config_file" ]]; then
+    log_info "Creating Serena config with dashboard auto-open disabled..."
+    cat > "$config_file" <<'EOF'
+web_dashboard_open_on_launch: false
+EOF
+    log_success "Serena dashboard auto-open disabled"
+    return 0
+  fi
+
+  if grep -qE '^web_dashboard_open_on_launch:\s*false' "$config_file"; then
+    log_info "Serena dashboard auto-open already disabled"
+    return 0
+  fi
+
+  if grep -qE '^web_dashboard_open_on_launch:' "$config_file"; then
+    sed -i.bak -E 's|^web_dashboard_open_on_launch:.*|web_dashboard_open_on_launch: false|' "$config_file"
+    rm -f "${config_file}.bak"
+  else
+    printf '\nweb_dashboard_open_on_launch: false\n' >> "$config_file"
+  fi
+  log_success "Serena dashboard auto-open disabled"
 }
 
 # --- Installation Summary (reads from config files) ---
