@@ -3,6 +3,9 @@
 # Skip for non-interactive shells
 [[ -o interactive ]] || return
 
+# Machine-private settings (not tracked in dotfiles)
+[[ -f "$HOME/.zshrc.private" ]] && source "$HOME/.zshrc.private"
+
 # --- Ghostty Shell Integration (tmux-safe) ---
 # Ghostty auto-loads integration only in directly-spawned shells. Re-source it
 # here so it also activates inside tmux, giving us the ssh wrapper (ssh-env,
