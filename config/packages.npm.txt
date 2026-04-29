@@ -8,6 +8,9 @@
 # Claude Code token usage analytics (local JSONL parser)
 ccusage
 
+# Claude Code token optimizer (auto-config hooks via global install)
+@ooples/token-optimizer-mcp
+
 # Neovim dependencies
 @mermaid-js/mermaid-cli
 @softwaretechnik/dbml-renderer
