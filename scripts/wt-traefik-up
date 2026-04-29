@@ -140,9 +140,12 @@ YAML
 echo "[wt-traefik-up] Wrote ${overlay}"
 
 # --- Recreate nginx with overlay (only nginx is affected; web/bff stay) ---
+# Project name must match wt-up.sh (`wt-<name>`); without -p the parent directory
+# name is used and compose treats existing containers as foreign, then trips on
+# container_name conflicts. --no-deps keeps web/bff untouched.
 cd "$compose_dir"
 echo "[wt-traefik-up] Recreating nginx with Traefik overlay..."
-docker compose -f compose.yml -f compose.traefik.yml up -d nginx
+docker compose -p "wt-${wt_name}" -f compose.yml -f compose.traefik.yml up -d --no-deps nginx
 
 cat <<INFO
 
