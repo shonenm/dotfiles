@@ -505,6 +505,17 @@ install_genshijin() {
   log_success "genshijin SessionStart hook registered"
 }
 
+install_rtk() {
+  if command_exists rtk; then
+    log_success "rtk already installed"
+    return
+  fi
+
+  log_info "Installing rtk (AI agent token compression CLI)..."
+  curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+  log_success "rtk installed"
+}
+
 install_serena() {
   if ! command_exists uv; then
     log_warn "uv not found, skipping serena"
@@ -807,6 +818,7 @@ install_modern_tools
 install_npm_packages
 install_claude_mem
 install_genshijin
+install_rtk
 install_serena
 install_context_mode
 install_code_review_graph
