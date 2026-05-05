@@ -13,7 +13,7 @@ FAIL_FILE="${CACHE_FILE}.fail"
 FAIL_TTL=60    # API 失敗時のバックオフ秒数
 
 AUTH_FILE="$HOME/.codex/auth.json"
-LABEL="OAI"
+LABEL="󰝨"
 
 # クロスプラットフォーム mtime 取得
 get_mtime() {
