@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# clipboard-copy — read stdin, send to host system clipboard.
+#
+# Bypasses the tmux display-popup OSC52 limitation: tmux 3.6 does not relay
+# OSC52 escape sequences from popup ptys to the outer terminal, so a popup
+# (lazygit / nested scratch tmux / etc.) cannot reach the host clipboard via
+# OSC52 alone. This wrapper picks an OS-direct copy command instead.
+#
+# Resolution order:
+#   1. macOS  -> pbcopy
+#   2. SSH session + lemonade present -> lemonade copy
+#      (lemonade-server on the SSH client side relays to host clipboard
+#      via reverse port-forward; required for remote linux popups -> mac)
+#   3. Wayland -> wl-copy
+#   4. X11    -> xclip / xsel
+#   5. fallback OSC52 (works in regular pane only — popup will silently no-op)
+
+set -euo pipefail
+
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  exec pbcopy
+fi
+
+if [[ -n "${SSH_CONNECTION:-}${SSH_CLIENT:-}${SSH_TTY:-}" ]] && command -v lemonade >/dev/null 2>&1; then
+  exec lemonade copy
+fi
+
+if [[ -n "${WAYLAND_DISPLAY:-}" ]] && command -v wl-copy >/dev/null 2>&1; then
+  exec wl-copy
+fi
+
+if [[ -n "${DISPLAY:-}" ]]; then
+  if command -v xclip >/dev/null 2>&1; then
+    exec xclip -selection clipboard
+  fi
+  if command -v xsel >/dev/null 2>&1; then
+    exec xsel --clipboard --input
+  fi
+fi
+
+data=$(base64 | tr -d '\n')
+printf '\033]52;c;%s\033\\' "$data"
