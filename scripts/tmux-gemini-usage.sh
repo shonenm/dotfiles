@@ -12,7 +12,6 @@ FAIL_TTL=60
 
 CREDS_FILE="$HOME/.gemini/oauth_creds.json"
 PROJECTS_FILE="$HOME/.gemini/projects.json"
-SETTINGS_FILE="$HOME/.gemini/settings.json"
 LABEL="󰫢"
 
 get_mtime() {
