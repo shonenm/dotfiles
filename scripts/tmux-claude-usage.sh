@@ -2,7 +2,7 @@
 # Claude Code 使用量表示 (tmux status-right 用)
 # OAuth トークンで使用量を取得しキャッシュ
 # macOS: Keychain, Linux: ~/.claude/.credentials.json
-# 出力: "󰧑 ▃▅ 42%/67% 2h15m" 形式のプレーンテキスト
+# 出力: "󰛄 ▃▅ 42%/67% 2h15m" 形式のプレーンテキスト
 #   最後のフィールドは five_hour セッションが切れるまでの残り時間
 #
 # キャッシュ形式: "<five_hour_pct>|<seven_day_pct>|<five_hour_resets_at_iso>"
@@ -47,9 +47,9 @@ try:
         remaining = f' {h}h{m:02d}m' if h > 0 else f' {m}m'
     except Exception:
       pass
-  print(f'󰧑 {sb}{wb} {s}%/{w}%{remaining}')
+  print(f'󰛄 {sb}{wb} {s}%/{w}%{remaining}')
 except Exception:
-  print('󰧑 --')
+  print('󰛄 --')
 PY
 }
 
@@ -69,7 +69,7 @@ fi
 if [[ -f "$FAIL_FILE" ]]; then
   fail_age=$(( $(date +%s) - $(get_mtime "$FAIL_FILE") ))
   if (( fail_age < FAIL_TTL )); then
-    echo "󰧑 --"
+    echo "󰛄 --"
     exit 0
   fi
 fi
@@ -105,7 +105,7 @@ print(d['claudeAiOauth']['accessToken'])
 token=$(get_token)
 if [[ -z "$token" ]]; then
   touch "$FAIL_FILE"
-  echo "󰧑 --"
+  echo "󰛄 --"
   exit 0
 fi
 
@@ -117,7 +117,7 @@ raw=$(curl -sf --max-time 5 \
 
 if [[ -z "$raw" ]]; then
   touch "$FAIL_FILE"
-  echo "󰧑 --"
+  echo "󰛄 --"
   exit 0
 fi
 
@@ -135,7 +135,7 @@ except Exception:
 
 if [[ -z "$parsed" ]]; then
   touch "$FAIL_FILE"
-  echo "󰧑 --"
+  echo "󰛄 --"
   exit 0
 fi
 
