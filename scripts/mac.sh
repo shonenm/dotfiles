@@ -222,6 +222,45 @@ install_cargo_update() {
   log_success "cargo-update installed"
 }
 
+install_lemonade() {
+  if command_exists lemonade; then
+    log_success "lemonade already installed"
+    return
+  fi
+
+  log_info "Installing lemonade (clipboard relay server)..."
+  mkdir -p "$HOME/.local/bin"
+
+  local arch tarball
+  arch=$(uname -m)
+  if [[ "$arch" == "arm64" ]]; then
+    log_warn "lemonade upstream has no darwin_arm64 binary; skipping (build from source via go install if needed)"
+    return
+  fi
+  tarball="lemonade_darwin_amd64.tar.gz"
+
+  local tmpdir
+  tmpdir=$(mktemp -d)
+  curl -fsSL "https://github.com/lemonade-command/lemonade/releases/latest/download/${tarball}" \
+    -o "$tmpdir/lemonade.tar.gz"
+  tar -xzf "$tmpdir/lemonade.tar.gz" -C "$tmpdir"
+  mv "$tmpdir/lemonade" "$HOME/.local/bin/lemonade"
+  chmod +x "$HOME/.local/bin/lemonade"
+  rm -rf "$tmpdir"
+  log_success "lemonade installed to ~/.local/bin"
+
+  # launchd: lemonade-server を常駐 (port 2489 で listen)
+  local plist_src="$DOTFILES_DIR/templates/com.user.lemonade.plist"
+  local plist_dst="$HOME/Library/LaunchAgents/com.user.lemonade.plist"
+  if [[ -f "$plist_src" ]]; then
+    mkdir -p "$HOME/Library/LaunchAgents"
+    sed "s|__HOME__|$HOME|g" "$plist_src" > "$plist_dst"
+    launchctl bootout "gui/$(id -u)/com.user.lemonade" 2>/dev/null || true
+    launchctl bootstrap "gui/$(id -u)" "$plist_dst"
+    log_success "lemonade-server launched via launchd (com.user.lemonade)"
+  fi
+}
+
 install_gh_extensions() {
   if ! command_exists gh; then
     log_warn "gh CLI not found, skipping gh extensions"
@@ -291,6 +330,7 @@ configure_claude_remote_control_autostart
 install_dops
 install_quay
 install_cargo_update
+install_lemonade
 install_gh_extensions
 link_ai_scripts
 set_default_shell
