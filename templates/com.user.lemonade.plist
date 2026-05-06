@@ -3,18 +3,20 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.user.clipboard-relay</string>
+    <string>com.user.lemonade</string>
     <key>ProgramArguments</key>
     <array>
-        <string>__HOME__/dotfiles/scripts/clipboard-relay-server</string>
+        <string>__HOME__/.local/bin/lemonade</string>
+        <string>server</string>
+        <string>--allow=127.0.0.1/32</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardErrorPath</key>
-    <string>/tmp/clipboard-relay.err</string>
+    <string>/tmp/lemonade.err</string>
     <key>StandardOutPath</key>
-    <string>/tmp/clipboard-relay.log</string>
+    <string>/tmp/lemonade.log</string>
 </dict>
 </plist>

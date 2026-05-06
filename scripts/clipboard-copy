@@ -8,9 +8,9 @@
 #
 # Resolution order:
 #   1. macOS  -> pbcopy
-#   2. SSH session -> bash /dev/tcp redirection to localhost:2489
-#      (clipboard-relay-server on the host pipes incoming bytes into pbcopy;
-#      reachable via SSH RemoteForward 2489 from the remote side)
+#   2. SSH session + lemonade present -> lemonade copy
+#      (lemonade-server on the SSH client side relays to host clipboard
+#      via reverse port-forward; required for remote linux popups -> mac)
 #   3. Wayland -> wl-copy
 #   4. X11    -> xclip / xsel
 #   5. fallback OSC52 (works in regular pane only — popup will silently no-op)
@@ -21,10 +21,8 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   exec pbcopy
 fi
 
-if [[ -n "${SSH_CONNECTION:-}${SSH_CLIENT:-}${SSH_TTY:-}" ]]; then
-  if { cat >/dev/tcp/127.0.0.1/2489; } 2>/dev/null; then
-    exit 0
-  fi
+if [[ -n "${SSH_CONNECTION:-}${SSH_CLIENT:-}${SSH_TTY:-}" ]] && command -v lemonade >/dev/null 2>&1; then
+  exec lemonade copy
 fi
 
 if [[ -n "${WAYLAND_DISPLAY:-}" ]] && command -v wl-copy >/dev/null 2>&1; then
