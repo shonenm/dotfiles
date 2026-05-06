@@ -335,18 +335,6 @@ TOOL_rainfrog_archive_pattern='rainfrog-${VERSION}-${ARCH}-unknown-linux-musl.ta
 TOOL_rainfrog_binary_path='rainfrog'
 TOOL_rainfrog_arch_map='x86_64:x86_64 aarch64:aarch64'
 
-# remote → host clipboard relay (tmux popup OSC52 不能対策)
-# 用途: SSH 接続元 (mac) で lemonade-server 起動 + 接続時 RemoteForward 2489
-# → remote 側で `lemonade copy` 実行で host clipboard に届く。
-# clipboard-copy wrapper が SSH session を検出してこれを呼び出す。
-# 注: upstream に arm64 binary なし (v1.1.1 は amd64/386 のみ)。
-# arm64 環境では go install での self-build が必要 (本 tool は skip される)。
-TOOL_lemonade_check_cmd="lemonade"
-TOOL_lemonade_method="github_release"
-TOOL_lemonade_github_repo="lemonade-command/lemonade"
-TOOL_lemonade_archive_pattern='lemonade_linux_${ARCH}.tar.gz'
-TOOL_lemonade_binary_path='lemonade'
-TOOL_lemonade_arch_map='x86_64:amd64'
 
 # ════════════════════════════════════════
 # APT repo installs (Debian/Ubuntu only)
@@ -388,7 +376,7 @@ LINUX_TOOL_ORDER=(
   bun starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
   fzf fzftmux fastfetch delta lazygit ghq dops yazi rainfrog typst
-  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh rtk lemonade
+  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh rtk
   # APT-only (skipped on Alpine)
   gh neovim eza bat postgresql
   # Cargo tools (depend on rust)
