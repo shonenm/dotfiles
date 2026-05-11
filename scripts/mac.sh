@@ -50,11 +50,42 @@ install_claude_mem() {
 
   if [[ -f "$HOME/.claude-mem/settings.json" ]]; then
     log_success "claude-mem already installed"
+  else
+    log_info "Installing claude-mem..."
+    npx -y claude-mem install
+  fi
+
+  disable_claude_mem_stop_hook
+}
+
+disable_claude_mem_stop_hook() {
+  if ! command_exists jq; then
+    log_warn "jq not found, skipping claude-mem Stop hook patch"
     return
   fi
 
-  log_info "Installing claude-mem..."
-  npx -y claude-mem install
+  local patched=false
+  local hooks_json
+  for hooks_json in "$HOME"/.claude/plugins/cache/thedotmack/claude-mem/*/hooks/hooks.json; do
+    [[ -f "$hooks_json" ]] || continue
+
+    if [[ "$(jq -r 'has("hooks") and (.hooks | has("Stop"))' "$hooks_json" 2>/dev/null)" != "true" ]]; then
+      continue
+    fi
+
+    local tmp="${hooks_json}.tmp.$$"
+    if jq 'del(.hooks.Stop)' "$hooks_json" > "$tmp" && mv "$tmp" "$hooks_json"; then
+      log_success "Disabled claude-mem Stop hook: $hooks_json"
+      patched=true
+    else
+      rm -f "$tmp"
+      log_warn "Failed to patch claude-mem Stop hook: $hooks_json"
+    fi
+  done
+
+  if [[ "$patched" == "false" ]]; then
+    log_success "claude-mem Stop hook already disabled"
+  fi
 }
 
 install_genshijin() {
