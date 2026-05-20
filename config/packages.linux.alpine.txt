@@ -22,3 +22,4 @@ dust
 bottom
 imagemagick
 autossh
+pueue

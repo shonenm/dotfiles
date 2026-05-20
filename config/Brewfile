@@ -44,6 +44,7 @@ brew "just"
 brew "watchexec"
 brew "hyperfine"
 brew "autossh"   # persistent ssh tunnel (dev-tunnel)
+brew "pueue"     # background task queue (pi-coding-agent parallel delegation)
 # lemonade は brew formula 未提供。github release から install (scripts/mac.sh の install_lemonade)
 
 # --- Database ---

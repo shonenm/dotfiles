@@ -14,3 +14,4 @@ luarocks
 imagemagick
 autossh
 openssh-client
+pueue

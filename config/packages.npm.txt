@@ -4,6 +4,7 @@
 @anthropic-ai/claude-code
 @openai/codex
 @google/gemini-cli
+@earendil-works/pi-coding-agent
 
 # Claude Code token usage analytics (local JSONL parser)
 ccusage
