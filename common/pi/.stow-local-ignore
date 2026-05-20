@@ -1,0 +1,10 @@
+# Ignore pi-coding-agent runtime files (credentials, caches, session state)
+# These should NOT be stowed - they are generated at runtime by pi
+
+\.pi/credentials\.json
+\.pi/sessions
+\.pi/cache
+\.pi/packages
+\.pi/logs
+\.pi/history
+\.pi/telemetry

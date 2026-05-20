@@ -1,0 +1,18 @@
+# Codex runtime files (should never be committed)
+auth.json
+history.jsonl
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+models_cache.json
+installation_id
+version.json
+.personality_migration
+.tmp/
+cache/
+log/
+memories/
+sessions/
+shell_snapshots/
+skills/
+tmp/

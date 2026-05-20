@@ -1,0 +1,8 @@
+# pi-coding-agent runtime files (should never be committed)
+credentials.json
+sessions/
+cache/
+packages/
+logs/
+history/
+telemetry/
