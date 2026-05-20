@@ -50,9 +50,21 @@
   pueue log <task-id>   # check results/status
   ```
 
-## Web Access
+## Prompts
+- Global prompt templates: `/review`, `/plan`, `/implement`, `/commit`
 
-- Pi has no built-in WebFetch / WebSearch. Use Jina AI:
+## Skills
+- Global skills: `quality-assure`, `safe-refactor`, `dependency-research`, `pr-review`, `incident-debug`
+- Invoke via `/skill:<name>` or let the agent load them automatically.
+- Claude Code skills under `~/.claude/skills/` are also available.
+
+## Extensions
+- `permission-gate`: blocks dangerous bash commands pending user confirmation.
+- `protected-paths`: blocks writes to secrets, generated files, and dependencies.
+- `web-tools`: adds `web_fetch` and `web_search` custom tools via Jina AI.
+
+## Web Access
+- Pi has no built-in WebFetch / WebSearch. Use the `web_fetch`/`web_search` tools, or Jina AI via bash:
   - WebFetch: `curl -fsSL 'https://r.jina.ai/<URL>'` returns markdown.
   - WebSearch: `curl -fsSL 'https://s.jina.ai/<QUERY>'`.
   - Without an API key, both are rate-limited to ~20 RPM. Set `JINA_API_KEY` env var for higher limits.
