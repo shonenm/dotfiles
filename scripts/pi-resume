@@ -1,0 +1,116 @@
+#!/bin/bash
+# pi session picker / resumer
+# Browse and resume previous pi coding agent sessions via fzf.
+#
+# Usage:
+#   pi-resume              # fzf picker → pi --session <id>
+#   pi-resume -c, --continue   # pi -c (continue most recent)
+#   pi-resume -f, --fork       # fzf picker → pi --fork <id>
+#
+# Sessions are stored as JSONL files under ~/.pi/agent/sessions/
+# (or $PI_CODING_AGENT_SESSION_DIR if set).
+
+set -euo pipefail
+
+SESSION_DIR="${PI_CODING_AGENT_SESSION_DIR:-$HOME/.pi/agent/sessions}"
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [options]
+
+Options:
+  -c, --continue    Continue the most recent session (pi -c)
+  -f, --fork        Fork a selected session (pi --fork <id>)
+  -h, --help        Show this help
+EOF
+}
+
+# Parse arguments
+MODE="pick"  # pick | continue | fork
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -c|--continue) MODE="continue"; shift ;;
+    -f|--fork)     MODE="fork"; shift ;;
+    -h|--help)     usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
+  esac
+done
+
+# Continue most recent session quickly
+if [[ "$MODE" == "continue" ]]; then
+  exec pi -c
+fi
+
+# Ensure session directory exists
+if [[ ! -d "$SESSION_DIR" ]]; then
+  echo "No session directory: $SESSION_DIR" >&2
+  exit 1
+fi
+
+# Find all JSONL session files, sort by mtime (newest first)
+files=()
+while IFS= read -r f; do
+  [[ -n "$f" ]] && files+=("$f")
+done < <(find "$SESSION_DIR" -name '*.jsonl' -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null)
+
+if [[ ${#files[@]} -eq 0 ]]; then
+  echo "No pi sessions found in $SESSION_DIR" >&2
+  exit 1
+fi
+
+# Build picker list: "session_id  YYYY-MM-DD HH:MM  /cwd/path  first_prompt"
+# First field is session_id (hidden by fzf --with-nth); remaining fields shown.
+list=()
+for f in "${files[@]}"; do
+  header=$(head -n1 "$f" 2>/dev/null)
+  first_user=$(grep -m1 '"role":"user"' "$f" 2>/dev/null || true)
+
+  ts=$(echo "$header" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('timestamp','')[:16].replace('T',' '))" 2>/dev/null || echo "?")
+  cwd=$(echo "$header" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('cwd',''))" 2>/dev/null || echo "?")
+  sid=$(echo "$header" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null || echo "?")
+  prompt=$(echo "$first_user" | python3 -c "
+import sys,json
+try:
+  d=json.load(sys.stdin)
+  content=d.get('message',{}).get('content',[])
+  for c in content:
+    if c.get('type')=='text':
+      t=c.get('text','')
+      print(t[:50].replace(chr(10),' '))
+      break
+except Exception:
+  pass
+" 2>/dev/null || echo "")
+
+  # format: id <TAB> ts <TAB> cwd <TAB> prompt
+  line=$(printf '%s\t%-16s\t%-40s\t%-50s' "$sid" "$ts" "${cwd/#$HOME/~}" "$prompt")
+  list+=("$line")
+done
+
+# fzf picker
+if ! command -v fzf &>/dev/null; then
+  echo "fzf is required for session picker" >&2
+  exit 1
+fi
+
+selected=$(printf '%s\n' "${list[@]}" |
+  fzf --ansi --no-sort --tac \
+      --delimiter $'\t' \
+      --with-nth=2.. \
+      --header="Select a pi session (enter=resume, esc=cancel)" \
+      --preview="echo '{}' | cut -f1" \
+      --preview-window=hidden |
+  cut -f1)
+
+if [[ -z "${selected:-}" ]]; then
+  exit 0
+fi
+
+session_id="$selected"
+
+# Launch pi
+if [[ "$MODE" == "fork" ]]; then
+  exec pi --fork "$session_id"
+else
+  exec pi --session "$session_id"
+fi

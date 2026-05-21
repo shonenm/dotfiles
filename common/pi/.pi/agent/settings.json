@@ -1,0 +1,72 @@
+{
+  "defaultProvider": "opencode-go",
+  "defaultModel": "opencode-go/deepseek-v4-pro",
+  "defaultThinkingLevel": "medium",
+  "theme": "dark",
+  "quietStartup": false,
+  "collapseChangelog": true,
+  "doubleEscapeAction": "tree",
+  "treeFilterMode": "default",
+  "editorPaddingX": 0,
+  "autocompleteMaxVisible": 5,
+  "showHardwareCursor": false,
+  "enableInstallTelemetry": true,
+  "shellCommandPrefix": "shopt -s expand_aliases\neval \"$(grep '^alias ' ~/.zshrc.common 2>/dev/null || grep '^alias ' ~/.zshrc 2>/dev/null)\"",
+  "npmCommand": ["mise", "exec", "node@24", "--", "npm"],
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 16384,
+    "keepRecentTokens": 20000
+  },
+  "branchSummary": {
+    "reserveTokens": 16384,
+    "skipPrompt": false
+  },
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3,
+    "baseDelayMs": 2000,
+    "provider": {
+      "timeoutMs": 3600000,
+      "maxRetries": 0,
+      "maxRetryDelayMs": 60000
+    }
+  },
+  "steeringMode": "one-at-a-time",
+  "followUpMode": "one-at-a-time",
+  "transport": "sse",
+  "terminal": {
+    "showImages": true,
+    "imageWidthCells": 60,
+    "clearOnShrink": false
+  },
+  "images": {
+    "autoResize": true,
+    "blockImages": false
+  },
+  "warnings": {
+    "anthropicExtraUsage": true
+  },
+  "markdown": {
+    "codeBlockIndent": "  "
+  },
+  "enableSkillCommands": true,
+  "skills": [
+    "~/.pi/agent/skills",
+    "~/.claude/skills",
+    "~/.codex/skills"
+  ],
+  "extensions": [
+    "~/.pi/agent/extensions"
+  ],
+  "prompts": [
+    "~/.pi/agent/prompts"
+  ],
+  "themes": [],
+  "packages": [],
+  "enabledModels": [
+    "opencode-go/*",
+    "openai-codex/*",
+    "anthropic/*"
+  ]
+}
