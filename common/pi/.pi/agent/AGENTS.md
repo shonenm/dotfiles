@@ -7,7 +7,8 @@
 
 ## Skills Guidelines
 
-- AGENTS.md assumes progressive disclosure: it contains only the minimum guidance to keep agents productive. Detailed how-tos belong to skills.
+- AGENTS.md assumes progressive disclosure: it contains only the minimum information needed, while task-specific knowledge and guidelines live elsewhere.
+- Select and load the necessary skills as needed for each task.
 - Reach for a skill when a task is recurring or has known steps. Invoke via `/skill:<skill-name>` in your prompt or instructions.
 
 ## Implementation Principles
@@ -17,6 +18,15 @@
 - Prefer root-cause fixes over workarounds. Investigate before patching symptoms.
 - Do not leave half-finished work, backwards-compatibility shims, or unused code behind.
 - Code-style invariants that can be checked statically should be expressed with the environment's linter or ast-grep, not in prompts.
+
+## Coding Style
+
+- Maintain separation of concerns.
+- Separate state from logic.
+- Prioritize readability and maintainability.
+- Follow t-wada-style TDD: implement while continuously verifying behavior with type checking and tests.
+- Define contract layers (APIs/types) rigorously using ADTs, and keep implementation layers regenerable.
+- Rules that can be checked statically should be expressed with the environment's linter or ast-grep, not in prompts.
 
 ## Agent Delegation
 
