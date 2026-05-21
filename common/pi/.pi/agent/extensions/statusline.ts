@@ -113,7 +113,7 @@ export default function (pi: ExtensionAPI) {
               : "";
 
           // Left: colorful token stats
-          const inputStr = theme.fg("info", `↑${formatTokens(input)}`);
+          const inputStr = theme.fg("text", `↑${formatTokens(input)}`);
           const outputStr = theme.fg("accent", `↓${formatTokens(output)}`);
           const costStr = theme.fg("success", `$${cost.toFixed(3)}`);
 
