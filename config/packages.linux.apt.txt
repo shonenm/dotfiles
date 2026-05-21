@@ -15,3 +15,4 @@ imagemagick
 autossh
 openssh-client
 pueue
+python3
