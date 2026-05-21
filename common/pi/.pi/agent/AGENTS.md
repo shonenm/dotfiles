@@ -44,11 +44,12 @@
     - Use for low-difficulty or low-abstraction tasks, such as coding from an existing design.
   - Difficulty: low
     - Option: `--model 'opencode-go/deepseek-v4-flash:off' --fallback-models 'openai-codex/gpt-5.4-mini:off'`
-    - Generic short tasks, mechanical edits, formatting, scaffolding.
+    - Generally not recommended. Use for summarizing or extracting data that is too voluminous to handle in a main session with high/medium models.
+- When calling an agent, clearly communicate the background, goal, expected output, and what not to do.
 
-## Background Processes
+## Long-running Tasks and Development Servers
 
-- Do not start long-running processes such as development servers, watchers, or daemons directly from the CLI; use `pueue` instead.
+- Do not start long-running processes such as development servers, watchers, or daemons directly from the CLI; use **`pueue`** instead.
 - Start them with `pueue add -- <command>`, and use `pueue status` / `pueue log` / `pueue follow` / `pueue kill` / `pueue remove` to check status or manage them.
 - For parallel agent delegation, queue tasks via pueue:
   ```bash
@@ -56,8 +57,8 @@
   ```
   ```bash
   pueue status
-  pueue wait <task-id>  # blocks when there is no other parallel work
-  pueue log <task-id>   # check results/status
+  pueue wait <task-id> # blocks when there is no other parallel work
+  pueue log <task-id> # check results/status
   ```
 
 ## Prompts
@@ -73,8 +74,33 @@
 - `protected-paths`: blocks writes to secrets, generated files, and dependencies.
 - `web-tools`: adds `web_fetch` and `web_search` custom tools via Jina AI.
 
-## Web Access
-- Pi has no built-in WebFetch / WebSearch. Use the `web_fetch`/`web_search` tools, or Jina AI via bash:
-  - WebFetch: `curl -fsSL 'https://r.jina.ai/<URL>'` returns markdown.
-  - WebSearch: `curl -fsSL 'https://s.jina.ai/<QUERY>'`.
-  - Without an API key, both are rate-limited to ~20 RPM. Set `JINA_API_KEY` env var for higher limits.
+## Web Fetch
+
+- Use Jina AI from Bash to fetch article/page content with `r.jina.ai`:
+  ```bash
+  curl -H "Authorization: Bearer ${JINA_API_KEY}" \
+    -fsSL 'https://r.jina.ai/<target-url>'
+  ```
+
+## Research external/web
+
+- For direct web search, use Jina AI from Bash with `s.jina.ai`:
+  ```bash
+  curl -H "X-Respond-With: no-content" \
+    -H "Authorization: Bearer ${JINA_API_KEY}" \
+    -fsSL 'https://s.jina.ai/<search-query>'
+  ```
+- For broader/deeper external web research, delegate research to Codex using this pattern:
+  ```bash
+  codex -a never exec \
+    -s read-only \
+    -m gpt-5.4-mini \
+    '<research instructions>' \
+    -o '/tmp/<topic>-report.txt' \
+    < /dev/null \
+    >/dev/null 2>&1 && cat '/tmp/<topic>-report.txt'
+  ```
+
+## Web Access (Legacy Fallback)
+- Without an API key, Jina AI endpoints are rate-limited to ~20 RPM. Set `JINA_API_KEY` env var for higher limits.
+- Pi has no built-in WebFetch / WebSearch. Use the `web_fetch`/`web_search` custom tools (added by the `web-tools` extension), or Jina AI via bash as shown above.
