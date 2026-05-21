@@ -23,3 +23,4 @@ bottom
 imagemagick
 autossh
 pueue
+python3
