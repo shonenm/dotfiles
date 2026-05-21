@@ -91,23 +91,38 @@ export default function (pi: ExtensionAPI) {
             }
           }
 
-          // Git branch
+          // Git branch with color
           const branch = footerData.getGitBranch();
+          const branchColor = dirtyState ? "warning" : "accent";
           const branchStr = branch
-            ? ` ${branch}${dirtyState ? "*" : ""} `
+            ? ` ${theme.fg(branchColor, branch)}${dirtyState ? theme.fg("warning", "*") : ""} `
             : "";
 
           // Model
-          const modelStr = ctx.model?.id || "no-model";
+          const modelStr = theme.fg("muted", ctx.model?.id || "no-model");
 
-          // Left: tokens
-          const left = theme.fg(
-            "dim",
-            `↑${formatTokens(input)} ↓${formatTokens(output)} $${cost.toFixed(3)}`
-          );
+          // Context capacity with color based on usage
+          const usage = ctx.getContextUsage();
+          const capacity = ctx.model?.contextWindow ?? 0;
+          const used = usage?.tokens ?? 0;
+          const pct = capacity > 0 ? (used / capacity) * 100 : 0;
+          const ctxColor = pct > 80 ? "error" : pct > 60 ? "warning" : "success";
+          const ctxStr =
+            capacity > 0
+              ? theme.fg(ctxColor, `${formatTokens(used)}/${formatTokens(capacity)} (${pct.toFixed(0)}%)`)
+              : "";
+
+          // Left: colorful token stats
+          const inputStr = theme.fg("info", `↑${formatTokens(input)}`);
+          const outputStr = theme.fg("accent", `↓${formatTokens(output)}`);
+          const costStr = theme.fg("success", `$${cost.toFixed(3)}`);
+
+          const leftParts = [inputStr, outputStr, costStr];
+          if (ctxStr) leftParts.push(ctxStr);
+          const left = leftParts.join(" ");
 
           // Right: branch + model
-          const right = theme.fg("dim", `${branchStr}${modelStr}`).trimStart();
+          const right = `${branchStr}${modelStr}`.trimStart();
 
           const padWidth = Math.max(
             1,
