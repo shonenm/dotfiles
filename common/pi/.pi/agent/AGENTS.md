@@ -96,7 +96,7 @@
 - Global prompt templates: `/review`, `/plan`, `/implement`, `/commit`
 
 ## Skills
-- Global skills: `quality-assure`, `safe-refactor`, `dependency-research`, `pr-review`, `incident-debug`, `deep-web-research`, `docs-research`, `github-research`, `safe-implementation`, `code-review`, `dependency-upgrade`
+- Global skills: `quality-assure`, `safe-refactor`, `dependency-research`, `pr-review`, `incident-debug`, `deep-web-research`, `docs-research`, `github-research`
 - Invoke via `/skill:<name>` or let the agent load them automatically.
 - Claude Code skills under `~/.claude/skills/` are also available.
 
