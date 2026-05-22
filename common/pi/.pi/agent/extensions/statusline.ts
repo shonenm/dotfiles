@@ -2,6 +2,8 @@
 // Replaces the footer with a richer status line showing:
 //   - Token stats (input/output/cost)
 //   - Git branch + dirty state
+//   - Context capacity
+//   - Web research activity (searches, fetches, cache hits)
 //   - Current model
 //
 // Toggle via /statusline command.
@@ -10,6 +12,9 @@ import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { execSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 let enabled = true;
 let dirtyState = false;
@@ -112,7 +117,25 @@ export default function (pi: ExtensionAPI) {
               ? theme.fg(ctxColor, `${formatTokens(used)}/${formatTokens(capacity)} (${pct.toFixed(0)}%)`)
               : "";
 
-          // Left: colorful token stats
+          // Research stats from audit log
+          const statsFile = join(homedir(), ".pi", "research", "stats.json");
+          let searchCount = 0;
+          let fetchCount = 0;
+          let cacheHits = 0;
+          if (existsSync(statsFile)) {
+            try {
+              const stats = JSON.parse(readFileSync(statsFile, "utf-8"));
+              searchCount = stats.searchCount ?? 0;
+              fetchCount = stats.fetchCount ?? 0;
+              cacheHits = stats.cacheHits ?? 0;
+            } catch { /* ignore */ }
+          }
+          const researchStr =
+            searchCount > 0 || fetchCount > 0
+              ? theme.fg("dim", `web q:${searchCount} f:${fetchCount} c:${cacheHits}`) + " "
+              : "";
+
+          // Left: colorful token stats + research
           const inputStr = theme.fg("text", `↑${formatTokens(input)}`);
           const outputStr = theme.fg("accent", `↓${formatTokens(output)}`);
           const costStr = theme.fg("success", `$${cost.toFixed(3)}`);
@@ -121,8 +144,8 @@ export default function (pi: ExtensionAPI) {
           if (ctxStr) leftParts.push(ctxStr);
           const left = leftParts.join(" ");
 
-          // Right: branch + model
-          const right = `${branchStr}${modelStr}`.trimStart();
+          // Right: research + branch + model
+          const right = `${researchStr}${branchStr}${modelStr}`.trimStart();
 
           const padWidth = Math.max(
             1,
