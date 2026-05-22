@@ -13,6 +13,17 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task, WebFetch, WebSearch, AskUser
 
 このスキルは通常の対話セッションとして動作します（自律ループ機構は使用しません）。
 
+## モード
+
+引数 `$ARGUMENTS` に `--grill` が含まれるかでモードを分岐する:
+
+- default（引数に `--grill` なし）: 旧来の挙動。Phase 0 -> 1 -> 2 -> 3 を各 GATE のユーザー承認のみで進める。grill フェーズは実行しない。
+- `--grill`: grill モード。`d-grill-me` スキルの詰問手法を組み込み、要件・制約・スコープ・隠れた前提・修了判定（受入条件と完了条件）を1問ずつ詰め切ってから状態ファイルを構築する。具体的には以下の追加フェーズ・追加ステップを有効化する:
+  - Phase 0.5: Requirement Grill
+  - Phase 1 / Phase 2 内の Completion Grill
+
+両モードとも grill の質問は AskUserQuestion ツールではなく通常テキストで行い、ユーザーのターン返信を待つ（自由記述の議論を妨げないため）。
+
 ## 絶対ルール
 
 1. 各フェーズの末尾でユーザーの明示的な承認を得るまで次のフェーズに進んではならない。「OK」「承認」「LGTM」「進めて」等の承認発言があるまで待機すること。承認なしにフェーズを跨ぐのは禁止。
@@ -26,6 +37,7 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task, WebFetch, WebSearch, AskUser
 | 引数 | 説明 |
 |------|------|
 | `<task-description>` | 実装するタスクの説明 |
+| `--grill` | grill モードを有効化（Phase 0.5 + Completion Grill） |
 
 ### 使用例
 
@@ -33,6 +45,7 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task, WebFetch, WebSearch, AskUser
 /d-ralph-plan "ユーザー認証機能を追加する"
 /d-ralph-plan "APIのレスポンスキャッシュ層を実装する"
 /d-ralph-plan docs/prd.md
+/d-ralph-plan --grill "ユーザー認証機能を追加する"
 ```
 
 ## 手順
@@ -65,6 +78,22 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task, WebFetch, WebSearch, AskUser
 
 --- GATE: Phase 0 完了 ---
 コンテキストレポートを提示したら停止し、ユーザーの承認を待つ。
+承認を得るまで Phase 0.5（grill モード時）または Phase 1（default モード時）に進んではならない。
+
+### Phase 0.5: Requirement Grill（grill モードのみ）
+
+default モードではこのフェーズをスキップして Phase 1 に進む。
+
+`d-grill-me` スキルの詰問手法を適用し、要件・制約・スコープ境界・隠れた前提を1問ずつ詰め切る:
+
+- 1問ずつ質問し、各質問に AI 推奨回答を理由とともに併記し、ユーザーのターン返信を待ってから次へ進む。
+- コードベース・docs（プロジェクトのアーキテクチャドキュメント・型定義・`docs/CONTEXT.md`）で答えられる質問は聞かず自分で調査する（Phase 0 の調査と統合）。
+- 既存アーキテクチャ・型定義と矛盾する前提を即指摘する（cross-reference）。
+- 曖昧な多義語に canonical term を提案する。エッジケースのシナリオで境界を確定する。
+- 用語が解決したら `docs/CONTEXT.md` に書き戻す。不可逆な設計判断は `docs/adr/NNNN-slug.md` に記録する（条件・書式は `d-grill-me` スキル参照）。
+
+--- GATE: Phase 0.5 完了 ---
+決定木が解消したらカバーサマリ（Decisions / Constraints / Open questions）を提示して停止し、ユーザーの承認を待つ。
 承認を得るまで Phase 1 に進んではならない。
 
 ### Phase 1: Requirements & Acceptance Criteria
@@ -93,6 +122,14 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task, WebFetch, WebSearch, AskUser
 - AC-T (全テストパス) と AC-L (tsc --noEmit エラー0) はデフォルトACとして必ず含める
 - 全てのACは検証可能な形式で記述する (コマンドまたは手順を明記)
 - ユーザーのフィードバックを受けて修正を繰り返す
+
+#### Completion Grill（grill モードのみ）
+
+default モードではスキップする。AC を提示する前に、各 AC を1問ずつ詰める:
+
+- 各 AC の検証方法（verification_command）が実際に機械的に検証可能か。曖昧な AC（"正しく動く" 等）は観測可能・検証可能な条件に書き直す。
+- 漏れている修了条件がないか（エラーパス・境界・後方互換）。必要なら AC を追加する。
+- 1問ずつ、推奨回答併記、ユーザー返信を待つ。
 
 --- GATE: Phase 1 完了 ---
 要件と受入条件を提示したら停止し、ユーザーの承認を待つ。
@@ -138,6 +175,15 @@ allowed-tools: Bash, Read, Write, Glob, Grep, Task, WebFetch, WebSearch, AskUser
 - 依存するタスク
 
 ユーザーのフィードバックを受けて修正を繰り返す。
+
+#### Completion Grill（grill モードのみ）
+
+default モードではスキップする。タスクグラフを承認に出す前に、修了判定を1問ずつ詰める:
+
+- 各タスクの完了条件（completion_condition）が曖昧でないか。「実装する」ではなく「何が成立したら done か」を観測可能な条件で表現する。
+- ralph 完了（RALPH_COMPLETE）の品質ゲート（typecheck / 全テスト / 全 AC verified）でこのタスクの正しさを十分に保証できるか。不足するなら AC を Phase 1 に追加で戻す。
+- タスク分割の粒度・依存（deps）の正しさ。
+- 1問ずつ、推奨回答併記、ユーザー返信を待つ。
 
 --- GATE: Phase 2 完了 ---
 設計とタスクグラフを提示したら停止し、ユーザーの承認を待つ。
