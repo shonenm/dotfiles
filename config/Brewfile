@@ -21,13 +21,19 @@ brew "aerc"
 brew "imagemagick"
 brew "qrencode"
 
+# --- Container Runtime (macOS) ---
+brew "colima"       # OSS container runtime on Lima VM
+brew "docker"       # Docker CLI (colima provides the daemon)
+brew "docker-compose"  # Docker Compose plugin
+brew "docker-credential-helper"  # osxkeychain credential store
+
 # --- Development ---
 brew "neovim"
 brew "typst"
 brew "fancy-cat"    # ターミナル内PDFビューア（Kitty graphics protocol）
 brew "lazygit"
 brew "trasta298/tap/keifu"
-brew "lazydocker"
+brew "lazydocker"  # TUI for Docker management
 brew "git-delta"
 brew "gh"
 brew "ghq"
