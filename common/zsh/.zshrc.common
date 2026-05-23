@@ -75,6 +75,12 @@ export FORGIT_STASH_FZF_OPTS='
   --header="enter:show | alt-p:pop | alt-a:apply | alt-d:drop | ctrl-y:copy ref"
 '
 
+# --- 1Password Secrets (non-interactive, graceful) ---
+# Jina AI API key for web research
+if command -v op &>/dev/null && op whoami &>/dev/null 2>&1; then
+  export JINA_API_KEY="$(op read "op://Personal/Jina AI/credential" 2>/dev/null)"
+fi
+
 # =====================================================
 # Interactive-only section
 # (aliases, completions, prompts, hooks)
