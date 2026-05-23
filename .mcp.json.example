@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/shonenm/dotfiles/main/common/mcp/.config/mcp/mcp.json",
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"],
+      "description": "Library documentation lookup",
+      "permission": "allow",
+      "enabled": true
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "description": "Browser automation",
+      "permission": "ask",
+      "enabled": false
+    },
+    "filesystem-readonly": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@latest", "."],
+      "description": "Read-only filesystem access (project root)",
+      "permission": "allow",
+      "enabled": false
+    }
+  }
+}
