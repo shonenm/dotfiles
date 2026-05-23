@@ -32,7 +32,7 @@
               nix-direnv
             ];
             shellHook = ''
-              # Nix Phase 0: scaffold-only development environment
+              # dotfiles devShell
             '';
           };
         }
@@ -42,7 +42,12 @@
         nixpkgs.legacyPackages.${system}.nixpkgs-fmt
       );
 
-      # Phase 0: scaffold only
-      # Outputs will be populated in Phase 1+ (hosts, homeConfigurations, darwinConfigurations)
+      darwinConfigurations.shonenm = nix-darwin.lib.darwinSystem {
+        system = "aarch64-darwin";
+        modules = [
+          ./nix/hosts/mac.nix
+        ];
+        specialArgs = { inherit nixpkgs; };
+      };
     };
 }
