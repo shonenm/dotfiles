@@ -61,46 +61,52 @@
   pueue log <task-id> # check results/status
   ```
 
+## Web Research
+
+- Use the pi web research toolchain, not raw curl or browser.
+- Follow the protocol: **search → fetch → cache → cite → answer**.
+- **Search is for discovery only** — Never rely on snippets alone. Always fetch source content.
+- **Primary sources first** — Official docs > source code > release notes > blogs > forums.
+- **Check cache before fetching** — Use `web_cache_lookup` to avoid redundant requests.
+- **Cache everything useful** — Store fetched content with `web_cache_write`.
+- **Cite all sources** — Use `web_citation_add` for every source that informed your answer.
+- **Never rely on snippets alone** — Fetch full page content before drawing conclusions.
+- **Note contradictions** — If sources disagree, mark conflicting ones and state uncertainty.
+- **Research results are stored** in `~/.pi/research/`.
+
+## Security
+
+- **Never send secrets to external web tools** — This includes `.env` files, API keys, private keys, tokens, customer data, internal URLs, auth cookies, and private source file full text.
+- **Three-tier web permission**:
+  - `allow`: Public package names, public error messages, public docs queries.
+  - `ask`: Stack traces, file paths, repository-specific questions.
+  - `deny`: Secrets, credentials, private source full text.
+- **Summarize private errors before searching** — Remove file paths, credentials, and internal context before sending to web tools.
+- **Ask before destructive commands** — Block `rm -rf`, `sudo`, `DROP`, `DELETE FROM`, and external network calls involving repo content.
+
+## Development
+
+- Prefer small diffs.
+- Check installed package versions before using latest docs.
+- Run relevant type checks and tests before finishing any task.
+- Update tests when behavior changes.
+- Do not leave unused code or backwards-compatibility shims behind.
+
 ## Prompts
 - Global prompt templates: `/review`, `/plan`, `/implement`, `/commit`
 
 ## Skills
-- Global skills: `quality-assure`, `safe-refactor`, `dependency-research`, `pr-review`, `incident-debug`
+- Global skills: `quality-assure`, `safe-refactor`, `dependency-research`, `pr-review`, `incident-debug`, `deep-research`, `docs-research`, `github-research`
 - Invoke via `/skill:<name>` or let the agent load them automatically.
 - Claude Code skills under `~/.claude/skills/` are also available.
 
 ## Extensions
 - `permission-gate`: blocks dangerous bash commands pending user confirmation.
 - `protected-paths`: blocks writes to secrets, generated files, and dependencies.
-- `web-tools`: adds `web_fetch` and `web_search` custom tools via Jina AI.
-
-## Web Fetch
-
-- Use Jina AI from Bash to fetch article/page content with `r.jina.ai`:
-  ```bash
-  curl -H "Authorization: Bearer ${JINA_API_KEY}" \
-    -fsSL 'https://r.jina.ai/<target-url>'
-  ```
-
-## Research external/web
-
-- For direct web search, use Jina AI from Bash with `s.jina.ai`:
-  ```bash
-  curl -H "X-Respond-With: no-content" \
-    -H "Authorization: Bearer ${JINA_API_KEY}" \
-    -fsSL 'https://s.jina.ai/<search-query>'
-  ```
-- For broader/deeper external web research, delegate research to Codex using this pattern:
-  ```bash
-  codex -a never exec \
-    -s read-only \
-    -m gpt-5.4-mini \
-    '<research instructions>' \
-    -o '/tmp/<topic>-report.txt' \
-    < /dev/null \
-    >/dev/null 2>&1 && cat '/tmp/<topic>-report.txt'
-  ```
-
-## Web Access (Legacy Fallback)
-- Without an API key, Jina AI endpoints are rate-limited to ~20 RPM. Set `JINA_API_KEY` env var for higher limits.
-- Pi has no built-in WebFetch / WebSearch. Use the `web_fetch`/`web_search` custom tools (added by the `web-tools` extension), or Jina AI via bash as shown above.
+- `web-router`: routes search queries through SearXNG → DuckDuckGo → Jina fallback chain.
+- `web-fetch`: fetches URL content with Jina → Playwright → Raw fallback chain.
+- `web-cache`: local file-based cache for research results under `~/.pi/research/`.
+- `citation-store`: tracks research sources and citations.
+- `secret-guard`: blocks transmission of secrets, credentials, and sensitive data to external web tools.
+- `audit-log`: logs all web tool usage for transparency.
+- `statusline`: colorful footer with token stats, context capacity, git branch, and research activity.
