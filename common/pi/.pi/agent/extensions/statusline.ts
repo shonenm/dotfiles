@@ -25,8 +25,6 @@ let mode: DisplayMode = "detailed";
 let dirtyState = false;
 let lastDirtyCheck = 0;
 const DIRTY_CHECK_INTERVAL_MS = 5000;
-const MIN_WIDTH_COMPACT = 60;
-const MIN_WIDTH_SINGLE = 100;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -98,15 +96,6 @@ function readStats(): StatsSnapshot {
   cachedStats = stats;
   statsCacheMs = now;
   return stats;
-}
-
-function contextBar(pct: number, width: number, theme: any): string {
-  const barWidth = Math.max(4, width);
-  const filled = Math.round((pct / 100) * barWidth);
-  const arrow = filled > 0 && filled < barWidth ? ">" : "";
-  const bar = "=".repeat(Math.max(0, filled - (arrow ? 1 : 0))) + arrow + " ".repeat(Math.max(0, barWidth - filled));
-  const color = pct > 80 ? "error" : pct > 60 ? "warning" : "success";
-  return theme.fg(color, `[${bar}]`) + ` ${pct.toFixed(0)}%`;
 }
 
 // ---------------------------------------------------------------------------
@@ -215,50 +204,71 @@ export default function (pi: ExtensionAPI) {
           const segOut = theme.fg("accent", `↓${formatTokens(output)}`);
           const segCost = theme.fg(costColor, `$${cost.toFixed(3)}`);
 
-          // ---- Right segments ----
-          const parts: string[] = [];
+          // ---- Layout: progressive hiding from right to left as width decreases ----
+          // Elements from right to left (first to hide → last to hide):
+          //   model → branch → mcp stats → web stats → context gauge → cost → output → input
 
-          // Web stats
-          if (stats.webSearch > 0 || stats.webFetch > 0) {
-            parts.push(theme.fg("dim", `web s:${stats.webSearch} f:${stats.webFetch} c:${stats.webCache}`));
-          }
-
-          // MCP stats
-          if (stats.mcpCalls > 0) {
-            parts.push(theme.fg("cyan", `mcp q:${stats.mcpCalls}${stats.mcpErrors > 0 ? `×${stats.mcpErrors}` : ""}`));
-          }
-
-          if (branchStr) parts.push(branchStr);
-          parts.push(modelStr);
-
-          // ---- Layout ----
-          if (mode === "compact" || width < MIN_WIDTH_COMPACT) {
-            // Compact: single line, minimal
+          if (mode === "compact") {
+            // Compact: minimal, always single line
             const left = `${segIn} ${segOut} ${segCost}`;
-            const right = [...parts, modelStr].filter(Boolean).join(" ");
+            const right = [modelStr].join(" ");
             const pad = Math.max(1, width - visibleWidth(left) - visibleWidth(right));
             return [truncateToWidth(left + " ".repeat(pad) + right, width)];
           }
 
-          // Detailed: full layout
-          const ctxBar = capacity > 0
-            ? contextBar(pct, Math.min(20, Math.floor(width * 0.15)), theme)
+          // Detailed: progressive layout
+          // Build a single line, dropping elements from right as space shrinks.
+          // Use color ONLY on simple tokens (no ANSI inside compound strings that get truncated).
+          const lines: string[] = [];
+
+          // Left base: always show tokens
+          const leftBase = `${segIn} ${segOut} ${segCost}`;
+
+          // Context gauge (simple text, pre-colored via ctxColor)
+          const ctxGauge = capacity > 0
+            ? ` ${theme.fg(ctxColor, `[${pct.toFixed(0)}%]`)}`
             : "";
 
-          const left = [segIn, segOut, segCost, ctxBar].filter(Boolean).join(" ");
-          const right = parts.join(" ");
+          // Right elements in priority order (first to drop = rightmost)
+          const rightElems: string[] = [];
+          if (branchStr) rightElems.push(branchStr);
+          if (stats.webSearch > 0 || stats.webFetch > 0) {
+            rightElems.push(theme.fg("dim", `web s:${stats.webSearch} f:${stats.webFetch} c:${stats.webCache}`));
+          }
+          if (stats.mcpCalls > 0) {
+            rightElems.push(theme.fg("cyan", `mcp q:${stats.mcpCalls}${stats.mcpErrors > 0 ? ` e:${stats.mcpErrors}` : ""}`));
+          }
+          rightElems.push(modelStr);
 
-          if (width >= MIN_WIDTH_SINGLE) {
-            // Single line
-            const pad = Math.max(1, width - visibleWidth(left) - visibleWidth(right));
-            return [truncateToWidth(left + " ".repeat(pad) + right, width)];
+          // Try fitting everything on one line. If not, drop elements or fall back to two lines.
+          const fullLeft = leftBase + ctxGauge;
+          const fullRight = rightElems.join(" ");
+          const fullWidth = visibleWidth(fullLeft) + visibleWidth(fullRight) + 1;
+
+          if (fullWidth <= width) {
+            // Everything fits on one line
+            const pad = " ".repeat(width - visibleWidth(fullLeft) - visibleWidth(fullRight));
+            lines.push(fullLeft + pad + fullRight);
+          } else {
+            // Doesn't fit. Try dropping right elements one by one.
+            let dropped = false;
+            for (let i = rightElems.length; i >= 0; i--) {
+              const r = rightElems.slice(0, i).join(" ");
+              const w = visibleWidth(fullLeft) + (r ? visibleWidth(r) + 1 : 0);
+              if (w <= width) {
+                const pad = r ? " ".repeat(width - visibleWidth(fullLeft) - visibleWidth(r)) : "";
+                lines.push(fullLeft + (r ? pad + r : ""));
+                dropped = true;
+                break;
+              }
+            }
+            if (!dropped) {
+              // Even tokens alone don't fit — minimal fallback
+              lines.push(truncateToWidth(leftBase, width));
+            }
           }
 
-          // Multi-line: stats on separate line when narrow
-          return [
-            truncateToWidth(left, width),
-            truncateToWidth(" ".repeat(Math.max(0, width - visibleWidth(right))) + right, width),
-          ];
+          return lines;
         },
       };
     });
