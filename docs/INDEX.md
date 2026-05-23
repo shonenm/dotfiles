@@ -19,7 +19,8 @@
 
 ## AI Agents
 ### pi
-- [ai-agents/pi/overview.md](ai-agents/pi/overview.md) — pi coding agent (extensions, skills, web research)
+- [ai-agents/pi/overview.md](ai-agents/pi/overview.md) — pi coding agent
+- [ai-agents/pi/web-research.md](ai-agents/pi/web-research.md) — Web Research Layer
 
 ### Claude
 - [ai-agents/claude/development.md](ai-agents/claude/development.md) — Claude development workflow
