@@ -1,65 +1,53 @@
 # Agent Shared Configuration Layer
 
-Claude Code, pi, Codex の各コーディングエージェントで共有する設定（ルール、スキル、プロンプト、MCP）を一元管理するレイヤー。
+Claude Code と pi で共有する設定（MCP、スキル、知識）を一元管理するレイヤー。
+**ファイル共有ではなく仕様共有**を原則とする。
 
 ## Architecture
 
 ```
-~/.config/agent/           ← 共有設定（全エージェント）
+~/.config/agent/           ← 共有設定
 ├── mcp.json               ← MCPサーバー設定（統合）
-├── rules/                 ← 共通ルール
-│   ├── communication.md
-│   ├── implementation.md
-│   ├── problem-solving.md
-│   ├── security.md
-│   └── web-research.md
-├── skills/                ← 共通スキル
+├── skills/                ← Agent Skills Standard 準拠
 │   ├── github/            ← commit, pr, issue, conflict-resolve
-│   ├── research/          ← deep-research, docs-research, github-research, mcp-research
+│   ├── research/          ← deep, docs, github, dependency, mcp
 │   ├── quality/           ← quality-assure, safe-refactor, pr-review
 │   └── debug/             ← incident-debug
-└── prompts/               ← プロンプトテンプレート
-    ├── plan.md
-    ├── implement.md
-    ├── commit.md
-    └── review.md
+└── knowledge/             ← ツール非依存の知識・原則
+    ├── communication.md
+    ├── security.md
+    └── web-research.md
+
+docs/specs/agent-infrastructure.md  ← 正準仕様書
+  「すべてのエージェントは以下を実装すること」
+   ├─ Permission Gate
+   ├─ Protected Paths
+   ├─ Audit Log
+   ├─ Status Line
+   ├─ Web Research
+   └─ MCP Gateway
 ```
 
-## 各エージェントからの参照
+## 共有するもの・しないもの
 
-| Agent | MCP | Rules | Skills | Prompts |
-|-------|-----|-------|--------|---------|
-| Claude | symlink: `~/.config/claude/mcp.json` → `~/.config/agent/mcp.json` | `~/.claude/rules/` (個別) + shared rules (CLAUDE.md経由) | `~/.config/agent/skills/` | — |
-| pi | `~/.config/agent/mcp.json` (mcp-gateway.ts 経由) | AGENTS.md で参照 | settings.json の skills path | settings.json の prompts path |
-| Codex | — | — | — | — |
+| 共有する | 共有しない（ツール固有） |
+|----------|------------------------|
+| MCP 設定（標準プロトコル） | プロンプトテンプレート（構文が非互換） |
+| スキル（Agent Skills Standard） | パスベースルール（glob 構文が非互換） |
+| 知識・原則（プレーン Markdown） | コマンド定義（標準化されていない） |
+| 仕様書（docs/specs/） | フック/拡張実装（機構が異なる） |
 
-## 設定ソースの優先順位
+## 新エージェント追加手順
 
-### MCP
-1. (低) `~/.config/agent/mcp.json` — グローバル共有
-2. `.mcp.json` — プロジェクト
-3. (高) `.pi/mcp.json` — pi 上書き
-
-### Skills / Prompts
-pi の `settings.json` で指定されたパス順に解決（先勝ち）。
-
-## スキル命名規則
-
-- `github/*` — GitHub ワークフロー（commit, pr, issue, conflict-resolve）
-- `research/*` — 調査系（deep, docs, github, dependency, mcp）
-- `quality/*` — 品質保証（assure, safe-refactor, pr-review）
-- `debug/*` — デバッグ・インシデント対応
-
-## dotfiles でのパッケージ構成
-
-```
-common/agent/.config/agent/  → stow → ~/.config/agent/
-```
-
-`~/.config/agent/mcp.json` が Claude と pi の両方から参照される単一の MCP 設定となる。
+1. `docs/specs/agent-infrastructure.md` を読む
+2. ツールのネイティブ機構で各コンポーネントを実装
+3. ポリシーは仕様書に従う
+4. 実装完了後、仕様書の Status テーブルを更新
+5. 共有スキルは `~/.config/agent/skills/` を参照パスに追加
 
 ## 移行履歴
 
-- 2026-05-23: `common/mcp/` と `common/claude/.config/claude/mcp.json` を統合し `common/agent/.config/agent/mcp.json` に移行
-- pi の skills/prompts を `common/agent/.config/agent/` に移行
-- pi AGENTS.md を共有ルール参照にスリム化
+- 2026-05-23: `common/mcp/` + Claude MCP → `common/agent/` に統合
+- pi skills/prompts → agent/skills/ に移行（prompts は pi 固有のため後日差し戻し）
+- rules/ → knowledge/ に改名（制御ルールは除外）
+- `docs/specs/agent-infrastructure.md` 新設

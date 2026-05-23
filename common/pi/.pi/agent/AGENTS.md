@@ -1,49 +1,43 @@
 # AGENTS.md (User Scoped)
 
-## Shared Rules
+## Infrastructure Spec
 
-Common rules are in `~/.config/agent/rules/`. These apply to all coding agents:
+The canonical specification for all agent infrastructure components is at:
+`docs/specs/agent-infrastructure.md`
 
-- `communication.md` — Language and tone
-- `implementation.md` — Scope and discipline
-- `problem-solving.md` — Debugging and research
-- `security.md` — Secret protection and permissions
-- `web-research.md` — Search protocol
+Implementations:
+- **Pi**: `~/.pi/agent/extensions/` (TypeScript)
+- **Claude Code**: `~/.claude/hooks/` (shell scripts)
 
-## Skills Guidelines
+## Shared Configuration
 
-- Shared skills are in `~/.config/agent/skills/`.
-- Invoke via `/skill:<name>` or let the agent load them automatically.
-- Claude Code skills under `~/.claude/skills/` are also available.
+Tool-agnostic config is in `~/.config/agent/`:
+- `mcp.json` — MCP server config (shared across Claude and pi)
+- `skills/` — Agent Skills Standard (github, research, quality, debug)
+- `knowledge/` — Shared principles (communication, security, web-research)
+
+## Skills
+
+Invoke via `/skill:<name>`. Shared skills are auto-discovered from `~/.config/agent/skills/`.
+Claude-specific skills under `~/.claude/skills/` are also available.
 
 ## Agent Delegation
 
-- To keep context clean and preserve accuracy, speed, and cost efficiency, proactively delegate yak shaving and work outside the current focus to an appropriate model agent.
-- How to call an agent: `pi --model <provider/model:effort> --fallback-models <provider/model:effort>,... -p '<instructions>'` (left-priority fallback)
-  - When a delegated task needs a specific skill, specify it in the prompt: `pi ... -p '/skill:<skill-name> <instructions>'`
-- Model selection (assumes OpenCode Go + Codex subscriptions):
-  - Difficulty: high → `--model 'openai-codex/gpt-5.5:high' --fallback-models 'opencode-go/kimi-k2.6:high'`
-  - Difficulty: medium → `--model 'opencode-go/deepseek-v4-pro:high' --fallback-models 'openai-codex/gpt-5.4:low,openai-codex/gpt-5.3-codex-spark:low'`
-  - Difficulty: low → `--model 'opencode-go/deepseek-v4-flash:off' --fallback-models 'openai-codex/gpt-5.4-mini:off'`
-- When calling an agent, clearly communicate the background, goal, expected output, and what not to do.
+- Delegate yak shaving and work outside current focus to a sub-agent.
+- `pi --model <provider/model:effort> --fallback-models <...> -p '<instructions>'`
+- Model selection:
+  - High difficulty: `openai-codex/gpt-5.5:high` / `opencode-go/kimi-k2.6:high`
+  - Medium: `opencode-go/deepseek-v4-pro:high` / `openai-codex/gpt-5.4:low`
+  - Low: `opencode-go/deepseek-v4-flash:off`
 
-## Long-running Tasks and Development Servers
+## Long-running Tasks
 
-- Do not start long-running processes directly from the CLI; use **`pueue`** instead.
-- Start: `pueue add -- <command>`, manage: `pueue status` / `pueue log` / `pueue follow` / `pueue kill`.
-- For parallel agent delegation: `pueue add -i --print-task-id -- "pi ... -p '<instruction>' < /dev/null"`
-
-## Development
-
-- Prefer small diffs.
-- Run relevant type checks and tests before finishing any task.
-- Update tests when behavior changes.
-- Do not leave unused code or backwards-compatibility shims behind.
+Use `pueue` for background processes: `pueue add -- <command>`
 
 ## Extensions
 
-- `permission-gate`: blocks dangerous bash commands pending user confirmation.
-- `protected-paths`: blocks writes to secrets, generated files, and dependencies.
-- `web-tools`: search, fetch, cache, citation tools (SearXNG + Jina).
-- `mcp-gateway`: MCP tool bridge with permission control and audit logging.
-- `statusline`: colorful footer with token stats, context capacity, git branch, and research activity.
+- `permission-gate` — blocks dangerous bash commands
+- `protected-paths` — blocks writes to secrets and generated files
+- `web-tools` — search, fetch, cache, citation (SearXNG + Jina)
+- `mcp-gateway` — MCP tool bridge with permission control and audit
+- `statusline` — footer with token stats, context, git branch, research activity
