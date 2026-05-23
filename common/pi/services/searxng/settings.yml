@@ -1,9 +1,7 @@
-use_standard_size: true
+use_default_settings: true
+
 general:
   instance_name: "SearXNG (pi research)"
-  debug: false
-  privacypolicy_url: false
-  donation_url: false
 
 search:
   formats:
@@ -11,9 +9,8 @@ search:
     - json
 
 server:
-  port: 8080
-  bind_address: "0.0.0.0"
   secret_key: "searxng-pi-research-key"
+  bind_address: "0.0.0.0"
   limiter: false
   image_proxy: false
 
@@ -23,31 +20,11 @@ ui:
 outgoing:
   request_timeout: 10.0
   max_request_timeout: 30.0
-  useragent_suffix: ""
 
+# Override default engines: keep only what we need for pi research
 engines:
-  - name: google
-    engine: google
-    shortcut: g
-    disabled: false
-
   - name: duckduckgo
-    engine: duckduckgo
-    shortcut: ddg
     disabled: false
 
   - name: wikipedia
-    engine: wikipedia
-    shortcut: wp
-    disabled: false
-
-  - name: github
-    engine: github
-    shortcut: gh
-    disabled: false
-
-  - name: stackoverflow
-    engine: stackexchange
-    shortcut: so
-    api_url: https://api.stackexchange.com/2.3/
     disabled: false
