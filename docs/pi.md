@@ -123,7 +123,7 @@ web_citation_list (summarize)
 
 | Skill | 用途 |
 |-------|------|
-| `deep-web-research` | マルチソース調査、クロスリファレンス |
+| `deep-research` | マルチソース調査、クロスリファレンス |
 | `docs-research` | ドキュメント調査（バージョン対応） |
 | `github-research` | clone-first ソースコード調査 |
 

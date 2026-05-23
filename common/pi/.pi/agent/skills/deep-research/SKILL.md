@@ -1,5 +1,5 @@
 ---
-name: deep-web-research
+name: deep-research
 description: "Conduct thorough web research using the pi web research toolchain. Search → fetch → cross-reference → cite. Use when investigating topics, finding solutions to errors, or gathering information from multiple sources."
 ---
 
