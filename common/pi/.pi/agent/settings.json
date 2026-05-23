@@ -52,6 +52,7 @@
   },
   "enableSkillCommands": true,
   "skills": [
+    "~/.config/agent/skills",
     "~/.pi/agent/skills",
     "~/.claude/skills",
     "~/.codex/skills"
@@ -60,6 +61,7 @@
     "~/.pi/agent/extensions"
   ],
   "prompts": [
+    "~/.config/agent/prompts",
     "~/.pi/agent/prompts"
   ],
   "themes": [],
