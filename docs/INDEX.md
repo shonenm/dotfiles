@@ -6,7 +6,6 @@
 - [install/setup-new-environment.md](install/setup-new-environment.md) — New machine setup checklist
 
 ## Tools
-- [tools/pi.md](tools/pi.md) — pi coding agent (extensions, skills, web research)
 - [tools/neovim/overview.md](tools/neovim/overview.md) — Neovim configuration
 - [tools/neovim/troubleshooting.md](tools/neovim/troubleshooting.md) — Neovim troubleshooting
 - [tools/neovim/patches/README.md](tools/neovim/patches/README.md) — Neovim patch notes
@@ -19,6 +18,9 @@
 - [tools/zsh-startup-optimization.md](tools/zsh-startup-optimization.md) — Zsh startup optimization
 
 ## AI Agents
+### pi
+- [ai-agents/pi/overview.md](ai-agents/pi/overview.md) — pi coding agent (extensions, skills, web research)
+
 ### Claude
 - [ai-agents/claude/development.md](ai-agents/claude/development.md) — Claude development workflow
 - [ai-agents/claude/fallback.md](ai-agents/claude/fallback.md) — Claude outage fallback
