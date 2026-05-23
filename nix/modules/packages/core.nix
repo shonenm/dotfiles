@@ -6,9 +6,9 @@
   # Casks (ghostty, raycast, karabiner-elements, aerospace) → Phase 1c.
   environment.systemPackages = with pkgs; [
     # Shell & Terminal
-    tmux
-    starship
-    sheldon
+    # tmux → home-manager (programs.tmux, Phase 2b)
+    # starship → home-manager (programs.starship, Phase 2b)
+    # sheldon REMOVED — replaced by programs.zsh.plugins (Phase 2b)
     atuin
     zoxide
     sesh

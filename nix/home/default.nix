@@ -11,6 +11,11 @@
     ./programs/mise.nix
     ./programs/sesh.nix
     ./programs/aerc.nix
+    # Phase 2b additions
+    ./programs/zsh.nix
+    ./programs/zsh-abbr.nix
+    ./programs/starship.nix
+    ./programs/tmux.nix
   ];
 
   home.username = "matsushimakouta";
