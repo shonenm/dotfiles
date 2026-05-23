@@ -804,9 +804,6 @@ function __icon_map() {
    "Opera")
         icon_result=":opera:"
         ;;
-   "OrbStack")
-        icon_result=":orbstack:"
-        ;;
    "OrcaSlicer")
         icon_result=":orcaslicer:"
         ;;
