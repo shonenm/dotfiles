@@ -12,7 +12,13 @@
   "showHardwareCursor": false,
   "enableInstallTelemetry": true,
   "shellCommandPrefix": "shopt -s expand_aliases\neval \"$(grep '^alias ' ~/.zshrc.common 2>/dev/null || grep '^alias ' ~/.zshrc 2>/dev/null)\"",
-  "npmCommand": ["mise", "exec", "node@24", "--", "npm"],
+  "npmCommand": [
+    "mise",
+    "exec",
+    "node@24",
+    "--",
+    "npm"
+  ],
   "compaction": {
     "enabled": true,
     "reserveTokens": 16384,
@@ -52,9 +58,9 @@
   },
   "enableSkillCommands": true,
   "skills": [
+    "~/.config/agent/skills",
     "~/.pi/agent/skills",
-    "~/.claude/skills",
-    "~/.codex/skills"
+    "~/.claude/skills"
   ],
   "extensions": [
     "~/.pi/agent/extensions"

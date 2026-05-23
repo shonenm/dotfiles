@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/shonenm/dotfiles/main/common/mcp/.config/mcp/mcp.json",
+  "$schema": "https://raw.githubusercontent.com/shonenm/dotfiles/main/common/agent/.config/agent/mcp.json",
   "mcpServers": {
     "context7": {
       "command": "npx",
