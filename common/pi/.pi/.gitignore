@@ -6,3 +6,6 @@ packages/
 logs/
 history/
 telemetry/
+
+# Web research layer runtime data
+research/
