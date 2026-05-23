@@ -46,6 +46,13 @@
         system = "aarch64-darwin";
         modules = [
           ./nix/hosts/mac.nix
+          home-manager.darwinModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.backupFileExtension = "stow-backup";
+            home-manager.users.matsushimakouta = import ./nix/home/default.nix;
+          }
         ];
         specialArgs = { inherit nixpkgs; };
       };

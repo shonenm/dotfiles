@@ -1,0 +1,16 @@
+{ ... }:
+
+{
+  programs.fd = {
+    enable = true;
+    ignores = [
+      "node_modules"
+      ".cache"
+      "__pycache__"
+      ".venv"
+      "target"
+      ".next"
+      ".turbo"
+    ];
+  };
+}

@@ -1,0 +1,141 @@
+{ ... }:
+
+{
+  # sesh has no programs.* home-manager module (as of 25.05).
+  # Package is installed via nix/modules/packages/core.nix (Phase 1a).
+
+  xdg.configFile."sesh/sesh.toml".text = ''
+    #:schema https://github.com/joshmedeski/sesh/raw/main/sesh.schema.json
+    #
+    # sesh - smart tmux session manager
+    # https://github.com/joshmedeski/sesh
+    #
+    # 選択ソース順序:
+    #   config  — 下記 [[session]] / [[wildcard]] の定義に合致した path
+    #   tmux    — 既にアクティブなローカル tmux セッション
+    #   zoxide  — 最近 cd したディレクトリ (ghq 配下も含む)
+    #
+    # 命名規約は Phase 1 で定義: rcon- / proj- / pers- / ops-
+    # zoxide 経由で起動したセッション名は basename が使われるため命名規約から外れる。
+    # 頻用プロジェクトは [[session]] に事前登録、プロジェクト群は [[wildcard]] で拾う。
+
+    sort_order = ["config", "tmux", "zoxide"]
+    dir_length = 2
+    cache = true
+
+    # popup / scratch など一時セッションはリストから除外
+    blacklist = ["scratch"]
+
+    [default_session]
+    preview_command = "eza --all --git --icons --color=always {}"
+
+    # --- 固定エントリ (特別扱いしたい path だけ) ---
+    #
+    # startup_command は session が新規作成されたときだけ走る (再 attach では再実行されない)。
+    # ~/.config/sesh/scripts/ の bash スクリプトを呼び出してブートストラップレイアウトを組む。
+
+    [[session]]
+    name = "pers-dotfiles"
+    path = "~/dotfiles"
+    startup_command = "~/.config/sesh/scripts/generic-project.sh"
+
+    [[session]]
+    name = "pers-config"
+    path = "~/.config"
+
+    # --- ワイルドカード (プロジェクト群を丸ごと拾う) ---
+    # ghq 配下のリポジトリ = ~/ghq/github.com/<owner>/<repo>
+    [[wildcard]]
+    pattern = "~/ghq/github.com/*/*"
+
+    # ~/workspace 配下の作業ディレクトリ
+    [[wildcard]]
+    pattern = "~/workspace/*"
+
+    # git worktree (scripts/wt で作成した `<main>--wt--<slug>` ディレクトリ)
+    # ~/ 直下と ~/ghq/github.com/<owner>/ 直下の両方をカバー。
+    # session 名は basename (`dotfiles--wt--feat-login` 等) となるため、
+    # Claude Code 並列実行時に worker を session 単位で識別できる。
+    [[wildcard]]
+    pattern = "~/*--wt--*"
+
+    [[wildcard]]
+    pattern = "~/ghq/github.com/*/*--wt--*"
+
+    # Example: Node.js プロジェクト専用のブートストラップを使いたいとき
+    # 具体的な path を wildcard で絞って startup_command を上書きする。
+    # [[wildcard]]
+    # pattern = "~/ghq/github.com/shonenm/my-node-app"
+    # startup_command = "~/.config/sesh/scripts/node-project.sh"
+
+    # Example: worktree で Claude Code を自動起動したいとき
+    # [[wildcard]]
+    # pattern = "~/*--wt--*"
+    # startup_command = "claude"
+  '';
+
+  xdg.configFile."sesh/scripts/node-project.sh" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      # node-project.sh — Node.js project bootstrap layout
+      #
+      # Usage: sesh.toml の [[wildcard]] / [[session]] の startup_command から参照:
+      #   startup_command = "~/.config/sesh/scripts/node-project.sh"
+      #
+      # Layout:
+      #   +----------------------------+
+      #   |                            |
+      #   |   nvim (current window)    |
+      #   |                            |
+      #   +----------------------------+
+      #   | $ npm run dev (30% height) |
+      #   +----------------------------+
+
+      set -e
+
+      # 下 30% に dev server 用 pane を分割
+      tmux split-window -v -p 30
+
+      # 上のペイン (エディタ) に戻って nvim 起動
+      tmux select-pane -U
+      tmux send-keys 'nvim' Enter
+
+      # 下のペインにフォーカスを移し、dev server コマンドを入力した状態で待機
+      # (Enter は送らない → ユーザーが確認してから起動)
+      tmux select-pane -D
+      if [ -f package.json ]; then
+        if grep -q '"dev"' package.json 2>/dev/null; then
+          tmux send-keys 'npm run dev'
+        elif grep -q '"start"' package.json 2>/dev/null; then
+          tmux send-keys 'npm start'
+        fi
+      fi
+    '';
+  };
+
+  xdg.configFile."sesh/scripts/generic-project.sh" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      # generic-project.sh — Minimal single-pane bootstrap with nvim
+      #
+      # Usage: sesh.toml の [[wildcard]] / [[session]] の startup_command から参照:
+      #   startup_command = "~/.config/sesh/scripts/generic-project.sh"
+      #
+      # Layout: 単一ペインで nvim を起動するだけ。追加の pane/window は作らない。
+      # lazygit などの popup は tmux 側の既存キーバインド (prefix+g) で即起動できるため、
+      # このスクリプトでは pre-launch しない (プロセスを無駄に立てない)。
+
+      set -e
+
+      # Git リポジトリ内であれば、nvim 起動前に status を確認しやすいように
+      # 2 行分のヒントを表示してから nvim へ
+      if git rev-parse --git-dir >/dev/null 2>&1; then
+        tmux send-keys 'git status --short && echo && nvim' Enter
+      else
+        tmux send-keys 'nvim' Enter
+      fi
+    '';
+  };
+}

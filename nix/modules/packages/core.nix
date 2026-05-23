@@ -22,12 +22,12 @@
     # Development
     neovim
     typst
-    lazygit
+    # lazygit → home-manager (programs.lazygit, Phase 2a)
     lazydocker
     delta # git-delta
-    gh
+    # gh → home-manager (programs.gh, Phase 2a)
     ghq
-    mise
+    # mise → home-manager (programs.mise, Phase 2a)
     uv
     rustup
     bun
@@ -50,9 +50,9 @@
     # Modern CLI tools
     eza
     lsd
-    bat
+    # bat → home-manager (programs.bat, Phase 2a)
     ripgrep
-    fd
+    # fd → home-manager (programs.fd, Phase 2a)
     fzf
     jq
     yazi
