@@ -163,7 +163,20 @@ in
 
         # --- Tool integrations ---
         command -v mise &>/dev/null && eval "$(mise activate zsh)"
-        command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
+        command -v direnv &>/dev/null && {
+          eval "$(direnv hook zsh)"
+          # direnv prints `direnv: export +VAR1 +VAR2 ...` (~50 nix vars
+          # per cd into a flake dir) via fmt.Fprintln to os.Stderr in the
+          # Go binary — DIRENV_LOG_FORMAT only covers log_status, not
+          # this diff output. Replace _direnv_hook with a quiet variant
+          # that filters out just the "export ±VAR" line, keeping real
+          # errors and the "loading .envrc" hint.
+          _direnv_hook() {
+            trap -- ''' SIGINT
+            eval "$(direnv export zsh 2> >(grep -v '^direnv: export ' >&2))"
+            trap - SIGINT
+          }
+        }
 
         # --- Completion ---
         autoload -Uz compinit
