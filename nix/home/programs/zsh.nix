@@ -517,25 +517,30 @@ in
         # (and after .zshrc.local has populated the abbr array), so the
         # pattern is in place at first prompt.
         if (( ''${+ABBR_REGULAR_USER_ABBREVIATIONS} )); then
-          # ZSH_HIGHLIGHT_REGEXP MUST be associative (-gA), not indexed.
-          # When indexed, the highlighter's `''${ZSH_HIGHLIGHT_REGEXP[$pat]}`
-          # lookup treats $pat (the regex pattern itself) as a numeric
-          # subscript → arithmetic evaluation of `^[[:blank:...` → error
-          # `bad math expression: operand expected` on every keystroke.
-          # See: https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/highlighters/regexp/regexp-highlighter.zsh
-          # zsh-abbr 6.x stores keys via `(qq)` zsh-style quoting, so use
-          # `''${(Q)k}` to dequote (the legacy literal-double-quote strip
-          # in .zshrc.local is wrong for plain keys with quotes around
-          # them like `"gp"` → `"gp"` unchanged, breaking the alternation).
+          # ZSH_HIGHLIGHT_REGEXP must be ASSOCIATIVE (-gA). When indexed,
+          # the highlighter's `$ZSH_HIGHLIGHT_REGEXP[$pat]` lookup turns
+          # the pattern string into an arithmetic subscript and errors
+          # with `bad math expression: operand expected` on every keystroke.
+          #
+          # ALSO: build the pattern in a local variable first, then use
+          # `array[$var]=...`. Putting the pattern literal inline as the
+          # subscript (e.g. array['^[[:...'...]) doesn't honour the quoting
+          # inside subscripts and the literal `"` / `'` end up in the key,
+          # producing a corrupt key like `'"^[[:blank:..."'`.
+          #
+          # zsh-abbr 6.x stores keys via `(qq)` zsh-style quoting; use
+          # `''${(Q)k}` to dequote properly (literal-double-quote strip
+          # in .zshrc.local is the wrong escape style).
           unset ZSH_HIGHLIGHT_REGEXP
           typeset -gA ZSH_HIGHLIGHT_REGEXP=()
           local -a _abbr_keys=()
-          local k
+          local k _abbr_re
           for k in ''${(k)ABBR_REGULAR_USER_ABBREVIATIONS}; do
             _abbr_keys+="''${(Q)k}"
           done
-          ZSH_HIGHLIGHT_REGEXP['^[[:blank:][:space:]]*('"''${(j:|:)_abbr_keys}"')$']='fg=green'
-          unset k _abbr_keys
+          _abbr_re="^[[:blank:][:space:]]*(''${(j:|:)_abbr_keys})$"
+          ZSH_HIGHLIGHT_REGEXP[$_abbr_re]='fg=green'
+          unset k _abbr_re _abbr_keys
         fi
 
         # Force nix-managed paths to win. envExtra prepends them in .zshenv,
