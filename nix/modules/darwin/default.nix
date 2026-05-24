@@ -19,48 +19,112 @@
   # behaviour still comes from home-manager-managed ~/.zshrc.
   programs.zsh.enable = true;
 
-  # === Phase 3a: macOS preferences (Tier 1) ===========================
-  # Settings here are written to the relevant plist on `darwin-rebuild
-  # switch`. Some require killall Dock / Finder / SystemUIServer or a
-  # logout to fully reflect in the System Settings UI.
+  # === macOS preferences =============================================
+  # Tier 1 (Phase 3a, low-risk universal):
+  #   key repeat, accent picker, file extensions, Dock auto-hide, Finder
+  #   path/status bar + list view + sort folders first, screenshot
+  #   location + format, LSQuarantine disabled.
+  # Tier 2 (Phase 3b, opinionated dev defaults):
+  #   Dark mode lock, all NSAutomatic*Enabled disabled, no iCloud default
+  #   save, hot corners disabled (aerospace boundaries), trackpad
+  #   tap-to-click.
+  # Tier 3 (Phase 3b, security baseline):
+  #   immediate lock on screensaver.
+  #
+  # Settings are written to plists on `darwin-rebuild switch`. Some
+  # require killall Dock / Finder / SystemUIServer or a re-login to
+  # fully reflect in the System Settings UI.
 
   system.defaults = {
     NSGlobalDomain = {
-      # Fastest key repeat (System Settings → Keyboard slider can't reach this)
+      # --- Tier 1 ---
       KeyRepeat = 2;
       InitialKeyRepeat = 15;
-      # Disable the accent picker so vim-style j/k hold works in any text field
       ApplePressAndHoldEnabled = false;
-      # Always show file extensions in the Finder
       AppleShowAllExtensions = true;
+      # --- Tier 2 ---
+      # Lock OS UI to dark — repo theme stack (tmux, Ghostty, starship,
+      # p10k) is dark; macOS UI matching avoids palette clashes.
+      AppleInterfaceStyle = "Dark";
+      # All NSAutomatic* off (incompatible with dev workflows: code,
+      # CLI commands, single quotes in strings, etc.)
+      NSAutomaticSpellingCorrectionEnabled = false;
+      NSAutomaticCapitalizationEnabled = false;
+      NSAutomaticQuoteSubstitutionEnabled = false;
+      NSAutomaticDashSubstitutionEnabled = false;
+      NSAutomaticPeriodSubstitutionEnabled = false;
+      # Default Save dialog → local disk, not iCloud
+      NSDocumentSaveNewDocumentsToCloud = false;
     };
 
     dock = {
+      # --- Tier 1 ---
       autohide = true;
       show-recents = false;
       tilesize = 36;
-      # Required for aerospace's workspace switching — when true, macOS
-      # auto-reorders Spaces based on recency and aerospace's index-based
-      # navigation breaks.
       mru-spaces = false;
+      # --- Tier 2 ---
+      # Hot corners off: aerospace uses screen edges for workspace
+      # navigation; macOS triggering Mission Control / sleep on those
+      # edges interferes.
+      wvous-tl-corner = 1;
+      wvous-tr-corner = 1;
+      wvous-bl-corner = 1;
+      wvous-br-corner = 1;
     };
 
     finder = {
+      # --- Tier 1 ---
       ShowPathbar = true;
       ShowStatusBar = true;
-      # List view by default
       FXPreferredViewStyle = "Nlsv";
       _FXSortFoldersFirst = true;
     };
 
     screencapture = {
+      # --- Tier 1 ---
       location = "~/Pictures/Screenshots";
       type = "png";
     };
 
     LaunchServices = {
-      # Skip the "this app was downloaded from the internet" warning
+      # --- Tier 1 ---
       LSQuarantine = false;
     };
+
+    # --- Tier 2: trackpad ---
+    trackpad = {
+      # Tap-to-click (no need to press down)
+      Clicking = true;
+    };
+
+    # --- Tier 3: screensaver password ---
+    screensaver = {
+      askForPassword = true;
+      # Lock immediately on sleep / screensaver (0 = no grace period)
+      askForPasswordDelay = 0;
+    };
   };
+
+  # === services.aerospace ============================================
+  # nix-darwin's launchd-managed startup for AeroSpace. Replaces
+  # AeroSpace's own `start-at-login = true` (removed from aerospace.toml).
+  # launchd label: org.nixos.aerospace (KeepAlive + RunAtLoad).
+  #
+  # Settings sourced from common/aerospace/.config/aerospace/aerospace.toml
+  # via builtins.fromTOML so the existing config remains the source of
+  # truth. Module assertions: !settings.start-at-login (removed).
+  services.aerospace = {
+    enable = true;
+    settings = builtins.fromTOML
+      (builtins.readFile ../../../common/aerospace/.config/aerospace/aerospace.toml);
+  };
+
+  # === Karabiner-Elements / SketchyBar deferred =======================
+  # services.karabiner-elements: v15 architecture rewrite + recurring
+  # post-rebuild breakage reports (nix-darwin#564, #639). Defer until a
+  # focused migration window with TCC re-grant rehearsal.
+  # services.sketchybar: inline cfg.config takes shell lines; user's
+  # setup is sketchybarrc + 14 plugins/*.sh referencing $PLUGIN_DIR.
+  # Inline conversion non-trivial and currently working via OS auto-start.
 }
