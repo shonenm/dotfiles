@@ -16,7 +16,7 @@ let
   # Override the nixpkgs derivation to bundle the user's config.yaml.
   tmuxWhichKeyWithConfig = pkgs.tmuxPlugins.tmux-which-key.overrideAttrs (oldAttrs: {
     postInstall = (oldAttrs.postInstall or "") + ''
-      cp ${../../../common/tmux/.config/tmux/plugins/tmux-which-key/config.yaml} \
+      cp ${./tmux/plugins/tmux-which-key/config.yaml} \
          $out/share/tmux-plugins/tmux-which-key/config.yaml
     '';
   });
@@ -69,20 +69,20 @@ in
   # tmux config dir is also where the scripts live; ship them all here.
   xdg.configFile = {
     "tmux/tokyonight.tmux".source =
-      ../../../common/tmux/.config/tmux/tokyonight.tmux;
+      ./tmux/tokyonight.tmux;
     "tmux/catppuccin.tmux".source =
-      ../../../common/tmux/.config/tmux/catppuccin.tmux;
+      ./tmux/catppuccin.tmux;
     "tmux/gruvbox.tmux".source =
-      ../../../common/tmux/.config/tmux/gruvbox.tmux;
+      ./tmux/gruvbox.tmux;
     "tmux/rosepine.tmux".source =
-      ../../../common/tmux/.config/tmux/rosepine.tmux;
+      ./tmux/rosepine.tmux;
     "tmux/syntopic.tmux".source =
-      ../../../common/tmux/.config/tmux/syntopic.tmux;
+      ./tmux/syntopic.tmux;
     "tmux/claude-hooks.tmux".source =
-      ../../../common/tmux/.config/tmux/claude-hooks.tmux;
+      ./tmux/claude-hooks.tmux;
   };
 
   # tmux-layout dev preset (used by tmux-layout script)
   xdg.dataFile."tmux-layout/dev.layout".source =
-    ../../../common/tmux/.local/share/tmux-layout/dev.layout;
+    ./tmux/layouts/dev.layout;
 }

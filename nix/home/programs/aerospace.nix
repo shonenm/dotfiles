@@ -6,5 +6,5 @@
   # file — ship it via xdg.configFile so changes go through switch.
 
   xdg.configFile."aerospace/aerospace.toml".source =
-    ../../../common/aerospace/.config/aerospace/aerospace.toml;
+    ./aerospace/aerospace.toml;
 }

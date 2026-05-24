@@ -9,7 +9,7 @@
     # (U+E0B0 …) that are easy to lose when retyping into a Nix string.
     # Parse the TOML file directly so the bytes flow through unchanged.
     settings = builtins.fromTOML (
-      builtins.readFile ../../../common/starship/.config/starship.toml
+      builtins.readFile ./starship/starship.toml
     );
   };
 }

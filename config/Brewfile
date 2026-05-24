@@ -1,102 +1,48 @@
-# macOS packages managed by Homebrew
+# macOS packages NOT yet covered by nix-darwin / home-manager.
 # Usage: brew bundle --file=config/Brewfile --no-lock
+#
+# Phase 6: all formulae that the Nix stack now provides have been moved
+# out of this file. What remains:
+#   - GUI apps (.app bundles) installed as casks — nix-darwin's casks
+#     module is supported but deferred (see migration plan).
+#   - Casks for which the Nix toolchain has no equivalent (raycast,
+#     1Password app, etc.).
+#   - A few custom-tap formulae that nixpkgs doesn't ship (see below).
+#
+# CLI binaries previously listed here are now declared in
+# `nix/modules/packages/core.nix` (mac) and
+# `nix/modules/packages/linux.nix` (linux) via home-manager.
 
-# --- Taps ---
-tap "dotenvx/brew"
-tap "FelixKratz/formulae"
-tap "trasta298/tap"
-tap "oven-sh/bun"
+# --- Taps (kept only if a cask below needs them) ---
+# none required for the remaining casks; lemonade / keifu / rtk were
+# CLI tools — those move to overlays in a follow-up if needed.
 
-# --- Shell & Terminal ---
-brew "tmux"
-brew "starship"
-brew "sheldon"
-brew "atuin"
-brew "zoxide"
-brew "joshmedeski/sesh/sesh"  # Smart tmux session manager (fuzzy finder + zoxide/ghq integration)
-brew "stow"
-brew "aerc"
-
-# --- Image Processing ---
-brew "imagemagick"
-brew "qrencode"
-
-# --- Container Runtime (macOS) ---
-brew "colima"       # OSS container runtime on Lima VM
-brew "docker"       # Docker CLI (colima provides the daemon)
-brew "docker-compose"  # Docker Compose plugin
-brew "docker-credential-helper"  # osxkeychain credential store
-
-# --- Development ---
-brew "neovim"
-brew "typst"
-brew "fancy-cat"    # ターミナル内PDFビューア（Kitty graphics protocol）
-brew "lazygit"
-brew "trasta298/tap/keifu"
-brew "lazydocker"  # TUI for Docker management
-brew "git-delta"
-brew "gh"
-brew "ghq"
-brew "mise"
-brew "uv"
-brew "rust"
-brew "oven-sh/bun/bun"
-brew "dotenvx/brew/dotenvx"
-brew "rtk"           # AI agent token compression CLI (60-90% reduction on dev commands)
-
-# --- Development Workflow ---
-brew "direnv"
-brew "just"
-brew "watchexec"
-brew "hyperfine"
-brew "autossh"   # persistent ssh tunnel (dev-tunnel)
-brew "pueue"     # background task queue (pi-coding-agent parallel delegation)
-# lemonade は brew formula 未提供。github release から install (scripts/mac.sh の install_lemonade)
-
-# --- Database ---
-brew "pgcli"         # PostgreSQL用インタラクティブクライアント（オートコンプリート・シンタックスハイライト）
-brew "rainfrog"      # TUIデータベースクライアント（Rust製、Vimキーバインド対応）
-brew "postgresql@17" # psqlクライアント + pg_dump/pg_restore（Docker内のDBに接続するため）
-
-# --- Security ---
-brew "gitleaks"
-
-# --- Modern CLI tools ---
-brew "eza"
-brew "lsd"
-brew "bat"
-brew "ripgrep"
-brew "fd"
-brew "fzf"
-brew "jq"
-brew "yazi"
-brew "tokei"
-brew "tealdeer"
-brew "procs"
-brew "sd"
-brew "dust"
-brew "bottom"
-brew "rip2"
-brew "fastfetch"
-brew "xh"
-brew "git-absorb"
-brew "ouch"
-brew "glow"
-brew "viddy"
-brew "doggo"
-brew "topgrade"
-brew "grex"
-
-# --- System Monitoring ---
-brew "macmon"      # Apple Silicon GPU/CPU monitoring (tmux status bar)
-
-# --- macOS UI ---
-brew "sketchybar"
-brew "borders"
-
-# --- Casks ---
+# --- macOS GUI apps (casks) ---
 cask "ghostty"
 cask "raycast"
-cask "karabiner-elements"
+cask "karabiner-elements"           # deferred from Phase 3b (services.karabiner-elements v15 instability)
 cask "aerospace"
 cask "font-sketchybar-app-font"
+
+# --- macOS-specific menubar/UI binaries not in nixpkgs ---
+# (These three live on the FelixKratz tap and have no nixpkgs equivalent
+# as of nixpkgs-unstable 2026-05. Retain on brew until upstream lands.)
+tap "FelixKratz/formulae"
+brew "sketchybar"
+brew "borders"
+brew "macmon"
+
+# --- Custom-tap CLI tools without nixpkgs equivalents ---
+# Retain because nix overlays for these were out of scope through
+# Phase 6. Migrate in a follow-up if/when needed.
+tap "trasta298/tap"
+brew "trasta298/tap/keifu"
+brew "rtk"                          # AI-agent token compression CLI
+
+# --- Mac-specific runtime helpers ---
+brew "colima"                       # container runtime for Mac (lima VM)
+brew "docker"                       # docker CLI (colima provides daemon)
+brew "docker-compose"
+brew "docker-credential-helper"     # osxkeychain credential store
+brew "rainfrog"                     # TUI DB client (not in nixpkgs)
+brew "fancy-cat"                    # terminal PDF viewer (not in nixpkgs)
