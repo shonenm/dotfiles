@@ -10,7 +10,7 @@
 
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth } from "@earendil-works/pi-tui";
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -179,28 +179,29 @@ export default function (pi: ExtensionAPI) {
             : "";
 
           // ---- Layout: 3-line, all left-aligned ----
-          // Line 1: tokens + gauge + cost
+          // Line 1: tokens + gauge
           // Line 2: branch + model
-          // Line 3: web stats + mcp stats (only if data exists)
+          // Line 3: cost + web stats + mcp stats
 
           if (mode === "compact") {
             return [truncateToWidth(`${tokIn} ${tokOut} ${tokCost}  ${modelStr}`, width)];
           }
 
-          const l1 = [tokIn, tokOut, gaugeStr, tokCost].filter(Boolean).join(" │ ");
+          const l1 = [tokIn, tokOut, gaugeStr].filter(Boolean).join(" │ ");
           const lines = [truncateToWidth(l1, width)];
 
           const l2 = [branchStr, modelStr].filter(Boolean).join(" · ");
           if (l2) lines.push(truncateToWidth(l2, width));
 
           const l3: string[] = [];
+          l3.push(tokCost);
           if (stats.webSearch > 0 || stats.webFetch > 0) {
             l3.push(theme.fg("dim", `web s:${stats.webSearch} f:${stats.webFetch} c:${stats.webCache}`));
           }
           if (stats.mcpCalls > 0) {
-            l3.push(theme.fg("cyan", `mcp q:${stats.mcpCalls}${stats.mcpErrors > 0 ? ` e:${stats.mcpErrors}` : ""}`));
+            l3.push(theme.fg("accent", `mcp q:${stats.mcpCalls}${stats.mcpErrors > 0 ? ` e:${stats.mcpErrors}` : ""}`));
           }
-          if (l3.length > 0) lines.push(truncateToWidth(l3.join(" · "), width));
+          lines.push(truncateToWidth(l3.join(" · "), width));
 
           return lines;
         },
