@@ -1,7 +1,12 @@
 { config, pkgs, ... }:
 
 {
+  # Cross-platform home-manager programs shared by mac.nix and linux.nix.
+  # Platform-specific entries (aerospace, ghostty, sketchybar — mac UI;
+  # any future linux-only modules) stay in the platform entry file.
+
   imports = [
+    # Phase 2a — simple configs
     ./programs/bat.nix
     ./programs/fd.nix
     ./programs/gh.nix
@@ -11,18 +16,15 @@
     ./programs/mise.nix
     ./programs/sesh.nix
     ./programs/aerc.nix
-    # Phase 2b additions
+    # Phase 2b — shell stack
     ./programs/zsh.nix
     ./programs/zsh-abbr.nix
     ./programs/starship.nix
     ./programs/tmux.nix
-    # Phase 2c additions
+    # Phase 2c — editor (mac-only UI modules live in mac.nix)
     ./programs/nvim.nix
     ./programs/vim.nix
-    ./programs/aerospace.nix
-    ./programs/ghostty.nix
-    ./programs/sketchybar.nix
-    # Phase 2d additions (final Phase 2)
+    # Phase 2d — stateful + scripts
     ./programs/atuin.nix
     ./programs/claude.nix
     ./programs/codex.nix
@@ -33,9 +35,6 @@
     ./programs/scripts.nix
   ];
 
-  home.username = "matsushimakouta";
-  home.homeDirectory = "/Users/matsushimakouta";
   home.stateVersion = "25.05";
-
   programs.home-manager.enable = true;
 }
