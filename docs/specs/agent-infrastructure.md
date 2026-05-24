@@ -69,6 +69,18 @@
 | **Pi impl** | `extensions/web-tools.ts` (6ツール統合) |
 | **Claude impl** | 検討中 |
 
+### 8. Agent Delegation
+
+サブエージェントによる並列作業の委譲。
+
+| 項目 | 内容 |
+|------|------|
+| **Tools** | `delegate_agent`, `check_delegation`, `wait_delegation` |
+| **Modes** | sync (blocking) / async (pueue background) |
+| **Model tiers** | high (gpt-5.5), medium (deepseek-v4-pro), low (flash) |
+| **Pi impl** | `extensions/agent-delegation.ts` — pueue + pi -p integration |
+
+
 ### 7. Memory Persistence
 
 セッション間知識継承のための永続化層。
@@ -134,6 +146,7 @@ MCP サーバーへの安全な接続レイヤー。
 | Web Research | ✅ | — | — |
 | MCP Gateway | ✅ | ✅ | — |
 | Memory Persistence | ✅ | — | — |
+| Agent Delegation | ✅ | — | — |
 
 ## Adding a New Agent
 
