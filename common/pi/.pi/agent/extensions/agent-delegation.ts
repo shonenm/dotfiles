@@ -66,12 +66,16 @@ function logDelegation(difficulty: string, task: string, taskId?: string) {
   }) + "\n");
 }
 
+function shellSafe(s: string): string {
+  // Escape for use inside single-quoted shell string
+  return s.replace(/'/g, "'\\''");
+}
+
 function buildPiCommand(task: string, difficulty: string, model?: string): string {
   const tier = MODEL_TIERS[difficulty] ?? MODEL_TIERS.medium;
   const m = model || tier.model;
-  // Escape single quotes, wrap in sh -c to prevent pipe hijacking by outer shell
-  const escaped = task.replace(/'/g, "'\\''");
-  return `sh -c "pi --model '${m}' -p '${escaped}' < /dev/null"`;
+  // sh -c wraps the command so < /dev/null is not hijacked by the outer shell
+  return `sh -c 'pi --model ${m} -p ${shellSafe(task)} < /dev/null'`;
 }
 
 // ---------------------------------------------------------------------------
