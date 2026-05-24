@@ -34,16 +34,16 @@ interface ModelTier {
 
 const MODEL_TIERS: Record<string, ModelTier> = {
   high: {
-    model: "openai-codex/gpt-5.5:high",
-    fallbackModels: ["opencode-go/kimi-k2.6:high"],
+    model: "opencode-go/kimi-k2.6:high",
+    fallbackModels: [],
   },
   medium: {
     model: "opencode-go/deepseek-v4-pro:high",
-    fallbackModels: ["openai-codex/gpt-5.4:low", "openai-codex/gpt-5.3-codex-spark:low"],
+    fallbackModels: [],
   },
   low: {
     model: "opencode-go/deepseek-v4-flash:off",
-    fallbackModels: ["openai-codex/gpt-5.4-mini:off"],
+    fallbackModels: [],
   },
 };
 
@@ -66,13 +66,12 @@ function logDelegation(difficulty: string, task: string, taskId?: string) {
   }) + "\n");
 }
 
-function buildPiCommand(task: string, difficulty: string, model?: string, fallback?: string): string {
+function buildPiCommand(task: string, difficulty: string, model?: string): string {
   const tier = MODEL_TIERS[difficulty] ?? MODEL_TIERS.medium;
   const m = model || tier.model;
-  const fb = fallback || tier.fallbackModels.join(",");
   // Escape single quotes in task
   const escaped = task.replace(/'/g, "'\\''");
-  return `pi --model '${m}' --fallback-models '${fb}' -p '${escaped}'`;
+  return `pi --model '${m}' -p '${escaped}'`;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,7 +91,7 @@ export default function (pi: ExtensionAPI) {
       "worker (implement from plan), oracle (second opinion). " +
       "Supports sync (wait for result) and async (background via pueue) modes. " +
       "Use natural language in the task: 'Use reviewer to audit auth module for security issues'. " +
-      "Difficulty auto-selects model: high=gpt-5.5, medium=deepseek-v4-pro, low=deepseek-v4-flash.",
+      "Difficulty auto-selects model: high=kimi-k2.6, medium=deepseek-v4-pro, low=deepseek-v4-flash.",
     promptSnippet: "Delegate a task to a sub-agent (reviewer/scout/worker/oracle)",
     promptGuidelines: [
       "Use delegate_agent for tasks that benefit from a second set of model eyes.",
@@ -105,13 +104,12 @@ export default function (pi: ExtensionAPI) {
       task: Type.String({ description: "Task description/instructions for the sub-agent" }),
       difficulty: Type.Optional(Type.String({ description: "high, medium, or low. Default: medium" })),
       mode: Type.Optional(Type.String({ description: "'async' (pueue background) or 'sync' (wait). Default: 'async'" })),
-      model: Type.Optional(Type.String({ description: "Override model (e.g., 'openai-codex/gpt-5.5:high')" })),
-      fallback: Type.Optional(Type.String({ description: "Override fallback models" })),
+      model: Type.Optional(Type.String({ description: "Override model (e.g., 'opencode-go/kimi-k2.6:high')" })),
     }),
     async execute(_toolCallId, params, _signal, onUpdate) {
       const difficulty = params.difficulty || "medium";
       const mode = params.mode || "async";
-      const cmd = buildPiCommand(params.task, difficulty, params.model, params.fallback);
+      const cmd = buildPiCommand(params.task, difficulty, params.model);
 
       if (mode === "sync") {
         onUpdate?.({ content: [{ type: "text", text: `🔄 Spawning sub-agent (${difficulty}, sync)...` }] });

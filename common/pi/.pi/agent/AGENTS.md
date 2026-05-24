@@ -45,9 +45,9 @@ Use `pueue` for background processes: `pueue add -- <command>`
 - Use `delegate_agent` tool to spawn sub-agents for parallel or specialized work.
 - `check_delegation` to view pueue task status. `wait_delegation` to block until complete.
 - Difficulty auto-selects model:
-  - `high` → gpt-5.5:high / kimi-k2.6:high (design, review, debugging)
-  - `medium` → deepseek-v4-pro:high / gpt-5.4:low (coding from design)
-  - `low` → deepseek-v4-flash:off / gpt-5.4-mini:off (summaries, extraction)
+  - `high` → kimi-k2.6:high (design, review, debugging)
+  - `medium` → deepseek-v4-pro:high (coding from design)
+  - `low` → deepseek-v4-flash:off (summaries, extraction)
 - Async mode uses pueue for background execution.
 - Sync mode blocks until completion (use for sequential dependencies).
 - When delegating, communicate: background, goal, expected output, constraints.
