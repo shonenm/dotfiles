@@ -507,6 +507,26 @@ in
       (lib.mkOrder 5000 ''
         source ${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
+        # === Rebuild abbr regexp highlighter ============================
+        # .zshrc.local builds a regex from $ABBR_REGULAR_USER_ABBREVIATIONS
+        # to render abbreviations (gp, gpl, gs, …) green before space-
+        # expansion, but its `ZSH_HIGHLIGHT_REGEXP+=(...)` runs while the
+        # array isn't yet declared as an associative-friendly array (and
+        # uses a stray top-level `local`), so the entry never actually
+        # lands. Rebuild it here, after zsh-syntax-highlighting is loaded
+        # (and after .zshrc.local has populated the abbr array), so the
+        # pattern is in place at first prompt.
+        if (( ''${+ABBR_REGULAR_USER_ABBREVIATIONS} )); then
+          typeset -ga ZSH_HIGHLIGHT_REGEXP
+          local -a _abbr_keys=()
+          local k
+          for k in ''${(k)ABBR_REGULAR_USER_ABBREVIATIONS}; do
+            _abbr_keys+="''${k//\"/}"
+          done
+          ZSH_HIGHLIGHT_REGEXP+=('^[[:blank:][:space:]]*('"''${(j:|:)_abbr_keys}"')$' fg=green)
+          unset k _abbr_keys
+        fi
+
         # Force nix-managed paths to win. envExtra prepends them in .zshenv,
         # but somewhere in the launchd → Ghostty → /etc/zprofile chain
         # path_helper or similar reshuffles PATH and pushes them to the end.
