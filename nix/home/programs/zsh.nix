@@ -139,7 +139,9 @@ in
         [[ -d "$HOME/.bun/bin" ]] && export PATH="$HOME/.bun/bin:$PATH"
         [[ -d "$HOME/.atuin/bin" ]] && export PATH="$HOME/.atuin/bin:$PATH"
         [[ -d "$HOME/.cargo/bin" ]] && export PATH="$HOME/.cargo/bin:$PATH"
-        export PATH="$HOME/dotfiles/scripts:$PATH"
+        # dotfiles/scripts/ PATH line removed in Phase 2d: all scripts are
+        # now symlinked into ~/.local/bin via programs/scripts.nix and
+        # ~/.local/bin is already prepended above.
         [[ -d "$DENO_INSTALL/bin" ]] && export PATH="$DENO_INSTALL/bin:$PATH"
         [[ -x "$HOME/syntopic/tools/packages/syntopic/bin/syntopic" ]] && \
           export PATH="$HOME/syntopic/tools/packages/syntopic/bin:$PATH"

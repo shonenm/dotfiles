@@ -22,6 +22,15 @@
     ./programs/aerospace.nix
     ./programs/ghostty.nix
     ./programs/sketchybar.nix
+    # Phase 2d additions (final Phase 2)
+    ./programs/atuin.nix
+    ./programs/claude.nix
+    ./programs/codex.nix
+    ./programs/opensessions.nix
+    ./programs/pi.nix
+    ./programs/traefik-dev.nix
+    ./programs/bin.nix
+    ./programs/scripts.nix
   ];
 
   home.username = "matsushimakouta";
