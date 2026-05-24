@@ -21,16 +21,6 @@ Tool-agnostic config is in `~/.config/agent/`:
 Invoke via `/skill:<name>`. Shared skills are auto-discovered from `~/.config/agent/skills/`.
 Claude-specific skills under `~/.claude/skills/` are also available.
 
-## Agent Delegation
-
-- Delegate yak shaving and work outside current focus to a sub-agent.
-- `pi --model <provider/model:effort> --fallback-models <...> -p '<instructions>'`
-- Model selection:
-  - High difficulty: `openai-codex/gpt-5.5:high` / `opencode-go/kimi-k2.6:high`
-  - Medium: `opencode-go/deepseek-v4-pro:high` / `openai-codex/gpt-5.4:low`
-  - Low: `opencode-go/deepseek-v4-flash:off`
-
-## Long-running Tasks
 
 Use `pueue` for background processes: `pueue add -- <command>`
 
@@ -49,3 +39,15 @@ Use `pueue` for background processes: `pueue add -- <command>`
 - Format: pi-memory compatible (MEMORY.md, SCRATCHPAD.md, daily/)
 - Context auto-injected on session start (scratchpad + today's log + MEMORY.md)
 - Install `qmd` for semantic/vector search upgrade
+
+## Agent Delegation
+
+- Use `delegate_agent` tool to spawn sub-agents for parallel or specialized work.
+- `check_delegation` to view pueue task status. `wait_delegation` to block until complete.
+- Difficulty auto-selects model:
+  - `high` → gpt-5.5:high / kimi-k2.6:high (design, review, debugging)
+  - `medium` → deepseek-v4-pro:high / gpt-5.4:low (coding from design)
+  - `low` → deepseek-v4-flash:off / gpt-5.4-mini:off (summaries, extraction)
+- Async mode uses pueue for background execution.
+- Sync mode blocks until completion (use for sequential dependencies).
+- When delegating, communicate: background, goal, expected output, constraints.
