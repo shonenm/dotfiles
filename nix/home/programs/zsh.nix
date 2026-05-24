@@ -173,7 +173,11 @@ in
           # errors and the "loading .envrc" hint.
           _direnv_hook() {
             trap -- ''' SIGINT
-            eval "$(direnv export zsh 2> >(grep -v '^direnv: export ' >&2))"
+            # NB: direnv prefixes its stderr lines with an ANSI reset escape
+            # (\x1b[0m) so `^direnv: export ...` won't anchor-match. Drop
+            # the anchor and match by substring instead — `direnv: export `
+            # is unique enough that this won't catch unrelated output.
+            eval "$(direnv export zsh 2> >(grep -v 'direnv: export ' >&2))"
             trap - SIGINT
           }
         }
