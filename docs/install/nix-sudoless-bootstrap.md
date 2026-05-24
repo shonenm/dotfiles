@@ -47,10 +47,14 @@ nix-user-chroot ~/.nix-store/nix bash -lc '
   nix-shell -p nix-info --run "nix-info -m"
 '
 
-# 4. Activate home-manager from within the chroot
+# 4. Make sure dotfiles is at ~/dotfiles (path is hardcoded in some
+#    home-manager modules — nvim, claude, pi, gh — via mkOutOfStoreSymlink).
+[ -e ~/dotfiles ] || ln -s ~/ghq/github.com/shonenm/dotfiles ~/dotfiles
+
+# 5. Activate home-manager from within the chroot
 nix-user-chroot ~/.nix-store/nix bash -lc '
   . ~/.nix-profile/etc/profile.d/nix.sh
-  cd ~/ghq/github.com/shonenm/dotfiles
+  cd ~/dotfiles
   nix run home-manager/master -- switch --flake .#matsushimakouta@linux-x86_64
 '
 ```
@@ -71,8 +75,11 @@ curl -L https://github.com/DavHau/nix-portable/releases/latest/download/nix-port
   -o ~/.local/bin/nix-portable
 chmod +x ~/.local/bin/nix-portable
 
-# 2. Activate home-manager via nix-portable
-cd ~/ghq/github.com/shonenm/dotfiles
+# 2. Ensure dotfiles is at ~/dotfiles (mkOutOfStoreSymlink hardcoded path)
+[ -e ~/dotfiles ] || ln -s ~/ghq/github.com/shonenm/dotfiles ~/dotfiles
+
+# 3. Activate home-manager via nix-portable
+cd ~/dotfiles
 ~/.local/bin/nix-portable nix run home-manager/master -- \
   switch --flake .#matsushimakouta@linux-x86_64
 ```

@@ -44,11 +44,37 @@ Everything else from the previous apt list (`config/packages.linux.apt.txt`) is 
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
    ```
-3. Clone dotfiles and activate home-manager:
+3. Clone dotfiles **to `~/dotfiles`** (mandatory path — see "Path assumption" below):
    ```bash
-   ghq get shonenm/dotfiles
-   cd ~/ghq/github.com/shonenm/dotfiles
+   git clone https://github.com/shonenm/dotfiles.git ~/dotfiles
+   # or, if ghq is your convention, symlink:
+   #   ghq get shonenm/dotfiles && ln -s ~/ghq/github.com/shonenm/dotfiles ~/dotfiles
+   cd ~/dotfiles
    nix run home-manager/master -- switch --flake .#matsushimakouta@linux-x86_64
    ```
+
+## Migrating from legacy stow setup
+
+If the host previously ran the stow-based install (pre-Nix), absolute symlinks like `~/.config/atuin → ~/dotfiles/common/atuin/.config/atuin` may remain. `stow -D` silently skips absolute symlinks, so they linger. **Worse**: when home-manager activation writes to e.g. `~/.config/atuin/config.toml`, it follows the dir symlink and overwrites the actual `common/atuin/.config/atuin/config.toml` source file with a `/nix/store/...` symlink — corrupting the repo source.
+
+Clean up before first home-manager activation:
+
+```bash
+# Detect leftover stow dir symlinks pointing into dotfiles
+for d in ~/.config/*; do
+  [ -L "$d" ] || continue
+  case "$(readlink "$d")" in
+    */dotfiles/*) echo "remove: $d"; rm "$d" ;;
+  esac
+done
+# Same for top-level dotfiles (~/.gitconfig pre-Nix etc. — usually relative
+# stow symlinks, those get cleaned by `stow -D` fine; only absolutes linger)
+```
+
+## Path assumption
+
+Several home-manager modules (nvim, claude, pi, gh) use `mkOutOfStoreSymlink` to point at `${config.home.homeDirectory}/dotfiles/...`. The path is hardcoded. If the repo lives elsewhere on the host, either:
+- Symlink: `ln -s ~/ghq/github.com/shonenm/dotfiles ~/dotfiles`
+- Or change the clone target to `~/dotfiles` directly.
 
 See also: `docs/install/nix-sudoless-bootstrap.md` for hosts where step 2 is not possible.
