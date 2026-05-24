@@ -36,6 +36,12 @@ in
       ABBR_USER_ABBREVIATIONS_FILE = "${config.home.homeDirectory}/.config/zsh-abbr/user-abbreviations";
 
       DENO_INSTALL = "${config.home.homeDirectory}/.deno";
+
+      # Suppress direnv's noisy `direnv: export +VAR1 +VAR2 ...` log
+      # spam on every cd into a flake-managed dir (~50 nix env vars
+      # listed by name = ~3 lines of clutter each load). Empty value
+      # silences all direnv log output.
+      DIRENV_LOG_FORMAT = "";
     };
 
     # envExtra goes into ~/.zshenv — runs for ALL shells (login + non-login).
@@ -157,7 +163,24 @@ in
 
         # --- Tool integrations ---
         command -v mise &>/dev/null && eval "$(mise activate zsh)"
-        command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
+        command -v direnv &>/dev/null && {
+          eval "$(direnv hook zsh)"
+          # direnv prints `direnv: export +VAR1 +VAR2 ...` (~50 nix vars
+          # per cd into a flake dir) via fmt.Fprintln to os.Stderr in the
+          # Go binary — DIRENV_LOG_FORMAT only covers log_status, not
+          # this diff output. Replace _direnv_hook with a quiet variant
+          # that filters out just the "export ±VAR" line, keeping real
+          # errors and the "loading .envrc" hint.
+          _direnv_hook() {
+            trap -- ''' SIGINT
+            # NB: direnv prefixes its stderr lines with an ANSI reset escape
+            # (\x1b[0m) so `^direnv: export ...` won't anchor-match. Drop
+            # the anchor and match by substring instead — `direnv: export `
+            # is unique enough that this won't catch unrelated output.
+            eval "$(direnv export zsh 2> >(grep -v 'direnv: export ' >&2))"
+            trap - SIGINT
+          }
+        }
 
         # --- Completion ---
         autoload -Uz compinit
@@ -483,6 +506,17 @@ in
         typeset -ga ZSH_HIGHLIGHT_HIGHLIGHTERS
         ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets)
 
+        # Explicit style for aliases so the highlighter doesn't fall through
+        # to unknown-token (red) when the alias's TARGET binary is checked
+        # but the highlighter can't classify the alias itself.
+        typeset -gA ZSH_HIGHLIGHT_STYLES
+        ZSH_HIGHLIGHT_STYLES[alias]='fg=cyan,bold'
+
+        # zsh-autosuggestions: default fg=8 (dark gray) is nearly invisible
+        # on the Dark mode terminal. Bump to fg=240 for visible contrast
+        # while still clearly secondary to typed input.
+        export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=240'
+
         # --- OS-specific zshrc.local (mac/linux divergence stays in stow tree) ---
         [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
 
@@ -495,6 +529,47 @@ in
       # (no order guarantee). Source manually with mkOrder 5000.
       (lib.mkOrder 5000 ''
         source ${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+        # === Rebuild abbr regexp highlighter ============================
+        # .zshrc.local builds a regex from $ABBR_REGULAR_USER_ABBREVIATIONS
+        # to render abbreviations (gp, gpl, gs, …) green before space-
+        # expansion, but its `ZSH_HIGHLIGHT_REGEXP+=(...)` runs while the
+        # array isn't yet declared as an associative-friendly array (and
+        # uses a stray top-level `local`), so the entry never actually
+        # lands. Rebuild it here, after zsh-syntax-highlighting is loaded
+        # (and after .zshrc.local has populated the abbr array), so the
+        # pattern is in place at first prompt.
+        # Wrap in a function: `local` at top-level of .zshrc, applied to a
+        # variable name that already has a value from .zshrc.local's for-loop
+        # (`k` ends up as the last abbr key), zsh treats as a `typeset` query
+        # and PRINTS `k='"g"'` to stderr at every shell startup. Inside a
+        # function scope `local` behaves like a real declaration without
+        # side-effect prints.
+        _zshrc_rebuild_abbr_regexp() {
+          (( ''${+ABBR_REGULAR_USER_ABBREVIATIONS} )) || return 0
+          # ZSH_HIGHLIGHT_REGEXP must be ASSOCIATIVE (-gA). When indexed,
+          # the highlighter's `$ZSH_HIGHLIGHT_REGEXP[$pat]` lookup turns
+          # the pattern string into an arithmetic subscript and errors
+          # with `bad math expression: operand expected` on every keystroke.
+          # Build the pattern in a local variable first, then use
+          # `array[$var]=...` — putting the pattern literal inline as the
+          # subscript doesn't honour quoting and the literal `"` / `'` end
+          # up in the key, producing a corrupt entry.
+          # zsh-abbr 6.x stores keys via `(qq)` zsh-style quoting; use
+          # `''${(Q)k}` to dequote (the legacy literal-double-quote strip
+          # in .zshrc.local is the wrong escape style).
+          unset ZSH_HIGHLIGHT_REGEXP
+          typeset -gA ZSH_HIGHLIGHT_REGEXP=()
+          local -a abbr_keys=()
+          local k re
+          for k in ''${(k)ABBR_REGULAR_USER_ABBREVIATIONS}; do
+            abbr_keys+="''${(Q)k}"
+          done
+          re="^[[:blank:][:space:]]*(''${(j:|:)abbr_keys})$"
+          ZSH_HIGHLIGHT_REGEXP[$re]='fg=green'
+        }
+        _zshrc_rebuild_abbr_regexp
+        unset -f _zshrc_rebuild_abbr_regexp
 
         # Force nix-managed paths to win. envExtra prepends them in .zshenv,
         # but somewhere in the launchd → Ghostty → /etc/zprofile chain
