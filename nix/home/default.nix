@@ -16,6 +16,12 @@
     ./programs/zsh-abbr.nix
     ./programs/starship.nix
     ./programs/tmux.nix
+    # Phase 2c additions
+    ./programs/nvim.nix
+    ./programs/vim.nix
+    ./programs/aerospace.nix
+    ./programs/ghostty.nix
+    ./programs/sketchybar.nix
   ];
 
   home.username = "matsushimakouta";
