@@ -37,9 +37,13 @@ if [[ -n "${CONTAINER:-}" ]]; then
   exec docker "${args[@]}"
 fi
 
-# Fallback: run on host. Use `zsh -ic` (interactive) so .zshrc init runs —
-# specifically `mise activate` which is what makes mise-managed tools (gh,
-# node, uv, ...) discoverable in PATH. Plain `exec "$@"` would only see
-# tools in static PATH (~/.local/bin via .zshenv) and miss everything else.
+# Fallback: run on host. Use `zsh -lc` (login non-interactive) — much
+# faster than `zsh -ic` (full .zshrc init costs ~2s after Phase 2b zsh
+# migration: p10k config + plugin sourcing + abbr import + mise activate
+# + compinit all run for an interactive shell). For popup-launched
+# commands (lazygit / gh dash / pgcli / keifu / quay) only the popup
+# binary itself needs to be on PATH, which `.zshenv` envExtra already
+# guarantees by prepending nix-managed paths. mise-managed tool versions
+# (node / python / uv via shims) are not consumed by popup commands.
 host_cmd_str=$(printf '%q ' "$@")
-exec zsh -ic "exec $host_cmd_str"
+exec zsh -lc "exec $host_cmd_str"
