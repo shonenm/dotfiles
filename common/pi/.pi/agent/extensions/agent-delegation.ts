@@ -71,7 +71,7 @@ function buildPiCommand(task: string, difficulty: string, model?: string): strin
   const m = model || tier.model;
   // Escape single quotes in task
   const escaped = task.replace(/'/g, "'\\''");
-  return `pi --model '${m}' -p '${escaped}'`;
+  return `pi --model '${m}' -p '${escaped}' < /dev/null`;
 }
 
 // ---------------------------------------------------------------------------
