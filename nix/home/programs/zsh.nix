@@ -36,6 +36,12 @@ in
       ABBR_USER_ABBREVIATIONS_FILE = "${config.home.homeDirectory}/.config/zsh-abbr/user-abbreviations";
 
       DENO_INSTALL = "${config.home.homeDirectory}/.deno";
+
+      # Suppress direnv's noisy `direnv: export +VAR1 +VAR2 ...` log
+      # spam on every cd into a flake-managed dir (~50 nix env vars
+      # listed by name = ~3 lines of clutter each load). Empty value
+      # silences all direnv log output.
+      DIRENV_LOG_FORMAT = "";
     };
 
     # envExtra goes into ~/.zshenv — runs for ALL shells (login + non-login).
@@ -516,32 +522,37 @@ in
         # lands. Rebuild it here, after zsh-syntax-highlighting is loaded
         # (and after .zshrc.local has populated the abbr array), so the
         # pattern is in place at first prompt.
-        if (( ''${+ABBR_REGULAR_USER_ABBREVIATIONS} )); then
+        # Wrap in a function: `local` at top-level of .zshrc, applied to a
+        # variable name that already has a value from .zshrc.local's for-loop
+        # (`k` ends up as the last abbr key), zsh treats as a `typeset` query
+        # and PRINTS `k='"g"'` to stderr at every shell startup. Inside a
+        # function scope `local` behaves like a real declaration without
+        # side-effect prints.
+        _zshrc_rebuild_abbr_regexp() {
+          (( ''${+ABBR_REGULAR_USER_ABBREVIATIONS} )) || return 0
           # ZSH_HIGHLIGHT_REGEXP must be ASSOCIATIVE (-gA). When indexed,
           # the highlighter's `$ZSH_HIGHLIGHT_REGEXP[$pat]` lookup turns
           # the pattern string into an arithmetic subscript and errors
           # with `bad math expression: operand expected` on every keystroke.
-          #
-          # ALSO: build the pattern in a local variable first, then use
-          # `array[$var]=...`. Putting the pattern literal inline as the
-          # subscript (e.g. array['^[[:...'...]) doesn't honour the quoting
-          # inside subscripts and the literal `"` / `'` end up in the key,
-          # producing a corrupt key like `'"^[[:blank:..."'`.
-          #
+          # Build the pattern in a local variable first, then use
+          # `array[$var]=...` — putting the pattern literal inline as the
+          # subscript doesn't honour quoting and the literal `"` / `'` end
+          # up in the key, producing a corrupt entry.
           # zsh-abbr 6.x stores keys via `(qq)` zsh-style quoting; use
-          # `''${(Q)k}` to dequote properly (literal-double-quote strip
+          # `''${(Q)k}` to dequote (the legacy literal-double-quote strip
           # in .zshrc.local is the wrong escape style).
           unset ZSH_HIGHLIGHT_REGEXP
           typeset -gA ZSH_HIGHLIGHT_REGEXP=()
-          local -a _abbr_keys=()
-          local k _abbr_re
+          local -a abbr_keys=()
+          local k re
           for k in ''${(k)ABBR_REGULAR_USER_ABBREVIATIONS}; do
-            _abbr_keys+="''${(Q)k}"
+            abbr_keys+="''${(Q)k}"
           done
-          _abbr_re="^[[:blank:][:space:]]*(''${(j:|:)_abbr_keys})$"
-          ZSH_HIGHLIGHT_REGEXP[$_abbr_re]='fg=green'
-          unset k _abbr_re _abbr_keys
-        fi
+          re="^[[:blank:][:space:]]*(''${(j:|:)abbr_keys})$"
+          ZSH_HIGHLIGHT_REGEXP[$re]='fg=green'
+        }
+        _zshrc_rebuild_abbr_regexp
+        unset -f _zshrc_rebuild_abbr_regexp
 
         # Force nix-managed paths to win. envExtra prepends them in .zshenv,
         # but somewhere in the launchd → Ghostty → /etc/zprofile chain
