@@ -69,6 +69,19 @@
 | **Pi impl** | `extensions/web-tools.ts` (6ツール統合) |
 | **Claude impl** | 検討中 |
 
+### 7. Memory Persistence
+
+セッション間知識継承のための永続化層。
+
+| 項目 | 内容 |
+|------|------|
+| **Storage** | JSON files in `~/.pi/research/memory/` |
+| **Auto-save** | Session summary on shutdown |
+| **Auto-inject** | Previous session context on startup |
+| **LLM tools** | `memory_search`, `memory_save`, `memory_decide`, `memory_summary` |
+| **Pi impl** | `extensions/memory.ts` — JSON-backed persistent store |
+
+
 ### 6. MCP Gateway
 
 MCP サーバーへの安全な接続レイヤー。
@@ -79,7 +92,7 @@ MCP サーバーへの安全な接続レイヤー。
 | **Permission** | 3段階: `allow` / `ask` / `deny` |
 | **Audit** | `~/.pi/research/mcp-audit.jsonl` |
 | **Stats** | `~/.pi/research/mcp-stats.json` |
-| **Pi impl** | `extensions/mcp-gateway.ts` (JSON-RPC client + tool registration) |
+| **Pi impl** | `extensions/mcp-gateway.ts` (plain Markdown (pi-memory compatible) in `~/.pi/agent/memory/` N-RPC client + tool registration) |
 | **Claude impl** | ネイティブ MCP 対応 + symlink で共有 config 参照 |
 
 ## Shared Configuration
@@ -120,6 +133,7 @@ MCP サーバーへの安全な接続レイヤー。
 | Status Line | ✅ | ✅ | — |
 | Web Research | ✅ | — | — |
 | MCP Gateway | ✅ | ✅ | — |
+| Memory Persistence | ✅ | — | — |
 
 ## Adding a New Agent
 

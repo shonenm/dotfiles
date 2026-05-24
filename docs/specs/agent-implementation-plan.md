@@ -30,17 +30,17 @@ statusline.ts の視認性・情報量・カスタマイズ性の強化。
 セッション間知識継承のための SQLite ベース永続化層。毎回 fresh start 状態を解消する。
 
 ### Tasks
-- [ ] `~/.pi/research/knowledge.db` — SQLite データベース新設
+- [x] `~/.pi/research/knowledge.db` — SQLite データベース新設
   - テーブル: `sessions` (id, name, cwd, started_at, summary)
   - テーブル: `knowledge` (id, key, value, source_session, created_at, ttl)
   - テーブル: `decisions` (id, context, decision, rationale, session_id)
-- [ ] `extensions/memory.ts` — 新規拡張
+- [x] `extensions/memory.ts` — 新規拡張
   - `session_start`: 前回セッションのサマリを inject
   - `session_shutdown`: 現在セッションのサマリを保存（LLM に要約を依頼）
   - `tool_execution_end`: 重要な決定を `decisions` テーブルに記録
-- [ ] LLM ツール: `memory_search` — knowledge.db を key/value 検索
-- [ ] LLM ツール: `memory_save` — 任意の知識を手動保存
-- [ ] AGENTS.md に Memory layer の使い方を追記
+- [x] LLM ツール: `memory_search` — knowledge.db を key/value 検索
+- [x] LLM ツール: `memory_save` — 任意の知識を手動保存
+- [x] AGENTS.md に Memory layer の使い方を追記
 
 ### Files
 - `common/pi/.pi/agent/extensions/memory.ts` (new)

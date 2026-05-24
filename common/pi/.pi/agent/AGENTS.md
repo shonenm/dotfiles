@@ -41,3 +41,11 @@ Use `pueue` for background processes: `pueue add -- <command>`
 - `web-tools` — search, fetch, cache, citation (SearXNG + Jina)
 - `mcp-gateway` — MCP tool bridge with permission control and audit
 - `statusline` — footer with token stats, context, git branch, research activity
+
+## Memory
+
+- Persistent across sessions via plain Markdown files in `~/.pi/agent/memory/`
+- Tools: `memory_write`, `memory_read`, `memory_search`, `scratchpad`
+- Format: pi-memory compatible (MEMORY.md, SCRATCHPAD.md, daily/)
+- Context auto-injected on session start (scratchpad + today's log + MEMORY.md)
+- Install `qmd` for semantic/vector search upgrade
