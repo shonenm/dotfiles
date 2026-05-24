@@ -178,47 +178,31 @@ export default function (pi: ExtensionAPI) {
             ? theme.fg(ctxColor, gauge(pct, 10))
             : "";
 
-          // ---- Line 1: tokens + gauge + cost + branch + model ----
-          const line1Parts: string[] = [];
-          line1Parts.push(`${tokIn} ${tokOut}`);       // always
-          if (gaugeStr) line1Parts.push(gaugeStr);      // always if context available
-          line1Parts.push(tokCost);                      // always
-          if (branchStr) line1Parts.push(branchStr);     // if in git repo
-          line1Parts.push(modelStr);                     // always
-
-          const line1 = line1Parts.join(" │ ");
-
-          // ---- Line 2: web stats + mcp stats ----
-          const line2Parts: string[] = [];
-          if (stats.webSearch > 0 || stats.webFetch > 0) {
-            line2Parts.push(
-              theme.fg("dim", `web s:${stats.webSearch} f:${stats.webFetch} c:${stats.webCache}`)
-            );
-          }
-          if (stats.mcpCalls > 0) {
-            line2Parts.push(
-              theme.fg("cyan", `mcp q:${stats.mcpCalls}${stats.mcpErrors > 0 ? ` e:${stats.mcpErrors}` : ""}`)
-            );
-          }
+          // ---- Layout: 3-line, all left-aligned ----
+          // Line 1: tokens + gauge + cost
+          // Line 2: branch + model
+          // Line 3: web stats + mcp stats (only if data exists)
 
           if (mode === "compact") {
-            // Single line: tokens + model only
-            const left = `${tokIn} ${tokOut} ${tokCost}`;
-            const right = modelStr;
-            const pad = Math.max(1, width - visibleWidth(left) - visibleWidth(right));
-            return [truncateToWidth(left + " ".repeat(pad) + right, width)];
+            return [truncateToWidth(`${tokIn} ${tokOut} ${tokCost}  ${modelStr}`, width)];
           }
 
-          // Detailed: 1-2 lines
-          if (line2Parts.length === 0) {
-            return [truncateToWidth(line1, width)];
-          }
+          const l1 = [tokIn, tokOut, gaugeStr, tokCost].filter(Boolean).join(" │ ");
+          const lines = [truncateToWidth(l1, width)];
 
-          const line2 = line2Parts.join(" · ");
-          return [
-            truncateToWidth(line1, width),
-            truncateToWidth(line2, width),
-          ];
+          const l2 = [branchStr, modelStr].filter(Boolean).join(" · ");
+          if (l2) lines.push(truncateToWidth(l2, width));
+
+          const l3: string[] = [];
+          if (stats.webSearch > 0 || stats.webFetch > 0) {
+            l3.push(theme.fg("dim", `web s:${stats.webSearch} f:${stats.webFetch} c:${stats.webCache}`));
+          }
+          if (stats.mcpCalls > 0) {
+            l3.push(theme.fg("cyan", `mcp q:${stats.mcpCalls}${stats.mcpErrors > 0 ? ` e:${stats.mcpErrors}` : ""}`));
+          }
+          if (l3.length > 0) lines.push(truncateToWidth(l3.join(" · "), width));
+
+          return lines;
         },
       };
     });
