@@ -517,19 +517,24 @@ in
         # (and after .zshrc.local has populated the abbr array), so the
         # pattern is in place at first prompt.
         if (( ''${+ABBR_REGULAR_USER_ABBREVIATIONS} )); then
-          # .zshrc.local's broken `+=` left ZSH_HIGHLIGHT_REGEXP as a
-          # scalar with a half-built string; the regexp highlighter
-          # then tries to use ''${#ZSH_HIGHLIGHT_REGEXP[@]} as a loop
-          # bound and falls into `bad math expression`. Hard-reset to
-          # an empty array, then assign cleanly.
+          # ZSH_HIGHLIGHT_REGEXP MUST be associative (-gA), not indexed.
+          # When indexed, the highlighter's `''${ZSH_HIGHLIGHT_REGEXP[$pat]}`
+          # lookup treats $pat (the regex pattern itself) as a numeric
+          # subscript → arithmetic evaluation of `^[[:blank:...` → error
+          # `bad math expression: operand expected` on every keystroke.
+          # See: https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/highlighters/regexp/regexp-highlighter.zsh
+          # zsh-abbr 6.x stores keys via `(qq)` zsh-style quoting, so use
+          # `''${(Q)k}` to dequote (the legacy literal-double-quote strip
+          # in .zshrc.local is wrong for plain keys with quotes around
+          # them like `"gp"` → `"gp"` unchanged, breaking the alternation).
           unset ZSH_HIGHLIGHT_REGEXP
-          typeset -ga ZSH_HIGHLIGHT_REGEXP=()
+          typeset -gA ZSH_HIGHLIGHT_REGEXP=()
           local -a _abbr_keys=()
           local k
           for k in ''${(k)ABBR_REGULAR_USER_ABBREVIATIONS}; do
-            _abbr_keys+="''${k//\"/}"
+            _abbr_keys+="''${(Q)k}"
           done
-          ZSH_HIGHLIGHT_REGEXP=('^[[:blank:][:space:]]*('"''${(j:|:)_abbr_keys}"')$' fg=green)
+          ZSH_HIGHLIGHT_REGEXP['^[[:blank:][:space:]]*('"''${(j:|:)_abbr_keys}"')$']='fg=green'
           unset k _abbr_keys
         fi
 
