@@ -39,10 +39,10 @@
 
 | ロール | 用途 | 推奨難易度 | モデル |
 |--------|------|:--:|--------|
-| `reviewer` | コードレビュー、セキュリティ監査、品質チェック | high | gpt-5.5 / kimi-k2.6 |
+| `reviewer` | コードレビュー、セキュリティ監査、品質チェック | high | kimi-k2.6 |
 | `scout` | コードベース探索、read-only調査、依存関係分析 | medium | deepseek-v4-pro |
 | `worker` | 承認済み計画からの実装 | medium | deepseek-v4-pro |
-| `oracle` | セカンドオピニオン、設計レビュー、前提検証 | high | gpt-5.5 / kimi-k2.6 |
+| `oracle` | セカンドオピニオン、設計レビュー、前提検証 | high | kimi-k2.6 |
 
 ## Model Auto-Selection
 
@@ -50,9 +50,9 @@
 
 | Difficulty | Primary Model | Fallback |
 |:----------:|---------------|----------|
-| `high` | openai-codex/gpt-5.5:high | opencode-go/kimi-k2.6:high |
-| `medium` | opencode-go/deepseek-v4-pro:high | openai-codex/gpt-5.4:low |
-| `low` | opencode-go/deepseek-v4-flash:off | openai-codex/gpt-5.4-mini:off |
+| `high` | opencode-go/kimi-k2.6:high | opencode-go/kimi-k2.6:high |
+| `medium` | opencode-go/deepseek-v4-pro:high | opencode-go/glm-5.1:high |
+| `low` | opencode-go/deepseek-v4-flash:off | opencode-go/glm-5:high |
 
 モデル・フォールバックは手動オーバーライド可能。
 
