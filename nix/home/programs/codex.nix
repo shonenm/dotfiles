@@ -8,7 +8,7 @@
   # those runtime files don't get tracked.
 
   home.file.".codex/config.toml".source =
-    ../../../common/codex/.codex/config.toml;
+    ./codex/config.toml;
   home.file.".codex/.gitignore".source =
-    ../../../common/codex/.codex/.gitignore;
+    ./codex/.gitignore;
 }

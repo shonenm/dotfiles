@@ -5,5 +5,5 @@
   # plugin itself, which lives under ~/.tmux/plugins/opensessions).
 
   xdg.configFile."opensessions/config.json".source =
-    ../../../common/opensessions/.config/opensessions/config.json;
+    ./opensessions/config.json;
 }

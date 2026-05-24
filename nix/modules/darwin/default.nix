@@ -111,13 +111,13 @@
   # AeroSpace's own `start-at-login = true` (removed from aerospace.toml).
   # launchd label: org.nixos.aerospace (KeepAlive + RunAtLoad).
   #
-  # Settings sourced from common/aerospace/.config/aerospace/aerospace.toml
+  # Settings sourced from nix/home/programs/aerospace/aerospace.toml
   # via builtins.fromTOML so the existing config remains the source of
   # truth. Module assertions: !settings.start-at-login (removed).
   services.aerospace = {
     enable = true;
     settings = builtins.fromTOML
-      (builtins.readFile ../../../common/aerospace/.config/aerospace/aerospace.toml);
+      (builtins.readFile ../../home/programs/aerospace/aerospace.toml);
   };
 
   # === Karabiner-Elements / SketchyBar deferred =======================
