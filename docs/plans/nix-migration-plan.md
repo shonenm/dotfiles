@@ -233,3 +233,83 @@ DECISION 3: container 側も Nix 化するか、container は現状維持で外�
 | 7. container (任意) | 2〜3 日 | 30 日 |
 
 実工数換算で 3〜4 週間。日常作業と並行なら 6〜8 週間が現実線。
+
+---
+
+## 9. 進捗ステータス (2026-05-24 時点)
+
+### コア Phase
+
+| Phase | 内容 | PR | 状態 |
+|-------|------|----|------|
+| 0 | preflight scaffold + flake.nix 雛形 | #139 | ✅ merged |
+| 1a | mac core packages (nixpkgs subset ~50) via nix-darwin | #149 | ✅ merged |
+| 2a | home-manager scaffold + 9 declarative configs | #153 | ✅ merged |
+| 2b | shell stack (tmux/zsh/abbr/starship), sheldon retired | #155 | ✅ merged |
+| 2c | editor + UI (nvim/vim/aerospace/ghostty/sketchybar) | #161 | ✅ merged |
+| 2d | stateful + scripts/ → PATH (final Phase 2) | #168 | ✅ merged |
+| 3a | Tier 1 macOS preferences + `programs.zsh.enable` | #170 | ✅ merged |
+| 3b | Tier 2/3 preferences + `services.aerospace` | #174 | ✅ merged |
+| 4+5 | Linux sudo + sudoless paths (1 PR) | #177 | ✅ merged |
+| 6 | legacy cleanup (delete migrated `common/*`, rewrite `install.sh`) | #180 | 🟡 open, CI green, mergeable |
+| 7 | container / Docker worktree (optional) | – | ⏳ 未着手 |
+
+### 補助 PR
+
+| 内容 | PR | 状態 |
+|------|----|------|
+| Phase 2c hot-loop symlinks fix (pi extensions / claude skills 等) | #172 | ✅ merged |
+| tmux popup launch 5x 高速化 (`zsh -ic` → `zsh -lc`) | #164 | ✅ merged |
+| zsh syntax-highlighting + abbr regexp + direnv noise 一連の fix | #175 | ✅ merged |
+
+### 実機検証
+
+| host | 状態 |
+|------|------|
+| **shonenm (mac, M-series, darwin 26.x)** | ✅ Phase 0–3b 全展開、Phase 6 PR #180 merge 後に再 switch 予定 |
+| **pi-500 (Raspberry Pi 5, aarch64, Debian 13)** | ✅ READY-NATIVE で Determinate install + home-manager (`shonenm@linux-aarch64`) 動作確認済 |
+| **devhost (host)** | ⏳ preflight 未実行 |
+| **devhost:syntopic-dev** | ⏳ preflight 未実行 |
+| **devhost:syntopic-dev-review** | ⏳ preflight 未実行 |
+| **devhost:syntopic-deploy** | ⏳ preflight 未実行 |
+| **devhost:fluid-sbi-dev** | ⏳ preflight 未実行 |
+
+### 決定事項の確定状況
+
+| 決定 | 確定内容 |
+|------|----------|
+| DECISION 1: sudoless ホストの台数とポリシー | ⏳ devhost 系 5 host の preflight 結果待ち |
+| DECISION 2: dotfiles を宣言式に変換するか | ✅ **宣言式採用**（Phase 2 で確定。hot-loop dir のみ `mkOutOfStoreSymlink` で例外対応） |
+| DECISION 3: container 側も Nix 化するか | ⏳ Phase 7 要否判定。現状 container は外部 (rcon → host tmux + docker exec) のため Nix 化のメリット限定的 |
+| DECISION 4: mise tools を Nix に統合 | ✅ **maintain**（mise はそのまま、Phase 1a で mise 自体は Nix 管理） |
+| DECISION 5: Nix installer | ✅ **Determinate Systems** v3.21.0 採用 |
+
+### 残りタスク
+
+#### 運用タスク（コード変更不要）
+
+- [ ] **Phase 0 preflight 残り 5 host** で `bash scripts/nix-preflight.sh` 実行 → 結果を `docs/plans/nix-migration-phase0-results.md` の matrix に追記 → DECISION 1 確定
+- [ ] **mac shonenm**: PR #180 merge 後に `sudo darwin-rebuild switch --flake .#shonenm` 実行（refactor のみで live 環境変化無し想定だが確認）
+- [ ] **devhost host**: READY-NATIVE 想定で `install.sh` 経由 Nix bootstrap → `matsushimakouta@linux-x86_64` activate
+- [ ] **devhost:syntopic-dev など container**: preflight 結果に応じて nix-user-chroot or nix-portable bootstrap → `matsushimakouta@linux-x86_64` activate
+- [ ] **pi-500 re-activate**: PR #180 merge 後に `home-manager switch --flake .#shonenm@linux-aarch64` 再実行（Phase 6 反映確認）
+
+#### コード課題（必要時のみ）
+
+- [ ] **Karabiner-Elements を `services.karabiner-elements` 経由化**: Phase 3b で deferred。v15 architecture 不安定性 (nix-darwin#564, #639) 解消 or 慎重に対応する時間が取れたら着手
+- [ ] **SketchyBar を `services.sketchybar` 経由化**: 同上。Lua plugin の inline config 化が課題
+- [ ] **Custom-tap CLIs (keifu / rtk / lemonade / dops / quay) を nixpkgs overlay 化**: 現状 Brewfile / scripts/mac.sh で残置。Linux 側で必要になった場合に overlay 自作
+- [ ] **scripts/{mac,linux}.sh の `install_*` 深いクリーンアップ**: Phase 6 では SUPPLEMENTAL マークのみ。Claude Code plugins / gh extensions / npm globals 等は Nix 対象外で残す方針
+- [ ] **Phase 7: container / Docker worktree 対応**: ralph-crew の container 動作前提を Nix-portable で再現するか、現行 install-in-container.sh 維持するか判断
+
+#### 既知の小課題
+
+- [ ] **`common/atuin/.config/atuin/config.toml` typechange 反復** (mac main worktree): Phase 6 で `common/atuin/` ディレクトリ自体を削除するため、merge 後は発生しなくなる見込み
+- [ ] **`~/.config/borders` 旧 stow symlink** (mac shonenm): borders は nix-darwin 未統合のため stow link は機能上必要。Phase 6 では touch しない
+
+### 完了基準
+
+Phase 0–6 のコア完了に加えて:
+- devhost 系全 host で home-manager 動作確認
+- mac (shonenm) で Phase 6 反映後の `darwin-rebuild switch` 成功
+- 新規 mac で `git clone && ./install.sh` だけで再現可能なこと（fresh install スモークテスト、preflight matrix 完成後）
