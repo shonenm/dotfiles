@@ -12,12 +12,11 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DOTFILES_DIR/scripts/utils.sh"
 
 # --- Argument parsing -------------------------------------------------
-SKIP_PROMPT=false
 NO_SUDO=false
 SKIP_1P=false
 for arg in "$@"; do
   case "$arg" in
-    -y|--skip-prompt) SKIP_PROMPT=true ;;
+    -y|--skip-prompt) ;;  # accepted for compatibility; install.sh is non-interactive
     --no-sudo)        NO_SUDO=true ;;
     --skip-1p)        SKIP_1P=true ;;
     -h|--help)

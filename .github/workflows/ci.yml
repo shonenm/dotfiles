@@ -16,8 +16,11 @@ jobs:
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: .
-          # Exclude: zsh config files, p10k, config definitions, .git, node_modules
-          ignore_paths: common/zsh linux/zsh mac/zsh config .git node_modules
+          # Exclude: zsh config files, p10k, config definitions, .git, node_modules.
+          # Phase 6: common/zsh moved into nix/home/programs/zsh; the .p10k.zsh
+          # there is zsh-specific syntax that shellcheck (bash-focused) can't
+          # parse. linux/zsh + mac/zsh still hold .zshrc.local.
+          ignore_paths: common/zsh linux/zsh mac/zsh nix/home/programs/zsh config .git node_modules
         env:
           # SC1090/SC1091: External sources (info-level, safe to ignore)
           SHELLCHECK_OPTS: -e SC1090 -e SC1091
