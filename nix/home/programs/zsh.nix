@@ -517,13 +517,19 @@ in
         # (and after .zshrc.local has populated the abbr array), so the
         # pattern is in place at first prompt.
         if (( ''${+ABBR_REGULAR_USER_ABBREVIATIONS} )); then
-          typeset -ga ZSH_HIGHLIGHT_REGEXP
+          # .zshrc.local's broken `+=` left ZSH_HIGHLIGHT_REGEXP as a
+          # scalar with a half-built string; the regexp highlighter
+          # then tries to use ''${#ZSH_HIGHLIGHT_REGEXP[@]} as a loop
+          # bound and falls into `bad math expression`. Hard-reset to
+          # an empty array, then assign cleanly.
+          unset ZSH_HIGHLIGHT_REGEXP
+          typeset -ga ZSH_HIGHLIGHT_REGEXP=()
           local -a _abbr_keys=()
           local k
           for k in ''${(k)ABBR_REGULAR_USER_ABBREVIATIONS}; do
             _abbr_keys+="''${k//\"/}"
           done
-          ZSH_HIGHLIGHT_REGEXP+=('^[[:blank:][:space:]]*('"''${(j:|:)_abbr_keys}"')$' fg=green)
+          ZSH_HIGHLIGHT_REGEXP=('^[[:blank:][:space:]]*('"''${(j:|:)_abbr_keys}"')$' fg=green)
           unset k _abbr_keys
         fi
 
