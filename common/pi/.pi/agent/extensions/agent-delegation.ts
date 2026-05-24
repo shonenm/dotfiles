@@ -69,9 +69,9 @@ function logDelegation(difficulty: string, task: string, taskId?: string) {
 function buildPiCommand(task: string, difficulty: string, model?: string): string {
   const tier = MODEL_TIERS[difficulty] ?? MODEL_TIERS.medium;
   const m = model || tier.model;
-  // Escape single quotes in task
+  // Escape single quotes in task, pipe empty stdin to avoid hang
   const escaped = task.replace(/'/g, "'\\''");
-  return `pi --model '${m}' -p '${escaped}' < /dev/null`;
+  return `printf '' | pi --model '${m}' -p '${escaped}'`;
 }
 
 // ---------------------------------------------------------------------------
