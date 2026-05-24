@@ -40,7 +40,7 @@ Use `pueue` for background processes: `pueue add -- <command>`
 - Context auto-injected on session start (scratchpad + today's log + MEMORY.md)
 - Install `qmd` for semantic/vector search upgrade
 
-## Agent Delegation
+## Agent Delegation (pi-subagents + custom)
 
 - Use `delegate_agent` tool to spawn sub-agents for parallel or specialized work.
 - `check_delegation` to view pueue task status. `wait_delegation` to block until complete.
@@ -51,3 +51,6 @@ Use `pueue` for background processes: `pueue add -- <command>`
 - Async mode uses pueue for background execution.
 - Sync mode blocks until completion (use for sequential dependencies).
 - When delegating, communicate: background, goal, expected output, constraints.
+
+- pi-subagents provides: chain/parallel execution, TUI visualization, built-in agents
+- agent-delegation.ts adds: pueue async execution, difficulty-based model auto-selection

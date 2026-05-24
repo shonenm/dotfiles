@@ -69,7 +69,9 @@
     "~/.pi/agent/prompts"
   ],
   "themes": [],
-  "packages": [],
+  "packages": [
+    "npm:pi-subagents"
+  ],
   "enabledModels": [
     "opencode-go/*",
     "openai-codex/*",
