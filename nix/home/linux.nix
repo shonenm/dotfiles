@@ -16,6 +16,7 @@
     ../modules/packages/linux.nix
   ];
 
-  home.username = "matsushimakouta";
-  home.homeDirectory = "/home/matsushimakouta";
+  # home.username + home.homeDirectory provided by mkLinuxHome in flake.nix
+  # so per-host accounts (matsushimakouta on ailab, shonenm on pi-500, …)
+  # all reuse this module.
 }

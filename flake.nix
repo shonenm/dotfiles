@@ -22,12 +22,17 @@
       # Used for both sudo and sudoless Linux paths — they share the same
       # home-manager modules; the difference is how Nix itself is bootstrapped
       # on the host (Determinate vs nix-user-chroot vs nix-portable).
-      mkLinuxHome = system: home-manager.lib.homeManagerConfiguration {
+      # Pass username so per-host accounts (matsushimakouta on ailab,
+      # shonenm on pi-500, etc.) resolve home.* correctly.
+      mkLinuxHome = { system, username }: home-manager.lib.homeManagerConfiguration {
         pkgs = import nixpkgs {
           inherit system;
           config.allowUnfree = true;
         };
-        modules = [ ./nix/home/linux.nix ];
+        modules = [
+          ./nix/home/linux.nix
+          { home.username = username; home.homeDirectory = "/home/${username}"; }
+        ];
       };
     in
     {
@@ -77,8 +82,13 @@
       #   nix run home-manager/master -- switch \
       #     --flake .#matsushimakouta@linux-$ARCH
       homeConfigurations = {
-        "matsushimakouta@linux-x86_64" = mkLinuxHome "x86_64-linux";
-        "matsushimakouta@linux-aarch64" = mkLinuxHome "aarch64-linux";
+        "matsushimakouta@linux-x86_64" =
+          mkLinuxHome { system = "x86_64-linux"; username = "matsushimakouta"; };
+        "matsushimakouta@linux-aarch64" =
+          mkLinuxHome { system = "aarch64-linux"; username = "matsushimakouta"; };
+        # pi-500 (Raspberry Pi 5, aarch64) runs as `shonenm` user.
+        "shonenm@linux-aarch64" =
+          mkLinuxHome { system = "aarch64-linux"; username = "shonenm"; };
       };
     };
 }
