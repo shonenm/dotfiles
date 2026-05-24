@@ -142,7 +142,7 @@ export default function (pi: ExtensionAPI) {
       try {
         const pueueResult = execSync(`pueue add -i --print-task-id -- ${cmd} < /dev/null`, {
           encoding: "utf-8",
-          timeout: 10_000,
+          timeout: 30_000,
           stdio: ["pipe", "pipe", "pipe"],
         });
         const taskId = pueueResult.trim();
