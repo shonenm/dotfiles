@@ -7,15 +7,15 @@
   # themes/ holds custom theme definitions referenced by `theme = ...`.
 
   xdg.configFile."ghostty/config".source =
-    ../../../common/ghostty/.config/ghostty/config;
+    ./ghostty/config;
 
   xdg.configFile."ghostty/backgrounds" = {
-    source = ../../../common/ghostty/.config/ghostty/backgrounds;
+    source = ./ghostty/backgrounds;
     recursive = true;
   };
 
   xdg.configFile."ghostty/themes" = {
-    source = ../../../common/ghostty/.config/ghostty/themes;
+    source = ./ghostty/themes;
     recursive = true;
   };
 }

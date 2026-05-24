@@ -3,7 +3,7 @@
 let
   # .p10k.zsh is large (1738 lines); ship as-is via readFile so the p10k
   # configure wizard's output is preserved verbatim.
-  p10kConfig = builtins.readFile ../../../common/zsh/.p10k.zsh;
+  p10kConfig = builtins.readFile ./zsh/.p10k.zsh;
 in
 {
   programs.zsh = {

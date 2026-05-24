@@ -7,7 +7,7 @@
   # are chmod +x in the repo).
 
   xdg.configFile."sketchybar" = {
-    source = ../../../common/sketchybar/.config/sketchybar;
+    source = ./sketchybar;
     recursive = true;
   };
 }

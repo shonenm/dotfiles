@@ -18,9 +18,17 @@
         update = {
           description = "Update all package managers and tools";
           run = ''
-            brew update && brew upgrade
-            sheldon lock --update
-            tldr --update
+            # Nix-side update
+            if command -v darwin-rebuild >/dev/null 2>&1; then
+              nix flake update --flake ~/dotfiles
+              sudo darwin-rebuild switch --flake ~/dotfiles
+            elif command -v home-manager >/dev/null 2>&1; then
+              nix flake update --flake ~/dotfiles
+              home-manager switch --flake ~/dotfiles
+            fi
+            # Homebrew casks (mac UI apps not in nix-darwin)
+            command -v brew >/dev/null 2>&1 && brew update && brew upgrade
+            command -v tldr >/dev/null 2>&1 && tldr --update
           '';
         };
 
@@ -28,7 +36,7 @@
           description = "Check dotfiles health";
           run = ''
             echo "==> Checking required tools..."
-            for cmd in zsh tmux nvim starship sheldon atuin zoxide fzf fd rg bat eza ghq mise stow; do
+            for cmd in zsh tmux nvim starship atuin zoxide fzf fd rg bat eza ghq mise; do
               if command -v "$cmd" >/dev/null 2>&1; then
                 printf "  ✓ %s (%s)\n" "$cmd" "$(command -v "$cmd")"
               else
@@ -36,11 +44,12 @@
               fi
             done
             echo ""
-            echo "==> Checking stow links..."
-            for dir in ~/dotfiles/common/*/; do
-              pkg=$(basename "$dir")
-              stow --dir=~/dotfiles/common --target="$HOME" --no "$pkg" 2>&1 | grep -q "CONFLICT" && echo "  ⚠ $pkg has conflicts" || echo "  ✓ $pkg"
-            done
+            echo "==> Active home-manager generation..."
+            if command -v home-manager >/dev/null 2>&1; then
+              home-manager generations 2>/dev/null | head -1
+            else
+              echo "  (managed by nix-darwin module — no standalone home-manager CLI)"
+            fi
           '';
         };
 

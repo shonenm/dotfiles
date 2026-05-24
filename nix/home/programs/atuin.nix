@@ -5,5 +5,5 @@
   # History database lives at ~/.local/share/atuin (mutable, untouched).
 
   xdg.configFile."atuin/config.toml".source =
-    ../../../common/atuin/.config/atuin/config.toml;
+    ./atuin/config.toml;
 }

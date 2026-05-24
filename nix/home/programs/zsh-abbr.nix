@@ -6,5 +6,5 @@
   # ABBR_USER_ABBREVIATIONS_FILE = ~/.config/zsh-abbr/user-abbreviations.
 
   xdg.configFile."zsh-abbr/user-abbreviations".text =
-    builtins.readFile ../../../common/zsh-abbr/.config/zsh-abbr/user-abbreviations;
+    builtins.readFile ./zsh-abbr/user-abbreviations;
 }
