@@ -1,8 +1,13 @@
 // Agent Delegation Extension for pi
 //
 // Spawn sub-agents for parallel work via pueue + pi -p.
-// Supports explicit delegation (delegate_agent tool) and
-// difficulty-based model auto-selection.
+// Supports natural language delegation and difficulty-based model auto-selection.
+//
+// Built-in agent roles (use in prompt/task description):
+//   reviewer   — Code review, correctness, security audit
+//   scout      — Codebase exploration, read-only research
+//   worker     — Implementation from approved plan
+//   oracle     — Second opinion, challenge assumptions, architecture advice
 //
 // Model selection tiers (from AGENTS.md):
 //   high   → gpt-5.5:high / kimi-k2.6:high
@@ -82,14 +87,19 @@ export default function (pi: ExtensionAPI) {
     name: "delegate_agent",
     label: "Delegate Agent",
     description:
-      "Spawn a sub-agent (separate pi instance) to handle a task. " +
+      "Spawn a sub-agent (separate pi instance) for focused work. " +
+      "Built-in roles: reviewer (code review), scout (codebase research), " +
+      "worker (implement from plan), oracle (second opinion). " +
       "Supports sync (wait for result) and async (background via pueue) modes. " +
+      "Use natural language in the task: 'Use reviewer to audit auth module for security issues'. " +
       "Difficulty auto-selects model: high=gpt-5.5, medium=deepseek-v4-pro, low=deepseek-v4-flash.",
-    promptSnippet: "Delegate a task to a sub-agent",
+    promptSnippet: "Delegate a task to a sub-agent (reviewer/scout/worker/oracle)",
     promptGuidelines: [
-      "Use delegate_agent for tasks that can be parallelized or need a different model.",
-      "Use difficulty='high' for design, review, or debugging. Use 'medium' for coding from design. Use 'low' for summaries.",
-      "Prefer async mode with pueue for independent tasks that can run in background.",
+      "Use delegate_agent for tasks that benefit from a second set of model eyes.",
+      "Prefer role names in the task: 'Use reviewer to...', 'Use scout to explore...', 'Use oracle for a second opinion on...'.",
+      "Run parallel reviewers for different concerns: correctness, tests, complexity.",
+      "Use async mode (default) for independent work. Use sync for sequential dependencies.",
+      "Difficulty: high=review/design/debug, medium=coding from plan, low=summaries.",
     ],
     parameters: Type.Object({
       task: Type.String({ description: "Task description/instructions for the sub-agent" }),
