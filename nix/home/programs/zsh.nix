@@ -483,6 +483,17 @@ in
         typeset -ga ZSH_HIGHLIGHT_HIGHLIGHTERS
         ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets)
 
+        # Explicit style for aliases so the highlighter doesn't fall through
+        # to unknown-token (red) when the alias's TARGET binary is checked
+        # but the highlighter can't classify the alias itself.
+        typeset -gA ZSH_HIGHLIGHT_STYLES
+        ZSH_HIGHLIGHT_STYLES[alias]='fg=cyan,bold'
+
+        # zsh-autosuggestions: default fg=8 (dark gray) is nearly invisible
+        # on the Dark mode terminal. Bump to fg=240 for visible contrast
+        # while still clearly secondary to typed input.
+        export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=240'
+
         # --- OS-specific zshrc.local (mac/linux divergence stays in stow tree) ---
         [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
 
