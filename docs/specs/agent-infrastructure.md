@@ -51,8 +51,8 @@
 | 項目 | 内容 |
 |------|------|
 | **Display** | トークン使用量 (in/out), コスト, コンテキスト容量 (%), git ブランチ, モデル名, web/MCP アクティビティ |
-| **Capacity color** | <60% 緑, 60-80% 黄, >80% 赤 |
-| **Pi impl** | `extensions/statusline.ts` — `ctx.ui.setFooter` |
+| **Gauge** | Unicodeブロックゲージ (████░░░░), 色は使用率連動 |
+| **Pi impl** | `extensions/statusline.ts` — 3行マルチラインフッター, 3モード切替 (detailed/compact/off) |
 | **Claude impl** | `hooks/statusline-command.sh` |
 
 ### 5. Web Research
