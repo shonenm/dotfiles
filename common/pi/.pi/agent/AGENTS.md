@@ -54,3 +54,15 @@ Use `pueue` for background processes: `pueue add -- <command>`
 
 - pi-subagents provides: chain/parallel execution, TUI visualization, built-in agents
 - agent-delegation.ts adds: pueue async execution, difficulty-based model auto-selection
+
+## Session Management
+
+- `/session-name <name>` — set session display name (auto-set from git branch)
+- `/sessions` — list recent sessions
+- `/session-export [file]` / `/session-import <file>` — export/import JSONL
+- `/btw <question>` — quick side question without polluting history
+
+## Remote Control
+
+- pi-remote-control package — `/remote-control-pair` for QR pairing, `/remote-control` to toggle
+- Requires iOS app (Pi Relay) + config at `~/.pi/remote-control/config.json`

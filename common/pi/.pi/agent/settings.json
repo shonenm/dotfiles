@@ -70,7 +70,8 @@
   ],
   "themes": [],
   "packages": [
-    "npm:pi-subagents"
+    "npm:pi-subagents",
+    "npm:pi-remote-control"
   ],
   "enabledModels": [
     "opencode-go/*",
