@@ -1,0 +1,34 @@
+#!/bin/bash
+# pi-remote — remote session access helper
+# Usage: pi-remote [host] [session-name]
+# Connects to a remote pi session via ssh + tmux
+
+set -euo pipefail
+
+host="${1:-}"
+session="${2:-}"
+
+if [[ -z "$host" ]]; then
+  echo "Usage: pi-remote <host> [session-name]"
+  echo ""
+  echo "Connects to a remote pi session via ssh + tmux."
+  echo "Leave session-name empty to list available sessions."
+  exit 1
+fi
+
+if [[ -z "$session" ]]; then
+  echo "Available sessions on $host:"
+  ssh "$host" "ls ~/.pi/agent/sessions/ 2>/dev/null | head -20 || echo '(none)'"
+  exit 0
+fi
+
+# Find session file
+session_file=$(ssh "$host" "ls ~/.pi/agent/sessions/*${session}* 2>/dev/null | head -1 || true")
+if [[ -z "$session_file" ]]; then
+  echo "Session not found: $session"
+  exit 1
+fi
+
+# Connect via tmux or start new pi session
+echo "Connecting to $host ($session)..."
+ssh -t "$host" "tmux attach -t ${session} 2>/dev/null || pi --resume '${session_file}'"

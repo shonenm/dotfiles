@@ -54,3 +54,12 @@ Use `pueue` for background processes: `pueue add -- <command>`
 
 - pi-subagents provides: chain/parallel execution, TUI visualization, built-in agents
 - agent-delegation.ts adds: pueue async execution, difficulty-based model auto-selection
+
+## Session Management
+
+- `/session-name <name>` — set session display name (auto-set from git branch)
+- `/sessions` — list recent sessions
+- `/session-export [file]` / `/session-import <file>` — export/import JSONL
+- `/remote` — show tmux/SSH remote access info
+- `/q <question>` — quick side question without polluting history
+- `scripts/pi-remote` — remote session access helper
