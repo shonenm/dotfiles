@@ -60,7 +60,7 @@ Use `pueue` for background processes: `pueue add -- <command>`
 - `/session-name <name>` — set session display name (auto-set from git branch)
 - `/sessions` — list recent sessions
 - `/session-export [file]` / `/session-import <file>` — export/import JSONL
-- `/q <question>` — quick side question without polluting history
+- `/btw <question>` — quick side question without polluting history
 
 ## Remote Control
 

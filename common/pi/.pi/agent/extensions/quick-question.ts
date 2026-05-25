@@ -7,11 +7,11 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execSync } from "node:child_process";
 
 export default function (pi: ExtensionAPI) {
-  pi.registerCommand("q", {
+  pi.registerCommand("btw", {
     description: "Ask a quick side question (won't pollute conversation)",
     handler: async (args, ctx) => {
       if (!args) {
-        ctx.ui.notify("Usage: /q <question>", "error");
+        ctx.ui.notify("Usage: /btw <question>", "error");
         return;
       }
 
