@@ -19,25 +19,30 @@ function listSessions(): Array<{ file: string; name: string; cwd: string; modifi
   const dirs = [SESSION_DIR, join(process.cwd(), ".pi", "sessions")];
   const results: Array<{ file: string; name: string; cwd: string; modified: string }> = [];
 
-  for (const dir of dirs) {
-    if (!existsSync(dir)) continue;
-    for (const f of readdirSync(dir)) {
-      if (!f.endsWith(".jsonl")) continue;
-      const file = join(dir, f);
-      try {
-        const firstLine = readFileSync(file, "utf-8").split("\n")[0];
-        const header = JSON.parse(firstLine);
-        results.push({
-          file,
-          name: header.sessionName || basename(f, ".jsonl"),
-          cwd: header.cwd || "",
-          modified: f.slice(0, 19),
-        });
-      } catch {
-        results.push({ file, name: basename(f, ".jsonl"), cwd: "", modified: "" });
+  function scan(dir: string) {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        scan(full);
+      } else if (entry.name.endsWith(".jsonl")) {
+        try {
+          const firstLine = readFileSync(full, "utf-8").split("\n")[0];
+          const header = JSON.parse(firstLine);
+          results.push({
+            file: full,
+            name: header.sessionName || basename(full, ".jsonl"),
+            cwd: header.cwd || "",
+            modified: entry.name.slice(0, 19),
+          });
+        } catch {
+          results.push({ file: full, name: basename(full, ".jsonl"), cwd: "", modified: "" });
+        }
       }
     }
   }
+
+  for (const dir of dirs) scan(dir);
   return results.sort((a, b) => b.modified.localeCompare(a.modified));
 }
 
