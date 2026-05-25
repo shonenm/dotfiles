@@ -60,6 +60,4 @@ Use `pueue` for background processes: `pueue add -- <command>`
 - `/session-name <name>` — set session display name (auto-set from git branch)
 - `/sessions` — list recent sessions
 - `/session-export [file]` / `/session-import <file>` — export/import JSONL
-- `/remote` — show tmux/SSH remote access info
 - `/q <question>` — quick side question without polluting history
-- `scripts/pi-remote` — remote session access helper
