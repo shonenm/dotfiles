@@ -61,3 +61,8 @@ Use `pueue` for background processes: `pueue add -- <command>`
 - `/sessions` — list recent sessions
 - `/session-export [file]` / `/session-import <file>` — export/import JSONL
 - `/q <question>` — quick side question without polluting history
+
+## Remote Control
+
+- pi-remote-control package — `/remote-control-pair` for QR pairing, `/remote-control` to toggle
+- Requires iOS app (Pi Relay) + config at `~/.pi/remote-control/config.json`
