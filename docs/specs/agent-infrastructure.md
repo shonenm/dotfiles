@@ -104,7 +104,7 @@ MCP サーバーへの安全な接続レイヤー。
 | **Permission** | 3段階: `allow` / `ask` / `deny` |
 | **Audit** | `~/.pi/research/mcp-audit.jsonl` |
 | **Stats** | `~/.pi/research/mcp-stats.json` |
-| **Pi impl** | `extensions/mcp-gateway.ts` (plain Markdown (pi-memory compatible) in `~/.pi/agent/memory/` N-RPC client + tool registration) |
+| **Pi impl** | `extensions/mcp-gateway.ts` — JSON-RPC stdio client + tool registration. allow/ask/deny enforced via `tool_call` gate; protocol version negotiated (advertises latest). stdio only (HTTP deferred) |
 | **Claude impl** | ネイティブ MCP 対応 + symlink で共有 config 参照 |
 
 ## Shared Configuration

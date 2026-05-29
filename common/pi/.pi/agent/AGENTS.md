@@ -3,7 +3,7 @@
 ## Infrastructure Spec
 
 The canonical specification for all agent infrastructure components is at:
-`docs/specs/agent-infrastructure.md`
+`~/dotfiles/docs/specs/agent-infrastructure.md` (in the dotfiles repo).
 
 Implementations:
 - **Pi**: `~/.pi/agent/extensions/` (TypeScript)
