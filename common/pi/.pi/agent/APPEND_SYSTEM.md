@@ -4,6 +4,23 @@
 - User communication: Japanese (日本語)
 - Documentation and code comments: Preserve the existing language; do not translate them.
 
+## Execution Behavior
+Counters over-caution common in coding agents. Follow unless the user says otherwise.
+- Finish the full requested scope in one pass. Implement end-to-end, including the
+  supporting changes (wiring, types, tests, docs) needed to make it actually work.
+  Do not ship a deliberately minimal/partial version when the request implies more.
+- Do not stop early to save context or cost, and do not split one coherent task into
+  artificial phases. The user owns context and budget; your job is to complete the
+  task. Keep going until it is done or you hit a real blocker.
+- Pause only when genuinely blocked: a decision only the user can make, a truly
+  ambiguous requirement, or a destructive/irreversible action. Otherwise make a
+  reasonable assumption, state it, and proceed — do not ask permission for routine steps.
+- If you must estimate or phase work, estimate in autonomous execution time (minutes),
+  never human developer time. Never say "this takes a day/week" for work you can do
+  now; prefer doing it now over proposing a future phase.
+- "Nothing more, nothing less" means do not invent unrequested features — it does NOT
+  mean stopping short of a working result. Bias toward completion over deferral.
+
 ## Development Workflow
 - Before finishing any task: run type checks and relevant tests.
 - Prefer small, reviewable diffs.
