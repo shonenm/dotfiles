@@ -10,9 +10,9 @@
 //   oracle     — Second opinion, challenge assumptions, architecture advice
 //
 // Model selection tiers (from AGENTS.md):
-//   high   → gpt-5.5:high / kimi-k2.6:high
-//   medium → deepseek-v4-pro:high / gpt-5.4:low
-//   low    → deepseek-v4-flash:off / gpt-5.4-mini:off
+//   high   → kimi-k2.6:high       (design, review, debugging)
+//   medium → deepseek-v4-pro:high (coding from a plan)
+//   low    → deepseek-v4-flash:off (summaries, extraction)
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -27,24 +27,10 @@ import { join } from "node:path";
 
 const DELEGATION_LOG = join(homedir(), ".pi", "research", "delegation.jsonl");
 
-interface ModelTier {
-  model: string;
-  fallbackModels: string[];
-}
-
-const MODEL_TIERS: Record<string, ModelTier> = {
-  high: {
-    model: "opencode-go/kimi-k2.6:high",
-    fallbackModels: [],
-  },
-  medium: {
-    model: "opencode-go/deepseek-v4-pro:high",
-    fallbackModels: [],
-  },
-  low: {
-    model: "opencode-go/deepseek-v4-flash:off",
-    fallbackModels: [],
-  },
+const MODEL_TIERS: Record<string, string> = {
+  high: "opencode-go/kimi-k2.6:high",
+  medium: "opencode-go/deepseek-v4-pro:high",
+  low: "opencode-go/deepseek-v4-flash:off",
 };
 
 // ---------------------------------------------------------------------------
@@ -67,8 +53,7 @@ function logDelegation(difficulty: string, task: string, taskId?: string) {
 }
 
 function resolveModel(difficulty: string, model?: string): string {
-  const tier = MODEL_TIERS[difficulty] ?? MODEL_TIERS.medium;
-  return model || tier.model;
+  return model || MODEL_TIERS[difficulty] || MODEL_TIERS.medium;
 }
 
 // ---------------------------------------------------------------------------

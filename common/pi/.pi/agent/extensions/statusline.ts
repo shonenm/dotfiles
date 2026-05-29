@@ -12,7 +12,7 @@ import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -21,10 +21,38 @@ import { join } from "node:path";
 // ---------------------------------------------------------------------------
 
 type DisplayMode = "off" | "compact" | "detailed";
-let mode: DisplayMode = "detailed";
+
+// Persist the chosen mode across sessions.
+const MODE_FILE = join(homedir(), ".pi", "agent", "statusline-mode");
+function loadMode(): DisplayMode {
+  try {
+    const v = readFileSync(MODE_FILE, "utf-8").trim();
+    if (v === "off" || v === "compact" || v === "detailed") return v;
+  } catch { /* default below */ }
+  return "detailed";
+}
+function saveMode(m: DisplayMode): void {
+  try { writeFileSync(MODE_FILE, m); } catch { /* non-fatal */ }
+}
+
+let mode: DisplayMode = loadMode();
 let dirtyState = false;
 let lastDirtyCheck = 0;
 const DIRTY_CHECK_INTERVAL_MS = 5000;
+
+// Cached token totals — recomputed on turn_end / session_start instead of
+// re-summing the entire branch on every footer render (cheap on large sessions).
+let tokCache = { input: 0, output: 0, cost: 0 };
+function recomputeTokens(branch: Iterable<{ type: string; message?: { role: string } }>): void {
+  let input = 0, output = 0, cost = 0;
+  for (const e of branch) {
+    if (e.type === "message" && e.message?.role === "assistant") {
+      const m = e.message as unknown as AssistantMessage;
+      input += m.usage.input; output += m.usage.output; cost += m.usage.cost.total;
+    }
+  }
+  tokCache = { input, output, cost };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -105,6 +133,7 @@ export default function (pi: ExtensionAPI) {
         const cycle: DisplayMode[] = ["detailed", "compact", "off"];
         mode = cycle[(cycle.indexOf(mode) + 1) % cycle.length];
       }
+      saveMode(mode);
       if (mode === "off") {
         ctx.ui.setFooter(undefined);
         ctx.ui.notify("Statusline: off", "info");
@@ -117,8 +146,9 @@ export default function (pi: ExtensionAPI) {
   // -----------------------------------------------------------------------
   // Git dirty check
   // -----------------------------------------------------------------------
-  pi.on("turn_end", async () => {
+  pi.on("turn_end", async (_event, ctx) => {
     if (mode === "off") return;
+    recomputeTokens(ctx.sessionManager.getBranch());
     const now = Date.now();
     if (now - lastDirtyCheck > DIRTY_CHECK_INTERVAL_MS) {
       dirtyState = checkGitDirty(); lastDirtyCheck = now;
@@ -133,6 +163,7 @@ export default function (pi: ExtensionAPI) {
   // Footer renderer
   // -----------------------------------------------------------------------
   pi.on("session_start", async (_event, ctx) => {
+    recomputeTokens(ctx.sessionManager.getBranch());
     ctx.ui.setFooter((tui, theme, footerData) => {
       const unsub = footerData.onBranchChange(() => tui.requestRender());
       return {
@@ -141,14 +172,8 @@ export default function (pi: ExtensionAPI) {
         render(width: number): string[] {
           if (mode === "off") return [];
 
-          // ---- Accumulate token stats ----
-          let input = 0, output = 0, cost = 0;
-          for (const e of ctx.sessionManager.getBranch()) {
-            if (e.type === "message" && e.message.role === "assistant") {
-              const m = e.message as AssistantMessage;
-              input += m.usage.input; output += m.usage.output; cost += m.usage.cost.total;
-            }
-          }
+          // ---- Token stats (cached; recomputed on turn_end / session_start) ----
+          const { input, output, cost } = tokCache;
 
           // ---- Context ----
           const usage = ctx.getContextUsage();
