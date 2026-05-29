@@ -33,10 +33,11 @@ go list -m <module-path>
 
 ### 2. Search for Documentation
 
-Use `web_search_docs` with the package name and version:
+Use `web_search` with the package name and the installed version in the query:
 
 ```
-web_search_docs("<package-name>", version="<installed-version>")
+web_search("<package-name> <installed-version> documentation")
+web_search("<package-name> <installed-version> changelog OR release notes")
 ```
 
 ### 3. Fetch Official Sources
@@ -44,16 +45,18 @@ web_search_docs("<package-name>", version="<installed-version>")
 Prioritize in this order:
 
 1. **Official documentation** — docs.{package}.com, package docs URL
-2. **GitHub README / docs directory** — `web_search_github` → `web_clone_github`
+2. **GitHub README / docs directory** — find the repo via `web_search`, then `git clone --depth 1` and read locally (see the github-research skill)
 3. **Release notes / changelog** — GitHub releases, CHANGELOG.md
 4. **API reference** — JSDoc, OpenAPI spec, type definitions
 
 ### 4. Cache Findings
 
-After fetching useful documentation:
+After fetching useful documentation (`web_fetch` already auto-caches; use
+`web_cache_write` only to store content you assembled yourself):
 
 ```
-web_cache_write(url, content, provider, sourceType: "official_docs", tags: ["<package>", "<topic>"])
+web_cache_write(url, content)
+web_citation_add(url, title, note)
 ```
 
 ### 5. Present Findings

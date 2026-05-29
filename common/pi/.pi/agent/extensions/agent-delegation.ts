@@ -16,7 +16,7 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { execSync, spawn } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, appendFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -66,16 +66,9 @@ function logDelegation(difficulty: string, task: string, taskId?: string) {
   }) + "\n");
 }
 
-function shellSafe(s: string): string {
-  // Escape for use inside single-quoted shell string
-  return s.replace(/'/g, "'\\''");
-}
-
-function buildPiCommand(task: string, difficulty: string, model?: string): string {
+function resolveModel(difficulty: string, model?: string): string {
   const tier = MODEL_TIERS[difficulty] ?? MODEL_TIERS.medium;
-  const m = model || tier.model;
-  // sh -c wraps the command so < /dev/null is not hijacked by the outer shell
-  return `sh -c 'pi --model ${m} -p ${shellSafe(task)} < /dev/null'`;
+  return model || tier.model;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,16 +106,18 @@ export default function (pi: ExtensionAPI) {
     async execute(_toolCallId, params, _signal, onUpdate) {
       const difficulty = params.difficulty || "medium";
       const mode = params.mode || "async";
-      const cmd = buildPiCommand(params.task, difficulty, params.model);
+      const m = resolveModel(difficulty, params.model);
 
       if (mode === "sync") {
         onUpdate?.({ content: [{ type: "text", text: `🔄 Spawning sub-agent (${difficulty}, sync)...` }] });
         try {
-          const result = execSync(cmd, {
+          // Arg array (no shell) — task/model are passed literally, no injection
+          // or word-splitting. stdin ignored to replace `< /dev/null`.
+          const result = execFileSync("pi", ["--model", m, "-p", params.task], {
             encoding: "utf-8",
             timeout: 600_000, // 10 min
             maxBuffer: 50 * 1024 * 1024,
-            stdio: ["pipe", "pipe", "pipe"],
+            stdio: ["ignore", "pipe", "pipe"],
           });
           logDelegation(difficulty, params.task);
           return {
@@ -130,7 +125,7 @@ export default function (pi: ExtensionAPI) {
               type: "text",
               text: `## Sub-agent Result (${difficulty}, sync)\n\n${result.slice(0, 15000)}`,
             }],
-            details: { difficulty, mode: "sync", model: cmd.split("--model ")[1]?.split(" ")[0] },
+            details: { difficulty, mode: "sync", model: m },
           };
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
@@ -144,11 +139,13 @@ export default function (pi: ExtensionAPI) {
       // Async mode: pueue
       onUpdate?.({ content: [{ type: "text", text: `📋 Queuing sub-agent (${difficulty}, async)...` }] });
       try {
-        const pueueResult = execSync(`pueue add -i --print-task-id -- ${cmd} < /dev/null`, {
-          encoding: "utf-8",
-          timeout: 30_000,
-          stdio: ["pipe", "pipe", "pipe"],
-        });
+        // --escape makes pueue treat each arg literally (pueue runs the command
+        // through a shell internally); arg array prevents word-splitting here.
+        const pueueResult = execFileSync(
+          "pueue",
+          ["add", "--escape", "--immediate", "--print-task-id", "--", "pi", "--model", m, "-p", params.task],
+          { encoding: "utf-8", timeout: 30_000, stdio: ["ignore", "pipe", "pipe"] }
+        );
         const taskId = pueueResult.trim();
         logDelegation(difficulty, params.task, taskId);
 
@@ -161,7 +158,7 @@ export default function (pi: ExtensionAPI) {
               `View log: \`pueue log ${taskId}\`\n` +
               `Wait for completion: \`pueue wait ${taskId}\``,
           }],
-          details: { difficulty, mode: "async", pueueTaskId: taskId, model: cmd.split("--model ")[1]?.split(" ")[0] },
+          details: { difficulty, mode: "async", pueueTaskId: taskId, model: m },
         };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -187,9 +184,9 @@ export default function (pi: ExtensionAPI) {
     async execute(_toolCallId, params) {
       try {
         if (params.taskId) {
-          const log = execSync(`pueue log ${params.taskId}`, {
+          const log = execFileSync("pueue", ["log", params.taskId], {
             encoding: "utf-8", timeout: 5000,
-            stdio: ["pipe", "pipe", "pipe"],
+            stdio: ["ignore", "pipe", "pipe"],
           });
           return {
             content: [{ type: "text", text: `## Task ${params.taskId}\n\n\`\`\`\n${log.slice(-5000)}\n\`\`\`` }],
@@ -197,9 +194,9 @@ export default function (pi: ExtensionAPI) {
           };
         }
 
-        const status = execSync("pueue status", {
+        const status = execFileSync("pueue", ["status"], {
           encoding: "utf-8", timeout: 5000,
-          stdio: ["pipe", "pipe", "pipe"],
+          stdio: ["ignore", "pipe", "pipe"],
         });
         return {
           content: [{ type: "text", text: `## Pueue Status\n\n\`\`\`\n${status.slice(0, 5000)}\n\`\`\`` }],
@@ -229,13 +226,13 @@ export default function (pi: ExtensionAPI) {
     async execute(_toolCallId, params, _signal, onUpdate) {
       onUpdate?.({ content: [{ type: "text", text: `⏳ Waiting for task ${params.taskId}...` }] });
       try {
-        execSync(`pueue wait ${params.taskId}`, {
+        execFileSync("pueue", ["wait", params.taskId], {
           encoding: "utf-8", timeout: 600_000, // 10 min
-          stdio: ["pipe", "pipe", "pipe"],
+          stdio: ["ignore", "pipe", "pipe"],
         });
-        const log = execSync(`pueue log ${params.taskId}`, {
+        const log = execFileSync("pueue", ["log", params.taskId], {
           encoding: "utf-8", timeout: 5000,
-          stdio: ["pipe", "pipe", "pipe"],
+          stdio: ["ignore", "pipe", "pipe"],
         });
         return {
           content: [{
@@ -259,7 +256,7 @@ export default function (pi: ExtensionAPI) {
   // -----------------------------------------------------------------------
   pi.on("session_start", async (_event, ctx) => {
     try {
-      execSync("pueued -d", { timeout: 2000, stdio: "ignore" });
+      execFileSync("pueued", ["-d"], { timeout: 2000, stdio: "ignore" });
     } catch {
       // daemon may already be running
     }

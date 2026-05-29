@@ -310,12 +310,17 @@ export default function (pi: ExtensionAPI) {
         }
       }
 
-      // Search today's daily log
-      const daily = readIfExists(dailyFile());
-      if (daily) {
-        for (const line of daily.split("\n")) {
+      // Search all daily logs (newest first), not just today's
+      ensureDir(DAILY_DIR);
+      const dailyFiles = readdirSync(DAILY_DIR)
+        .filter((f) => f.endsWith(".md"))
+        .sort()
+        .reverse();
+      for (const f of dailyFiles) {
+        const content = readIfExists(join(DAILY_DIR, f));
+        for (const line of content.split("\n")) {
           if (line.toLowerCase().includes(query)) {
-            results.push({ file: `daily/${todayStr()}.md`, snippet: line.trim().slice(0, 200) });
+            results.push({ file: `daily/${f}`, snippet: line.trim().slice(0, 200) });
           }
         }
       }
