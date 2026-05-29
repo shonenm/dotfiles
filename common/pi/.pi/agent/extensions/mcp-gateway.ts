@@ -12,7 +12,7 @@
 //       → MCP server process
 //
 // Config sources (merged, later overrides earlier):
-//   1. ~/.config/mcp/mcp.json     (global)
+//   1. ~/.config/agent/mcp.json   (global, shared across agents — see AGENTS.md)
 //   2. .mcp.json                   (project)
 //   3. .pi/mcp.json                (pi overrides)
 
@@ -81,8 +81,8 @@ const DEFAULT_MAX_RESULT = 8000;
 function loadConfig(cwd: string): MCPConfig {
   const merged: MCPConfig = { mcpServers: {} };
 
-  // 1. Global: ~/.config/mcp/mcp.json
-  const globalPath = join(homedir(), ".config", "mcp", "mcp.json");
+  // 1. Global: ~/.config/agent/mcp.json (shared location per AGENTS.md / spec)
+  const globalPath = join(homedir(), ".config", "agent", "mcp.json");
   if (existsSync(globalPath)) {
     try {
       const g = JSON.parse(readFileSync(globalPath, "utf-8"));
@@ -337,35 +337,27 @@ class MCPManager {
       const perm = serverCfg?.permission ?? "ask";
       const desc = serverCfg?.description ?? server;
 
-      // Build TypeBox schema from JSON schema
+      // Build TypeBox schema from JSON schema. Keys listed in the MCP tool's
+      // `required` array are registered as non-optional so the LLM is forced to
+      // supply them (otherwise every param was Optional → frequent tool errors).
       const props: Record<string, unknown> = {};
-      const required: string[] = [];
+      const requiredSet = new Set<string>(tool.inputSchema?.required ?? []);
 
       if (tool.inputSchema?.properties) {
         for (const [key, val] of Object.entries(tool.inputSchema.properties)) {
           const v = val as Record<string, unknown>;
           const jtype = v.type as string | undefined;
-          if (jtype === "string") {
-            props[key] = Type.Optional(Type.String({
-              description: (v.description as string) ?? "",
-            }));
-          } else if (jtype === "number" || jtype === "integer") {
-            props[key] = Type.Optional(Type.Number({
-              description: (v.description as string) ?? "",
-            }));
+          const description = (v.description as string) ?? "";
+          let base;
+          if (jtype === "number" || jtype === "integer") {
+            base = Type.Number({ description });
           } else if (jtype === "boolean") {
-            props[key] = Type.Optional(Type.Boolean({
-              description: (v.description as string) ?? "",
-            }));
+            base = Type.Boolean({ description });
           } else {
-            // Default to string for complex types
-            props[key] = Type.Optional(Type.String({
-              description: (v.description as string) ?? "",
-            }));
+            // string, plus default for complex/unknown types
+            base = Type.String({ description });
           }
-        }
-        if (tool.inputSchema.required) {
-          required.push(...tool.inputSchema.required);
+          props[key] = requiredSet.has(key) ? base : Type.Optional(base);
         }
       }
 
