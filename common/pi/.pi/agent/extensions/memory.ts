@@ -32,6 +32,10 @@ const SCRATCHPAD_FILE = join(MEMORY_DIR, "SCRATCHPAD.md");
 const DAILY_DIR = join(MEMORY_DIR, "daily");
 
 const INJECTION_MAX = 8000;
+// Soft cap for MEMORY.md — beyond this, memory_write nudges the agent to curate.
+// (Injection already only surfaces ~4KB, so unbounded growth wastes storage and
+// dilutes relevance rather than helping.)
+const MEMORY_SOFT_CAP = 50 * 1024;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -43,6 +47,12 @@ function ensureDir(dir: string) {
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function dateStrDaysAgo(days: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
 }
 
 function dailyFile(date?: string): string {
@@ -110,6 +120,20 @@ function buildInjection(): string {
     if (budget > 0) {
       parts.push(`## Today (${todayStr()})\n${tail.slice(-budget)}`);
       used += budget;
+    }
+  }
+
+  // 2b. Yesterday's daily log (tail) — continuity across the day boundary
+  if (used < INJECTION_MAX) {
+    const yStr = dateStrDaysAgo(1);
+    const yday = readIfExists(dailyFile(yStr));
+    if (yday) {
+      const tail = yday.split("\n").slice(-30).join("\n");
+      const budget = Math.min(tail.length, 1500, INJECTION_MAX - used);
+      if (budget > 0) {
+        parts.push(`## Yesterday (${yStr})\n${tail.slice(-budget)}`);
+        used += budget;
+      }
     }
   }
 
@@ -212,9 +236,13 @@ export default function (pi: ExtensionAPI) {
       if (target === "long_term") {
         const entry = `\n## ${timestamp}\n${content}\n`;
         appendFile(MEMORY_FILE, entry);
+        const size = readIfExists(MEMORY_FILE).length;
+        const hint = size > MEMORY_SOFT_CAP
+          ? `\n\n⚠️ MEMORY.md is ${(size / 1024).toFixed(0)}KB (soft cap ${MEMORY_SOFT_CAP / 1024}KB). Consider curating stale entries — only ~4KB is injected at session start.`
+          : "";
         return {
-          content: [{ type: "text", text: `📝 Saved to MEMORY.md:\n\n${content.slice(0, 400)}` }],
-          details: { target: "long_term", file: MEMORY_FILE },
+          content: [{ type: "text", text: `📝 Saved to MEMORY.md:\n\n${content.slice(0, 400)}${hint}` }],
+          details: { target: "long_term", file: MEMORY_FILE, sizeBytes: size },
         };
       } else {
         const entry = `\n### ${timestamp}\n${content}\n`;

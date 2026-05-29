@@ -32,6 +32,20 @@ Use `pueue` for background processes: `pueue add -- <command>`
 - `mcp-gateway` — MCP tool bridge with permission control and audit
 - `statusline` — footer with token stats, context, git branch, research activity
 
+## Custom vs Community Packages
+
+These extensions are maintained in-house (`~/.pi/agent/extensions/`) rather than
+adopting community packages (`pi-mcp`, `pi-web-access`, `pi-subagents`) because
+they add value the packages don't: pueue-based async delegation with
+difficulty-tiered model selection (`agent-delegation`), secret/SSRF guards +
+cache/citation audit trail (`web-tools`), and unified allow/ask/deny gating with
+audit logging (`mcp-gateway`). When a community package gains equivalent
+guarantees, prefer adopting it over maintaining the custom one.
+
+- `mcp-gateway` transport: **stdio only**. SSE is deprecated upstream; Streamable
+  HTTP support is intentionally deferred until a remote MCP server is actually
+  needed (avoid speculative implementation). stdio is the recommended local transport.
+
 ## Memory
 
 - Persistent across sessions via plain Markdown files in `~/.pi/agent/memory/`

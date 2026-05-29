@@ -77,6 +77,10 @@ const RESEARCH_DIR = join(homedir(), ".pi", "research");
 const MCP_AUDIT_FILE = join(RESEARCH_DIR, "mcp-audit.jsonl");
 const MCP_STATS_FILE = join(RESEARCH_DIR, "mcp-stats.json");
 const DEFAULT_MAX_RESULT = 8000;
+// Preferred MCP protocol version we advertise in `initialize`. The actual
+// version is negotiated: the server replies with the version it will use, which
+// we accept (tools/list and tools/call are stable across these revisions).
+const PREFERRED_PROTOCOL_VERSION = "2025-11-25";
 
 function loadConfig(cwd: string): MCPConfig {
   const merged: MCPConfig = { mcpServers: {} };
@@ -127,6 +131,7 @@ class MCPClient {
   private pending = new Map<number, (res: JSONRPCResponse) => void>();
   private buffer = "";
   private initialized = false;
+  private negotiatedVersion = "";
   private serverName: string;
 
   constructor(private config: MCPServerConfig, name: string) {
@@ -188,7 +193,7 @@ class MCPClient {
 
       // Send initialize
       this.send("initialize", {
-        protocolVersion: "2024-11-05",
+        protocolVersion: PREFERRED_PROTOCOL_VERSION,
         capabilities: {},
         clientInfo: { name: "pi-mcp-gateway", version: "1.0.0" },
       })
@@ -198,6 +203,9 @@ class MCPClient {
             reject(new Error(`MCP initialize failed: ${res.error.message}`));
             return;
           }
+          // Accept the server's negotiated protocol version.
+          const initResult = res.result as { protocolVersion?: string } | undefined;
+          this.negotiatedVersion = initResult?.protocolVersion ?? PREFERRED_PROTOCOL_VERSION;
           this.initialized = true;
           // Send initialized notification
           if (this.proc?.stdin) {
@@ -569,12 +577,6 @@ export default async function (pi: ExtensionAPI) {
       const msg = err instanceof Error ? err.message : String(err);
       ctx.ui.notify(`MCP Gateway init failed: ${msg}`, "error");
     }
-  });
-
-  // Reload on /reload
-  pi.on("session_start", async (_event, ctx) => {
-    // Reload config (picks up changes to .mcp.json)
-    manager.reloadConfig();
   });
 
   // Permission gate for MCP tools. pi only exposes interactive ctx.ui in the
