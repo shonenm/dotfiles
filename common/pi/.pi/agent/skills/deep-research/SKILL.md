@@ -14,7 +14,9 @@ Follow this exact sequence for all research:
 ```
 web_search (discovery)
   ↓
-web_fetch / web_fetch_many (source retrieval)
+web_cache_lookup (check cache first)
+  ↓
+web_fetch (source retrieval — call once per URL)
   ↓
 web_cache_write (persist findings)
   ↓

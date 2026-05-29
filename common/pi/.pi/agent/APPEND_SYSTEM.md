@@ -15,11 +15,12 @@
 - Do not read .env*, private keys, credentials, or production dumps.
 - Before large refactors, write a plan to TODO.md or docs/agent-plan.md.
 
-## Web Access Fallback
-- Pi has no built-in WebSearch/WebFetch. Use Jina AI via bash tool:
-  - WebFetch: `curl -fsSL 'https://r.jina.ai/<URL>'`
-  - WebSearch: `curl -fsSL 'https://s.jina.ai/<QUERY>'`
-- Rate limit: ~20 RPM without JINA_API_KEY. Set JINA_API_KEY for higher limits.
+## Web Access
+- Use the `web_search` and `web_fetch` tools (provided by the web-tools extension).
+  They cache, cite, and guard against secret/SSRF leakage — prefer them over raw curl.
+- Protocol: `web_search` (discovery) → `web_cache_lookup` → `web_fetch` → `web_cache_write` → `web_citation_add`.
+- Raw `curl 'https://r.jina.ai/<URL>'` / `curl 'https://s.jina.ai/<QUERY>'` is a last-resort
+  fallback only if the tools are unavailable. Rate limit ~20 RPM without JINA_API_KEY.
 
 ## Background Processes
 - Do not start long-running processes (servers, watchers, daemons) directly from CLI; use `pueue` instead.

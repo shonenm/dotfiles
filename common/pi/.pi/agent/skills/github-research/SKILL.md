@@ -17,10 +17,10 @@ Investigate GitHub repositories, issues, PRs, and source code using a clone-firs
 
 ### 1. Locate the Repository
 
-Use `web_search_github` to find the repository:
+Use `web_search` to find the repository (restrict to GitHub):
 
 ```
-web_search_github("topic OR package-name", repo?: "owner/repo")
+web_search("site:github.com <topic OR package-name>")
 ```
 
 ### 2. Clone the Repository
