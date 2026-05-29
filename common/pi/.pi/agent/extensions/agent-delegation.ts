@@ -26,6 +26,8 @@ import { join } from "node:path";
 // ---------------------------------------------------------------------------
 
 const DELEGATION_LOG = join(homedir(), ".pi", "research", "delegation.jsonl");
+// pueue label applied to delegated sub-agents (statusline filters on this).
+const DELEGATE_LABEL = "pi-delegate";
 
 const MODEL_TIERS: Record<string, string> = {
   high: "opencode-go/kimi-k2.6:high",
@@ -137,7 +139,9 @@ export default function (pi: ExtensionAPI) {
         // through a shell internally); arg array prevents word-splitting here.
         const pueueResult = execFileSync(
           "pueue",
-          ["add", "--escape", "--immediate", "--print-task-id", "--", "pi", "--model", m, "-p", params.task],
+          // --label pi-delegate marks these tasks so the statusline can count
+          // active sub-agents separately from the user's other pueue jobs.
+          ["add", "--escape", "--immediate", "--print-task-id", "--label", DELEGATE_LABEL, "--", "pi", "--model", m, "-p", params.task],
           { encoding: "utf-8", timeout: 30_000, stdio: ["ignore", "pipe", "pipe"] }
         );
         const taskId = pueueResult.trim();

@@ -30,6 +30,8 @@ const MEMORY_DIR = join(homedir(), ".pi", "agent", "memory");
 const MEMORY_FILE = join(MEMORY_DIR, "MEMORY.md");
 const SCRATCHPAD_FILE = join(MEMORY_DIR, "SCRATCHPAD.md");
 const DAILY_DIR = join(MEMORY_DIR, "daily");
+// Pinned session goal (set via /goal). statusline.ts reads the same path.
+const GOAL_FILE = join(homedir(), ".pi", "agent", "goal");
 
 const INJECTION_MAX = 8000;
 // Soft cap for MEMORY.md — beyond this, memory_write nudges the agent to curate.
@@ -102,6 +104,14 @@ function writeScratchpad(items: ScratchItem[]) {
 function buildInjection(): string {
   const parts: string[] = [];
   let used = 0;
+
+  // 0. Pinned goal (set via /goal)
+  const goal = readIfExists(GOAL_FILE).trim();
+  if (goal) {
+    const text = `## Current Goal\n${goal}`;
+    parts.push(text.slice(0, 1000));
+    used += Math.min(text.length, 1000);
+  }
 
   // 1. Open scratchpad items
   const items = parseScratchpad().filter((i) => !i.done);
@@ -207,6 +217,35 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("session_shutdown", async () => writeHandoff());
   pi.on("session_before_compact", async () => writeHandoff());
+
+  // -----------------------------------------------------------------------
+  // Command: /goal <text> | /goal | /goal clear
+  // Pinned goal: injected as context (session start + on set) and shown in the
+  // statusline (statusline.ts reads GOAL_FILE).
+  // -----------------------------------------------------------------------
+  pi.registerCommand("goal", {
+    description: "Set/show/clear the pinned session goal (injected as context + shown in statusline)",
+    handler: async (args, ctx) => {
+      const arg = (args || "").trim();
+      if (!arg) {
+        const g = readIfExists(GOAL_FILE).trim();
+        ctx.ui.notify(g ? `🎯 Goal: ${g}` : "No goal set. Usage: /goal <text> (or /goal clear)", "info");
+        return;
+      }
+      if (arg === "clear") {
+        writeFile(GOAL_FILE, "");
+        ctx.ui.notify("Goal cleared", "info");
+        return;
+      }
+      writeFile(GOAL_FILE, arg);
+      // Inject now so the model sees the goal this turn, not only next session.
+      pi.sendMessage(
+        { customType: "goal", content: `## Current Goal\n${arg}`, display: false },
+        { deliverAs: "nextTurn" }
+      );
+      ctx.ui.notify(`🎯 Goal set: ${arg}`, "info");
+    },
+  });
 
   // -----------------------------------------------------------------------
   // Tool: memory_write
