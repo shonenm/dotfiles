@@ -12,11 +12,13 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
+import { promises as dnsPromises } from "node:dns";
+import { isIP } from "node:net";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -87,14 +89,87 @@ function checkSecrets(text: string): string | null {
   return null;
 }
 
-function searxngSearch(query: string): string | null {
+// SSRF guard: reject URLs that resolve to internal / loopback / link-local
+// addresses (e.g. the cloud metadata endpoint 169.254.169.254). All curl calls
+// below pass arguments as an array (no shell), so command injection via the URL
+// is not possible; this guard prevents the *destination* from being internal.
+function isPrivateIp(ip: string): boolean {
+  if (isIP(ip) === 4) {
+    return (
+      /^127\./.test(ip) ||
+      /^10\./.test(ip) ||
+      /^0\./.test(ip) ||
+      /^169\.254\./.test(ip) ||
+      /^192\.168\./.test(ip) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(ip)
+    );
+  }
+  const v6 = ip.toLowerCase();
+  return (
+    v6 === "::1" ||
+    v6 === "::" ||
+    v6.startsWith("fe80") ||
+    v6.startsWith("fc") ||
+    v6.startsWith("fd") ||
+    v6.startsWith("::ffff:127.") ||
+    v6.startsWith("::ffff:10.") ||
+    v6.startsWith("::ffff:192.168.") ||
+    v6.startsWith("::ffff:169.254.")
+  );
+}
+
+async function assertSafeUrl(rawUrl: string): Promise<string | null> {
+  let host: string;
+  let scheme: string;
   try {
-    const url = `${SEARXNG_URL}/search?q=${encodeURIComponent(query)}&format=json`;
-    const result = execSync(`curl -fsSL --max-time 15 '${url}'`, {
+    const u = new URL(rawUrl);
+    host = u.hostname;
+    scheme = u.protocol;
+  } catch {
+    return "Invalid URL";
+  }
+  if (scheme !== "http:" && scheme !== "https:") {
+    return `Blocked: unsupported scheme "${scheme}"`;
+  }
+  if (!host) return "Blocked: empty host";
+
+  // Literal IP in the URL
+  if (isIP(host)) {
+    return isPrivateIp(host) ? `Blocked: internal IP ${host}` : null;
+  }
+
+  // Resolve hostname and reject if any address is internal
+  try {
+    const addrs = await dnsPromises.lookup(host, { all: true });
+    for (const a of addrs) {
+      if (isPrivateIp(a.address)) {
+        return `Blocked: ${host} resolves to internal address ${a.address}`;
+      }
+    }
+  } catch {
+    return `Blocked: cannot resolve host "${host}"`;
+  }
+  return null;
+}
+
+function curl(args: string[], opts: { timeout: number; maxBuffer?: number }): string | null {
+  try {
+    return execFileSync("curl", args, {
       encoding: "utf-8",
-      timeout: 16000,
+      timeout: opts.timeout,
+      maxBuffer: opts.maxBuffer,
       stdio: ["pipe", "pipe", "pipe"],
     });
+  } catch {
+    return null;
+  }
+}
+
+function searxngSearch(query: string): string | null {
+  const url = `${SEARXNG_URL}/search?q=${encodeURIComponent(query)}&format=json`;
+  const result = curl(["-fsSL", "--max-time", "15", url], { timeout: 16000 });
+  if (!result) return null;
+  try {
     const data = JSON.parse(result);
     if (!data.results || data.results.length === 0) return null;
     return JSON.stringify(data.results.slice(0, 10), null, 2);
@@ -105,43 +180,33 @@ function searxngSearch(query: string): string | null {
 
 function jinaSearch(query: string): string | null {
   const apiKey = process.env.JINA_API_KEY;
-  try {
-    const auth = apiKey ? `-H "Authorization: Bearer ${apiKey}"` : "";
-    const result = execSync(
-      `curl -fsSL --max-time 20 ${auth} '${JINA_SEARCH_URL}/${encodeURIComponent(query)}'`,
-      { encoding: "utf-8", timeout: 21000, stdio: ["pipe", "pipe", "pipe"] }
-    );
-    return result.slice(0, 8000);
-  } catch {
-    return null;
-  }
+  const args = ["-fsSL", "--max-time", "20"];
+  if (apiKey) args.push("-H", `Authorization: Bearer ${apiKey}`);
+  args.push(`${JINA_SEARCH_URL}/${encodeURIComponent(query)}`);
+  const result = curl(args, { timeout: 21000 });
+  return result ? result.slice(0, 8000) : null;
 }
 
 function jinaFetch(url: string): string | null {
   const apiKey = process.env.JINA_API_KEY;
-  try {
-    const auth = apiKey ? `-H "Authorization: Bearer ${apiKey}"` : "";
-    // Use X-Return-Format: markdown for clean output
-    const result = execSync(
-      `curl -fsSL --max-time 30 ${auth} -H "X-Return-Format: markdown" '${JINA_FETCH_URL}/${url}'`,
-      { encoding: "utf-8", timeout: 31000, stdio: ["pipe", "pipe", "pipe"], maxBuffer: 500 * 1024 }
-    );
-    return result.slice(0, 20000);
-  } catch {
-    return null;
-  }
+  const args = ["-fsSL", "--max-time", "30"];
+  if (apiKey) args.push("-H", `Authorization: Bearer ${apiKey}`);
+  // X-Return-Format: markdown for clean output. The target is concatenated onto
+  // the Jina prefix so it is a single argument starting with https (not a flag).
+  args.push("-H", "X-Return-Format: markdown", `${JINA_FETCH_URL}/${url}`);
+  const result = curl(args, { timeout: 31000, maxBuffer: 500 * 1024 });
+  return result ? result.slice(0, 20000) : null;
 }
 
 function rawFetch(url: string): string | null {
-  try {
-    const result = execSync(
-      `curl -fsSL --max-time 15 -L '${url}'`,
-      { encoding: "utf-8", timeout: 16000, stdio: ["pipe", "pipe", "pipe"], maxBuffer: 200 * 1024 }
-    );
-    return result.slice(0, 10000);
-  } catch {
-    return null;
-  }
+  // `--` stops option parsing so a URL starting with `-` can't inject a flag.
+  // Redirects are capped; note that a redirect *target* is not re-validated for
+  // SSRF (residual risk), but the initial host is checked by assertSafeUrl.
+  const result = curl(
+    ["-fsSL", "--max-time", "15", "-L", "--max-redirs", "3", "--", url],
+    { timeout: 16000, maxBuffer: 200 * 1024 }
+  );
+  return result ? result.slice(0, 10000) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -249,6 +314,16 @@ export default function (pi: ExtensionAPI) {
         logAudit("web_fetch_blocked", url, secretErr);
         return {
           content: [{ type: "text", text: `❌ ${secretErr}` }],
+          details: { blocked: true, url: url.slice(0, 100) },
+        };
+      }
+
+      // SSRF guard — reject internal/loopback/link-local destinations
+      const ssrfErr = await assertSafeUrl(url);
+      if (ssrfErr) {
+        logAudit("web_fetch_blocked", url, ssrfErr);
+        return {
+          content: [{ type: "text", text: `❌ ${ssrfErr}` }],
           details: { blocked: true, url: url.slice(0, 100) },
         };
       }
