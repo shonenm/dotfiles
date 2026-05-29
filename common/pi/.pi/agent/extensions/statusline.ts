@@ -102,6 +102,34 @@ function readStats(): StatsSnapshot {
   return s;
 }
 
+// Pinned goal (set via /goal in the memory extension). Tiny file — read directly.
+const GOAL_FILE = join(homedir(), ".pi", "agent", "goal");
+function readGoal(): string {
+  try { return readFileSync(GOAL_FILE, "utf-8").trim(); } catch { return ""; }
+}
+
+// Active delegated sub-agents (pueue tasks labeled pi-delegate). Refreshed off
+// the render path (turn_end / session_start) since `pueue status` shells out.
+let agentStatus = { running: 0, queued: 0 };
+function refreshAgents(): void {
+  let running = 0, queued = 0;
+  try {
+    const out = execSync("pueue status --json", {
+      encoding: "utf-8", timeout: 1500, stdio: ["pipe", "pipe", "ignore"],
+    });
+    const data = JSON.parse(out);
+    const tasks = (data.tasks ?? {}) as Record<string, { label?: string; status?: unknown }>;
+    for (const id of Object.keys(tasks)) {
+      const t = tasks[id];
+      if (t?.label !== "pi-delegate") continue;
+      const state = typeof t.status === "string" ? t.status : Object.keys(t.status ?? {})[0];
+      if (state === "Running") running++;
+      else if (state === "Queued" || state === "Paused") queued++;
+    }
+  } catch { /* pueue not running / unparseable — show nothing */ }
+  agentStatus = { running, queued };
+}
+
 /**
  * Plain-character progress gauge. Safe to use inside theme.fg() because the
  * characters have no ANSI codes. Returns something like "████░░░░  29%".
@@ -149,6 +177,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("turn_end", async (_event, ctx) => {
     if (mode === "off") return;
     recomputeTokens(ctx.sessionManager.getBranch());
+    refreshAgents();
     const now = Date.now();
     if (now - lastDirtyCheck > DIRTY_CHECK_INTERVAL_MS) {
       dirtyState = checkGitDirty(); lastDirtyCheck = now;
@@ -164,6 +193,7 @@ export default function (pi: ExtensionAPI) {
   // -----------------------------------------------------------------------
   pi.on("session_start", async (_event, ctx) => {
     recomputeTokens(ctx.sessionManager.getBranch());
+    refreshAgents();
     ctx.ui.setFooter((tui, theme, footerData) => {
       const unsub = footerData.onBranchChange(() => tui.requestRender());
       return {
@@ -212,14 +242,23 @@ export default function (pi: ExtensionAPI) {
             return [truncateToWidth(`${tokIn} ${tokOut} ${tokCost}  ${modelStr}`, width)];
           }
 
+          const lines: string[] = [];
+
+          // Pinned goal (top, most visible)
+          const goal = readGoal();
+          if (goal) lines.push(truncateToWidth(theme.fg("warning", `🎯 ${goal}`), width));
+
           const l1 = [tokIn, tokOut, gaugeStr].filter(Boolean).join(" │ ");
-          const lines = [truncateToWidth(l1, width)];
+          lines.push(truncateToWidth(l1, width));
 
           const l2 = [branchStr, modelStr].filter(Boolean).join(" · ");
           if (l2) lines.push(truncateToWidth(l2, width));
 
           const l3: string[] = [];
           l3.push(tokCost);
+          if (agentStatus.running > 0 || agentStatus.queued > 0) {
+            l3.push(theme.fg("accent", `agents r:${agentStatus.running} q:${agentStatus.queued}`));
+          }
           if (stats.webSearch > 0 || stats.webFetch > 0) {
             l3.push(theme.fg("dim", `web s:${stats.webSearch} f:${stats.webFetch} c:${stats.webCache}`));
           }

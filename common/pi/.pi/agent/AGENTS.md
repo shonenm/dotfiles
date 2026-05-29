@@ -51,8 +51,9 @@ guarantees, prefer adopting it over maintaining the custom one.
 - Persistent across sessions via plain Markdown files in `~/.pi/agent/memory/`
 - Tools: `memory_write`, `memory_read`, `memory_search`, `scratchpad`
 - Format: pi-memory compatible (MEMORY.md, SCRATCHPAD.md, daily/)
-- Context auto-injected on session start (scratchpad + today's log + MEMORY.md)
+- Context auto-injected on session start (goal + scratchpad + today/yesterday log + MEMORY.md)
 - Install `qmd` for semantic/vector search upgrade
+- `/goal <text>` — set a pinned session goal (injected as context + shown in the statusline). `/goal` shows it, `/goal clear` clears it.
 
 ## Agent Delegation (pi-subagents + custom)
 
@@ -68,6 +69,8 @@ guarantees, prefer adopting it over maintaining the custom one.
 
 - pi-subagents provides: chain/parallel execution, TUI visualization, built-in agents
 - agent-delegation.ts adds: pueue async execution, difficulty-based model auto-selection
+- Async sub-agents are pueue tasks labeled `pi-delegate`; the statusline shows their
+  running/queued count (`agents r:N q:M`) so background work is visible.
 
 ## Session Management
 
