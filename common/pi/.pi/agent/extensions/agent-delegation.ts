@@ -42,12 +42,21 @@ function ensureLogDir() {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
+// Best-effort secret redaction before writing the delegation audit log.
+function redactSecrets(s: string): string {
+  return s
+    .replace(/("?(?:api[_-]?key|token|secret|password|authorization)"?\s*[:=]\s*"?)[^",}\s]+/gi, "$1[REDACTED]")
+    .replace(/sk-[a-zA-Z0-9]{20,}/g, "[REDACTED]")
+    .replace(/gh[pousr]_[a-zA-Z0-9]{20,}/g, "[REDACTED]")
+    .replace(/xox[bprs]-[a-zA-Z0-9-]{10,}/g, "[REDACTED]");
+}
+
 function logDelegation(difficulty: string, task: string, taskId?: string) {
   ensureLogDir();
   appendFileSync(DELEGATION_LOG, JSON.stringify({
     timestamp: new Date().toISOString(),
     difficulty,
-    task: task.slice(0, 300),
+    task: redactSecrets(task).slice(0, 300),
     taskId: taskId ?? null,
   }) + "\n");
 }

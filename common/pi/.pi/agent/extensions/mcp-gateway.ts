@@ -401,8 +401,8 @@ class MCPManager {
     const serverCfg = this.config.mcpServers[server];
     const permission = serverCfg?.permission ?? "ask";
 
-    // Build details for audit
-    const argsSummary = JSON.stringify(params).slice(0, 200);
+    // Build details for audit (secrets redacted)
+    const argsSummary = redactSecrets(JSON.stringify(params)).slice(0, 200);
 
     // Handle permission: deny
     if (permission === "deny") {
@@ -519,6 +519,17 @@ class MCPManager {
 
 function ensureResearchDir() {
   if (!existsSync(RESEARCH_DIR)) mkdirSync(RESEARCH_DIR, { recursive: true });
+}
+
+// Redact obvious secrets before they hit the audit log (MCP tool args can carry
+// tokens). Best-effort — covers key/token/password assignments and common token
+// shapes, not a guarantee.
+function redactSecrets(s: string): string {
+  return s
+    .replace(/("?(?:api[_-]?key|token|secret|password|authorization)"?\s*[:=]\s*"?)[^",}\s]+/gi, "$1[REDACTED]")
+    .replace(/sk-[a-zA-Z0-9]{20,}/g, "[REDACTED]")
+    .replace(/gh[pousr]_[a-zA-Z0-9]{20,}/g, "[REDACTED]")
+    .replace(/xox[bprs]-[a-zA-Z0-9-]{10,}/g, "[REDACTED]");
 }
 
 function logMCPAudit(

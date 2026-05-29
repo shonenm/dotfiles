@@ -165,14 +165,14 @@ function curl(args: string[], opts: { timeout: number; maxBuffer?: number }): st
   }
 }
 
-function searxngSearch(query: string): string | null {
+function searxngSearch(query: string, num: number): string | null {
   const url = `${SEARXNG_URL}/search?q=${encodeURIComponent(query)}&format=json`;
   const result = curl(["-fsSL", "--max-time", "15", url], { timeout: 16000 });
   if (!result) return null;
   try {
     const data = JSON.parse(result);
     if (!data.results || data.results.length === 0) return null;
-    return JSON.stringify(data.results.slice(0, 10), null, 2);
+    return JSON.stringify(data.results.slice(0, num), null, 2);
   } catch {
     return null;
   }
@@ -236,6 +236,7 @@ export default function (pi: ExtensionAPI) {
     }),
     async execute(_toolCallId, params, _signal, onUpdate) {
       const { query, num = 5 } = params;
+      const n = Math.min(Math.max(num, 1), 10);
       const trimmedQuery = query.trim().slice(0, 500);
 
       // Secret guard
@@ -251,7 +252,7 @@ export default function (pi: ExtensionAPI) {
       onUpdate?.({ content: [{ type: "text", text: `🔍 Searching: ${trimmedQuery.slice(0, 100)}...` }] });
 
       // Try SearXNG first
-      let result = searxngSearch(trimmedQuery);
+      let result = searxngSearch(trimmedQuery, n);
       let backend = "searxng";
 
       if (!result) {
@@ -508,7 +509,7 @@ export default function (pi: ExtensionAPI) {
   // Notify on startup
   // -----------------------------------------------------------------------
   pi.on("session_start", async (_event, ctx) => {
-    const searxngUp = searxngSearch("test") !== null;
+    const searxngUp = searxngSearch("test", 1) !== null;
     const jinaKeySet = !!process.env.JINA_API_KEY;
     const parts: string[] = [];
     if (searxngUp) parts.push("SearXNG✅");
