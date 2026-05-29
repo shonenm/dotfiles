@@ -413,12 +413,10 @@ class MCPManager {
       };
     }
 
-    // Handle permission: ask — for now, since pi tools can't do interactive confirm
-    // in tool execute (ctx.ui is available but would pause the LLM), we log and allow
-    // with a warning. In a future version, this will integrate with permission-gate.
-    if (permission === "ask") {
-      // TODO: integrate with ctx.ui.confirm when available in tool context
-    }
+    // Note: allow/ask/deny is enforced earlier in the `tool_call` event handler
+    // (the only place pi exposes interactive ctx.ui.confirm). By the time
+    // execute() runs, the call has already passed that gate. The `deny`
+    // short-circuit above is kept as defense-in-depth.
 
     onUpdate?.({ content: [{ type: "text", text: `🔌 MCP: ${server}/${toolName}...` }] });
 
@@ -506,6 +504,13 @@ class MCPManager {
   getTools(): Map<string, { server: string; tool: MCPToolDef }> {
     return this.tools;
   }
+
+  /** Permission for a registered MCP tool name, or undefined if not an MCP tool. */
+  getPermission(toolName: string): "allow" | "ask" | "deny" | undefined {
+    const server = this.tools.get(toolName)?.server;
+    if (!server) return undefined;
+    return this.config.mcpServers[server]?.permission ?? "ask";
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -578,6 +583,33 @@ export default async function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     // Reload config (picks up changes to .mcp.json)
     manager.reloadConfig();
+  });
+
+  // Permission gate for MCP tools. pi only exposes interactive ctx.ui in the
+  // tool_call event (not inside a tool's execute()), so allow/ask/deny is
+  // enforced here. In headless (-p) mode ctx.ui.confirm() returns false, so
+  // "ask" tools are blocked — the safe default (never auto-approve).
+  pi.on("tool_call", async (event, ctx) => {
+    const perm = manager.getPermission(event.toolName);
+    if (!perm || perm === "allow") return; // not MCP, or explicitly allowed
+
+    const argsSummary = JSON.stringify(event.input ?? {}).slice(0, 300);
+
+    if (perm === "deny") {
+      return {
+        block: true,
+        reason: `MCP tool "${event.toolName}" is denied by permission policy.`,
+      };
+    }
+
+    // perm === "ask"
+    const ok = await ctx.ui.confirm(
+      "🔌 MCP tool call",
+      `Allow MCP tool "${event.toolName}"?\n\nArgs: ${argsSummary}`
+    );
+    if (!ok) {
+      return { block: true, reason: "Declined by user (MCP permission: ask)." };
+    }
   });
 
   // Cleanup on shutdown
