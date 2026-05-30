@@ -48,6 +48,10 @@ in
     # Re-prepend nix-managed paths so Nix-installed binaries win over
     # /opt/homebrew/bin regardless of how the shell is launched.
     envExtra = ''
+      # Homebrew (Apple Silicon). Adds /opt/homebrew/{bin,sbin} to PATH.
+      # Runs before the nix-path prepend below so Nix binaries still win.
+      [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+
       for p in \
         "$HOME/.nix-profile/bin" \
         "/etc/profiles/per-user/$USER/bin" \
