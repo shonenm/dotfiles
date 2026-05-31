@@ -117,6 +117,16 @@ else
           'curl -L https://nixos.org/nix/install | sh -s -- --no-daemon'
         mkdir -p "$HOME/.config/nix"
         echo 'experimental-features = nix-command flakes' > "$HOME/.config/nix/nix.conf"
+        # Add re-exec block to ~/.profile so login shells auto-enter the chroot
+        _profile_snippet='
+# nix-user-chroot: mount ~/.nix-store/nix as /nix and re-exec if outside chroot
+if [ ! -d /nix/store ] && [ -x "$HOME/.local/bin/nix-user-chroot" ] && [ -d "$HOME/.nix-store/nix" ]; then
+  exec "$HOME/.local/bin/nix-user-chroot" "$HOME/.nix-store/nix" bash -l
+fi'
+        if ! grep -qF 'nix-user-chroot' "$HOME/.profile" 2>/dev/null; then
+          printf '%s\n' "$_profile_snippet" >> "$HOME/.profile"
+          log_info "Added nix-user-chroot re-exec to ~/.profile"
+        fi
         BOOTSTRAP_MODE="chroot"
         ;;
       READY-PORTABLE)
