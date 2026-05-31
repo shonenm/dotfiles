@@ -29,6 +29,14 @@ const DANGEROUS_PATTERNS = [
   /\bDROP\s+(TABLE|DATABASE|SCHEMA)\b/i,
   /\bDELETE\s+FROM\b/i,
   /\btruncate\s+table\b/i,
+  // Production database protection
+  /psql.*-U\s+postgres.*(bstg-syntopic|sandbox-andtopic)/i,
+  /PGPASSWORD=.*psql/i,
+  /\bINSERT\s+INTO\s+/i,
+  /\bUPDATE\s+\w+\s+SET\s+/i,
+  /\bCREATE\s+(TABLE|FUNCTION|INDEX|POLICY|ROLE)\s+/i,
+  /\bALTER\s+(TABLE|FUNCTION)\s+/i,
+  /\bGRANT\s+(INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\s+/i,
 ];
 
 // Tool names that execute shell commands. `bash` is pi's real tool; the others
