@@ -124,7 +124,20 @@ if [ ! -x "$HOME/.nix-profile/bin/nix" ] && [ -x "$HOME/.local/bin/nix-user-chro
   exec "$HOME/.local/bin/nix-user-chroot" "$HOME/.nix-store/nix" bash -l
 fi'
         if ! grep -qF 'nix-user-chroot' "$HOME/.profile" 2>/dev/null; then
-          printf '%s\n' "$_profile_snippet" >> "$HOME/.profile"
+          # Insert before 'exec zsh' line if present; otherwise append
+          if grep -q 'exec zsh' "$HOME/.profile" 2>/dev/null; then
+            python3 -c "
+import sys
+with open('$HOME/.profile') as f: c = f.read()
+snippet = sys.stdin.read()
+marker = next((l for l in c.splitlines() if 'exec zsh' in l), None)
+if marker:
+    c = c.replace(marker, snippet + '\n\n' + marker)
+    with open('$HOME/.profile', 'w') as f: f.write(c)
+" <<< "$_profile_snippet"
+          else
+            printf '%s\n' "$_profile_snippet" >> "$HOME/.profile"
+          fi
           log_info "Added nix-user-chroot re-exec to ~/.profile"
         fi
         BOOTSTRAP_MODE="chroot"
