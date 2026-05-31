@@ -5,7 +5,7 @@
 # Fallback to bash if zsh is not found in either case.
 if [ ! -d /nix/store ] && [ -x "$HOME/.local/bin/nix-user-chroot" ] && [ -d "$HOME/.nix-store/nix" ]; then
   exec "$HOME/.local/bin/nix-user-chroot" "$HOME/.nix-store/nix" \
-    "$(command -v zsh 2>/dev/null || echo /bin/bash)"
+    "${HOME}/.nix-profile/bin/zsh"
 else
   exec "$(command -v zsh 2>/dev/null || echo /bin/bash)"
 fi
