@@ -86,6 +86,8 @@
           mkLinuxHome { system = "x86_64-linux"; username = "matsushimakouta"; };
         "matsushimakouta@linux-aarch64" =
           mkLinuxHome { system = "aarch64-linux"; username = "matsushimakouta"; };
+        "matsushima@linux-x86_64" =
+          mkLinuxHome { system = "x86_64-linux"; username = "matsushima"; };
         # pi-500 (Raspberry Pi 5, aarch64) runs as `shonenm` user.
         "shonenm@linux-aarch64" =
           mkLinuxHome { system = "aarch64-linux"; username = "shonenm"; };

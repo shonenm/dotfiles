@@ -14,6 +14,7 @@ source "$DOTFILES_DIR/scripts/utils.sh"
 # --- Argument parsing -------------------------------------------------
 NO_SUDO=false
 SKIP_1P=false
+BOOTSTRAP_MODE=""  # chroot | portable | "" (native sudo)
 for arg in "$@"; do
   case "$arg" in
     -y|--skip-prompt) ;;  # accepted for compatibility; install.sh is non-interactive
@@ -89,11 +90,55 @@ if command_exists nix; then
 else
   log_info "Installing Nix via Determinate Systems installer..."
   if [[ "$OS" == "linux" && "$NO_SUDO" == "true" ]]; then
-    log_warn "Sudoless Linux host detected — Determinate installer needs root."
-    log_warn "Follow docs/install/nix-sudoless-bootstrap.md for nix-user-chroot"
-    log_warn "or nix-portable bootstrap, then re-run with the appropriate"
-    log_warn "wrapper command. Stopping here."
-    exit 0
+    log_info "Sudoless Linux host — running preflight to select bootstrap path..."
+    _preflight_result=$(bash "$DOTFILES_DIR/scripts/nix-preflight.sh" 2>/dev/null \
+      | grep -oE 'READY-CHROOT|READY-PORTABLE|READY-NATIVE|BLOCKED')
+    case "$_preflight_result" in
+      READY-NATIVE)
+        log_info "Preflight: READY-NATIVE — proceeding with Determinate installer (sudo prompt expected)."
+        NO_SUDO=false
+        ;;
+      READY-CHROOT)
+        log_info "Preflight: READY-CHROOT → nix-user-chroot bootstrap"
+        _nuc_bin="$HOME/.local/bin/nix-user-chroot"
+        _nuc_store="$HOME/.nix-store/nix"
+        _nuc_version="2.1.1"
+        _nuc_arch="$(uname -m)"
+        mkdir -p "$HOME/.local/bin" "$_nuc_store"
+        if [[ ! -x "$_nuc_bin" ]]; then
+          log_info "Downloading nix-user-chroot ${_nuc_version}..."
+          curl -fsSL \
+            "https://github.com/nix-community/nix-user-chroot/releases/download/${_nuc_version}/nix-user-chroot-bin-${_nuc_version}-${_nuc_arch}-unknown-linux-musl" \
+            -o "$_nuc_bin"
+          chmod +x "$_nuc_bin"
+        fi
+        log_info "Installing Nix inside user chroot (single-user)..."
+        "$_nuc_bin" "$_nuc_store" bash -lc \
+          'curl -L https://nixos.org/nix/install | sh -s -- --no-daemon'
+        mkdir -p "$HOME/.config/nix"
+        echo 'experimental-features = nix-command flakes' > "$HOME/.config/nix/nix.conf"
+        BOOTSTRAP_MODE="chroot"
+        ;;
+      READY-PORTABLE)
+        log_info "Preflight: READY-PORTABLE → nix-portable bootstrap"
+        _np_bin="$HOME/.local/bin/nix-portable"
+        _np_arch="$(uname -m)"
+        mkdir -p "$HOME/.local/bin"
+        if [[ ! -x "$_np_bin" ]]; then
+          log_info "Downloading nix-portable..."
+          curl -fsSL \
+            "https://github.com/DavHau/nix-portable/releases/latest/download/nix-portable-${_np_arch}" \
+            -o "$_np_bin"
+          chmod +x "$_np_bin"
+        fi
+        BOOTSTRAP_MODE="portable"
+        ;;
+      *)
+        log_warn "Preflight: BLOCKED — cannot bootstrap Nix without root on this host."
+        log_warn "See docs/install/nix-sudoless-bootstrap.md (Section C) for pixi fallback."
+        exit 0
+        ;;
+    esac
   fi
 
   determinate_flags="install --no-confirm"
@@ -136,7 +181,22 @@ case "$OS" in
     user="${USER:-$(id -un)}"
     target="${user}@linux-${hm_arch}"
     log_info "Running: nix run home-manager/master -- switch --flake .#$target -b stow-backup"
-    nix run home-manager/master -- switch --flake ".#$target" -b stow-backup
+    case "${BOOTSTRAP_MODE}" in
+      chroot)
+        _nuc_bin="$HOME/.local/bin/nix-user-chroot"
+        _nuc_store="$HOME/.nix-store/nix"
+        "$_nuc_bin" "$_nuc_store" bash -lc \
+          ". ~/.nix-profile/etc/profile.d/nix.sh && cd ~/dotfiles && nix run home-manager/master -- switch --flake \".#${target}\" -b stow-backup"
+        ;;
+      portable)
+        _np_bin="$HOME/.local/bin/nix-portable"
+        cd ~/dotfiles
+        "$_np_bin" nix run home-manager/master -- switch --flake ".#${target}" -b stow-backup
+        ;;
+      *)
+        nix run home-manager/master -- switch --flake ".#$target" -b stow-backup
+        ;;
+    esac
     ;;
 esac
 
