@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# tmux default-command wrapper.
+# On native nix hosts (/nix/store exists): exec zsh directly.
+# On nix-user-chroot hosts (ailab): enter the chroot first, then exec zsh.
+# Fallback to bash if zsh is not found in either case.
+if [ ! -d /nix/store ] && [ -x "$HOME/.local/bin/nix-user-chroot" ] && [ -d "$HOME/.nix-store/nix" ]; then
+  exec "$HOME/.local/bin/nix-user-chroot" "$HOME/.nix-store/nix" \
+    "$(command -v zsh 2>/dev/null || echo /bin/bash)"
+else
+  exec "$(command -v zsh 2>/dev/null || echo /bin/bash)"
+fi
