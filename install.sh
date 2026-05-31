@@ -119,8 +119,8 @@ else
         echo 'experimental-features = nix-command flakes' > "$HOME/.config/nix/nix.conf"
         # Add re-exec block to ~/.profile so login shells auto-enter the chroot
         _profile_snippet='
-# nix-user-chroot: mount ~/.nix-store/nix as /nix and re-exec if outside chroot
-if [ ! -d /nix/store ] && [ -x "$HOME/.local/bin/nix-user-chroot" ] && [ -d "$HOME/.nix-store/nix" ]; then
+# nix-user-chroot: enter chroot if nix-profile not yet accessible
+if [ ! -x "$HOME/.nix-profile/bin/nix" ] && [ -x "$HOME/.local/bin/nix-user-chroot" ] && [ -d "$HOME/.nix-store/nix" ]; then
   exec "$HOME/.local/bin/nix-user-chroot" "$HOME/.nix-store/nix" bash -l
 fi'
         if ! grep -qF 'nix-user-chroot' "$HOME/.profile" 2>/dev/null; then
