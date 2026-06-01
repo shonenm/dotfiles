@@ -675,6 +675,9 @@ set_default_shell() {
       {
         echo ""
         echo "$marker"
+        echo '# zsh is installed under ~/.pixi/bin in no-sudo mode; ensure it is on PATH'
+        echo '# before the lookup so login bash hands off to zsh instead of staying put.'
+        echo '[ -d "$HOME/.pixi/bin" ] && PATH="$HOME/.pixi/bin:$PATH"'
         echo 'if [ -z "$ZSH_VERSION" ] && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then'
         echo '  exec zsh -l'
         echo 'fi'
