@@ -1,21 +1,6 @@
 #!/bin/bash
 
-# macOS Setup Script — Phase 6 status: SUPPLEMENTAL.
-#
-# The Nix bootstrap (`install.sh`) handles core tooling now (everything
-# previously covered by install_brew_bundle's brew formulae is in
-# `nix/modules/packages/core.nix` + home-manager). This script remains
-# only for things Nix doesn't reasonably cover:
-#   - Homebrew casks (Ghostty, Raycast, Karabiner-Elements, AeroSpace.app,
-#     fonts) — `brew bundle --file=config/Brewfile`
-#   - Claude Code / pi / codex plugin installers (managed by their own
-#     plugin systems, not by Nix)
-#   - GitHub release binaries without nixpkgs equivalents (lemonade,
-#     dops, quay)
-#   - gh extensions, mise tools, cargo install entries
-#
-# Run individual functions as needed; the bottom-of-file invocation list
-# still works for a full setup but most users only need install.sh.
+# macOS Setup Script (Homebrew packages)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(dirname "$SCRIPT_DIR")"

@@ -1,24 +1,6 @@
 #!/bin/bash
 
-# Linux (Debian/Ubuntu/Alpine) Setup Script — Phase 6 status: SUPPLEMENTAL.
-#
-# The Nix bootstrap (`install.sh`) handles core tooling now via
-# home-manager (everything previously installed by install_modern_tools,
-# install_gh_apt, install_eza_apt, install_bat_apt, etc. is in
-# `nix/modules/packages/linux.nix` and `programs.<name>.enable = true`).
-#
-# This script remains for things Nix doesn't cover:
-#   - apt-residue installation (build-essential, postgresql server,
-#     openssh-server, fonts — see config/packages.linux.apt.txt and
-#     docs/install/linux-apt-residue.md)
-#   - source-built tmux 3.6a for xterm-ghostty compatibility on ailab
-#   - Ghostty terminfo install
-#   - Claude Code plugin installers (managed by their own plugin
-#     systems, not by Nix)
-#   - GitHub release binaries without nixpkgs equivalents
-#
-# For a fresh Linux install, run `./install.sh` first (Nix + home-manager),
-# then any of these functions individually as needed.
+# Linux (Debian/Ubuntu/Alpine) Setup Script
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(dirname "$SCRIPT_DIR")"

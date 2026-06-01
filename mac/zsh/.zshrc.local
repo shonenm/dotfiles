@@ -15,7 +15,7 @@ if [[ -n $GHOSTTY_RESOURCES_DIR ]]; then
 fi
 
 # --- Mac Tools Init ---
-# sheldon removed in Phase 2b: zsh plugins now managed by programs.zsh.plugins (zsh-completions, zsh-autosuggestions, zsh-abbr, forgit, zsh-syntax-highlighting).
+command -v sheldon &>/dev/null && eval "$(sheldon source)"
 command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 
 # Ctrl+P で atuin の履歴検索を有効化（Up Arrow と同じ動作）
