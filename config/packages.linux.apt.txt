@@ -1,21 +1,18 @@
-# Linux system packages — apt-residue after Phase 6.
-# Usage: scripts/linux.sh apt-residue
-#
-# Contains ONLY packages that:
-#   - Are system-level (system services, kernel-adjacent)
-#   - Require setuid / system integration
-#   - Aren't reasonable to install per-user via Nix
-#
-# Everything previously listed here (ripgrep, fd-find, jq, stow,
-# unzip, tmux, etc.) is now installed by home-manager via
-# `nix/modules/packages/linux.nix` and `programs.<name>.enable = true`.
-#
-# See docs/install/linux-apt-residue.md for the full rationale.
-
+# Debian/Ubuntu system packages (installed via apt)
 build-essential
 pkg-config
 libssl-dev
-openssh-server
 zsh
-fontconfig
+tmux
+jq
+stow
+unzip
+ripgrep
+fd-find
+rsync
 luarocks
+imagemagick
+autossh
+openssh-client
+pueue
+python3

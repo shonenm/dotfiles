@@ -1,0 +1,5 @@
+--theme="Visual Studio Dark+"
+--style="numbers,changes,header"
+--italic-text=always
+--map-syntax="*.env:DotENV"
+--map-syntax=".envrc:Bash"
