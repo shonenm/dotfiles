@@ -77,5 +77,6 @@
     "opencode-go/*",
     "openai-codex/*",
     "anthropic/*"
-  ]
+  ],
+  "lastChangelogVersion": "0.78.0"
 }
