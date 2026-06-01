@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Called by rcon for host-only targets. Re-execs inside nix-user-chroot if /nix
+# is not yet mounted (ailab-style sudoless setup).
+sess="${1:-main}"
+
+if [ ! -x "$HOME/.nix-profile/bin/nix" ] && \
+   [ -x "$HOME/.local/bin/nix-user-chroot" ] && \
+   [ -d "$HOME/.nix-store/nix" ]; then
+  exec "$HOME/.local/bin/nix-user-chroot" "$HOME/.nix-store/nix" "$0" "$@"
+fi
+
+zsh_bin=$(command -v zsh 2>/dev/null) && export SHELL="$zsh_bin"
+cwd="$HOME"
+[ -d "$HOME/$sess" ] && cwd="$HOME/$sess"
+tmux new-session -A -d -s "$sess" -c "$cwd" 2>/dev/null || true
+tmux set-option -t "$sess" '@rcon-host' "${RCON_HOST_MACHINE:-}"
+exec tmux attach-session -t "$sess"

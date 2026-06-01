@@ -468,12 +468,7 @@ in
               export TERMINFO_DIRS=\"\$HOME/.terminfo:/usr/share/terminfo:/lib/terminfo\"
               export CLAUDE_CONTEXT='$context'
               export RCON_HOST_MACHINE='$host'
-              zsh_bin=\$(command -v zsh 2>/dev/null) && export SHELL=\"\$zsh_bin\"
-              cwd=\"\$HOME\"
-              [ -d \"\$HOME/$sess\" ] && cwd=\"\$HOME/$sess\"
-              tmux new-session -A -d -s '$sess' -c \"\$cwd\" 2>/dev/null || true
-              tmux set-option -t '$sess' '@rcon-host' '$host'
-              exec tmux attach-session -t '$sess'
+              exec \"\$HOME/dotfiles/scripts/rcon-host-attach\" '$sess'
             "
           fi
         }
