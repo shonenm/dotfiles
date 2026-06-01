@@ -620,7 +620,7 @@ main() {
   # 3.6. Regenerate tmux theme on Linux (fixes powerline char encoding)
   if [[ "$(detect_os)" == "linux" ]]; then
     log_info "Regenerating tmux theme for Linux..."
-    "$DOTFILES_DIR/scripts/regenerate-tmux-theme.sh" "$HOME/.config/tmux/tokyonight.tmux"
+    "$DOTFILES_DIR/scripts/regenerate-tmux-theme.sh" tokyonight "$HOME/.config/tmux/tokyonight.tmux"
   fi
 
   # 3.7. Install TPM plugins and setup tmux-which-key
