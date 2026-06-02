@@ -9,7 +9,9 @@
 | cursor-agent CLI | ヘッドレス Agent | `scripts/mac.sh` / `config/tools.linux.bash` (curl install) |
 | rules | グローバル振る舞いルール | `common/cursor/.cursor/rules/` → `~/.cursor/rules/` |
 | cli-config.json | CLI 権限・承認モード | `templates/cursor-cli-config.json` → `~/.cursor/cli-config.json` |
+| statusline | CLI フッター (ctx/model/git) | `common/cursor/.cursor/statusline-command.sh` (Claude と共有) |
 | hooks.json | 完了通知 | `templates/cursor-hooks.json` → `~/.cursor/hooks.json` |
+| tmux 使用量 | プラン制限の可視化 | `scripts/tmux-cursor-usage.sh` |
 | d-* skills | dotfiles ワークフロー | `common/claude/.claude/skills/` → `~/.claude/skills/` (Cursor 互換読み込み) |
 | 共有 MCP / skills | ツール横断設定 | `common/agent/.config/agent/` → `~/.config/agent/` |
 
@@ -90,6 +92,85 @@ cursor-agent --plan "design a caching layer for the API"
 cursor-agent --mode ask "explain how auth middleware works"
 ```
 
+## Statusline (CLI フッター)
+
+Claude Code と同じ `statusLine.command` 形式。`install.sh` で `~/.cursor/cli-config.json` に設定が入り、`~/.cursor/statusline-command.sh` が stow される。
+
+表示内容 (Claude と同等):
+
+- cwd / git branch / model
+- context 使用率ゲージ (`ctx:████░░░░ 34%`)
+- cost / duration / diff lines (API が返す場合)
+
+Cursor CLI 内でフッターが見えない場合は `cursor-agent` を再起動する。
+
+## tmux 使用量表示
+
+tmux status-right に Claude / Codex / Gemini と並べて Cursor のプラン使用量を表示する (`◆ ▁▁ 2%/3% 29d` 形式)。
+
+| 表示 | 意味 |
+| --- | --- |
+| 1つ目の % | 含まれる使用量の総利用率 (`planUsage.totalPercentUsed`) |
+| 2つ目の % | Auto/Composer モデル利用率 (`autoPercentUsed`) |
+| 末尾 | 請求周期終了までの残り日数 |
+
+データソース: `api2.cursor.sh` の `GetCurrentPeriodUsage` (Pro/Team/Ultra)。Enterprise は `/auth/usage` にフォールバック。
+
+トークン取得 (`scripts/cursor-auth-token.sh`):
+
+1. `CURSOR_AUTH_TOKEN` / `CURSOR_API_KEY` 環境変数
+2. macOS Keychain (`cursor-access-token`, cursor-agent login 時)
+3. Linux secret-service (同名)
+4. Cursor IDE の `state.vscdb` (IDE インストール時)
+
+手動確認:
+
+```bash
+~/dotfiles/scripts/tmux-cursor-usage.sh
+```
+
+tmux 反映:
+
+```bash
+tmux source ~/.config/tmux/tmux.conf
+```
+
+**注意:** Cursor は公式の安定した usage API を公開していない。非公式エンドポイントのため、将来変更で `--` 表示になる可能性がある。
+
+## pi ハーネス + Cursor 課金
+
+**推奨: `pi-cursor-agent` プロバイダ** — 1 つの pi セッションで Cursor サブスクのモデルを使い、dotfiles 拡張 (permission-gate, mcp-gateway, delegation 等) を維持する。
+
+| 方式 | 可否 | 備考 |
+| --- | --- | --- |
+| **pi-cursor-agent** (dotfiles 標準) | ✅ | Cursor API + pi ツールブリッジ。`settings.json` の `packages` に同梱 |
+| `@netandreus/pi-cursor-provider` | △ | `cursor-agent --print` 子プロセス。Cursor CLI がツール実行 → pi 拡張が効かない |
+| pi `delegate_agent` → cursor | ❌ | ハードコードで `pi` のみ spawn |
+| 別 tmux ペインで cursor-agent | △ | 並行運用向け。ハーネス統合ではない |
+
+### セットアップ (pi-cursor-agent)
+
+`install.sh` 後、`common/pi/.pi/agent/settings.json` に `npm:pi-cursor-agent` が入る。初回 `pi` 起動時にパッケージが自動インストールされる (または `pi install npm:pi-cursor-agent`)。
+
+```bash
+pi
+> /login          # Cursor Agent を選択 → ブラウザ OAuth
+> /model cursor-agent/composer-2-fast
+```
+
+`enabledModels` に `cursor-agent/*` が含まれるため `/models` で Cursor モデルが選べる。
+
+### 代替: netandreus/pi-cursor-provider
+
+Cursor CLI をそのままバックエンドにする薄いラッパ。導入は `pi install npm:@netandreus/pi-cursor-provider` だが、**ツール実行が Cursor CLI 側**になるため pi 拡張との統合は弱い。更新も 2026-02 以降停滞 (v0.1.4)。CLI ラッパー方式を試す場合のみ検討。
+
+### その他
+
+- **シェル委譲:** `cursor-agent -p --trust "task"` を pi の Bash から実行 (別ハーネス)
+- **delegate_agent:** サブエージェントは引き続き OpenCode Go / Codex の `pi -p` (Cursor モデルにしたい場合はメインセッションを Cursor プロバイダに)
+
+詳細: [pi overview — Cursor Provider](../pi/overview.md#cursor-provider-pi-cursor-agent)
+
 ## 他エージェントとの違い
 
 | 項目 | Claude Code | Cursor |
@@ -98,6 +179,8 @@ cursor-agent --mode ask "explain how auth middleware works"
 | グローバル設定 | `~/.claude/settings.json` (生成) | `~/.cursor/cli-config.json` (生成) |
 | ルール形式 | `.claude/rules/*.md` | `.cursor/rules/*.mdc` |
 | 通知イベント | stop / permission / idle | stop (完了) |
+| Statusline | hooks statusLine | cli-config statusLine |
+| tmux 使用量 | tmux-claude-usage.sh | tmux-cursor-usage.sh |
 | SketchyBar 連携 | あり | なし (Slack のみ) |
 
 ## 関連

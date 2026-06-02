@@ -93,3 +93,22 @@ Deterministic multi-agent orchestration over headless `pi` sub-agents (`workflow
 
 - pi-remote-control package — `/remote-control-pair` for QR pairing, `/remote-control` to toggle
 - Requires iOS app (Pi Relay) + config at `~/.pi/remote-control/config.json`
+
+## Cursor Provider (pi-cursor-agent)
+
+Use Cursor subscription models inside pi's harness via the community `pi-cursor-agent` package
+(`settings.json` → `packages`). Tool calls stay in pi (permission-gate, mcp-gateway, etc.);
+inference and billing go through Cursor's API.
+
+Setup:
+
+1. `cursor-agent` CLI installed (`install.sh`)
+2. In pi: `/login` → **Cursor Agent** → browser OAuth
+3. `/model cursor-agent/composer-2-fast` (or any model from `/models`)
+
+Recommended when Cursor quota is the billing target but pi extensions / delegation / skills
+are required. Sub-agent delegation (`delegate_agent`) still spawns OpenCode Go / Codex pi instances;
+switch the main session model to Cursor when you want Cursor billing on the primary harness.
+
+Caveats: community-maintained (MIT, [sudosubin/pi-frontier](https://github.com/sudosubin/pi-frontier));
+unofficial Cursor API surface; token counts may be unavailable from the provider.

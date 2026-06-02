@@ -48,6 +48,13 @@
     "defaultBehavior": "agent"
   },
   "approvalMode": "allowlist",
+  "statusLine": {
+    "type": "command",
+    "command": "__HOME__/.cursor/statusline-command.sh",
+    "padding": 0,
+    "updateIntervalMs": 300,
+    "timeoutMs": 2000
+  },
   "attribution": {
     "attributeCommitsToAgent": true,
     "attributePRsToAgent": true

@@ -149,6 +149,8 @@ MCP サーバーへの安全な接続レイヤー。
 | Agent Delegation | ✅ | — | — | — |
 | Global Rules | — | ✅ | — | ✅ |
 | Completion Notify | — | ✅ | ✅ | ✅ |
+| CLI Statusline | — | ✅ | — | ✅ |
+| tmux Usage Display | — | ✅ | ✅ | ✅ |
 
 ## Adding a New Agent
 

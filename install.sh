@@ -644,6 +644,9 @@ main() {
   # 3.8. Link git hooks into .git/hooks (post-merge → tmux reload broadcast)
   setup_git_hooks
 
+  # 3.9. Install pi packages declared in ~/.pi/agent/settings.json
+  install_pi_packages
+
   # 4. Generate AI CLI configs (with absolute paths)
   generate_ai_cli_configs
 
@@ -659,6 +662,46 @@ main() {
 
   # Unified summary (all config-driven)
   print_install_summary
+}
+
+# --- 3.9. Install pi packages from stowed settings.json ---
+# settings.json lists npm:/git: sources; pi install is idempotent.
+install_pi_packages() {
+  if ! command_exists pi; then
+    log_warn "pi not installed, skipping pi package install"
+    return 0
+  fi
+
+  local settings_file="$HOME/.pi/agent/settings.json"
+  if [[ ! -f "$settings_file" ]]; then
+    log_warn "pi settings not found, skipping pi package install"
+    return 0
+  fi
+
+  local packages
+  packages=$(python3 -c "
+import json
+with open('$settings_file') as f:
+    for pkg in json.load(f).get('packages', []):
+        print(pkg)
+" 2>/dev/null) || {
+    log_warn "Failed to read pi packages from settings.json"
+    return 0
+  }
+
+  if [[ -z "$packages" ]]; then
+    return 0
+  fi
+
+  log_info "Installing pi packages..."
+  while IFS= read -r pkg; do
+    [[ -z "$pkg" ]] && continue
+    if pi install "$pkg" >/dev/null 2>&1; then
+      log_success "  pi package: $pkg"
+    else
+      log_warn "  pi package failed: $pkg"
+    fi
+  done <<< "$packages"
 }
 
 # --- 4.5. Configure rtk Claude Code hook ---
