@@ -4,7 +4,7 @@
 #        ai-notify.sh --setup <tool>       # Cache webhook and send setup notification
 #        ai-notify.sh --refresh-cache      # Refresh all webhook caches (no notification)
 #        ai-notify.sh --clear-cache        # Clear all cached webhooks
-# tool: claude | codex | gemini
+# tool: claude | codex | gemini | cursor
 # event: stop | complete | permission | idle | error
 
 set -euo pipefail
@@ -21,6 +21,7 @@ get_op_path() {
     claude) echo "op://Personal/Claude Webhook/password" ;;
     codex)  echo "op://Personal/Codex Webhook/password" ;;
     gemini) echo "op://Personal/Gemini Webhook/password" ;;
+    cursor) echo "op://Personal/Cursor Webhook/password" ;;
     *)      return 1 ;;
   esac
 }
@@ -120,7 +121,7 @@ refresh_cache() {
 
   mkdir -p "$CACHE_DIR"
 
-  for tool in claude codex gemini; do
+  for tool in claude codex gemini cursor; do
     local op_path
     op_path=$(get_op_path "$tool") || continue
 
