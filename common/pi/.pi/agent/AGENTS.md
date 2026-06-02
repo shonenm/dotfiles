@@ -72,6 +72,16 @@ guarantees, prefer adopting it over maintaining the custom one.
 - Async sub-agents are pueue tasks labeled `pi-delegate`; the statusline shows their
   running/queued count (`agents r:N q:M`) so background work is visible.
 
+## Workflow Orchestration
+
+Deterministic multi-agent orchestration over headless `pi` sub-agents (`workflow.ts`):
+
+- `agent_parallel` — fan out independent tasks concurrently, collect structured results + total token/cost.
+- `agent_pipeline` — push each item through ordered stages ({input} = prev output, {item} = original).
+- Sub-agents run as `pi --mode json --no-session`; usage is parsed from the event stream for a real budget (`budgetUSD`).
+- `jsonKeys` per task/stage requests + parses JSON output (pi CLI has no schema enforcement; best-effort parse).
+- Recursion capped at depth 1 (sub-agents cannot fan out further).
+
 ## Session Management
 
 - `/session-name <name>` — set session display name (auto-set from git branch)
