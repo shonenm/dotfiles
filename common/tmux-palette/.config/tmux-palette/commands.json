@@ -1,0 +1,54 @@
+[
+  {
+    "title": "Lazygit",
+    "description": "Git TUI (routes into container)",
+    "aliases": ["git", "lg"],
+    "action": { "popup": "~/dotfiles/scripts/tmux-popup-in-container lazygit" }
+  },
+  {
+    "title": "Keifu",
+    "description": "keifu TUI",
+    "aliases": ["kf"],
+    "action": { "popup": "~/dotfiles/scripts/tmux-popup-in-container zsh -lc keifu" }
+  },
+  {
+    "title": "pgcli",
+    "description": "PostgreSQL client",
+    "aliases": ["psql", "db", "postgres"],
+    "action": { "popup": "~/dotfiles/scripts/tmux-popup-in-container pgcli ${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/postgres}" }
+  },
+  {
+    "title": "Quay",
+    "description": "quay TUI",
+    "action": { "popup": "~/dotfiles/scripts/tmux-popup-in-container quay" }
+  },
+  {
+    "title": "gh-dash",
+    "description": "GitHub dashboard",
+    "aliases": ["gh", "pr", "github"],
+    "action": { "popup": "~/dotfiles/scripts/tmux-popup-in-container gh dash" }
+  },
+  {
+    "title": "Scratchpad",
+    "description": "Toggle scratch session",
+    "aliases": ["scratch", "tmp"],
+    "action": { "tmux": "if-shell -F '#{==:#{session_name},scratch}' { detach-client } { display-popup -E -w 80% -h 80% -d '#{pane_current_path}' 'tmux new-session -A -s scratch' }" }
+  },
+  {
+    "title": "Sessions",
+    "description": "Switch session (fzf)",
+    "aliases": ["sess"],
+    "action": { "popup": "~/dotfiles/scripts/tmux-session-color.sh fzf-sessions" }
+  },
+  {
+    "title": "Projects",
+    "description": "Open project (ghq)",
+    "aliases": ["proj", "ghq"],
+    "action": { "popup": "~/dotfiles/scripts/tmux-popup-ghq.sh" }
+  },
+  {
+    "title": "Layout",
+    "description": "Pane layout menu",
+    "action": { "popup": "~/dotfiles/scripts/tmux-layout menu" }
+  }
+]

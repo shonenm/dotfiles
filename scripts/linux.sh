@@ -425,6 +425,18 @@ install_modern_tools() {
   [[ ${#_existing[@]} -gt 0 ]] && log_info "  Existing: ${_existing[*]}"
 }
 
+install_bun() {
+  if command_exists bun; then
+    log_success "bun already installed"
+    return
+  fi
+
+  log_info "Installing bun (tmux-palette runtime)..."
+  # Installs into ~/.bun; PATH is exported in zshrc.common (~/.bun/bin).
+  curl -fsSL https://bun.sh/install | bash
+  log_success "bun installed"
+}
+
 install_npm_packages() {
   if ! command_exists npm; then
     log_warn "npm not found, skipping npm packages"
@@ -849,6 +861,7 @@ check_requirements
 install_system_packages
 install_tmux_source
 install_modern_tools
+install_bun
 install_npm_packages
 install_claude_mem
 install_genshijin

@@ -47,7 +47,9 @@ dotfiles/
 ├── templates/       # AI CLI設定テンプレート
 │   ├── claude-settings.json
 │   ├── codex-config.toml
-│   └── gemini-settings.json
+│   ├── gemini-settings.json
+│   ├── cursor-cli-config.json
+│   └── cursor-hooks.json
 ├── docs/            # ドキュメント
 │   ├── neovim.md
 │   ├── neovim-troubleshooting.md

@@ -16,6 +16,7 @@ dotfilesのセットアップと日常利用で1Passwordをシークレット管
 | Claude Webhook | `op://Personal/Claude Webhook/password` |
 | Codex Webhook | `op://Personal/Codex Webhook/password` |
 | Gemini Webhook | `op://Personal/Gemini Webhook/password` |
+| Cursor Webhook | `op://Personal/Cursor Webhook/password` |
 | GitHub Token | `op://Personal/GitHub/token` |
 | Git Name | `op://Personal/Git Config/name` |
 | Git Email | `op://Personal/Git Config/email` |
@@ -128,7 +129,7 @@ Git config updated: Your Name <your@email.com>
 
 ## Webhook連携
 
-AI CLI（Claude/Codex/Gemini）のSlack通知用Webhook URLを1Passwordで管理。
+AI CLI（Claude/Codex/Gemini/Cursor）のSlack通知用Webhook URLを1Passwordで管理。
 
 ### キャッシュの仕組み
 

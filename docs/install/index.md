@@ -75,12 +75,15 @@ TPM と tmux-which-key、tmux-thumbs を自動セットアップ:
 
 ### 7. AI CLI 設定生成
 
-Claude / Codex / Gemini の設定ファイルを生成:
+Claude / Codex / Gemini / Cursor の設定ファイルを生成:
 
 - `~/.claude/settings.json` (テンプレートから `__HOME__` を置換して生成)
 - `~/.claude/skills/` (Stow symlink がある場合はスキップ、なければ `common/claude/.claude/skills/` からコピー)
 - `~/.codex/config.toml` (テンプレートから生成)
 - `~/.gemini/settings.json` (テンプレートから生成)
+- `~/.cursor/cli-config.json` (テンプレートから生成)
+- `~/.cursor/hooks.json` (テンプレートから生成)
+- `~/.cursor/rules/` (`common/cursor/.cursor/rules/` を stow でリンク)
 
 1Password から Webhook URL を取得してキャッシュ。
 

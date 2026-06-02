@@ -379,6 +379,11 @@ TOOL_pgcli_method="curl_pipe"
 TOOL_pgcli_curl_cmd='uv tool install pgcli'
 TOOL_pgcli_depends_on="uv"
 
+# Cursor CLI (headless AI coding agent, Composer 2.5)
+TOOL_cursor_check_cmd="cursor-agent"
+TOOL_cursor_method="curl_pipe"
+TOOL_cursor_curl_cmd='curl https://cursor.com/install -fsS | bash'
+
 # ════════════════════════════════════════
 # Install order (dependencies must come before dependents)
 # ════════════════════════════════════════
@@ -389,6 +394,8 @@ LINUX_TOOL_ORDER=(
   # GitHub releases (no deps)
   fzf fzftmux fastfetch delta lazygit ghq dops yazi rainfrog typst
   just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh rtk lemonade
+  # Cursor CLI (headless AI coding agent)
+  cursor
   # APT-only (skipped on Alpine)
   gh neovim eza bat postgresql
   # Cargo tools (depend on rust)

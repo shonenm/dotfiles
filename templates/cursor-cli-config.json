@@ -1,0 +1,55 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(find **)",
+      "Shell(ls **)",
+      "Shell(cat **)",
+      "Shell(echo **)",
+      "Shell(printf **)",
+      "Shell(head **)",
+      "Shell(tail **)",
+      "Shell(wc **)",
+      "Shell(which **)",
+      "Shell(type **)",
+      "Shell(env **)",
+      "Shell(printenv **)",
+      "Shell(date **)",
+      "Shell(jq **)",
+      "Shell(sort **)",
+      "Shell(uniq **)",
+      "Shell(cut **)",
+      "Shell(mkdir **)",
+      "Shell(touch **)",
+      "Shell(cp **)",
+      "Shell(mv **)",
+      "Shell(git status**)",
+      "Shell(git diff**)",
+      "Shell(git log**)",
+      "Shell(git show**)",
+      "Shell(git branch**)",
+      "Shell(gh **)",
+      "Read(**)",
+      "Write(**)",
+      "Glob(**)",
+      "Grep(**)",
+      "WebSearch(**)",
+      "WebFetch(**)",
+      "Mcp(**)"
+    ],
+    "deny": [
+      "Shell(rm -rf **)",
+      "Shell(sudo **)",
+      "Shell(chmod 777 **)",
+      "Shell(git push --force**)",
+      "Shell(git reset --hard**)"
+    ]
+  },
+  "editor": {
+    "defaultBehavior": "agent"
+  },
+  "approvalMode": "allowlist",
+  "attribution": {
+    "attributeCommitsToAgent": true,
+    "attributePRsToAgent": true
+  }
+}

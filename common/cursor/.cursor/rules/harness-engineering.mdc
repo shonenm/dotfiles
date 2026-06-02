@@ -1,0 +1,30 @@
+---
+description: Agent harness design — rules, skills, hooks, shared config
+alwaysApply: true
+---
+
+# Harness Engineering
+
+エージェントハーネス（設定・フック・スキル・ルール）を体系的に設計・最適化する規律。
+ハーネスの質がセッション全体の生産性を決定する。
+
+## Cursor コンポーネント
+
+| コンポーネント | グローバル | プロジェクト | 役割 |
+|---------------|-----------|-------------|------|
+| rules/ | `~/.cursor/rules/` | `.cursor/rules/` | 振る舞いを制約する指示 |
+| skills/ | `~/.cursor/skills/` | `.cursor/skills/` | 定型ワークフロー |
+| hooks.json | `~/.cursor/hooks.json` | `.cursor/hooks.json` | イベント駆動の自動処理 |
+| cli-config.json | `~/.cursor/cli-config.json` | `.cursor/cli.json` | CLI 権限・承認モード |
+
+## 共有設定
+
+ツール非依存の設定は `~/.config/agent/` に集約する（MCP、共有スキル、知識ベース）。
+Cursor は `~/.claude/skills/` も互換読み込みするため、dotfiles の `d-*` スキルは Claude と共有される。
+
+## 設計原則
+
+- **レイヤリング**: グローバル (dotfiles) → プロジェクト → ローカル
+- **最小権限**: CLI は allowlist モード、危険操作は deny で明示拒否
+- **コンテキスト効率**: ルールは簡潔に、詳細手順はスキルに委譲
+- **関心の分離**: 1 ルール = 1 関心事、1 スキル = 1 ワークフロー

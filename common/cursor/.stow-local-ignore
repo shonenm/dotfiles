@@ -1,0 +1,8 @@
+# Cursor runtime files - do NOT stow these
+\.cursor/agent-cli-state\.json
+\.cursor/ai-tracking
+\.cursor/projects
+\.cursor/prompt_history\.json
+\.cursor/skills-cursor
+\.cursor/cli-config\.json
+\.cursor/hooks\.json

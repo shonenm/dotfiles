@@ -1,0 +1,8 @@
+# tmux-palette runtime files (theme.json/sizing.json/hidden.json/shortcuts.json,
+# palettes/, node_modules, etc.) are written by the palette UI at runtime and
+# must not be committed. Track only the curated command palette.
+*
+!.gitignore
+!commands.json
+!sizing.json
+!theme.json
