@@ -71,12 +71,14 @@
   "themes": [],
   "packages": [
     "npm:pi-subagents",
-    "npm:pi-remote-control"
+    "npm:pi-remote-control",
+    "npm:pi-cursor-agent"
   ],
   "enabledModels": [
     "opencode-go/*",
     "openai-codex/*",
-    "anthropic/*"
+    "anthropic/*",
+    "cursor-agent/*"
   ],
   "lastChangelogVersion": "0.78.0"
 }

@@ -1,6 +1,6 @@
-# pi-coding-agent (OpenCode Go + Codex)
+# pi-coding-agent (OpenCode Go + Codex + Cursor)
 
-[pi](https://pi.dev/) はミニマルな terminal coding harness。MCP / sub-agents / permission popup / plan mode を持たず、CLI extensions と skills で組み立てる思想。dotfiles では OpenCode Go と Codex のサブスクリプションで動かす前提で構築している。
+[pi](https://pi.dev/) はミニマルな terminal coding harness。MCP / sub-agents / permission popup / plan mode を持たず、CLI extensions と skills で組み立てる思想。dotfiles では OpenCode Go / Codex を主軸に、Cursor サブスク向けに [pi-cursor-agent](https://www.npmjs.com/package/pi-cursor-agent) プロバイダも同梱している。
 
 参考: [OpenCode Go + pi-coding-agent のすゝめ](https://zenn.dev/kimuson/articles/pi-coding-agent-with-opencode-go)
 
@@ -9,6 +9,7 @@
 | 要素 | 役割 | 配置 |
 | --- | --- | --- |
 | pi CLI | エージェント本体 | `config/packages.npm.txt` の `@earendil-works/pi-coding-agent` (npm global) |
+| pi-cursor-agent | Cursor サブスク → pi プロバイダ | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
 | AGENTS.md | グローバル指示書 | `common/pi/.pi/agent/AGENTS.md` → `~/.pi/agent/AGENTS.md` |
 | pueue | バックグラウンドタスク・並列 delegation 用キュー | `config/Brewfile` (mac), `packages.linux.{apt,alpine}.txt` (linux) |
 
@@ -40,6 +41,8 @@ pi
 # OpenCode Go を選択 → ブラウザで OAuth
 > /login
 # ChatGPT (Codex) を選択 → ブラウザで OAuth
+> /login
+# Cursor Agent を選択 → ブラウザで OAuth (pi-cursor-agent)
 ```
 
 認証情報は `~/.pi/credentials.json` に保存される (gitignore 済み、stow 対象外)。
@@ -50,7 +53,24 @@ pi
   - `deepseek-v4-pro`, `kimi-k2.6`, `glm-5.1` 等の Open Model にアクセス
 - **Codex ($20 or $100/月)** をフォールバックの Frontier モデル枠
   - `gpt-5.5`, `gpt-5.4`, `gpt-5.3-codex-spark` 等
+- **Cursor Pro/Team** — pi ハーネス内で Composer / Claude / GPT 等を使う場合
+  - `/model cursor-agent/composer-2-fast` 等 (`enabledModels`: `cursor-agent/*`)
 - Claude Pro/Max は pi 経由だと利用規約上 extra usage 課金になるため非推奨
+
+### Cursor Provider (pi-cursor-agent)
+
+[pi-cursor-agent](https://github.com/sudosubin/pi-frontier/tree/main/pi-cursor-agent) は Cursor API 経由で推論し、ツール実行は pi 側にブリッジする。dotfiles 拡張 (permission-gate, mcp-gateway, statusline) がそのまま効く。
+
+| 項目 | 内容 |
+| --- | --- |
+| パッケージ | `npm:pi-cursor-agent` (`settings.json` → `packages`) |
+| 前提 | `cursor-agent` CLI (`install.sh`) |
+| 認証 | pi 内 `/login` → Cursor Agent |
+| モデル例 | `cursor-agent/composer-2-fast`, `cursor-agent/claude-opus-4-6` |
+
+`@netandreus/pi-cursor-provider` は Cursor CLI 子プロセス方式で、ツールが CLI 側で実行されるため pi ハーネス統合には不向き。dotfiles では採用していない。
+
+**注意:** コミュニティ製・非公式 API。Cursor の仕様変更で動かなくなる可能性あり。
 
 ### 3. pueue デーモンを起動
 
