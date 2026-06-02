@@ -22,6 +22,9 @@
 - [ai-agents/pi/overview.md](ai-agents/pi/overview.md) — pi coding agent
 - [ai-agents/pi/web-research.md](ai-agents/pi/web-research.md) — Web Research Layer
 
+### Cursor
+- [ai-agents/cursor/overview.md](ai-agents/cursor/overview.md) — Cursor Agent CLI
+
 ### Claude
 - [ai-agents/claude/development.md](ai-agents/claude/development.md) — Claude development workflow
 - [ai-agents/claude/fallback.md](ai-agents/claude/fallback.md) — Claude outage fallback

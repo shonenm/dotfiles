@@ -555,9 +555,24 @@ for name, config in servers.items():
     log_success "  Generated ~/.gemini/settings.json"
   fi
 
+  # Cursor CLI
+  if [[ -f "$templates_dir/cursor-cli-config.json" ]]; then
+    mkdir -p "$HOME/.cursor"
+    rm -f "$HOME/.cursor/cli-config.json" 2>/dev/null || true
+    sed "s|__HOME__|$HOME|g" "$templates_dir/cursor-cli-config.json" > "$HOME/.cursor/cli-config.json"
+    log_success "  Generated ~/.cursor/cli-config.json"
+  fi
+
+  if [[ -f "$templates_dir/cursor-hooks.json" ]]; then
+    mkdir -p "$HOME/.cursor"
+    rm -f "$HOME/.cursor/hooks.json" 2>/dev/null || true
+    sed "s|__HOME__|$HOME|g" "$templates_dir/cursor-hooks.json" > "$HOME/.cursor/hooks.json"
+    log_success "  Generated ~/.cursor/hooks.json"
+  fi
+
   # Cache webhooks and send setup notifications
   log_info "  Caching webhooks..."
-  for tool in claude codex gemini; do
+  for tool in claude codex gemini cursor; do
     if "$DOTFILES_DIR/scripts/ai-notify.sh" --setup "$tool" 2>/dev/null; then
       log_success "    ✓ $tool webhook cached and notified"
     else

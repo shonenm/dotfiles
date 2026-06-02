@@ -347,6 +347,17 @@ link_ai_scripts() {
   fi
 }
 
+install_cursor_cli() {
+  if command_exists cursor-agent; then
+    log_success "cursor-agent already installed"
+    return
+  fi
+
+  log_info "Installing Cursor CLI (cursor-agent)..."
+  curl https://cursor.com/install -fsS | bash
+  log_success "Cursor CLI installed"
+}
+
 # --- Main Execution ---
 install_brew_bundle
 install_mise_tools
@@ -357,6 +368,7 @@ install_serena
 install_context_mode
 install_code_review_graph
 install_auto_mode
+install_cursor_cli
 configure_claude_remote_control_autostart
 install_dops
 install_quay
