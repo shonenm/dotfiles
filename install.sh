@@ -406,6 +406,23 @@ setup_tmux_plugins() {
     "$tpm_path/bin/install_plugins" >/dev/null 2>&1 || true
   fi
 
+  # tmux-palette: patch makeColors() for a transparent background. The plugin
+  # paints every row with an opaque RGB panel color; rewriting panel/bg to the
+  # ANSI default-background code (\x1b[49m) lets Ghostty's background-image show
+  # through, matching the other tmux popups. The selected-row highlight keeps
+  # its color. Re-applied here because TPM updates overwrite the plugin source.
+  local palette_theme="$HOME/.tmux/plugins/tmux-palette/src/theme.ts"
+  if [[ -f "$palette_theme" ]]; then
+    if grep -q 'panel: "\\x1b\[49m"' "$palette_theme"; then
+      log_info "tmux-palette transparency patch already applied"
+    elif grep -q 'panel: bg(theme.panel),' "$palette_theme"; then
+      perl -i -pe 's/bg: bg\(theme\.bg\),/bg: "\\x1b[49m",/; s/panel: bg\(theme\.panel\),/panel: "\\x1b[49m",/' "$palette_theme"
+      log_success "Applied tmux-palette transparency patch"
+    else
+      log_warn "tmux-palette theme.ts changed upstream; transparency patch skipped (re-check makeColors)"
+    fi
+  fi
+
   # Setup tmux-which-key config symlink
   local whichkey_plugin="$HOME/.tmux/plugins/tmux-which-key"
   local whichkey_config="$HOME/.config/tmux/plugins/tmux-which-key/config.yaml"
