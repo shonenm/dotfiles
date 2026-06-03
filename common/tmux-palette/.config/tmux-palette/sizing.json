@@ -1,4 +1,6 @@
 {
+  "bodyStyle": "default",
+  "border": "single",
   "popupBorder": "single",
   "popupBodyStyle": "default",
   "popupBorderStyle": "default"
