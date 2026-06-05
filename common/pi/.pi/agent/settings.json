@@ -1,7 +1,7 @@
 {
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.5",
-  "defaultThinkingLevel": "medium",
+  "defaultProvider": "commandcode",
+  "defaultModel": "deepseek/deepseek-v4-pro",
+  "defaultThinkingLevel": "high",
   "theme": "dark",
   "quietStartup": false,
   "collapseChangelog": true,
@@ -72,13 +72,8 @@
   "packages": [
     "npm:pi-subagents",
     "npm:pi-remote-control",
-    "npm:pi-cursor-agent"
-  ],
-  "enabledModels": [
-    "opencode-go/*",
-    "openai-codex/*",
-    "anthropic/*",
-    "cursor-agent/*"
+    "npm:pi-cursor-agent",
+    "npm:pi-commandcode-provider"
   ],
   "lastChangelogVersion": "0.78.0"
 }
