@@ -73,7 +73,8 @@
     "npm:pi-subagents",
     "npm:pi-remote-control",
     "npm:pi-cursor-agent",
-    "npm:pi-commandcode-provider"
+    "npm:pi-commandcode-provider",
+    "npm:pi-permission-system"
   ],
   "lastChangelogVersion": "0.78.0"
 }
