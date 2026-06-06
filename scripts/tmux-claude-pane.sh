@@ -1,12 +1,12 @@
 #!/bin/bash
-# tmux Claude Code ペーン通知管理 (純tmuxローカル)
-# Claude Code hooks から呼び出され、pane user option で通知状態を管理する。
+# tmux AI Agent ペーン通知管理 (純tmuxローカル)
+# Claude Code / Command Code hooks から呼び出され、pane user option で通知状態を管理する。
 # Beacon (workspace/Slack/SketchyBar) とは独立して動作。
 #
 # Usage:
 #   tmux-claude-pane.sh set <status>    # idle | permission | complete
 #   tmux-claude-pane.sh clear           # 通知クリア
-#   tmux-claude-pane.sh scan            # 全ペーンをスキャンして idle Claude を検出・設定
+#   tmux-claude-pane.sh scan            # 全ペーンをスキャンして idle Agent を検出・設定
 
 set -euo pipefail
 
@@ -63,13 +63,14 @@ case "${1:-}" in
     ;;
 
   scan)
-    # 全ペーンをスキャンして idle/permission 状態の Claude Code を検出
+    # 全ペーンをスキャンして idle/permission 状態の AI Agent を検出
     found=0
     while IFS=$'\t' read -r pid cmd status; do
       # 既に状態設定済みならスキップ
       [[ -n "$status" ]] && continue
       # Claude Code はバージョン番号がコマンド名になる (例: 2.1.39)
-      [[ "$cmd" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || continue
+      # Command Code は "cmd" がコマンド名
+      [[ "$cmd" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "$cmd" == "cmd" ]] || continue
 
       # ペーン内容の末尾を取得して状態を判定
       content=$(tmux capture-pane -t "$pid" -p -S -10 2>/dev/null || echo "")
@@ -96,9 +97,9 @@ case "${1:-}" in
 
     if [[ $found -gt 0 ]]; then
       tmux refresh-client -S 2>/dev/null || true
-      echo "Detected $found idle Claude pane(s)"
+      echo "Detected $found idle Agent pane(s)"
     else
-      echo "No idle Claude panes found"
+      echo "No idle Agent panes found"
     fi
     ;;
 
