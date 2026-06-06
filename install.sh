@@ -568,6 +568,7 @@ for name, config in servers.items():
   # Gemini CLI
   if [[ -f "$templates_dir/gemini-settings.json" ]]; then
     mkdir -p "$HOME/.gemini"
+    rm -f "$HOME/.gemini/settings.json" 2>/dev/null || true
     sed "s|__HOME__|$HOME|g" "$templates_dir/gemini-settings.json" > "$HOME/.gemini/settings.json"
     log_success "  Generated ~/.gemini/settings.json"
   fi
@@ -587,9 +588,66 @@ for name, config in servers.items():
     log_success "  Generated ~/.cursor/hooks.json"
   fi
 
+  # Command Code CLI
+  if [[ -f "$templates_dir/commandcode-settings.json" ]]; then
+    mkdir -p "$HOME/.commandcode"
+    rm -f "$HOME/.commandcode/settings.json" 2>/dev/null || true
+    sed "s|__HOME__|$HOME|g" "$templates_dir/commandcode-settings.json" > "$HOME/.commandcode/settings.json"
+    log_success "  Generated ~/.commandcode/settings.json"
+  fi
+
+  # Command Code skills (symlink d-* from common/claude)
+  local cmd_skills_src="$DOTFILES_DIR/common/claude/.claude/skills"
+  if [[ -d "$cmd_skills_src" ]]; then
+    mkdir -p "$HOME/.commandcode/skills"
+    for skill_dir in "$cmd_skills_src"/*/; do
+      [[ -d "$skill_dir" ]] || continue
+      local skill_name target_dir
+      skill_name=$(basename "$skill_dir")
+      target_dir="$HOME/.commandcode/skills/$skill_name"
+      ln -sfn "$skill_dir" "$target_dir"
+      log_success "  Linked Command Code skill: $skill_name"
+    done
+  fi
+
+  # Command Code MCP servers (from shared agent mcp.json)
+  local agent_mcp="$DOTFILES_DIR/common/agent/.config/agent/mcp.json"
+  if [[ -f "$agent_mcp" ]] && command -v cmd &>/dev/null; then
+    local notion_token=""
+    if command -v op &>/dev/null; then
+      notion_token=$(op read "op://Personal/Notion MCP/credential" 2>/dev/null || true)
+    fi
+    python3 -c "
+import json, sys
+with open('$agent_mcp') as f:
+    servers = json.load(f)['mcpServers']
+for name, config in servers.items():
+    if not config.get('enabled', True):
+        continue
+    cfg = {k: v for k, v in config.items()
+           if k not in ('description', 'permission', 'enabled')}
+    if cfg.get('type') == 'stdio':
+        cfg.pop('type', None)
+    print(json.dumps({'name': name, 'config': cfg}))
+" | while IFS= read -r entry; do
+      local name config
+      name=$(echo "$entry" | python3 -c "import json,sys; print(json.load(sys.stdin)['name'])")
+      config=$(echo "$entry" | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin)['config']))")
+      if [[ -n "$notion_token" ]]; then
+        config="${config//\$\{NOTION_TOKEN\}/$notion_token}"
+      fi
+      config="${config//\$\{HOME\}/$HOME}"
+      if cmd mcp add-json --scope user "$name" "$config" >/dev/null 2>&1; then
+        log_success "  Registered Command Code MCP server: $name"
+      else
+        log_warn "  Failed to register Command Code MCP server: $name"
+      fi
+    done
+  fi
+
   # Cache webhooks and send setup notifications
   log_info "  Caching webhooks..."
-  for tool in claude codex gemini cursor; do
+  for tool in claude codex gemini cursor cmd; do
     if "$DOTFILES_DIR/scripts/ai-notify.sh" --setup "$tool" 2>/dev/null; then
       log_success "    ✓ $tool webhook cached and notified"
     else

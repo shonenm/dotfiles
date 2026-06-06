@@ -2,7 +2,7 @@
   "plugins": [],
   "theme": "tokyo-night",
   "sidebarPosition": "left",
-  "sidebarWidth": 33,
+  "sidebarWidth": 30,
   "sessionFilter": "all",
   "detailPanelHeights": {
     "MAIN": 30,

@@ -1,6 +1,6 @@
 # Agent Infrastructure Specification
 
-すべてのコーディングエージェント（Claude Code / pi / Codex / Cursor）が実装すべき基盤コンポーネントの仕様。
+すべてのコーディングエージェント（Claude Code / pi / Codex / Cursor / Command Code）が実装すべき基盤コンポーネントの仕様。
 **実装方法はツール固有だが、振る舞いとポリシーは統一する。**
 
 ## Design Principle

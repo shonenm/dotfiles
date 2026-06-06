@@ -1,0 +1,38 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "__HOME__/.commandcode/statusline-command.sh"
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/ai-notify.sh cmd complete"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set permission"
+          }
+        ]
+      },
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle"
+          }
+        ]
+      }
+    ]
+  }
+}
