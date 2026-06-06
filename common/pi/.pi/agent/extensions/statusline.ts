@@ -135,7 +135,8 @@ function refreshAgents(): void {
  * characters have no ANSI codes. Returns something like "████░░░░  29%".
  */
 function gauge(pct: number, barChars: number): string {
-  const filled = Math.round((pct / 100) * barChars);
+  const clamped = Math.max(0, Math.min(100, pct));
+  const filled = Math.max(0, Math.min(barChars, Math.round((clamped / 100) * barChars)));
   return "█".repeat(filled) + "░".repeat(barChars - filled) + ` ${pct.toFixed(0)}%`;
 }
 
