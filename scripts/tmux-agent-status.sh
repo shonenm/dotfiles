@@ -171,6 +171,23 @@ case "${1:-popup}" in
     tmux select-window -t "$target" 2>/dev/null || true
     tmux select-pane -t "$target" 2>/dev/null || true
     ;;
+  reload)
+    # エージェント通知サブシステムを最新化:
+    #   watcher を単一インスタンスに再起動 + 即時 hang-scan(残留/シェル復帰の GC・ハング検出)
+    # ※ テーマ/キーバインド等 tmux 設定の再読込は別途 prefix+r
+    reload_dir="$(dirname "$SELF")"
+    pkill -f tmux-agent-hang-watch.sh 2>/dev/null || true
+    # 旧インスタンスの終了を最大3s待つ(多重起動防止)
+    for _ in 1 2 3 4 5 6; do
+      ps axo command 2>/dev/null | grep 'tmux-agent-hang-watch.sh' | grep -v grep | grep -q '/bin/bash' || break
+      sleep 0.5
+    done
+    rm -f /tmp/claude/hang-watch.pid
+    tmux run-shell -b "$reload_dir/tmux-agent-hang-watch.sh >/dev/null 2>&1 || true"
+    bash "$reload_dir/tmux-claude-pane.sh" hang-scan 2>/dev/null || true
+    tmux refresh-client -S 2>/dev/null || true
+    tmux display-message "agent-notify reloaded (watcher 再起動 + 状態スキャン)"
+    ;;
   *)
-    echo "Usage: $0 {list|popup|preview <target> <status>}" >&2; exit 1 ;;
+    echo "Usage: $0 {list|popup|reload|preview <target> <status>}" >&2; exit 1 ;;
 esac
