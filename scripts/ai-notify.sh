@@ -159,6 +159,15 @@ EVENT="${2:-notification}"
 
 mkdir -p "$CACHE_DIR"
 
+# 状態の正本(tmux pane option)を更新。tmux 内でのみ作用する(スクリプトが自己ガード)。
+# 全ツール共通の入口とし、単一フックの codex/cursor もこの経路でペーン状態を得る。
+# 仕様: docs/specs/agent-stop-notification.md
+case "$EVENT" in
+  complete|permission|idle|error)
+    "$SCRIPT_DIR/tmux-claude-pane.sh" set "$EVENT" 2>/dev/null || true
+    ;;
+esac
+
 # 1. 依存チェック (jq がない場合は何もしない)
 if ! command -v jq &> /dev/null; then
   exit 0

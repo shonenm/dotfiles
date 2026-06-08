@@ -244,3 +244,25 @@
 7. クリーンアップ: 旧経路・未使用コード削除、ドキュメント更新（agent-infrastructure.md の Completion Notify を本仕様へ集約）。
 
 未決事項（§9）はフェーズ着手時に確定する。
+
+### 11.1 実装状況
+
+| フェーズ | 状態 | 主な成果物 |
+|---------|------|-----------|
+| 1 状態モデル基盤 | 完了 | `tmux-claude-pane.sh`(正本化/`@agent_*`/start/heartbeat/scan廃止)、`badge.sh`/`focus.sh` 追従 |
+| 2 hooks 統一配線 | 完了 | `ai-notify.sh`(共通入口で pane 更新)、`claude-settings.json`(start/heartbeat 追加)、`commandcode-settings.json`(統一) |
+| 3 ハング検知 | 完了 | `tmux-claude-pane.sh hang-scan`(出力ハッシュ併用)、`tmux-agent-hang-watch.sh`(単一インスタンス watcher)、`claude-hooks.tmux` 起動 |
+| 4 ペーン表示 | 完了(a) / 保留(b) | (a) 6テーマ `pane-border-format` にアイコン+緊急度色。(b) SketchyBar 派生化は保留 |
+| 5 横断集約ビュー | 完了 | `tmux-agent-status.sh`(list/popup)、`prefix + a` バインド |
+| 6 リモート/コンテナ統合 | 完了 | 横断ビューが file store(`/tmp/claude/status`)を集約・ホスト識別・ウィンドウ単位ジャンプ・local 重複排除 |
+| 7 クリーンアップ | 進行中 | 本仕様の進捗反映、`agent-infrastructure.md` ポインタ更新 |
+
+注: 全て dotfiles 内の編集のみ。反映には settings 再生成（install.sh 相当）+ tmux 設定リロードが必要。
+
+### 11.2 既知の制約・残課題
+
+- pi 未配線: pi は extensions ベースで hooks ブロックを持たない。pane option 連携には pi extension が必要（別途）。
+- cursor/codex のハング検知なし: 単一フックのため heartbeat を送れず、`complete` 等のみ。`hang` 対象外。
+- リモートの `error` 欠落: リモート/コンテナ経路は `ai-notify` の SketchyBar 状態（idle/permission/complete/none）でファイルへ書くため `error` が `none` に丸められ横断ビューに出ない。修正は `ai-notify` リモート分岐の状態マッピング要改修。
+- SketchyBar 派生化(4b)保留: 現行ファイルベース経路で動作。pane option 集約への一本化は未実施。
+- クリア契機（§9）: フォーカス/時間減衰クリアの是非は未確定。現状は `complete` の10秒自動消去のみ既存挙動として維持。
