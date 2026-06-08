@@ -13,6 +13,7 @@ set -uo pipefail
 [[ -z "${TMUX:-}" ]] && exit 0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SELF="$SCRIPT_DIR/tmux-agent-sidebar.sh"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/tmux-agent-status.sh"   # ヘルパー(status_icon/color, is_shell, branch_of, trunc, humanize)
 set +e +o pipefail   # status.sh の set -e/pipefail を解除(常駐ループを堅牢に)
@@ -37,10 +38,10 @@ trunc_w() {
   printf '%s' "$out"
 }
 
-# 全エージェント行を生成: rank \t line1 \t line2
+# 全エージェント行を生成(sortable): rank \t pane_id \t line1 \t line2
 sb_rows() {
   local now w; now=$(date +%s); w=$(( WIDTH - 4 ))
-  while IFS=$'\x1f' read -r sess win status hb path cmd title; do
+  while IFS=$'\x1f' read -r pid sess win status hb path cmd title; do
     [[ -z "$status" ]] && continue          # 状態未設定(非エージェント)は除外
     is_shell "$cmd" && continue             # シェル復帰(終了済み)は除外
     local rank icon col task branch elapsed loc tool l1 l2
@@ -51,35 +52,67 @@ sb_rows() {
     if [[ "$hb" =~ ^[0-9]+$ ]]; then elapsed=$(humanize "$(( now - hb ))"); else elapsed="-"; fi
     l1=$(printf '%s%s %s%s' "$col" "$icon" "$task" "$C_RST")
     l2=$(printf '  %s%s · %s · %s · %s前%s' "$C_DIM" "$loc" "$branch" "$tool" "$elapsed" "$C_RST")
-    printf '%s\t%s\t%s\n' "$rank" "$l1" "$l2"
+    printf '%s\t%s\t%s\t%s\n' "$rank" "$pid" "$l1" "$l2"
   done < <(tmux list-panes -a -F \
-    "#{session_name}$(printf '\x1f')#{window_index}$(printf '\x1f')#{@agent_status}$(printf '\x1f')#{@agent_heartbeat}$(printf '\x1f')#{pane_current_path}$(printf '\x1f')#{pane_current_command}$(printf '\x1f')#{pane_title}") \
+    "#{pane_id}$(printf '\x1f')#{session_name}$(printf '\x1f')#{window_index}$(printf '\x1f')#{@agent_status}$(printf '\x1f')#{@agent_heartbeat}$(printf '\x1f')#{pane_current_path}$(printf '\x1f')#{pane_current_command}$(printf '\x1f')#{pane_title}") \
     | sort -n -t$'\t' -k1,1
 }
 
+# fzf 入力(NUL 区切り): pane_id <TAB> line1<LF>line2   (--with-nth=2 で表示部のみ)
+fzf_feed() {
+  sb_rows | while IFS=$'\t' read -r _rank pid l1 l2; do
+    printf '%s\t%s\n%s\0' "$pid" "$l1" "$l2"
+  done
+}
+
+# 静的描画(デバッグ/フォールバック用)
 render() {
-  printf '\033[H\033[2J'  # カーソル原点 + クリア
-  printf '%s AGENTS%s  %s\n' "$C_BOLD" "$C_RST" "$(date '+%H:%M:%S')"
-  printf '%s%s%s\n' "$C_DIM" "────────────────────" "$C_RST"
+  printf '\033[H\033[2J'
+  printf '%s AGENTS%s\n%s%s%s\n' "$C_BOLD" "$C_RST" "$C_DIM" "────────────────────" "$C_RST"
   local rows; rows=$(sb_rows)
-  if [[ -z "$rows" ]]; then
-    printf '%s(エージェントなし)%s\n' "$C_DIM" "$C_RST"
-    return
-  fi
-  printf '%s\n' "$rows" | while IFS=$'\t' read -r _rank l1 l2; do
+  [[ -z "$rows" ]] && { printf '%s(エージェントなし)%s\n' "$C_DIM" "$C_RST"; return; }
+  printf '%s\n' "$rows" | while IFS=$'\t' read -r _rank _pid l1 l2; do
     printf '%s\n%s\n\n' "$l1" "$l2"
   done
 }
 
 case "${1:-toggle}" in
   run)
-    # サイドバー pane 内ループ。INT/TERM で抜ける
-    trap 'exit 0' INT TERM
+    # サイドバー pane 内で fzf を常駐。選択して Enter でそのエージェントへジャンプ。
+    # 更新は fzf の listen API へ定期 reload(差分再描画なので チカチカしない)。
+    PORTFILE="/tmp/claude/sidebar.port.$$"
+    trap 'rm -f "$PORTFILE" 2>/dev/null; exit 0' INT TERM
+    mkdir -p /tmp/claude
     while true; do
-      tmux info &>/dev/null || exit 0
-      render
-      sleep "$REFRESH" & wait $! || true
+      rm -f "$PORTFILE"
+      ( # 非フリッカー自動更新: fzf 起動後 PORTFILE に書かれたポートへ reload を送る
+        for _ in $(seq 1 60); do [[ -s "$PORTFILE" ]] && break; sleep 0.1; done
+        p=$(cat "$PORTFILE" 2>/dev/null); [[ -z "$p" ]] && exit 0
+        while sleep "$REFRESH"; do
+          curl -s "http://localhost:$p" -d "reload(bash '$SELF' fzf-feed)" >/dev/null 2>&1 || exit 0
+        done
+      ) &
+      ref=$!
+      fzf_feed | fzf --read0 --ansi --delimiter=$'\t' --with-nth=2 \
+        --no-sort --reverse --gap --listen --no-mouse \
+        --header 'AGENTS  ↑↓  Enter:jump  ^R:reload' \
+        --bind "start:execute-silent(echo \$FZF_PORT > '$PORTFILE')" \
+        --bind "ctrl-r:reload(bash '$SELF' fzf-feed)" \
+        --bind "enter:execute-silent(bash '$SELF' jump {1})" \
+        --color 'pointer:203' >/dev/null 2>&1 || true
+      kill "$ref" 2>/dev/null
+      tmux info &>/dev/null || break    # tmux 消滅で終了
+      sleep 0.2                          # Esc 等で抜けたら再起動(常駐維持)
     done
+    rm -f "$PORTFILE"
+    ;;
+  fzf-feed)
+    fzf_feed ;;
+  jump)
+    t="${2:-}"; [[ -z "$t" || "$t" == "-" ]] && exit 0
+    tmux switch-client -t "$t" 2>/dev/null || true
+    tmux select-window -t "$t" 2>/dev/null || true
+    tmux select-pane -t "$t" 2>/dev/null || true
     ;;
   toggle)
     existing=$(tmux show-options -gqv @agent_sidebar_pane 2>/dev/null || echo "")
@@ -97,5 +130,5 @@ case "${1:-toggle}" in
   once)
     render ;;   # 1回だけ描画(デバッグ用)
   *)
-    echo "Usage: $0 {run|toggle|once}" >&2; exit 1 ;;
+    echo "Usage: $0 {run|toggle|fzf-feed|jump <target>|once}" >&2; exit 1 ;;
 esac
