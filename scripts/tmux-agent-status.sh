@@ -39,6 +39,8 @@ humanize() {
 
 # ツール種別(pane_current_command から)
 tool_of() { local c="${1%.exe}"; case "$c" in claude) echo claude;; cmd) echo cmd;; node) echo node;; *) echo "$c";; esac; }
+# 前景コマンドがシェル(=エージェント終了でプロンプト復帰)か
+is_shell() { case "${1#-}" in zsh|bash|sh|fish|dash|ksh|tcsh|nu|xonsh|elvish) return 0;; *) return 1;; esac; }
 # git ブランチ(worktree 含む)
 branch_of() { git -C "$1" symbolic-ref --quiet --short HEAD 2>/dev/null || echo "-"; }
 # 簡易切り詰め(文字数)
@@ -49,6 +51,7 @@ build_local_rows() {
   local now; now=$(date +%s)
   while IFS="$US" read -r pid sess win status hb path cmd title; do
     is_stopped "$status" || continue
+    is_shell "$cmd" && continue   # エージェント終了済み(シェル復帰)→ 残留を表示しない
     local rank icon col task branch elapsed loc
     rank=$(status_rank "$status"); icon=$(status_icon "$status"); col=$(status_color "$status")
     task=$(trunc "${title:-$(basename "${path:-?}")}" 40)
