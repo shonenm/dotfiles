@@ -1,18 +1,22 @@
 #!/bin/bash
-# AI Agent 横断集約ビュー (リッチ版)
+# AI Agent 横断集約ビュー (リッチ版 / 2行表示)
 # 全 tmux session/window/pane(local の pane option) + リモート/コンテナ(file store)を
-# 走査し、停止中(idle/permission/complete/hang/error)のエージェントを一覧表示。
+# 走査し、停止中(idle/permission/complete/hang/error)のエージェントを2行で一覧表示。
 # fzf ライブプレビュー(右ペイン)で各エージェントの画面末尾・要対応内容を、開かずに triage。
 # 仕様: docs/specs/agent-stop-notification.md §5.3
 #
+# 表示(2行/エージェント):
+#   1行目: <icon> <status>  <タスク(pane_title)>            <経過>
+#   2行目:    <session> · <branch> · <loc> · <tool>
+#
 # Usage:
-#   tmux-agent-status.sh list            # CLI 一覧(人間可読、色なし)
-#   tmux-agent-status.sh popup           # fzf + ライブプレビューでジャンプ (display-popup 用)
-#   tmux-agent-status.sh preview <t> <s> # fzf プレビュー描画(内部用): t=jump_target s=status
+#   tmux-agent-status.sh list            # CLI 一覧(2行、色なし)
+#   tmux-agent-status.sh popup           # fzf + ライブプレビューでジャンプ
+#   tmux-agent-status.sh reload          # watcher 再起動 + 即時スキャン
+#   tmux-agent-status.sh preview <t> <s> # fzf プレビュー描画(内部用)
 #
-# 内部行: rank \t jump_target \t window_loc \t status \t display(ANSI)
+# 内部 sortable 行(タブ区切り): rank \t jump_target \t window_loc \t status \t line1 \t line2
 #   jump_target : local=pane_id(%N) / remote=session:window / "-"=ジャンプ不可
-#
 # 注: tmux/jq の多フィールド読みは US(\x1f)区切り(タブは IFS 空白で空フィールドが coalesce する)。
 
 set -euo pipefail
@@ -23,50 +27,38 @@ SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]
 STATUS_DIR="${AGENT_STATUS_DIR:-/tmp/claude/status}"
 US=$'\x1f'
 
-# ANSI
 C_RED=$'\e[38;5;203m'; C_AMBER=$'\e[38;5;214m'; C_DIM=$'\e[2m'; C_BOLD=$'\e[1m'; C_RST=$'\e[0m'
 
 status_rank() { case "$1" in permission) echo 0;; hang) echo 1;; error) echo 2;; idle) echo 3;; complete) echo 4;; *) echo 9;; esac; }
 status_icon() { case "$1" in idle) echo "󰔟";; permission) echo "󰌆";; complete) echo "";; hang) echo "";; error) echo "";; *) echo " ";; esac; }
-# 状態色: 要対応(permission/hang/error)=赤、それ以外(idle/complete)=amber
 status_color() { case "$1" in permission|hang|error) printf '%s' "$C_RED";; *) printf '%s' "$C_AMBER";; esac; }
 is_stopped() { case "$1" in idle|permission|complete|hang|error) return 0;; *) return 1;; esac; }
-
-humanize() {
-  local s="$1"
-  if (( s < 60 )); then echo "${s}s"; elif (( s < 3600 )); then echo "$(( s/60 ))m"; else echo "$(( s/3600 ))h"; fi
-}
-
-# ツール種別(pane_current_command から)
-tool_of() { local c="${1%.exe}"; case "$c" in claude) echo claude;; cmd) echo cmd;; node) echo node;; *) echo "$c";; esac; }
-# 前景コマンドがシェル(=エージェント終了でプロンプト復帰)か
 is_shell() { case "${1#-}" in zsh|bash|sh|fish|dash|ksh|tcsh|nu|xonsh|elvish) return 0;; *) return 1;; esac; }
-# git ブランチ(worktree 含む)
-branch_of() { git -C "$1" symbolic-ref --quiet --short HEAD 2>/dev/null || echo "-"; }
-# 簡易切り詰め(文字数)
-trunc() { local s="$1" n="$2"; if (( ${#s} > n )); then printf '%s…' "${s:0:n}"; else printf '%s' "$s"; fi; }
 
-# ローカル(pane option)行。task=pane_title, tool=pane_current_command
+humanize() { local s="$1"; if (( s<60 )); then echo "${s}s"; elif (( s<3600 )); then echo "$((s/60))m"; else echo "$((s/3600))h"; fi; }
+tool_of() { local c="${1%.exe}"; case "$c" in claude) echo claude;; cmd) echo cmd;; node) echo node;; *) echo "$c";; esac; }
+branch_of() { git -C "$1" symbolic-ref --quiet --short HEAD 2>/dev/null || echo "-"; }
+trunc() { local s="$1" n="$2"; s="${s//$'\t'/ }"; if (( ${#s} > n )); then printf '%s…' "${s:0:n}"; else printf '%s' "$s"; fi; }
+
+# ローカル(pane option)行 → sortable 6 フィールド
 build_local_rows() {
   local now; now=$(date +%s)
   while IFS="$US" read -r pid sess win status hb path cmd title; do
     is_stopped "$status" || continue
-    is_shell "$cmd" && continue   # エージェント終了済み(シェル復帰)→ 残留を表示しない
-    local rank icon col task branch elapsed loc
+    is_shell "$cmd" && continue
+    local rank icon col task branch elapsed loc tool line1 line2
     rank=$(status_rank "$status"); icon=$(status_icon "$status"); col=$(status_color "$status")
-    task=$(trunc "${title:-$(basename "${path:-?}")}" 40)
-    branch=$(branch_of "$path")
-    loc="${sess}:${win}"
+    task=$(trunc "${title:-$(basename "${path:-?}")}" 52)
+    branch=$(branch_of "$path"); tool=$(tool_of "$cmd"); loc="${sess}:${win}"
     if [[ "$hb" =~ ^[0-9]+$ ]]; then elapsed=$(humanize "$(( now - hb ))"); else elapsed="-"; fi
-    local disp
-    disp=$(printf '%s%s %-10s%s  %-42s  %s%-14s%s  %s%4s%s' \
-      "$col" "$icon" "$status" "$C_RST" "$task" "$C_DIM" "$branch" "$C_RST" "$C_DIM" "$elapsed" "$C_RST")
-    printf '%s\t%s\t%s\t%s\t%s\n' "$rank" "$pid" "$loc" "$status" "$disp"
+    line1=$(printf '%s%s %-10s%s %s' "$col" "$icon" "$status" "$C_RST" "$task")
+    line2=$(printf '   %s%s · %s · %s · %s · %s%s' "$C_DIM" "$sess" "$branch" "$loc" "$tool" "${elapsed}前" "$C_RST")
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$rank" "$pid" "$loc" "$status" "$line1" "$line2"
   done < <(tmux list-panes -a -F \
     "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}")
 }
 
-# リモート/コンテナ(file store)行。seen_windows の window は除外(local 優先)
+# リモート/コンテナ(file store)行 → sortable 6 フィールド。seen_windows の window は除外
 build_file_rows() {
   local seen_windows="$1"
   [[ -d "$STATUS_DIR" ]] || return 0
@@ -83,16 +75,14 @@ build_file_rows() {
     if [[ -n "$ws" ]]; then case "$ws_seen" in *"|${ws}|"*) continue;; *) ws_seen="${ws_seen}|${ws}|";; esac; fi
     local loc="${tsess}:${twin}"
     if [[ -n "$tsess" && -n "$twin" ]]; then printf '%s\n' "$seen_windows" | grep -qxF "$loc" && continue; fi
-    local host proj jt disp_loc
+    local host proj jt disp_loc rank icon col elapsed line1 line2
     if [[ "$project" == *:* ]]; then host="${project%%:*}"; proj="${project#*:}"; else host="ext"; proj="$project"; fi
     if [[ -n "$tsess" && -n "$twin" ]]; then jt="$loc"; disp_loc="$loc"; else jt="-"; disp_loc="-"; fi
-    local rank icon col elapsed
     rank=$(status_rank "$status"); icon=$(status_icon "$status"); col=$(status_color "$status")
     if [[ "$updated" =~ ^[0-9]+$ && "$updated" != "0" ]]; then elapsed=$(humanize "$(( now - updated ))"); else elapsed="-"; fi
-    local disp
-    disp=$(printf '%s%s %-10s%s  %s%-8s%s %-33s  %s%-14s%s  %s%4s%s' \
-      "$col" "$icon" "$status" "$C_RST" "$C_BOLD" "$host" "$C_RST" "$(trunc "$proj" 33)" "$C_DIM" "$disp_loc" "$C_RST" "$C_DIM" "$elapsed" "$C_RST")
-    printf '%s\t%s\t%s\t%s\t%s\n' "$rank" "$jt" "$loc" "$status" "$disp"
+    line1=$(printf '%s%s %-10s%s %s' "$col" "$icon" "$status" "$C_RST" "$(trunc "$proj" 52)")
+    line2=$(printf '   %s%s · %s · %s%s' "$C_DIM" "$host" "$disp_loc" "${elapsed}前" "$C_RST")
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$rank" "$jt" "$loc" "$status" "$line1" "$line2"
   done
 }
 
@@ -101,32 +91,26 @@ build_rows() {
   local_raw=$(build_local_rows)
   seen_windows=$(printf '%s\n' "$local_raw" | awk -F'\t' 'NF{print $3}')
   file_raw=$(build_file_rows "$seen_windows")
-  printf '%s\n%s\n' "$local_raw" "$file_raw" | awk 'NF' | sort -n
+  printf '%s\n%s\n' "$local_raw" "$file_raw" | awk -F'\t' 'NF>=6' | sort -n
 }
 
-# 要対応の中身を capture-pane 末尾から軽く抽出
+# sortable 行 → fzf 入力(NUL 区切り、各レコードは「target<TAB>status<TAB>line1<LF>line2」)
+to_fzf_records() {
+  while IFS=$'\t' read -r _rank jt _wl status line1 line2; do
+    printf '%s\t%s\t%s\n%s\0' "$jt" "$status" "$line1" "$line2"
+  done
+}
+
 extract_needs() {
   local status="$1" tailtxt="$2" line
-  # 空行・シェルプロンプト・powerline/装飾行を除外し、意味のある最終行を採用
-  line=$(printf '%s\n' "$tailtxt" \
-    | grep -vE '^[[:space:]]*$' \
-    | grep -vE '^[[:space:]]*[❯➜$#%>]' \
-    | grep -v '󰊠' \
-    | tail -1 \
-    | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
+  line=$(printf '%s\n' "$tailtxt" | grep -vE '^[[:space:]]*$' | grep -vE '^[[:space:]]*[❯➜$#%>]' | grep -v '󰊠' | tail -1 | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')
   [[ -z "$line" ]] && return 0
-  case "$status" in
-    permission) echo "承認待ち: $line" ;;
-    idle)       echo "最後: $line" ;;
-    *)          echo "$line" ;;
-  esac
+  case "$status" in permission) echo "承認待ち: $line";; idle) echo "最後: $line";; *) echo "$line";; esac
 }
 
-# プレビュー描画(fzf から各カーソル移動で呼ばれる)
 render_preview() {
   local target="$1" status="$2"
   local col icon; col=$(status_color "$status"); icon=$(status_icon "$status")
-  # 状態色のヘッダバー(=枠の色)
   printf '%s%s ▌ %s%s\n' "$col" "$icon" "$(echo "$status" | tr '[:lower:]' '[:upper:]')" "$C_RST"
   if [[ "$target" == %* ]]; then
     local path title cmd branch tool
@@ -149,7 +133,9 @@ render_preview() {
 
 case "${1:-popup}" in
   list)
-    build_rows | cut -f5- | sed $'s/\e\\[[0-9;]*m//g'  # 色除去
+    build_rows | while IFS=$'\t' read -r _r _jt _wl _st l1 l2; do
+      printf '%s\n%s\n' "$l1" "$l2"
+    done | sed $'s/\e\\[[0-9;]*m//g'
     ;;
   preview)
     render_preview "${2:-}" "${3:-}"
@@ -157,27 +143,23 @@ case "${1:-popup}" in
   popup)
     rows=$(build_rows)
     if [[ -z "$rows" ]]; then tmux display-message "停止中のエージェントなし"; exit 0; fi
-    sel=$(printf '%s\n' "$rows" \
-      | fzf --ansi --delimiter=$'\t' --with-nth=5 --no-sort --reverse --height=100% \
-            --preview "bash '$SELF' preview {2} {4}" \
+    sel=$(printf '%s\n' "$rows" | to_fzf_records \
+      | fzf --read0 --ansi --delimiter=$'\t' --with-nth=3 --no-sort --reverse --height=100% --gap \
+            --preview "bash '$SELF' preview {1} {2}" \
             --preview-window 'right,58%,border-left,wrap' \
             --prompt 'agent> ' \
             --header '停止中エージェント: ↑↓ で確認, Enter でジャンプ' \
             --color 'pointer:203,marker:214') || exit 0
     [[ -z "$sel" ]] && exit 0
-    target=$(printf '%s' "$sel" | cut -f2)
+    target=$(printf '%s' "$sel" | head -1 | cut -f1)
     [[ -z "$target" || "$target" == "-" ]] && exit 0
     tmux switch-client -t "$target" 2>/dev/null || true
     tmux select-window -t "$target" 2>/dev/null || true
     tmux select-pane -t "$target" 2>/dev/null || true
     ;;
   reload)
-    # エージェント通知サブシステムを最新化:
-    #   watcher を単一インスタンスに再起動 + 即時 hang-scan(残留/シェル復帰の GC・ハング検出)
-    # ※ テーマ/キーバインド等 tmux 設定の再読込は別途 prefix+r
     reload_dir="$(dirname "$SELF")"
     pkill -f tmux-agent-hang-watch.sh 2>/dev/null || true
-    # 旧インスタンスの終了を最大3s待つ(多重起動防止)
     for _ in 1 2 3 4 5 6; do
       ps axo command 2>/dev/null | grep 'tmux-agent-hang-watch.sh' | grep -v grep | grep -q '/bin/bash' || break
       sleep 0.5
