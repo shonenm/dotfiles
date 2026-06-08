@@ -21,11 +21,17 @@ if [[ -f "$LOCK_FILE" ]] && kill -0 "$(cat "$LOCK_FILE" 2>/dev/null)" 2>/dev/nul
   exit 0
 fi
 echo $$ > "$LOCK_FILE"
-trap 'rm -f "$LOCK_FILE"' EXIT INT TERM
+# INT/TERM は cleanup 後に必ず exit する。exit しないと TERM を握り潰してループ継続し、
+# pkill で死なず多重起動の原因になる。
+cleanup() { rm -f "$LOCK_FILE"; }
+trap cleanup EXIT
+trap 'cleanup; exit 0' INT TERM
 
 while true; do
   # tmux サーバが消えたら終了
   tmux info &>/dev/null || exit 0
   "$SCRIPT_DIR/tmux-claude-pane.sh" hang-scan 2>/dev/null || true
-  sleep "$INTERVAL"
+  # sleep を背景+wait にすることで INT/TERM を sleep 中でも即座に trap できる
+  # (前景 sleep だと bash が trap を sleep 終了まで保留し、pkill が最大 INTERVAL 遅延する)
+  sleep "$INTERVAL" & wait $! || true
 done
