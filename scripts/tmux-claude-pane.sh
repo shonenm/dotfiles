@@ -131,7 +131,8 @@ case "${1:-}" in
     # 出力が動いていれば生存とみなし heartbeat をリセット(長時間 Bash の誤検知防止)。
     now=$(date +%s)
     changed=0
-    while IFS=$'\t' read -r pid status hb prevhash; do
+    US=$'\x1f'  # 非空白フィールド区切り(タブは IFS 空白で空フィールドが coalesce する)
+    while IFS="$US" read -r pid status hb prevhash; do
       [[ "$status" == "running" ]] || continue
       [[ -n "$hb" ]] || continue
       (( now - hb > HANG_THRESHOLD )) || continue
@@ -146,7 +147,7 @@ case "${1:-}" in
       # 出力も停止 → hang
       apply_status "$pid" hang
       changed=1
-    done < <(tmux list-panes -a -F "#{pane_id}$(printf '\t')#{@agent_status}$(printf '\t')#{@agent_heartbeat}$(printf '\t')#{@agent_outhash}")
+    done < <(tmux list-panes -a -F "#{pane_id}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{@agent_outhash}")
 
     [[ $changed -eq 1 ]] && tmux refresh-client -S 2>/dev/null || true
     ;;

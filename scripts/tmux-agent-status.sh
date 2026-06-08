@@ -12,12 +12,16 @@
 # 内部行フォーマット(タブ区切り): rank \t jump_target \t window_loc \t 表示文字列
 #   jump_target : local=pane_id / remote=session:window
 #   window_loc  : session:window (local 行とリモート行の重複排除キー)
+#
+# 注: tmux/jq の多フィールド読み取りは US(\x1f)区切り。タブは IFS 空白扱いで
+#     空フィールドが coalesce されフィールドずれを起こすため使わない。
 
 set -euo pipefail
 
 [[ -z "${TMUX:-}" ]] && exit 0
 
 STATUS_DIR="${AGENT_STATUS_DIR:-/tmp/claude/status}"
+US=$'\x1f'  # Unit Separator (非空白フィールド区切り)
 
 # 状態 → 表示順位(小さいほど緊急)
 status_rank() {
@@ -62,22 +66,22 @@ is_stopped() {
 build_local_rows() {
   local now
   now=$(date +%s)
-  while IFS=$'\t' read -r pid sess win pane status hb path host; do
+  while IFS="$US" read -r pid sess win pane status hb path host; do
     is_stopped "$status" || continue
 
     local rank icon project elapsed loc hostlabel
     rank=$(status_rank "$status")
     icon=$(status_icon "$status")
-    project=$(basename "${path:-?}")
+    [[ -n "$path" ]] && project=$(basename "$path") || project="?"
     loc="${sess}:${win}"
-    [[ -n "$hb" ]] && elapsed=$(humanize "$(( now - hb ))") || elapsed="-"
+    if [[ "$hb" =~ ^[0-9]+$ ]]; then elapsed=$(humanize "$(( now - hb ))"); else elapsed="-"; fi
     hostlabel="local"
     [[ -n "$host" ]] && hostlabel="$host"
 
     printf '%s\t%s\t%s\t%s %-10s %-7s %-18s %-12s %s\n' \
       "$rank" "$pid" "$loc" "$icon" "$status" "$hostlabel" "$project" "${loc}.${pane}" "$elapsed"
   done < <(tmux list-panes -a -F \
-    "#{pane_id}$(printf '\t')#{session_name}$(printf '\t')#{window_index}$(printf '\t')#{pane_index}$(printf '\t')#{@agent_status}$(printf '\t')#{@agent_heartbeat}$(printf '\t')#{pane_current_path}$(printf '\t')#{@agent_host}")
+    "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{pane_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{pane_current_path}${US}#{@agent_host}")
 }
 
 # リモート/コンテナ(file store)行を生成。seen_windows に含まれる window は除外(local 優先)
@@ -89,15 +93,14 @@ build_file_rows() {
   local now ws_seen=""
   now=$(date +%s)
 
-  # updated 降順で走査し、workspace ごとに最新のみ採用
   local f rows
   rows=""
   for f in "$STATUS_DIR"/*.json; do
     [[ -f "$f" ]] || continue
-    rows+=$(jq -r '[(.updated // .timestamp // 0), (.status // ""), (.project // ""), (.workspace // ""), (.tmux_session // ""), (.tmux_window_index // .tmux_window // "")] | @tsv' "$f" 2>/dev/null)$'\n'
+    rows+=$(jq -r --arg us "$US" '[(.updated // .timestamp // 0), (.status // ""), (.project // ""), (.workspace // ""), (.tmux_session // ""), (.tmux_window_index // .tmux_window // "")] | map(tostring) | join($us)' "$f" 2>/dev/null)$'\n'
   done
 
-  printf '%s' "$rows" | sort -rn -t"$(printf '\t')" -k1,1 | while IFS=$'\t' read -r updated status project ws tsess twin; do
+  printf '%s' "$rows" | sort -rn -t"$US" -k1,1 | while IFS="$US" read -r updated status project ws tsess twin; do
     [[ -z "$status" ]] && continue
     is_stopped "$status" || continue
 
@@ -122,7 +125,7 @@ build_file_rows() {
     local rank icon elapsed
     rank=$(status_rank "$status")
     icon=$(status_icon "$status")
-    if [[ -n "$updated" && "$updated" != "0" ]]; then elapsed=$(humanize "$(( now - updated ))"); else elapsed="-"; fi
+    if [[ "$updated" =~ ^[0-9]+$ && "$updated" != "0" ]]; then elapsed=$(humanize "$(( now - updated ))"); else elapsed="-"; fi
 
     printf '%s\t%s\t%s\t%s %-10s %-7s %-18s %-12s %s\n' \
       "$rank" "$jt" "$loc" "$icon" "$status" "$host" "$proj" "$disp_loc" "$elapsed"
@@ -139,7 +142,7 @@ build_rows() {
 
 jump_to() {
   local target="$1"
-  [[ -z "$target" ]] && return 0
+  [[ -z "$target" || "$target" == "-" ]] && return 0
   tmux switch-client -t "$target" 2>/dev/null || true
   tmux select-window -t "$target" 2>/dev/null || true
   tmux select-pane -t "$target" 2>/dev/null || true
