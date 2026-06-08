@@ -131,6 +131,9 @@ render_preview() {
   fi
 }
 
+# source された場合(サイドバー等がヘルパー再利用)はディスパッチしない
+[[ "${BASH_SOURCE[0]}" != "${0}" ]] && return 0
+
 case "${1:-popup}" in
   list)
     build_rows | while IFS=$'\t' read -r _r _jt _wl _st l1 l2; do
