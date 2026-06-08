@@ -8,3 +8,6 @@ set-hook -g session-window-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
 
 # セッション切り替え時も同様
 set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude-focus.sh >/dev/null 2>&1 || true"'
+
+# ハング検知ウォッチャを起動(単一インスタンス保証。設定再読込でも多重起動しない)
+run-shell -b "~/dotfiles/scripts/tmux-agent-hang-watch.sh >/dev/null 2>&1 || true"
