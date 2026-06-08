@@ -41,6 +41,14 @@ status_icon() {
   esac
 }
 
+# ペーンの前景コマンドがシェルか(=エージェント終了でプロンプトに戻った)
+is_shell() {
+  case "${1#-}" in
+    zsh|bash|sh|fish|dash|ksh|tcsh|nu|xonsh|elvish) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # 指定ペーンに状態+アイコンを適用
 apply_status() {
   local pane="$1" status="$2" icon
@@ -132,7 +140,15 @@ case "${1:-}" in
     now=$(date +%s)
     changed=0
     US=$'\x1f'  # 非空白フィールド区切り(タブは IFS 空白で空フィールドが coalesce する)
-    while IFS="$US" read -r pid status hb prevhash; do
+    while IFS="$US" read -r pid status cmd hb prevhash; do
+      [[ -n "$status" ]] || continue
+      # エージェント終了の検出: 状態が残っているが前景がシェル(C-c 等でプロンプトに復帰)
+      # → ペーンは生きているので pane option をクリアし、残留表示を消す
+      if is_shell "$cmd"; then
+        clear_pane "$pid"
+        changed=1
+        continue
+      fi
       [[ "$status" == "running" ]] || continue
       [[ -n "$hb" ]] || continue
       (( now - hb > HANG_THRESHOLD )) || continue
@@ -147,7 +163,7 @@ case "${1:-}" in
       # 出力も停止 → hang
       apply_status "$pid" hang
       changed=1
-    done < <(tmux list-panes -a -F "#{pane_id}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{@agent_outhash}")
+    done < <(tmux list-panes -a -F "#{pane_id}${US}#{@agent_status}${US}#{pane_current_command}${US}#{@agent_heartbeat}${US}#{@agent_outhash}")
 
     [[ $changed -eq 1 ]] && tmux refresh-client -S 2>/dev/null || true
     ;;
