@@ -1,0 +1,86 @@
+{
+  // pi-permission-system global policy
+  // read / grep / find などの調査系は allow、write / edit / bash は ask
+
+  "defaultPolicy": {
+    "tools": "ask",
+    "bash": "ask",
+    "mcp": "ask",
+    "skills": "ask",
+    "special": "ask"
+  },
+
+  "tools": {
+    // 調査系: 自動許可
+    "read": "allow",
+    "grep": "allow",
+    "find": "allow",
+    "ls": "allow",
+    "glob": "allow",
+    "memory_read": "allow",
+    "memory_search": "allow",
+    "scratchpad": "allow",
+    "web_cache_lookup": "allow",
+    "web_citation_list": "allow",
+    "bash": "allow",
+    // 操作系: 確認
+    "write": "ask",
+    "edit": "ask",
+    // web_search / web_fetch: 許可（安全）
+    "web_search": "allow",
+    "web_fetch": "allow",
+    "web_cache_write": "allow",
+    "web_citation_add": "allow",
+    // MCP ツール: 許可（別途 MCP セクションで制御）
+    "mcp": "allow",
+    // その他ツール: 許可
+    "*": "allow"
+  },
+
+  "bash": {
+    // デストラクティブなコマンドは確認
+    "rm *": "ask",
+    "rmdir *": "ask",
+    "rm -rf *": "ask",
+    "rm -r *": "ask",
+    "mv *": "ask",
+    "cp *": "ask",
+    "mkdir *": "allow",
+    "touch *": "allow",
+    "chmod *": "ask",
+    "chown *": "ask",
+    "sudo *": "ask",
+    "kill *": "ask",
+    "pkill *": "ask",
+    "brew install *": "ask",
+    "brew uninstall *": "ask",
+    "npm install *": "ask",
+    "npm uninstall *": "ask",
+    "pnpm install *": "ask",
+    "pnpm add *": "ask",
+    "pip install *": "ask",
+    "pip uninstall *": "ask",
+    "git push *": "ask",
+    "git commit *": "allow",
+    "git add *": "allow",
+    "git checkout *": "ask",
+    "git merge *": "ask",
+    "git rebase *": "ask",
+    "git stash *": "allow",
+    // 他は許可
+    "*": "allow"
+  },
+
+  "mcp": {
+    // MCP ツールは基本許可
+    "*": "allow"
+  },
+
+  "skills": {
+    "*": "allow"
+  },
+
+  "special": {
+    "external_directory": "ask"
+  }
+}

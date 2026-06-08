@@ -4,6 +4,36 @@
     "command": "__HOME__/.commandcode/statusline-command.sh"
   },
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh start"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
@@ -20,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set permission"
+            "command": "__HOME__/dotfiles/scripts/ai-notify.sh cmd permission"
           }
         ]
       },
@@ -29,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle"
+            "command": "__HOME__/dotfiles/scripts/ai-notify.sh cmd idle"
           }
         ]
       }

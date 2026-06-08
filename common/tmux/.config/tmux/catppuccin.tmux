@@ -27,7 +27,7 @@ set -g pane-border-style "fg=#45475a,bg=default"
 # off: subtle, reload: active, thumbs: info, copy: error, sync: success, prefix: warning, zoom: inactive, default: primary
 set -g pane-active-border-style '#{?#{==:#{client_key_table},off},fg=#6c7086 bg=#1e1e2e,#{?#{==:#{@reload_mode},1},fg=#fab387 bg=#1e1e2e,#{?#{==:#{window_name},[thumbs]},fg=#94e2d5 bg=#1e1e2e,#{?pane_in_mode,fg=#f38ba8 bg=#1e1e2e,#{?pane_synchronized,fg=#a6e3a1 bg=#1e1e2e,#{?client_prefix,fg=#f9e2af bg=#1e1e2e,#{?window_zoomed_flag,fg=#cba6f7 bg=#1e1e2e,fg=#89b4fa bg=#1e1e2e}}}}}}}'
 set -g pane-border-status top
-set -g pane-border-format " #P: #{?pane_title,#{pane_title},#{pane_current_command}} "
+set -g pane-border-format " #{?@agent_icon,#{?#{||:#{==:#{@agent_status},permission},#{||:#{==:#{@agent_status},hang},#{==:#{@agent_status},error}}},#[fg=colour203]#[bold],#[fg=colour214]#[bold]}#{@agent_icon}#[default] ,}#P: #{?pane_title,#{pane_title},#{pane_current_command}} "
 set -g pane-border-indicators both
 
 # --- Window Style ---

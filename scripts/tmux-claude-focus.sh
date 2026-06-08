@@ -56,8 +56,8 @@ has_notification() {
 
   # 1. pane option チェック（高速）
   local pane_count
-  pane_count=$(tmux list-panes -t "${session}:${window_index}" -F '#{@claude_status}' 2>/dev/null \
-    | grep -cE '^(idle|permission|complete)$' || true)
+  pane_count=$(tmux list-panes -t "${session}:${window_index}" -F '#{@agent_status}' 2>/dev/null \
+    | grep -cE '^(idle|permission|complete|hang|error)$' || true)
   [[ $pane_count -gt 0 ]] && return 0
 
   # 2. ファイルベース フォールバック
@@ -72,7 +72,7 @@ has_notification() {
 
     if [[ "$file_session" == "$session" && "$file_window" == "$window_index" ]]; then
       case "$file_status" in
-        idle|permission|complete)
+        idle|permission|complete|hang|error)
           return 0
           ;;
       esac

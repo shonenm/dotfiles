@@ -45,6 +45,30 @@
           {
             "type": "command",
             "command": "__HOME__/dotfiles/common/claude/.claude/hooks/claude-session-title.sh"
+          },
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh start"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat"
           }
         ]
       }

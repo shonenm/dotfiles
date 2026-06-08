@@ -57,8 +57,8 @@ show_window_badge() {
 
   # 1. tmux pane option チェック (純ローカル、Beacon不要)
   local pane_count
-  pane_count=$(tmux list-panes -t "${session_name}:${window_index}" -F '#{@claude_status}' 2>/dev/null \
-    | grep -cE '^(idle|permission|complete)$' || true)
+  pane_count=$(tmux list-panes -t "${session_name}:${window_index}" -F '#{@agent_status}' 2>/dev/null \
+    | grep -cE '^(idle|permission|complete|hang|error)$' || true)
   count=$pane_count
 
   # 2. ファイルベースのフォールバック (リモート/Beacon連携用、pane通知がなければ参照)
@@ -76,7 +76,7 @@ show_window_badge() {
 
       if [[ "$file_session" == "$session_name" && "$file_window" == "$window_index" ]]; then
         case "$file_status" in
-          idle|permission|complete)
+          idle|permission|complete|hang|error)
             ((count++))
             ;;
         esac

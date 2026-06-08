@@ -148,7 +148,7 @@ MCP サーバーへの安全な接続レイヤー。
 | Memory Persistence | ✅ | — | — | — |
 | Agent Delegation | ✅ | — | — | — |
 | Global Rules | — | ✅ | — | ✅ |
-| Completion Notify | — | ✅ | ✅ | ✅ |
+| Stop Notify (詳細は [agent-stop-notification.md](./agent-stop-notification.md)) | — | ✅ | △ | △ |
 | CLI Statusline | — | ✅ | — | ✅ |
 | tmux Usage Display | — | ✅ | ✅ | ✅ |
 

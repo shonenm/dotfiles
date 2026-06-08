@@ -211,7 +211,7 @@ set -g pane-border-style "fg=${BORDER_INACTIVE},bg=default"
 # off: subtle, reload: active, thumbs: info, copy: error, sync: success, prefix: warning, zoom: inactive, default: primary
 set -g pane-active-border-style '#{?#{==:#{client_key_table},off},fg=${FG_SUBTLE} bg=${BG_DARK},#{?#{==:#{@reload_mode},1},fg=${COLOR_RELOAD} bg=${BG_DARK},#{?#{==:#{window_name},[thumbs]},fg=${COLOR_THUMBS} bg=${BG_DARK},#{?pane_in_mode,fg=${COLOR_ERROR} bg=${BG_DARK},#{?pane_synchronized,fg=${COLOR_SUCCESS} bg=${BG_DARK},#{?client_prefix,fg=${COLOR_WARNING} bg=${BG_DARK},#{?window_zoomed_flag,fg=${COLOR_ZOOM} bg=${BG_DARK},fg=${ACCENT_PRIMARY} bg=${BG_DARK}}}}}}}}'
 set -g pane-border-status top
-set -g pane-border-format " #P: #{?pane_title,#{pane_title},#{pane_current_command}} "
+set -g pane-border-format " #{?@agent_icon,#{?#{||:#{==:#{@agent_status},permission},#{||:#{==:#{@agent_status},hang},#{==:#{@agent_status},error}}},#[fg=colour203]#[bold],#[fg=colour214]#[bold]}#{@agent_icon}#[default] ,}#P: #{?pane_title,#{pane_title},#{pane_current_command}} "
 set -g pane-border-indicators both
 
 # --- Window Style ---
