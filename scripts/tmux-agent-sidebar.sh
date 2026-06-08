@@ -28,7 +28,9 @@ trunc_w() {
   local s="$1" max="$2" out="" w=0 ch cw i
   for (( i=0; i<${#s}; i++ )); do
     ch="${s:i:1}"
-    if [[ "$ch" =~ [[:ascii:]] ]]; then cw=1; else cw=2; fi
+    # ASCII 印字可能(0x20-0x7e)=1幅、それ以外(全角等)=2幅と近似。
+    # [[:ascii:]] は macOS の正規表現が非対応のため case の範囲で判定する。
+    case "$ch" in [\ -~]) cw=1 ;; *) cw=2 ;; esac
     (( w + cw > max )) && { out+="…"; break; }
     out+="$ch"; (( w += cw ))
   done
@@ -85,7 +87,7 @@ case "${1:-toggle}" in
       tmux kill-pane -t "$existing" 2>/dev/null || true
       tmux set-option -gu @agent_sidebar_pane 2>/dev/null || true
     else
-      pane=$(tmux split-window -h -b -l "$WIDTH" -P -F '#{pane_id}' \
+      pane=$(tmux split-window -fh -b -l "$WIDTH" -P -F '#{pane_id}' \
         "bash '$SCRIPT_DIR/tmux-agent-sidebar.sh' run")
       tmux set-option -p -t "$pane" @agent_status "" 2>/dev/null || true  # サイドバー自身は対象外
       tmux set-option -g @agent_sidebar_pane "$pane" 2>/dev/null || true
