@@ -259,10 +259,23 @@
 
 注: 全て dotfiles 内の編集のみ。反映には settings 再生成（install.sh 相当）+ tmux 設定リロードが必要。
 
-### 11.2 既知の制約・残課題
+### 11.2 ツール別の配線状況・制約
 
-- pi 未配線: pi は extensions ベースで hooks ブロックを持たない。pane option 連携には pi extension が必要（別途）。
-- cursor/codex のハング検知なし: 単一フックのため heartbeat を送れず、`complete` 等のみ。`hang` 対象外。
+全ツールが pane option (@agent_status) を立て、横断ビュー/サイドバー/ペーンアイコンに出る。
+codex/cursor/pi は pane_current_command が全て `node` でコマンド識別不可のため、コマンド/title
+ヒューリスティック検出は採らず、各ツールのネイティブ機構で push する方式に統一した。
+
+| ツール | 配線 | start/running | heartbeat(hang検知) | 停止表示 |
+|--------|------|:--:|:--:|------|
+| Claude / Command Code | hooks(settings.json) | ◯ | ◯ | complete/idle/permission |
+| pi | extension(`agent-notify.ts`) | ◯(session_start) | ◯(tool_call) | turn_end→idle |
+| cursor | hooks(`cursor-hooks.json`) | ◯(beforeSubmitPrompt) | ◯(shell/edit) | stop→idle |
+| codex | notify(単一・turn完了のみ) | × | × | turn完了→idle |
+
+- codex の制約: notify は turn 完了時しか発火しない。実行中の running 表示・ハング検知は不可
+  （idle のみ）。codex 側に他フックが無いための根本制約。
+- 反映には各ツールの設定再生成(install.sh 相当)+ 当該エージェントの再起動が必要
+  （hooks/extension はプロセス起動時に読まれるため）。
 - リモートの `error` 欠落: リモート/コンテナ経路は `ai-notify` の SketchyBar 状態（idle/permission/complete/none）でファイルへ書くため `error` が `none` に丸められ横断ビューに出ない。修正は `ai-notify` リモート分岐の状態マッピング要改修。
 - SketchyBar 派生化(4b)保留: 現行ファイルベース経路で動作。pane option 集約への一本化は未実施。
 - クリア契機（§9）: フォーカス/時間減衰クリアの是非は未確定。現状は `complete` の10秒自動消去のみ既存挙動として維持。
