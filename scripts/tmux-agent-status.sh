@@ -44,11 +44,13 @@ trunc() { local s="$1" n="$2"; s="${s//$'\t'/ }"; if (( ${#s} > n )); then print
 # ローカル(pane option)行 → sortable 6 フィールド
 build_local_rows() {
   local now; now=$(date +%s)
-  while IFS="$US" read -r pid sess win status hb path cmd title; do
+  while IFS="$US" read -r pid sess win status hb path cmd title stashed; do
     is_agent "$status" || continue          # 停止状態 + running を対象
     is_shell "$cmd" && continue             # シェル復帰(終了済み)は除外
     local rank icon col task branch elapsed loc tool line1 line2
-    rank=$(status_rank "$status"); icon=$(status_icon "$status"); col=$(status_color "$status")
+    # stash 済みは status に関わらず stash セクション(rank 6: stopped と running の間)へ
+    if [[ -n "$stashed" ]]; then rank=6; else rank=$(status_rank "$status"); fi
+    icon=$(status_icon "$status"); col=$(status_color "$status")
     task=$(trunc "${title:-$(basename "${path:-?}")}" 52)
     branch=$(branch_of "$path"); tool=$(tool_of "$cmd"); loc="${sess}:${win}"
     if [[ "$hb" =~ ^[0-9]+$ ]]; then elapsed=$(humanize "$(( now - hb ))"); else elapsed="-"; fi
@@ -56,7 +58,7 @@ build_local_rows() {
     line2=$(printf '   %s%s · %s · %s · %s · %s%s' "$C_DIM" "$sess" "$branch" "$loc" "$tool" "${elapsed}前" "$C_RST")
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$rank" "$pid" "$loc" "$status" "$line1" "$line2"
   done < <(tmux list-panes -a -F \
-    "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}")
+    "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}${US}#{@agent_stashed}")
 }
 
 # リモート/コンテナ(file store)行 → sortable 6 フィールド。seen_windows の window は除外
@@ -99,13 +101,19 @@ build_rows() {
 # running は最下部の別セクション。区切り見出しは独立項目にせず、最初の running 項目の
 # 表示先頭に前置する(独立した選択不可ダミー項目を作らない=見出しにカーソルが乗らない)。
 to_fzf_records() {
-  local seen_running=0
-  while IFS=$'\t' read -r _rank jt _wl status line1 line2; do
-    if [[ "$status" == running && $seen_running -eq 0 ]]; then
-      seen_running=1
-      # 区切りは独立項目(status=divider)。j/k/↑/↓ がこの項目を飛び越える(下記 bind)。
-      printf '%s\t%s\t%s\n%s\0' "-" "divider" \
-        "$(printf '%s─── 実行中 (running) ───%s' "$C_DIM" "$C_RST")" " "
+  local prev="" sec
+  while IFS=$'\t' read -r rank jt _wl status line1 line2; do
+    # rank で区分: 0-4=停止(指示待ち) / 6=stash(あとで見る) / 8+=running
+    if [[ "$rank" == 6 ]]; then sec=stash
+    elif (( rank >= 8 )); then sec=running
+    else sec=stopped; fi
+    # セクション境界に独立した区切り項目(status=divider)を挿入。j/k 等が飛び越える(bind)。
+    if [[ "$sec" != "$prev" ]]; then
+      case "$sec" in
+        stash)   printf '%s\t%s\t%s\n%s\0' "-" "divider" "$(printf '%s─── あとで見る (stash) ───%s' "$C_DIM" "$C_RST")" " " ;;
+        running) printf '%s\t%s\t%s\n%s\0' "-" "divider" "$(printf '%s─── 実行中 (running) ───%s' "$C_DIM" "$C_RST")" " " ;;
+      esac
+      prev="$sec"
     fi
     printf '%s\t%s\t%s\n%s\0' "$jt" "$status" "$line1" "$line2"
   done
@@ -147,10 +155,12 @@ render_preview() {
 
 case "${1:-popup}" in
   list)
-    build_rows | { seen_running=0
+    build_rows | { prev=""
       while IFS=$'\t' read -r _r _jt _wl _st l1 l2; do
-        if [[ "$_st" == running && $seen_running -eq 0 ]]; then
-          seen_running=1; printf '\n─── 実行中 (running) ───\n'
+        if [[ "$_r" == 6 ]]; then sec=stash; elif (( _r >= 8 )); then sec=running; else sec=stopped; fi
+        if [[ "$sec" != "$prev" ]]; then
+          case "$sec" in stash) printf '\n─── あとで見る (stash) ───\n';; running) printf '\n─── 実行中 (running) ───\n';; esac
+          prev="$sec"
         fi
         printf '%s\n%s\n' "$l1" "$l2"
       done; } | sed $'s/\e\\[[0-9;]*m//g'
@@ -163,6 +173,15 @@ case "${1:-popup}" in
     # popup 内 ^R から reload で呼ばれる。
     bash "$(dirname "$SELF")/tmux-claude-pane.sh" hang-scan 2>/dev/null || true
     build_rows | to_fzf_records
+    ;;
+  stash-toggle)
+    # pane の @agent_stashed をトグル(ローカル pane のみ。リモート行は no-op)。
+    p="${2:-}"; [[ "$p" == %* ]] || exit 0
+    if [[ -n "$(tmux show-options -p -t "$p" -qv @agent_stashed 2>/dev/null)" ]]; then
+      tmux set-option -p -t "$p" -u @agent_stashed 2>/dev/null || true
+    else
+      tmux set-option -p -t "$p" @agent_stashed 1 2>/dev/null || true
+    fi
     ;;
   popup)
     rows=$(build_rows)
@@ -177,7 +196,7 @@ case "${1:-popup}" in
             --preview "bash '$SELF' preview {1} {2}" \
             --preview-window 'right,58%,border-left,wrap' \
             --prompt 'agent> ' \
-            --header 'j/k:移動  C-u/d:ページ  g/G:上下端  r:再走査  /:検索  Enter:ジャンプ' \
+            --header 'j/k:移動  g/G:端  r:再走査  s:stash  /:検索  Enter:ジャンプ  q:閉じる' \
             --bind 'g:first,G:last' \
             --bind 'j:down+transform:[ {2} = divider ] && echo down' \
             --bind 'k:up+transform:[ {2} = divider ] && echo up' \
@@ -187,10 +206,12 @@ case "${1:-popup}" in
             --bind 'ctrl-u:half-page-up+transform:[ {2} = divider ] && echo up' \
             --bind 'load:transform:[ {2} = divider ] && echo down' \
             --bind "r:reload(bash '$SELF' rescan)" \
+            --bind 'q:abort' \
+            --bind "s:execute-silent(bash '$SELF' stash-toggle {1})+reload(bash '$SELF' rescan)" \
             --bind 'change:clear-query' \
-            --bind '/:unbind(change)+unbind(j,k,g,G,r)+change-prompt(検索> )' \
-            --bind 'enter:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "rebind(j,k,g,G,r)+change-prompt(agent> )" || echo accept' \
-            --bind 'esc:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "rebind(change,j,k,g,G,r)+clear-query+change-prompt(agent> )" || echo abort' \
+            --bind '/:unbind(change)+unbind(j,k,g,G,r,q,s)+change-prompt(検索> )' \
+            --bind 'enter:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "rebind(j,k,g,G,r,q,s)+change-prompt(agent> )" || echo accept' \
+            --bind 'esc:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "rebind(change,j,k,g,G,r,q,s)+clear-query+change-prompt(agent> )" || echo abort' \
             --color 'pointer:203,marker:214') || exit 0
     [[ -z "$sel" ]] && exit 0
     target=$(printf '%s' "$sel" | head -1 | cut -f1)
