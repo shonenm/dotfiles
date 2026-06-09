@@ -156,6 +156,12 @@ case "${1:-popup}" in
   preview)
     render_preview "${2:-}" "${3:-}"
     ;;
+  rescan)
+    # 全再走査(hang-scan で hang 検出・シェル復帰 GC を更新)してから最新の fzf レコードを出力。
+    # popup 内 ^R から reload で呼ばれる。
+    bash "$(dirname "$SELF")/tmux-claude-pane.sh" hang-scan 2>/dev/null || true
+    build_rows | to_fzf_records
+    ;;
   popup)
     rows=$(build_rows)
     if [[ -z "$rows" ]]; then tmux display-message "停止中のエージェントなし"; exit 0; fi
@@ -164,7 +170,8 @@ case "${1:-popup}" in
             --preview "bash '$SELF' preview {1} {2}" \
             --preview-window 'right,58%,border-left,wrap' \
             --prompt 'agent> ' \
-            --header '停止中エージェント: ↑↓ で確認, Enter でジャンプ' \
+            --header '↑↓:確認  Enter:ジャンプ  ^R:再走査' \
+            --bind "ctrl-r:reload(bash '$SELF' rescan)" \
             --color 'pointer:203,marker:214') || exit 0
     [[ -z "$sel" ]] && exit 0
     target=$(printf '%s' "$sel" | head -1 | cut -f1)
@@ -187,5 +194,5 @@ case "${1:-popup}" in
     tmux display-message "agent-notify reloaded (watcher 再起動 + 状態スキャン)"
     ;;
   *)
-    echo "Usage: $0 {list|popup|reload|preview <target> <status>}" >&2; exit 1 ;;
+    echo "Usage: $0 {list|popup|reload|rescan|preview <target> <status>}" >&2; exit 1 ;;
 esac
