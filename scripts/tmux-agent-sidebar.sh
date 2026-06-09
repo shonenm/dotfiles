@@ -148,15 +148,22 @@ case "${1:-toggle}" in
     done
     ;;
   toggle)
-    existing=$(tmux show-options -gqv @agent_sidebar_pane 2>/dev/null || echo "")
-    if [[ -n "$existing" ]] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$existing"; then
+    # サイドバーは window 内の pane。追跡は window 単位にし、別 window/session の
+    # サイドバーを誤って kill しない(グローバル追跡だとセッション移動で閉じてしまう)。
+    # prefix+b を押した pane($TMUX_PANE)の window に -t で固定して操作する。
+    src="${TMUX_PANE:-$(tmux display-message -p '#{pane_id}' 2>/dev/null)}"
+    win=$(tmux display-message -t "$src" -p '#{window_id}' 2>/dev/null)
+    [[ -z "$win" ]] && exit 0
+    existing=$(tmux show-options -w -t "$win" -qv @agent_sidebar_pane 2>/dev/null || echo "")
+    if [[ -n "$existing" ]] && tmux list-panes -t "$win" -F '#{pane_id}' 2>/dev/null | grep -qxF "$existing"; then
       tmux kill-pane -t "$existing" 2>/dev/null || true
-      tmux set-option -gu @agent_sidebar_pane 2>/dev/null || true
+      tmux set-option -w -t "$win" -u @agent_sidebar_pane 2>/dev/null || true
     else
-      pane=$(tmux split-window -fh -b -l "$WIDTH" -P -F '#{pane_id}' \
+      pane=$(tmux split-window -t "$src" -fh -b -l "$WIDTH" -P -F '#{pane_id}' \
         "bash '$SCRIPT_DIR/tmux-agent-sidebar.sh' run")
       tmux set-option -p -t "$pane" @agent_status "" 2>/dev/null || true
-      tmux set-option -g @agent_sidebar_pane "$pane" 2>/dev/null || true
+      tmux set-option -w -t "$win" @agent_sidebar_pane "$pane" 2>/dev/null || true
+      tmux select-pane -t "$src" 2>/dev/null || true   # 作業 pane にフォーカスを残す
     fi
     ;;
   once)
