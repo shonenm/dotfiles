@@ -165,13 +165,17 @@ case "${1:-popup}" in
   popup)
     rows=$(build_rows)
     if [[ -z "$rows" ]]; then tmux display-message "停止中のエージェントなし"; exit 0; fi
+    # vim 風操作: 既定はナビ(j/k 移動, C-u/d ページ, g/G 端, r 再走査, --cycle で端循環)。
+    # 検索は / を押した時のみ(nav 文字を unbind して入力可能化)。↑↓ は常にナビ可能。
     sel=$(printf '%s\n' "$rows" | to_fzf_records \
-      | fzf --read0 --ansi --delimiter=$'\t' --with-nth=3 --no-sort --reverse --height=100% --gap \
+      | fzf --read0 --ansi --delimiter=$'\t' --with-nth=3 --no-sort --reverse --height=100% --gap --cycle \
             --preview "bash '$SELF' preview {1} {2}" \
             --preview-window 'right,58%,border-left,wrap' \
             --prompt 'agent> ' \
-            --header '↑↓:確認  Enter:ジャンプ  ^R:再走査' \
-            --bind "ctrl-r:reload(bash '$SELF' rescan)" \
+            --header 'j/k:移動  C-u/d:ページ  g/G:上下端  r:再走査  /:検索  Enter:ジャンプ' \
+            --bind 'j:down,k:up,g:first,G:last,ctrl-d:half-page-down,ctrl-u:half-page-up' \
+            --bind "r:reload(bash '$SELF' rescan)" \
+            --bind '/:unbind(j,k,g,G,r)+change-prompt(検索> )' \
             --color 'pointer:203,marker:214') || exit 0
     [[ -z "$sel" ]] && exit 0
     target=$(printf '%s' "$sel" | head -1 | cut -f1)
