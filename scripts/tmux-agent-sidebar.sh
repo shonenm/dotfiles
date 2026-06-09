@@ -1,36 +1,43 @@
 #!/bin/bash
-# AI Agent サイドバー (常設・自動更新)
-# 全エージェント(running 含む)を狭い tmux pane に2行で常時表示する。opensessions の代替。
-# 状態源は pane option(@agent_status)。ヘルパーは tmux-agent-status.sh を source して再利用。
+# AI Agent サイドバー (常設・アンビエント表示)
+# 「セッションごとに何体の AI がいて各々どの状態か」を一目で見るための密な表示。
+# AI 1体 = 色付きアイコン1個(色で状態)。詳細/ジャンプは prefix+a の横断ビューに任せる。
+# 状態源は pane option(@agent_status) + リモート/コンテナの file store。
 # 仕様: docs/specs/agent-stop-notification.md §5.3
 #
+# 表示例:
+#   AGENTS 5
+#   ──────────────
+#   main      󰌆 󰔟 ●
+#   scratch   ●
+#   ailab     󰔟
+#
 # Usage:
-#   tmux-agent-sidebar.sh run      # サイドバー pane 内で動くループ(自動更新)
+#   tmux-agent-sidebar.sh run      # サイドバー pane 内ループ(自動更新・非フリッカー)
 #   tmux-agent-sidebar.sh toggle   # サイドバー pane を開閉 (prefix+b)
+#   tmux-agent-sidebar.sh once     # 1回描画(デバッグ)
 
 set -uo pipefail
 
 [[ -z "${TMUX:-}" ]] && exit 0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SELF="$SCRIPT_DIR/tmux-agent-sidebar.sh"
 # shellcheck source=/dev/null
-source "$SCRIPT_DIR/tmux-agent-status.sh"   # ヘルパー(status_icon/color, is_shell, branch_of, trunc, humanize)
-set +e +o pipefail   # status.sh の set -e/pipefail を解除(常駐ループを堅牢に)
+source "$SCRIPT_DIR/tmux-agent-status.sh"   # ヘルパー(is_shell, trunc_w 由来の helpers, C_*)
+set +e +o pipefail
 
 REFRESH="${AGENT_SIDEBAR_REFRESH:-3}"
-WIDTH="${AGENT_SIDEBAR_WIDTH:-44}"
+WIDTH="${AGENT_SIDEBAR_WIDTH:-30}"
+STATUS_DIR="${AGENT_STATUS_DIR:-/tmp/claude/status}"
+ESC_K=$'\033[K'   # 行末までクリア(全画面クリアせず=チカチカしない)
 
-# running を含む全エージェントの状態順位(stopped 優先、running は後ろ)
 sb_rank() { case "$1" in permission) echo 0;; hang) echo 1;; error) echo 2;; idle) echo 3;; complete) echo 4;; running) echo 8;; *) echo 9;; esac; }
 
-# 表示幅基準の切り詰め(全角=2幅近似)。狭い pane で折返さないよう文字数でなく桁で切る
+# 表示幅基準の切り詰め(全角=2幅近似)。[[:ascii:]] は macOS 非対応のため case で判定
 trunc_w() {
   local s="$1" max="$2" out="" w=0 ch cw i
   for (( i=0; i<${#s}; i++ )); do
     ch="${s:i:1}"
-    # ASCII 印字可能(0x20-0x7e)=1幅、それ以外(全角等)=2幅と近似。
-    # [[:ascii:]] は macOS の正規表現が非対応のため case の範囲で判定する。
     case "$ch" in [\ -~]) cw=1 ;; *) cw=2 ;; esac
     (( w + cw > max )) && { out+="…"; break; }
     out+="$ch"; (( w += cw ))
@@ -38,81 +45,84 @@ trunc_w() {
   printf '%s' "$out"
 }
 
-# 全エージェント行を生成(sortable): rank \t pane_id \t line1 \t line2
-sb_rows() {
-  local now w; now=$(date +%s); w=$(( WIDTH - 4 ))
-  while IFS=$'\x1f' read -r pid sess win status hb path cmd title; do
-    [[ -z "$status" ]] && continue          # 状態未設定(非エージェント)は除外
-    is_shell "$cmd" && continue             # シェル復帰(終了済み)は除外
-    local rank icon col task branch elapsed loc tool l1 l2
-    rank=$(sb_rank "$status"); icon=$(status_icon "$status")
-    if [[ "$status" == running ]]; then col="$C_DIM"; else col=$(status_color "$status"); fi
-    task=$(trunc_w "${title:-$(basename "${path:-?}")}" "$w")
-    branch=$(branch_of "$path"); tool=$(tool_of "$cmd"); loc="${sess}:${win}"
-    if [[ "$hb" =~ ^[0-9]+$ ]]; then elapsed=$(humanize "$(( now - hb ))"); else elapsed="-"; fi
-    l1=$(printf '%s%s %s%s' "$col" "$icon" "$task" "$C_RST")
-    l2=$(printf '  %s%s · %s · %s · %s前%s' "$C_DIM" "$loc" "$branch" "$tool" "$elapsed" "$C_RST")
-    printf '%s\t%s\t%s\t%s\n' "$rank" "$pid" "$l1" "$l2"
-  done < <(tmux list-panes -a -F \
-    "#{pane_id}$(printf '\x1f')#{session_name}$(printf '\x1f')#{window_index}$(printf '\x1f')#{@agent_status}$(printf '\x1f')#{@agent_heartbeat}$(printf '\x1f')#{pane_current_path}$(printf '\x1f')#{pane_current_command}$(printf '\x1f')#{pane_title}") \
-    | sort -n -t$'\t' -k1,1
+# AI 1体のアイコン(色=状態)。色で状態が分かるのが主、グリフで種別も補助
+sb_glyph() {
+  local c g
+  case "$1" in
+    permission) c=203; g="󰌆" ;;   # 承認待ち(赤)
+    hang)       c=196; g="" ;;   # 無応答(明るい赤)
+    error)      c=160; g="" ;;   # エラー(暗い赤)
+    idle)       c=214; g="󰔟" ;;   # 入力待ち(amber)
+    complete)   c=114; g="" ;;   # 完了(緑)
+    running)    c=39;  g="●" ;;   # 実行中(青)
+    *)          c=240; g="●" ;;
+  esac
+  printf '\033[38;5;%sm%s\033[0m' "$c" "$g"
 }
 
-# fzf 入力(NUL 区切り): pane_id <TAB> line1<LF>line2   (--with-nth=2 で表示部のみ)
-fzf_feed() {
-  sb_rows | while IFS=$'\t' read -r _rank pid l1 l2; do
-    printf '%s\t%s\n%s\0' "$pid" "$l1" "$l2"
+# (session, rank, glyph) を収集: local pane option + file store
+collect_agents() {
+  # local panes
+  while IFS=$'\x1f' read -r sess status cmd; do
+    [[ -z "$status" ]] && continue
+    is_shell "$cmd" && continue
+    printf '%s\t%s\t%s\n' "$sess" "$(sb_rank "$status")" "$(sb_glyph "$status")"
+  done < <(tmux list-panes -a -F "#{session_name}$(printf '\x1f')#{@agent_status}$(printf '\x1f')#{pane_current_command}")
+
+  # file store (リモート/コンテナ)。workspace ごと最新のみ採用
+  [[ -d "$STATUS_DIR" ]] || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  local rows="" f ws_seen=""
+  for f in "$STATUS_DIR"/*.json; do
+    [[ -f "$f" ]] || continue
+    rows+=$(jq -r --arg us $'\x1f' '[(.updated // .timestamp // 0),(.status // ""),(.workspace // ""),(.tmux_session // ""),(.project // "")]|map(tostring)|join($us)' "$f" 2>/dev/null)$'\n'
+  done
+  printf '%s' "$rows" | sort -rn -t$'\x1f' -k1,1 | while IFS=$'\x1f' read -r _u status ws tsess project; do
+    [[ -z "$status" ]] && continue
+    case "$status" in idle|permission|complete|hang|error) ;; *) continue;; esac
+    if [[ -n "$ws" ]]; then case "$ws_seen" in *"|${ws}|"*) continue;; *) ws_seen="${ws_seen}|${ws}|";; esac; fi
+    local key="$tsess"
+    [[ -z "$key" ]] && key="${project%%:*}"   # session 不明なら host/project
+    [[ -z "$key" ]] && key="remote"
+    printf '%s\t%s\t%s\n' "$key" "$(sb_rank "$status")" "$(sb_glyph "$status")"
   done
 }
 
-# 静的描画(デバッグ/フォールバック用)
 render() {
-  printf '\033[H\033[2J'
-  printf '%s AGENTS%s\n%s%s%s\n' "$C_BOLD" "$C_RST" "$C_DIM" "────────────────────" "$C_RST"
-  local rows; rows=$(sb_rows)
-  [[ -z "$rows" ]] && { printf '%s(エージェントなし)%s\n' "$C_DIM" "$C_RST"; return; }
-  printf '%s\n' "$rows" | while IFS=$'\t' read -r _rank _pid l1 l2; do
-    printf '%s\n%s\n\n' "$l1" "$l2"
-  done
+  local rows total cur="" icons="" s _rank glyph
+  rows=$(collect_agents | sort -t$'\t' -k1,1 -k2,2n)
+  total=$(printf '%s' "$rows" | grep -c . 2>/dev/null)
+
+  printf '\033[H'   # ホームへ(全画面クリアしない)
+  printf '%s AGENTS%s %s%s%s%s\n' "$C_BOLD" "$C_RST" "$C_DIM" "$total" "$C_RST" "$ESC_K"
+  printf '%s──────────────────%s%s\n' "$C_DIM" "$C_RST" "$ESC_K"
+  if [[ -z "$rows" ]]; then
+    printf '%s(エージェントなし)%s%s\n' "$C_DIM" "$C_RST" "$ESC_K"
+    printf '\033[J'
+    return
+  fi
+  while IFS=$'\t' read -r s _rank glyph; do
+    [[ -z "$s" ]] && continue
+    if [[ "$s" != "$cur" ]]; then
+      [[ -n "$cur" ]] && printf '%s%-10s%s %s%s\n' "$C_DIM" "$(trunc_w "$cur" 10)" "$C_RST" "$icons" "$ESC_K"
+      cur="$s"; icons="$glyph"
+    else
+      icons="$icons $glyph"
+    fi
+  done <<< "$rows"
+  [[ -n "$cur" ]] && printf '%s%-10s%s %s%s\n' "$C_DIM" "$(trunc_w "$cur" 10)" "$C_RST" "$icons" "$ESC_K"
+  printf '\033[J'   # 残りの古い行を消去
 }
 
 case "${1:-toggle}" in
   run)
-    # サイドバー pane 内で fzf を常駐。選択して Enter でそのエージェントへジャンプ。
-    # 更新は fzf の listen API へ定期 reload(差分再描画なので チカチカしない)。
-    PORTFILE="/tmp/claude/sidebar.port.$$"
-    trap 'rm -f "$PORTFILE" 2>/dev/null; exit 0' INT TERM
-    mkdir -p /tmp/claude
+    trap 'printf "\033[?25h"; exit 0' INT TERM
+    printf '\033[?25l'   # カーソル非表示(ちらつき低減)
     while true; do
-      rm -f "$PORTFILE"
-      ( # 非フリッカー自動更新: fzf 起動後 PORTFILE に書かれたポートへ reload を送る
-        for _ in $(seq 1 60); do [[ -s "$PORTFILE" ]] && break; sleep 0.1; done
-        p=$(cat "$PORTFILE" 2>/dev/null); [[ -z "$p" ]] && exit 0
-        while sleep "$REFRESH"; do
-          curl -s "http://localhost:$p" -d "reload(bash '$SELF' fzf-feed)" >/dev/null 2>&1 || exit 0
-        done
-      ) &
-      ref=$!
-      fzf_feed | fzf --read0 --ansi --delimiter=$'\t' --with-nth=2 \
-        --no-sort --reverse --gap --listen --no-mouse \
-        --header 'AGENTS  ↑↓  Enter:jump  ^R:reload' \
-        --bind "start:execute-silent(echo \$FZF_PORT > '$PORTFILE')" \
-        --bind "ctrl-r:reload(bash '$SELF' fzf-feed)" \
-        --bind "enter:execute-silent(bash '$SELF' jump {1})" \
-        --color 'pointer:203' >/dev/null 2>&1 || true
-      kill "$ref" 2>/dev/null
-      tmux info &>/dev/null || break    # tmux 消滅で終了
-      sleep 0.2                          # Esc 等で抜けたら再起動(常駐維持)
+      tmux info &>/dev/null || { printf '\033[?25h'; exit 0; }
+      render
+      sleep "$REFRESH" & wait $! || true
     done
-    rm -f "$PORTFILE"
-    ;;
-  fzf-feed)
-    fzf_feed ;;
-  jump)
-    t="${2:-}"; [[ -z "$t" || "$t" == "-" ]] && exit 0
-    tmux switch-client -t "$t" 2>/dev/null || true
-    tmux select-window -t "$t" 2>/dev/null || true
-    tmux select-pane -t "$t" 2>/dev/null || true
     ;;
   toggle)
     existing=$(tmux show-options -gqv @agent_sidebar_pane 2>/dev/null || echo "")
@@ -122,13 +132,12 @@ case "${1:-toggle}" in
     else
       pane=$(tmux split-window -fh -b -l "$WIDTH" -P -F '#{pane_id}' \
         "bash '$SCRIPT_DIR/tmux-agent-sidebar.sh' run")
-      tmux set-option -p -t "$pane" @agent_status "" 2>/dev/null || true  # サイドバー自身は対象外
+      tmux set-option -p -t "$pane" @agent_status "" 2>/dev/null || true
       tmux set-option -g @agent_sidebar_pane "$pane" 2>/dev/null || true
-      tmux select-pane -L 2>/dev/null || true
     fi
     ;;
   once)
-    render ;;   # 1回だけ描画(デバッグ用)
+    render ;;
   *)
-    echo "Usage: $0 {run|toggle|fzf-feed|jump <target>|once}" >&2; exit 1 ;;
+    echo "Usage: $0 {run|toggle|once}" >&2; exit 1 ;;
 esac
