@@ -99,15 +99,15 @@ build_rows() {
 # running は最下部の別セクション。区切り見出しは独立項目にせず、最初の running 項目の
 # 表示先頭に前置する(独立した選択不可ダミー項目を作らない=見出しにカーソルが乗らない)。
 to_fzf_records() {
-  local seen_running=0 hdr
+  local seen_running=0
   while IFS=$'\t' read -r _rank jt _wl status line1 line2; do
     if [[ "$status" == running && $seen_running -eq 0 ]]; then
       seen_running=1
-      hdr="$(printf '%s─── 実行中 (running) ───%s\n' "$C_DIM" "$C_RST")"
-      printf '%s\t%s\t%s%s\n%s\0' "$jt" "$status" "$hdr" "$line1" "$line2"
-    else
-      printf '%s\t%s\t%s\n%s\0' "$jt" "$status" "$line1" "$line2"
+      # 区切りは独立項目(status=divider)。j/k/↑/↓ がこの項目を飛び越える(下記 bind)。
+      printf '%s\t%s\t%s\n%s\0' "-" "divider" \
+        "$(printf '%s─── 実行中 (running) ───%s' "$C_DIM" "$C_RST")" " "
     fi
+    printf '%s\t%s\t%s\n%s\0' "$jt" "$status" "$line1" "$line2"
   done
 }
 
@@ -178,7 +178,13 @@ case "${1:-popup}" in
             --preview-window 'right,58%,border-left,wrap' \
             --prompt 'agent> ' \
             --header 'j/k:移動  C-u/d:ページ  g/G:上下端  r:再走査  /:検索  Enter:ジャンプ' \
-            --bind 'j:down,k:up,g:first,G:last,ctrl-d:half-page-down,ctrl-u:half-page-up' \
+            --bind 'g:first,G:last' \
+            --bind 'j:down+transform:[ {2} = divider ] && echo down' \
+            --bind 'k:up+transform:[ {2} = divider ] && echo up' \
+            --bind 'down:down+transform:[ {2} = divider ] && echo down' \
+            --bind 'up:up+transform:[ {2} = divider ] && echo up' \
+            --bind 'ctrl-d:half-page-down+transform:[ {2} = divider ] && echo down' \
+            --bind 'ctrl-u:half-page-up+transform:[ {2} = divider ] && echo up' \
             --bind "r:reload(bash '$SELF' rescan)" \
             --bind 'change:clear-query' \
             --bind '/:unbind(change)+unbind(j,k,g,G,r)+change-prompt(検索> )' \
