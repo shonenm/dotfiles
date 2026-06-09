@@ -165,12 +165,13 @@ case "${1:-popup}" in
   popup)
     rows=$(build_rows)
     if [[ -z "$rows" ]]; then tmux display-message "停止中のエージェントなし"; exit 0; fi
-    # vim 風操作: 既定はナビ。--disabled で検索オフ(未バインドキーを打っても検索にならない)。
-    # / で検索開始(enable-search + nav 文字を unbind して入力可能化)。
-    # 検索中 enter=確定(フィルタ保持しナビへ復帰・遷移しない) / esc=検索取消(フィルタ破棄)。
+    # vim 風操作。既定ナビでは検索しない(空 query=全件表示)。文字を打っても
+    # change:clear-query で即クリアするので検索バーに溜まらずフィルタもされない。
+    # / で検索開始(change と nav 文字を unbind して入力可能化)。
+    # 検索中 enter=確定(フィルタ保持しナビ復帰・遷移しない) / esc=検索取消(空 query に戻し全候補再表示)。
     # ナビ中 enter=ジャンプ / esc=閉じる。--cycle で端循環。↑↓ は常にナビ可能。
     sel=$(printf '%s\n' "$rows" | to_fzf_records \
-      | fzf --read0 --ansi --delimiter=$'\t' --with-nth=3 --no-sort --reverse --height=100% --gap --cycle --disabled \
+      | fzf --read0 --ansi --delimiter=$'\t' --with-nth=3 --no-sort --reverse --height=100% --gap --cycle \
             --preview "bash '$SELF' preview {1} {2}" \
             --preview-window 'right,58%,border-left,wrap' \
             --prompt 'agent> ' \
@@ -178,9 +179,9 @@ case "${1:-popup}" in
             --bind 'j:down,k:up,g:first,G:last,ctrl-d:half-page-down,ctrl-u:half-page-up' \
             --bind "r:reload(bash '$SELF' rescan)" \
             --bind 'change:clear-query' \
-            --bind '/:enable-search+unbind(change)+unbind(j,k,g,G,r)+change-prompt(検索> )' \
+            --bind '/:unbind(change)+unbind(j,k,g,G,r)+change-prompt(検索> )' \
             --bind 'enter:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "rebind(j,k,g,G,r)+change-prompt(agent> )" || echo accept' \
-            --bind 'esc:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "disable-search+rebind(change,j,k,g,G,r)+clear-query+change-prompt(agent> )" || echo abort' \
+            --bind 'esc:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "rebind(change,j,k,g,G,r)+clear-query+change-prompt(agent> )" || echo abort' \
             --color 'pointer:203,marker:214') || exit 0
     [[ -z "$sel" ]] && exit 0
     target=$(printf '%s' "$sel" | head -1 | cut -f1)
