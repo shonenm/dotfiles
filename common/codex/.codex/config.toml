@@ -1,1 +1,4 @@
-notify = ["/Users/matsushimakouta/dotfiles/scripts/ai-notify.sh", "codex", "complete"]
+# codex は notify(単一プログラム)のみで turn 完了時に呼ばれる。引数末尾に JSON が
+# 付くが tmux-claude-pane.sh set は $2 のみ参照するため無害。turn 完了=入力待ち→ idle。
+# 注: codex は実行中の heartbeat イベントが無いため running/ハング検知は対象外。
+notify = ["/Users/matsushimakouta/dotfiles/scripts/tmux-claude-pane.sh", "set", "idle"]
