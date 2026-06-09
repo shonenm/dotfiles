@@ -29,10 +29,11 @@ US=$'\x1f'
 
 C_RED=$'\e[38;5;203m'; C_AMBER=$'\e[38;5;214m'; C_DIM=$'\e[2m'; C_BOLD=$'\e[1m'; C_RST=$'\e[0m'
 
-status_rank() { case "$1" in permission) echo 0;; hang) echo 1;; error) echo 2;; idle) echo 3;; complete) echo 4;; *) echo 9;; esac; }
-status_icon() { case "$1" in idle) echo "󰔟";; permission) echo "󰌆";; complete) echo "";; hang) echo "";; error) echo "";; *) echo " ";; esac; }
-status_color() { case "$1" in permission|hang|error) printf '%s' "$C_RED";; *) printf '%s' "$C_AMBER";; esac; }
+status_rank() { case "$1" in permission) echo 0;; hang) echo 1;; error) echo 2;; idle) echo 3;; complete) echo 4;; running) echo 8;; *) echo 9;; esac; }
+status_icon() { case "$1" in idle) echo "󰔟";; permission) echo "󰌆";; complete) echo "";; hang) echo "";; error) echo "";; running) echo "●";; *) echo " ";; esac; }
+status_color() { case "$1" in permission|hang|error) printf '%s' "$C_RED";; running) printf '%s' "$C_DIM";; *) printf '%s' "$C_AMBER";; esac; }
 is_stopped() { case "$1" in idle|permission|complete|hang|error) return 0;; *) return 1;; esac; }
+is_agent() { case "$1" in idle|permission|complete|hang|error|running) return 0;; *) return 1;; esac; }
 is_shell() { case "${1#-}" in zsh|bash|sh|fish|dash|ksh|tcsh|nu|xonsh|elvish) return 0;; *) return 1;; esac; }
 
 humanize() { local s="$1"; if (( s<60 )); then echo "${s}s"; elif (( s<3600 )); then echo "$((s/60))m"; else echo "$((s/3600))h"; fi; }
@@ -44,8 +45,8 @@ trunc() { local s="$1" n="$2"; s="${s//$'\t'/ }"; if (( ${#s} > n )); then print
 build_local_rows() {
   local now; now=$(date +%s)
   while IFS="$US" read -r pid sess win status hb path cmd title; do
-    is_stopped "$status" || continue
-    is_shell "$cmd" && continue
+    is_agent "$status" || continue          # 停止状態 + running を対象
+    is_shell "$cmd" && continue             # シェル復帰(終了済み)は除外
     local rank icon col task branch elapsed loc tool line1 line2
     rank=$(status_rank "$status"); icon=$(status_icon "$status"); col=$(status_color "$status")
     task=$(trunc "${title:-$(basename "${path:-?}")}" 52)
@@ -95,8 +96,15 @@ build_rows() {
 }
 
 # sortable 行 → fzf 入力(NUL 区切り、各レコードは「target<TAB>status<TAB>line1<LF>line2」)
+# running は最下部の別セクション(区切り見出し付き)に分ける
 to_fzf_records() {
+  local seen_running=0
   while IFS=$'\t' read -r _rank jt _wl status line1 line2; do
+    if [[ "$status" == running && $seen_running -eq 0 ]]; then
+      seen_running=1
+      printf '%s\t%s\t%s\n%s\0' "-" "divider" \
+        "$(printf '%s─── 実行中 (running) ────────%s' "$C_DIM" "$C_RST")" " "
+    fi
     printf '%s\t%s\t%s\n%s\0' "$jt" "$status" "$line1" "$line2"
   done
 }
@@ -110,6 +118,7 @@ extract_needs() {
 
 render_preview() {
   local target="$1" status="$2"
+  [[ "$status" == divider ]] && { printf '%s実行中のエージェント(対応不要)%s\n' "$C_DIM" "$C_RST"; return; }
   local col icon; col=$(status_color "$status"); icon=$(status_icon "$status")
   printf '%s%s ▌ %s%s\n' "$col" "$icon" "$(echo "$status" | tr '[:lower:]' '[:upper:]')" "$C_RST"
   if [[ "$target" == %* ]]; then
@@ -136,9 +145,13 @@ render_preview() {
 
 case "${1:-popup}" in
   list)
-    build_rows | while IFS=$'\t' read -r _r _jt _wl _st l1 l2; do
-      printf '%s\n%s\n' "$l1" "$l2"
-    done | sed $'s/\e\\[[0-9;]*m//g'
+    build_rows | { seen_running=0
+      while IFS=$'\t' read -r _r _jt _wl _st l1 l2; do
+        if [[ "$_st" == running && $seen_running -eq 0 ]]; then
+          seen_running=1; printf '\n─── 実行中 (running) ───\n'
+        fi
+        printf '%s\n%s\n' "$l1" "$l2"
+      done; } | sed $'s/\e\\[[0-9;]*m//g'
     ;;
   preview)
     render_preview "${2:-}" "${3:-}"
