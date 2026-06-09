@@ -139,6 +139,19 @@
 - 低オーバーヘッド: シェル起動・status 更新サイクルに影響を与えない。watcher は軽量・遅延ロード。
 - ヒューリスティック廃止: `scan` のペーン文字列 grep は hook 駆動 + heartbeat に置換（ツール起動時の取りこぼし救済が必要なら最小限の初期スキャンのみ）。
 
+### 6.1 パフォーマンス設計メモ（実測ベース）
+
+| 箇所 | コスト | 対策 |
+|------|--------|------|
+| heartbeat hook | 1回 ~27ms(fork+tmux)。tool 毎に発火 | `PostToolUse` のみに限定(`PreToolUse` 廃止)。長 tool の生存は watcher の出力ハッシュ差分で担保し heartbeat 冗長分を削減 |
+| file store | `set_status` が timestamp 付きファイルを書き続け無限蓄積 → scan が全件 jq | workspace ごと旧ファイルを削除し1ファイルに(get は最新のみ参照) |
+| サイドバー render | 128ms/3s → ファイル数分 jq spawn + agent毎 subshell | 全ファイルを単一 `jq -s` で処理、rank+glyph を1関数化。実測 128ms→34ms |
+| 横断ビュー popup | ~130ms/回 | on-demand(prefix+a / ^R)なので許容 |
+| hang watcher | 15s 周期、running ペーンのみ capture-pane | 低頻度・対象限定で軽量 |
+| window バッジ | status 更新(~5s)毎、3s キャッシュ + pane option 優先 | file store 1ファイル化で fallback も軽量 |
+
+原則: 常駐ループ(サイドバー/watcher)は jq/subprocess を最小化し、無制限に増える状態(file store)は書き込み側で必ず上限を設ける。
+
 ## 7. 現行コンポーネントの扱い
 
 | 現行 | 変更方針 |

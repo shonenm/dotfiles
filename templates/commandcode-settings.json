@@ -14,16 +14,6 @@
         ]
       }
     ],
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat"
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "hooks": [
