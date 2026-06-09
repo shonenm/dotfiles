@@ -27,7 +27,7 @@ source "$SCRIPT_DIR/tmux-agent-status.sh"   # ヘルパー(is_shell, trunc_w 由
 set +e +o pipefail
 
 REFRESH="${AGENT_SIDEBAR_REFRESH:-3}"
-WIDTH="${AGENT_SIDEBAR_WIDTH:-30}"
+WIDTH="${AGENT_SIDEBAR_WIDTH:-40}"
 STATUS_DIR="${AGENT_STATUS_DIR:-/tmp/claude/status}"
 ESC_K=$'\033[K'   # 行末までクリア(全画面クリアせず=チカチカしない)
 
@@ -69,9 +69,13 @@ collect_agents() {
     printf '%s\t%s\t%s\n' "$sess" "$(sb_rank "$status")" "$(sb_glyph "$status")"
   done < <(tmux list-panes -a -F "#{session_name}$(printf '\x1f')#{@agent_status}$(printf '\x1f')#{pane_current_command}")
 
-  # file store (リモート/コンテナ)。workspace ごと最新のみ採用
+  # file store (リモート/コンテナ)。workspace ごと最新のみ採用。
+  # tmux_session が「ローカルセッション」に一致する行はローカル pane の重複なので除外し、
+  # 真のリモート/コンテナ(tmux_session 空 or 非ローカル)のみ採用する。
   [[ -d "$STATUS_DIR" ]] || return 0
   command -v jq >/dev/null 2>&1 || return 0
+  local local_sessions
+  local_sessions="|$(tmux list-sessions -F '#{session_name}' 2>/dev/null | tr '\n' '|')"
   local rows="" f ws_seen=""
   for f in "$STATUS_DIR"/*.json; do
     [[ -f "$f" ]] || continue
@@ -80,37 +84,56 @@ collect_agents() {
   printf '%s' "$rows" | sort -rn -t$'\x1f' -k1,1 | while IFS=$'\x1f' read -r _u status ws tsess project; do
     [[ -z "$status" ]] && continue
     case "$status" in idle|permission|complete|hang|error) ;; *) continue;; esac
+    # ローカルセッションに属する行はローカル pane で既出 → 除外
+    if [[ -n "$tsess" ]]; then case "$local_sessions" in *"|${tsess}|"*) continue;; esac; fi
     if [[ -n "$ws" ]]; then case "$ws_seen" in *"|${ws}|"*) continue;; *) ws_seen="${ws_seen}|${ws}|";; esac; fi
     local key="$tsess"
-    [[ -z "$key" ]] && key="${project%%:*}"   # session 不明なら host/project
+    [[ -z "$key" ]] && key="${project%%:*}"   # session 不明なら host/project(リモート)
     [[ -z "$key" ]] && key="remote"
     printf '%s\t%s\t%s\n' "$key" "$(sb_rank "$status")" "$(sb_glyph "$status")"
   done
 }
 
+# セッションブロックを出力(セッション名を独立行、アイコンは折返してインデント表示)。
+# 動的スコープで render の cur/glyphs/WIDTH を参照する。
+_sb_flush() {
+  [[ -z "$cur" ]] && return
+  printf '%s%s%s%s\n' "$C_BOLD" "$(trunc_w "$cur" $(( WIDTH - 2 )))" "$C_RST" "$ESC_K"
+  local per=$(( (WIDTH - 4) / 2 )); (( per < 1 )) && per=1
+  local i=0 line="  " g
+  for g in "${glyphs[@]}"; do
+    line+="$g "
+    (( i++ ))
+    if (( i % per == 0 )); then printf '%s%s\n' "$line" "$ESC_K"; line="  "; fi
+  done
+  [[ "$line" != "  " ]] && printf '%s%s\n' "$line" "$ESC_K"
+}
+
 render() {
-  local rows total cur="" icons="" s _rank glyph
+  local rows total cur="" s _rank glyph
+  local glyphs=()
   rows=$(collect_agents | sort -t$'\t' -k1,1 -k2,2n)
   total=$(printf '%s' "$rows" | grep -c . 2>/dev/null)
 
   printf '\033[H'   # ホームへ(全画面クリアしない)
   printf '%s AGENTS%s %s%s%s%s\n' "$C_BOLD" "$C_RST" "$C_DIM" "$total" "$C_RST" "$ESC_K"
-  printf '%s──────────────────%s%s\n' "$C_DIM" "$C_RST" "$ESC_K"
+  printf '%s────────────────────────%s%s\n' "$C_DIM" "$C_RST" "$ESC_K"
   if [[ -z "$rows" ]]; then
     printf '%s(エージェントなし)%s%s\n' "$C_DIM" "$C_RST" "$ESC_K"
     printf '\033[J'
     return
   fi
+  # セッションごとに: 名前を独立行、アイコンを折返してインデント表示
   while IFS=$'\t' read -r s _rank glyph; do
     [[ -z "$s" ]] && continue
     if [[ "$s" != "$cur" ]]; then
-      [[ -n "$cur" ]] && printf '%s%-10s%s %s%s\n' "$C_DIM" "$(trunc_w "$cur" 10)" "$C_RST" "$icons" "$ESC_K"
-      cur="$s"; icons="$glyph"
+      _sb_flush
+      cur="$s"; glyphs=("$glyph")
     else
-      icons="$icons $glyph"
+      glyphs+=("$glyph")
     fi
   done <<< "$rows"
-  [[ -n "$cur" ]] && printf '%s%-10s%s %s%s\n' "$C_DIM" "$(trunc_w "$cur" 10)" "$C_RST" "$icons" "$ESC_K"
+  _sb_flush
   printf '\033[J'   # 残りの古い行を消去
 }
 
