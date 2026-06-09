@@ -185,6 +185,7 @@ case "${1:-popup}" in
             --bind 'up:up+transform:[ {2} = divider ] && echo up' \
             --bind 'ctrl-d:half-page-down+transform:[ {2} = divider ] && echo down' \
             --bind 'ctrl-u:half-page-up+transform:[ {2} = divider ] && echo up' \
+            --bind 'load:transform:[ {2} = divider ] && echo down' \
             --bind "r:reload(bash '$SELF' rescan)" \
             --bind 'change:clear-query' \
             --bind '/:unbind(change)+unbind(j,k,g,G,r)+change-prompt(検索> )' \
