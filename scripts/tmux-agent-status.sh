@@ -207,7 +207,7 @@ case "${1:-popup}" in
             --bind 'load:transform:[ {2} = divider ] && echo down' \
             --bind "r:reload(bash '$SELF' rescan)" \
             --bind 'q:abort' \
-            --bind "s:execute-silent(bash '$SELF' stash-toggle {1})+reload(bash '$SELF' rescan)" \
+            --bind "s:reload(bash '$SELF' stash-toggle {1}; bash '$SELF' rescan)" \
             --bind 'change:clear-query' \
             --bind '/:unbind(change)+unbind(j,k,g,G,r,q,s)+change-prompt(検索> )' \
             --bind 'enter:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "rebind(j,k,g,G,r,q,s)+change-prompt(agent> )" || echo accept' \
