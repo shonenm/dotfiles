@@ -96,16 +96,18 @@ build_rows() {
 }
 
 # sortable 行 → fzf 入力(NUL 区切り、各レコードは「target<TAB>status<TAB>line1<LF>line2」)
-# running は最下部の別セクション(区切り見出し付き)に分ける
+# running は最下部の別セクション。区切り見出しは独立項目にせず、最初の running 項目の
+# 表示先頭に前置する(独立した選択不可ダミー項目を作らない=見出しにカーソルが乗らない)。
 to_fzf_records() {
-  local seen_running=0
+  local seen_running=0 hdr
   while IFS=$'\t' read -r _rank jt _wl status line1 line2; do
     if [[ "$status" == running && $seen_running -eq 0 ]]; then
       seen_running=1
-      printf '%s\t%s\t%s\n%s\0' "-" "divider" \
-        "$(printf '%s─── 実行中 (running) ────────%s' "$C_DIM" "$C_RST")" " "
+      hdr="$(printf '%s─── 実行中 (running) ───%s\n' "$C_DIM" "$C_RST")"
+      printf '%s\t%s\t%s%s\n%s\0' "$jt" "$status" "$hdr" "$line1" "$line2"
+    else
+      printf '%s\t%s\t%s\n%s\0' "$jt" "$status" "$line1" "$line2"
     fi
-    printf '%s\t%s\t%s\n%s\0' "$jt" "$status" "$line1" "$line2"
   done
 }
 
