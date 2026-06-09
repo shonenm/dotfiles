@@ -41,6 +41,10 @@ set_status() {
     fi
   done
 
+  # 同一 workspace の旧ファイルを削除(get_status は最新のみ参照するため蓄積は無駄。
+  # 残すと sidebar/badge の jq スキャンが毎回全ファイルを舐めて重くなる)。
+  rm -f "$STATUS_DIR"/workspace_"${workspace}"_*.json 2>/dev/null || true
+
   # workspace_${workspace}_${timestamp}.json 形式でユニークに
   local timestamp
   timestamp=$(date +%s%N)
