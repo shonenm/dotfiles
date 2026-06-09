@@ -177,9 +177,10 @@ case "${1:-popup}" in
             --header 'j/k:移動  C-u/d:ページ  g/G:上下端  r:再走査  /:検索  Enter:ジャンプ' \
             --bind 'j:down,k:up,g:first,G:last,ctrl-d:half-page-down,ctrl-u:half-page-up' \
             --bind "r:reload(bash '$SELF' rescan)" \
-            --bind '/:enable-search+unbind(j,k,g,G,r)+change-prompt(検索> )' \
+            --bind 'change:clear-query' \
+            --bind '/:enable-search+unbind(change)+unbind(j,k,g,G,r)+change-prompt(検索> )' \
             --bind 'enter:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "rebind(j,k,g,G,r)+change-prompt(agent> )" || echo accept' \
-            --bind 'esc:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "disable-search+rebind(j,k,g,G,r)+clear-query+change-prompt(agent> )" || echo abort' \
+            --bind 'esc:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "disable-search+rebind(change,j,k,g,G,r)+clear-query+change-prompt(agent> )" || echo abort' \
             --color 'pointer:203,marker:214') || exit 0
     [[ -z "$sel" ]] && exit 0
     target=$(printf '%s' "$sel" | head -1 | cut -f1)
