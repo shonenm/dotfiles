@@ -1,6 +1,6 @@
 {
   "defaultProvider": "commandcode",
-  "defaultModel": "deepseek/deepseek-v4-pro",
+  "defaultModel": "xiaomi/mimo-v2.5-pro",
   "defaultThinkingLevel": "high",
   "theme": "dark",
   "quietStartup": false,
@@ -11,7 +11,7 @@
   "autocompleteMaxVisible": 5,
   "showHardwareCursor": false,
   "enableInstallTelemetry": true,
-  "shellCommandPrefix": "shopt -s expand_aliases\neval \"$(grep '^alias ' ~/.zshrc.common 2>/dev/null || grep '^alias ' ~/.zshrc 2>/dev/null)\"",
+  "shellCommandPrefix": "shopt -s expand_aliases 2>/dev/null\neval \"$(grep '^alias [^-]' ~/.zshrc.common 2>/dev/null)\"",
   "npmCommand": [
     "mise",
     "exec",
@@ -76,5 +76,5 @@
     "npm:pi-commandcode-provider",
     "npm:pi-permission-system"
   ],
-  "lastChangelogVersion": "0.78.0"
+  "lastChangelogVersion": "0.79.1"
 }
