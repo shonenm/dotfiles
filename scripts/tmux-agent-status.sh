@@ -58,7 +58,7 @@ build_local_rows() {
     if [[ "$hb" =~ ^[0-9]+$ ]]; then elapsed=$(humanize "$(( now - hb ))"); else elapsed="-"; fi
     # 現在の pane(prefix+a を押した pane)は左に枠線バー + マーカーで強調
     if [[ -n "$cur" && "$pid" == "$cur" ]]; then
-      g1="${C_CUR}▎${C_RST} "; g2="${C_CUR}▎${C_RST}  "; mk=" ${C_CUR}◀ 今ここ${C_RST}"
+      g1="${C_CUR}▎${C_RST} "; g2="${C_CUR}▎${C_RST}  "; mk=" ${C_CUR}◀ current${C_RST}"
     else
       g1="  "; g2="   "; mk=""
     fi
