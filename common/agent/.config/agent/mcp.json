@@ -1,68 +1,16 @@
 {
-  "$schema": "https://raw.githubusercontent.com/shonenm/dotfiles/main/common/agent/.config/agent/mcp.json",
   "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"],
-      "description": "Library documentation lookup (Context7)",
-      "permission": "allow",
-      "enabled": true
-    },
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"],
-      "description": "Browser automation for UI testing and web fetch fallback",
-      "permission": "ask",
-      "enabled": false
-    },
-    "filesystem-readonly": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem@latest", "."],
-      "description": "Read-only filesystem access",
-      "permission": "ask",
-      "enabled": false
-    },
     "tmux": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "tmux-mcp"],
-      "description": "Tmux session and pane management",
-      "permission": "allow",
-      "enabled": true
+      "type": "stdio", "command": "npx", "args": ["-y", "tmux-mcp"],
+      "description": "", "permission": "allow", "enabled": false
     },
     "serena": {
-      "type": "stdio",
-      "command": "serena",
-      "args": ["start-mcp-server", "--context", "claude-code", "--project-from-cwd"],
-      "description": "Code analysis and semantic search",
-      "permission": "allow",
-      "enabled": true
+      "type": "stdio", "command": "serena", "args": ["start-mcp-server", "--context", "claude-code", "--project-from-cwd"],
+      "description": "", "permission": "allow", "enabled": false
     },
     "token-optimizer": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "token-optimizer-mcp"],
-      "env": {
-        "TOKEN_OPTIMIZER_CACHE_DIR": "${HOME}/.cache/token-optimizer-mcp"
-      },
-      "description": "Token usage optimization",
-      "permission": "allow",
-      "enabled": true
-    },
-    "notion": {
-      "command": "npx",
-      "args": ["-y", "@notionhq/notion-mcp-server"],
-      "env": { "NOTION_TOKEN": "${NOTION_TOKEN}" },
-      "description": "Notion workspace access",
-      "permission": "ask",
-      "enabled": false
-    },
-    "syntopic": {
-      "type": "http",
-      "url": "https://mcp.sandbox.syntopic.io/mcp",
-      "description": "SynTopic MCP server (HTTP)",
-      "permission": "ask",
-      "enabled": false
+      "type": "stdio", "command": "npx", "args": ["-y", "token-optimizer-mcp"],
+      "description": "", "permission": "allow", "enabled": false
     }
   }
 }

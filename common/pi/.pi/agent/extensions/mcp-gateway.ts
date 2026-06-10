@@ -314,11 +314,12 @@ class MCPManager {
     this.initialized = true;
     this.reloadConfig();
 
-    // Discover tools from enabled servers
+    // Discover tools from enabled servers — start in parallel.
+    // Each server is independently started; failures in one do not block others.
     const servers = getEnabledServers(this.config);
 
-    for (const [name, cfg] of servers) {
-      try {
+    const results = await Promise.allSettled(
+      servers.map(async ([name, cfg]) => {
         const client = new MCPClient(cfg, name);
         await client.start();
         this.clients.set(name, client);
@@ -328,10 +329,16 @@ class MCPManager {
           const tname = this.toolName(name, tool.name);
           this.tools.set(tname, { server: name, tool });
         }
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
+      })
+    );
+
+    // Log failures without blocking
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.status === "rejected") {
+        const [name] = servers[i];
+        const msg = result.reason instanceof Error ? result.reason.message : String(result.reason);
         console.error(`[mcp-gateway] Failed to initialize "${name}": ${msg}`);
-        // Continue with other servers
       }
     }
 
