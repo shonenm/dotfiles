@@ -44,7 +44,8 @@ trunc() { local s="$1" n="$2"; s="${s//$'\t'/ }"; if (( ${#s} > n )); then print
 
 # ローカル(pane option)行 → sortable 6 フィールド
 build_local_rows() {
-  local now cur; now=$(date +%s); cur="${TMUX_PANE:-}"
+  # 現在 pane(prefix+a を押した pane)は bind が @agent_cur_pane に保存している
+  local now cur; now=$(date +%s); cur="$(tmux show-options -gv @agent_cur_pane 2>/dev/null || echo "")"
   while IFS="$US" read -r pid sess win status hb path cmd title stashed; do
     is_agent "$status" || continue          # 停止状態 + running を対象
     is_shell "$cmd" && continue             # シェル復帰(終了済み)は除外
