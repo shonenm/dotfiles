@@ -111,18 +111,17 @@ case "${1:-}" in
     ;;
 
   heartbeat)
-    # 生存信号更新。停止状態(idle/permission/complete/error)は触らない。
-    # running/hang/未設定 のみ running へ(hang からの自動復帰)。
+    # 生存信号更新。heartbeat はツール実行中にのみ呼ばれる=エージェントは稼働中なので、
+    # idle/complete/hang/error/未設定 いずれからも running へ戻す(turn_start イベントが
+    # 無い pi 等で、前ターンの idle が残って実行中に見えない問題を防ぐ)。
     PANE_ID=$(resolve_pane)
     tmux set-option -p -t "$PANE_ID" @agent_heartbeat "$(date +%s)" 2>/dev/null || true
     current=$(tmux show-options -pv -t "$PANE_ID" @agent_status 2>/dev/null || echo "")
-    case "$current" in
-      ""|running|hang)
-        tmux set-option -p -t "$PANE_ID" @agent_status running 2>/dev/null || true
-        tmux set-option -p -t "$PANE_ID" -u @agent_icon 2>/dev/null || true
-        [[ "$current" == "hang" ]] && tmux refresh-client -S 2>/dev/null || true
-        ;;
-    esac
+    if [[ "$current" != "running" ]]; then
+      tmux set-option -p -t "$PANE_ID" @agent_status running 2>/dev/null || true
+      tmux set-option -p -t "$PANE_ID" -u @agent_icon 2>/dev/null || true
+      tmux refresh-client -S 2>/dev/null || true
+    fi
     ;;
 
   clear)
