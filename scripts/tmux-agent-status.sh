@@ -28,6 +28,7 @@ STATUS_DIR="${AGENT_STATUS_DIR:-/tmp/claude/status}"
 US=$'\x1f'
 
 C_RED=$'\e[38;5;203m'; C_AMBER=$'\e[38;5;214m'; C_DIM=$'\e[2m'; C_BOLD=$'\e[1m'; C_RST=$'\e[0m'
+C_CUR=$'\e[38;5;45m'   # 現在の pane 強調(シアン)。prefix+a を押した pane を枠線で示す
 
 status_rank() { case "$1" in permission) echo 0;; hang) echo 1;; error) echo 2;; idle) echo 3;; complete) echo 4;; running) echo 8;; *) echo 9;; esac; }
 status_icon() { case "$1" in idle) echo "󰔟";; permission) echo "󰌆";; complete) echo "";; hang) echo "";; error) echo "";; running) echo "●";; *) echo " ";; esac; }
@@ -43,19 +44,25 @@ trunc() { local s="$1" n="$2"; s="${s//$'\t'/ }"; if (( ${#s} > n )); then print
 
 # ローカル(pane option)行 → sortable 6 フィールド
 build_local_rows() {
-  local now; now=$(date +%s)
+  local now cur; now=$(date +%s); cur="${TMUX_PANE:-}"
   while IFS="$US" read -r pid sess win status hb path cmd title stashed; do
     is_agent "$status" || continue          # 停止状態 + running を対象
     is_shell "$cmd" && continue             # シェル復帰(終了済み)は除外
-    local rank icon col task branch elapsed loc tool line1 line2
+    local rank icon col task branch elapsed loc tool line1 line2 g1 g2 mk
     # stash 済みは status に関わらず stash セクション(rank 6: stopped と running の間)へ
     if [[ -n "$stashed" ]]; then rank=6; else rank=$(status_rank "$status"); fi
     icon=$(status_icon "$status"); col=$(status_color "$status")
     task=$(trunc "${title:-$(basename "${path:-?}")}" 52)
     branch=$(branch_of "$path"); tool=$(tool_of "$cmd"); loc="${sess}:${win}"
     if [[ "$hb" =~ ^[0-9]+$ ]]; then elapsed=$(humanize "$(( now - hb ))"); else elapsed="-"; fi
-    line1=$(printf '%s%s %-10s%s %s' "$col" "$icon" "$status" "$C_RST" "$task")
-    line2=$(printf '   %s%s · %s · %s · %s · %s%s' "$C_DIM" "$sess" "$branch" "$loc" "$tool" "${elapsed}前" "$C_RST")
+    # 現在の pane(prefix+a を押した pane)は左に枠線バー + マーカーで強調
+    if [[ -n "$cur" && "$pid" == "$cur" ]]; then
+      g1="${C_CUR}▎${C_RST} "; g2="${C_CUR}▎${C_RST}  "; mk=" ${C_CUR}◀ 今ここ${C_RST}"
+    else
+      g1="  "; g2="   "; mk=""
+    fi
+    line1=$(printf '%s%s%s %-10s%s %s%s' "$g1" "$col" "$icon" "$status" "$C_RST" "$task" "$mk")
+    line2=$(printf '%s%s%s · %s · %s · %s · %s%s' "$g2" "$C_DIM" "$sess" "$branch" "$loc" "$tool" "${elapsed}前" "$C_RST")
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$rank" "$pid" "$loc" "$status" "$line1" "$line2"
   done < <(tmux list-panes -a -F \
     "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}${US}#{@agent_stashed}")
