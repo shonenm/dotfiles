@@ -1,10 +1,11 @@
 #!/bin/bash
 # Codex (OpenAI) 使用量表示 (tmux status-right 用)
 # ~/.codex/auth.json の OAuth トークンで使用量を取得しキャッシュ
-# 出力: "OAI ▃▅ 42%/67% 2h15m" 形式のプレーンテキスト
-#   最後のフィールドは primary_window がリセットされるまでの残り時間
+# 出力: サイドバー用の構造化レコード(1行=1ウィンドウ、区切りは US 0x1f)
+#   "<icon>\x1f<label>\x1f<gauge>\x1f<pct>\x1f<remaining>" (current=primary / weekly=secondary)
+#   データ無しは "<icon>\x1f--"
 #
-# キャッシュ形式: "<primary_pct>|<secondary_pct>|<primary_resets_at_unix>"
+# キャッシュ形式: "<primary_pct>|<secondary_pct>|<primary_resets_unix>|<secondary_resets_unix>"
 # 残り時間はキャッシュ読み出し時に現在時刻から都度計算する
 
 CACHE_FILE="/tmp/tmux_codex_usage"
@@ -15,6 +16,9 @@ FAIL_TTL=60    # API 失敗時のバックオフ秒数
 AUTH_FILE="$HOME/.codex/auth.json"
 LABEL="󰝨"
 
+# データ無しレコードを出力
+na() { printf '%s\x1f--\n' "$LABEL"; }
+
 # クロスプラットフォーム mtime 取得
 get_mtime() {
   case "$(uname -s)" in
@@ -23,36 +27,38 @@ get_mtime() {
   esac
 }
 
-# "<s>|<w>|<resets_at_unix>" を受け取り表示文字列を出力
+# "<s>|<w>|<primary_resets_unix>|<secondary_resets_unix>" を受け取り2レコード出力
 render() {
-  python3 - "$1" "$2" "$3" "$LABEL" <<'PY'
+  python3 - "$LABEL" "$1" "$2" "$3" "$4" <<'PY'
 import sys
 from datetime import datetime, timezone
-label = sys.argv[4] if len(sys.argv) > 4 else 'OAI'
+US = '\x1f'
+icon = sys.argv[1]
+bars = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
+def bar(v):
+  if v <= 0: return bars[0]
+  if v >= 100: return bars[8]
+  return bars[max(1, v * 8 // 100)]
+def remain(ts):
+  if not ts: return ''
+  try:
+    delta = int(ts) - int(datetime.now(timezone.utc).timestamp())
+    if delta <= 0: return '0m'
+    total_min = delta // 60
+    h, m = divmod(total_min, 60)
+    if h >= 24:
+      d, h = divmod(h, 24)
+      return f'{d}d'
+    return f'{h}h{m:02d}m' if h > 0 else f'{m}m'
+  except Exception:
+    return ''
 try:
-  s = int(sys.argv[1])
-  w = int(sys.argv[2])
-  resets_at = sys.argv[3]
-  bars = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
-  sb = bars[s * 8 // 100] if s < 100 else bars[8]
-  wb = bars[w * 8 // 100] if w < 100 else bars[8]
-  remaining = ''
-  if resets_at:
-    try:
-      reset_ts = int(resets_at)
-      now_ts = int(datetime.now(timezone.utc).timestamp())
-      delta = reset_ts - now_ts
-      if delta <= 0:
-        remaining = ' 0m'
-      else:
-        total_min = delta // 60
-        h, m = divmod(total_min, 60)
-        remaining = f' {h}h{m:02d}m' if h > 0 else f' {m}m'
-    except Exception:
-      pass
-  print(f'{label} {sb}{wb} {s}%/{w}%{remaining}')
+  s = int(sys.argv[2]); w = int(sys.argv[3])
+  rp = sys.argv[4]; rsec = sys.argv[5]
+  print(US.join([icon, 'current', bar(s), f'{s}%', remain(rp)]))
+  print(US.join([icon, 'weekly',  bar(w), f'{w}%', remain(rsec)]))
 except Exception:
-  print(f'{label} --')
+  print(f'{icon}{US}--')
 PY
 }
 
@@ -60,9 +66,9 @@ PY
 if [[ -f "$CACHE_FILE" ]]; then
   age=$(( $(date +%s) - $(get_mtime "$CACHE_FILE") ))
   if (( age < CACHE_TTL )); then
-    IFS='|' read -r cs cw cresets < "$CACHE_FILE" 2>/dev/null
+    IFS='|' read -r cs cw crp crsec < "$CACHE_FILE" 2>/dev/null
     if [[ -n "$cs" && -n "$cw" ]]; then
-      render "$cs" "$cw" "${cresets:-}"
+      render "$cs" "$cw" "${crp:-}" "${crsec:-}"
       exit 0
     fi
   fi
@@ -72,7 +78,7 @@ fi
 if [[ -f "$FAIL_FILE" ]]; then
   fail_age=$(( $(date +%s) - $(get_mtime "$FAIL_FILE") ))
   if (( fail_age < FAIL_TTL )); then
-    echo "$LABEL --"
+    na
     exit 0
   fi
 fi
@@ -80,7 +86,7 @@ fi
 # auth.json は Mac/Linux 共通でプレーンテキスト保存（macOS Keychain は使わない）
 if [[ ! -f "$AUTH_FILE" ]]; then
   touch "$FAIL_FILE"
-  echo "$LABEL --"
+  na
   exit 0
 fi
 
@@ -113,7 +119,7 @@ PY
 
 if [[ -z "$token" ]]; then
   touch "$FAIL_FILE"
-  echo "$LABEL --"
+  na
   exit 0
 fi
 
@@ -131,12 +137,14 @@ raw=$(curl "${curl_args[@]}" "https://chatgpt.com/backend-api/wham/usage" 2>/dev
 
 if [[ -z "$raw" ]]; then
   touch "$FAIL_FILE"
-  echo "$LABEL --"
+  na
   exit 0
 fi
 
 parsed=$(echo "$raw" | python3 -c "
 import sys, json
+def ts(v):
+  return str(int(v)) if v is not None else ''
 try:
   d = json.load(sys.stdin)
   rl = d.get('rate_limit') or {}
@@ -146,20 +154,20 @@ try:
   w = int(round(sw.get('used_percent') or 0))
   s = max(0, min(100, s))
   w = max(0, min(100, w))
-  r = pw.get('reset_at')
-  r_str = str(int(r)) if r is not None else ''
-  print(f'{s}|{w}|{r_str}')
+  rp = ts(pw.get('reset_at'))
+  rsec = ts(sw.get('reset_at'))
+  print(f'{s}|{w}|{rp}|{rsec}')
 except Exception:
   print('')
 " 2>/dev/null)
 
 if [[ -z "$parsed" ]]; then
   touch "$FAIL_FILE"
-  echo "$LABEL --"
+  na
   exit 0
 fi
 
 echo "$parsed" > "$CACHE_FILE"
 rm -f "$FAIL_FILE"
-IFS='|' read -r s w resets_at <<< "$parsed"
-render "$s" "$w" "$resets_at"
+IFS='|' read -r s w rp rsec <<< "$parsed"
+render "$s" "$w" "$rp" "$rsec"
