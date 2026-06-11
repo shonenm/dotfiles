@@ -826,7 +826,11 @@ with open('$settings_file') as f:
 # --- 4.5. Configure rtk Claude Code hook ---
 # rtk init -g registers a Bash hook in ~/.claude/settings.json that transparently
 # rewrites commands like `git status` -> `rtk git status` for 60-90% token reduction.
-# Idempotent: skips if hook already configured.
+# --auto-patch is required: without it rtk prompts before patching settings.json,
+# and in non-interactive installs the prompt fails, leaving RTK.md claiming a
+# hook that was never installed.
+# Idempotent: skips if hook already configured. Must run after
+# generate_ai_cli_configs, whose template merge resets the hook arrays.
 configure_rtk_claude_hook() {
   if ! command_exists rtk; then
     log_warn "rtk not installed, skipping rtk Claude hook setup"
@@ -840,10 +844,10 @@ configure_rtk_claude_hook() {
   fi
 
   log_info "Configuring rtk Claude Code hook (token compression)..."
-  if rtk init -g; then
+  if rtk init -g --auto-patch; then
     log_success "rtk Claude hook configured"
   else
-    log_warn "rtk init -g failed (non-fatal)"
+    log_warn "rtk init -g --auto-patch failed (non-fatal)"
   fi
 }
 
