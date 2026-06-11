@@ -337,6 +337,22 @@ link_dotfiles() {
     return 1
   fi
 
+  local os
+  os=$(detect_os)
+
+  # Abort if the repo has uncommitted changes under the stow source dirs.
+  # stow --adopt overwrites repo files with the $HOME versions, and the
+  # later `git checkout -- common/ <os>/` rolls everything back to HEAD,
+  # so any uncommitted edits would be silently destroyed.
+  local dirty
+  dirty=$(git -C "$DOTFILES_DIR" status --porcelain -- common/ "$os/" 2>/dev/null || true)
+  if [[ -n "$dirty" ]]; then
+    log_error "Uncommitted changes in dotfiles repo would be lost by stow --adopt:"
+    echo "$dirty"
+    log_error "Commit or stash these changes, then re-run install.sh"
+    return 1
+  fi
+
   # Create .config if not exists
   mkdir -p "$HOME/.config"
 
@@ -351,8 +367,6 @@ link_dotfiles() {
   fi
 
   # Stow OS-specific packages
-  local os
-  os=$(detect_os)
   if [[ -d "$DOTFILES_DIR/$os" ]]; then
     log_info "Linking $os-specific dotfiles..."
     for pkg in "$DOTFILES_DIR/$os"/*/; do
