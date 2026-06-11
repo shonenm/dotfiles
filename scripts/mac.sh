@@ -1,6 +1,9 @@
 #!/bin/bash
 
 # macOS Setup Script (Homebrew packages)
+# No -e: individual steps may fail without aborting the rest; failures are
+# collected via run_step and reported through finish_steps (non-zero exit).
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(dirname "$SCRIPT_DIR")"
@@ -359,23 +362,23 @@ install_cursor_cli() {
 }
 
 # --- Main Execution ---
-install_brew_bundle
-install_mise_tools
-install_npm_packages
-install_claude_mem
-install_genshijin
-install_serena
-install_context_mode
-install_code_review_graph
-install_auto_mode
-install_cursor_cli
-configure_claude_remote_control_autostart
-install_dops
-install_quay
-install_cargo_update
-install_lemonade
-install_gh_extensions
-link_ai_scripts
-set_default_shell
+run_step install_brew_bundle
+run_step install_mise_tools
+run_step install_npm_packages
+run_step install_claude_mem
+run_step install_genshijin
+run_step install_serena
+run_step install_context_mode
+run_step install_code_review_graph
+run_step install_auto_mode
+run_step install_cursor_cli
+run_step configure_claude_remote_control_autostart
+run_step install_dops
+run_step install_quay
+run_step install_cargo_update
+run_step install_lemonade
+run_step install_gh_extensions
+run_step link_ai_scripts
+run_step set_default_shell
 
-log_success "macOS packages installed!"
+finish_steps "macOS packages installed!"

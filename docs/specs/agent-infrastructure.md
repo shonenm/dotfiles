@@ -105,7 +105,7 @@ MCP サーバーへの安全な接続レイヤー。
 | **Audit** | `~/.pi/research/mcp-audit.jsonl` |
 | **Stats** | `~/.pi/research/mcp-stats.json` |
 | **Pi impl** | `extensions/mcp-gateway.ts` — JSON-RPC stdio client + tool registration. allow/ask/deny enforced via `tool_call` gate; protocol version negotiated (advertises latest). stdio only (HTTP deferred) |
-| **Claude impl** | ネイティブ MCP 対応 + symlink で共有 config 参照 |
+| **Claude impl** | ネイティブ MCP 対応。`common/claude/.config/claude/mcp.json` を正本に install.sh が `claude mcp add-json --scope user` で登録 |
 
 ## Shared Configuration
 
