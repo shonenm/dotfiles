@@ -122,7 +122,14 @@ try:
   d = json.load(sys.stdin)
   pu = d.get('planUsage') or {}
   if pu:
-    s = int(round(float(pu.get('totalPercentUsed') or 0)))
+    # total = included 枠の消化率(Cursor UI の 'X% of your included usage' と一致)。
+    # includedSpend/limit を優先し、無ければ totalPercentUsed にフォールバック。
+    limit = float(pu.get('limit') or 0)
+    spend = float(pu.get('includedSpend') or pu.get('totalSpend') or 0)
+    if limit > 0:
+      s = int(round(spend * 100 / limit))
+    else:
+      s = int(round(float(pu.get('totalPercentUsed') or 0)))
     w = int(round(float(pu.get('autoPercentUsed') or pu.get('apiPercentUsed') or 0)))
     s = max(0, min(100, s))
     w = max(0, min(100, w))
