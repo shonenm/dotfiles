@@ -4,6 +4,18 @@
     "command": "__HOME__/.claude/statusline-command.sh"
   },
   "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/id_rsa*)",
+      "Read(**/id_ed25519*)",
+      "Read(~/.ssh/id_*)",
+      "Read(~/.claude/.credentials.json)",
+      "Read(~/.local/share/ai-notify/**)",
+      "Read(**/*_webhook)",
+      "Read(**/credentials*)"
+    ],
     "allow": [
       "mcp__syntopic__*",
       "mcp__notion__*",

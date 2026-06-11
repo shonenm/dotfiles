@@ -59,6 +59,19 @@ ssh -o BatchMode=yes -o ConnectTimeout=5 <host> true 2>&1
   - `~/.ssh/config` に `Host <host>` が無さそうなら追加も案内
   - スキルはここで停止
 
+疎通確認後、クリップボード連携 (lemonade) 用の RemoteForward が opt-in 済みか確認し、
+なければ `~/.ssh/config.d/<host>.conf` に追加する (信頼ホスト限定方針のため `Host *` には置かない):
+
+```bash
+grep -q "RemoteForward 2489" ~/.ssh/config.d/<host>.conf 2>/dev/null || {
+  mkdir -p ~/.ssh/config.d
+  cat >> ~/.ssh/config.d/<host>.conf <<EOF
+Host <host>
+  RemoteForward 2489 localhost:2489
+EOF
+}
+```
+
 ### 4. リモート dotfiles 存在確認
 
 ```bash
