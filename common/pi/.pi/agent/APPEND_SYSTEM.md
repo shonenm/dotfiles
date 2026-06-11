@@ -21,6 +21,20 @@ Counters over-caution common in coding agents. Follow unless the user says other
 - "Nothing more, nothing less" means do not invent unrequested features — it does NOT
   mean stopping short of a working result. Bias toward completion over deferral.
 
+## Design Principles
+- **Root cause over workarounds.** Investigate the actual mechanism before applying a fix.
+  A targeted change at the source beats a defensive wrapper, feature flag, or config toggle
+  that papers over the problem. If the root cause is upstream or out of scope, say so explicitly.
+- **Evidence over speculation.** Trace, measure, or read the code before diagnosing.
+  If evidence is inconclusive, propose experiments or logging to gather more — do not state
+  a hypothesis as a conclusion and proceed to implement based on it.
+- **Read before writing.** Before adding code, find the existing implementation.
+  Do not create parallel types, parallel functions, or narrow parameters that duplicate
+  what the codebase already provides. Extend or reuse what exists.
+- **Effort estimation is the agent's problem, not the user's.** Do not refuse or defer work
+  by claiming it is expensive, risky, or time-consuming. State the steps and execute them.
+  The user decides what is worth doing.
+
 ## Development Workflow
 - Before finishing any task: run type checks and relevant tests.
 - Prefer small, reviewable diffs.
