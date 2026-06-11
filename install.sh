@@ -13,6 +13,7 @@ source "$DOTFILES_DIR/scripts/utils.sh"
 SKIP_PROMPT=false
 NO_SUDO=false
 SKIP_1P=false
+SETUP_FAILED=false
 for arg in "$@"; do
   case "$arg" in
     -y|--skip-prompt) SKIP_PROMPT=true ;;
@@ -163,7 +164,10 @@ setup_environment() {
     mac)
       if [[ -f "$DOTFILES_DIR/scripts/mac.sh" ]]; then
         log_info "Running macOS setup script..."
-        bash "$DOTFILES_DIR/scripts/mac.sh"
+        if ! bash "$DOTFILES_DIR/scripts/mac.sh"; then
+          SETUP_FAILED=true
+          log_warn "Some macOS setup steps failed (see above); continuing"
+        fi
       else
         log_warn "scripts/mac.sh not found. Skipping package installation."
       fi
@@ -171,7 +175,10 @@ setup_environment() {
     linux)
       if [[ -f "$DOTFILES_DIR/scripts/linux.sh" ]]; then
         log_info "Running Linux setup script..."
-        bash "$DOTFILES_DIR/scripts/linux.sh"
+        if ! bash "$DOTFILES_DIR/scripts/linux.sh"; then
+          SETUP_FAILED=true
+          log_warn "Some Linux setup steps failed (see above); continuing"
+        fi
       else
         log_warn "scripts/linux.sh not found. Skipping package installation."
       fi
@@ -337,6 +344,22 @@ link_dotfiles() {
     return 1
   fi
 
+  local os
+  os=$(detect_os)
+
+  # Abort if the repo has uncommitted changes under the stow source dirs.
+  # stow --adopt overwrites repo files with the $HOME versions, and the
+  # later `git checkout -- common/ <os>/` rolls everything back to HEAD,
+  # so any uncommitted edits would be silently destroyed.
+  local dirty
+  dirty=$(git -C "$DOTFILES_DIR" status --porcelain -- common/ "$os/" 2>/dev/null || true)
+  if [[ -n "$dirty" ]]; then
+    log_error "Uncommitted changes in dotfiles repo would be lost by stow --adopt:"
+    echo "$dirty"
+    log_error "Commit or stash these changes, then re-run install.sh"
+    return 1
+  fi
+
   # Create .config if not exists
   mkdir -p "$HOME/.config"
 
@@ -351,8 +374,6 @@ link_dotfiles() {
   fi
 
   # Stow OS-specific packages
-  local os
-  os=$(detect_os)
   if [[ -d "$DOTFILES_DIR/$os" ]]; then
     log_info "Linking $os-specific dotfiles..."
     for pkg in "$DOTFILES_DIR/$os"/*/; do
@@ -483,12 +504,42 @@ generate_ai_cli_configs() {
 
   local templates_dir="$DOTFILES_DIR/templates"
 
-  # Claude CLI
+  # Claude CLI — merge the template into the existing settings instead of
+  # regenerating from scratch. Template keys win (single source of truth),
+  # but keys only present locally (model, hooks registered by other steps
+  # like rtk, feedbackSurveyState, ...) are preserved.
   if [[ -f "$templates_dir/claude-settings.json" ]]; then
     mkdir -p "$HOME/.claude"
-    rm -f "$HOME/.claude/settings.json" 2>/dev/null || true
-    sed "s|__HOME__|$HOME|g" "$templates_dir/claude-settings.json" > "$HOME/.claude/settings.json"
-    log_success "  Generated ~/.claude/settings.json"
+    local rendered_template
+    rendered_template=$(mktemp)
+    sed "s|__HOME__|$HOME|g" "$templates_dir/claude-settings.json" > "$rendered_template"
+    python3 - "$rendered_template" "$HOME/.claude/settings.json" <<'PYEOF'
+import json, sys
+
+template_path, settings_path = sys.argv[1], sys.argv[2]
+with open(template_path) as f:
+    template = json.load(f)
+try:
+    with open(settings_path) as f:
+        current = json.load(f)
+except (OSError, ValueError):
+    current = {}
+
+def merge(base, override):
+    out = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(out.get(key), dict):
+            out[key] = merge(out[key], value)
+        else:
+            out[key] = value
+    return out
+
+with open(settings_path, "w") as f:
+    json.dump(merge(current, template), f, indent=2, ensure_ascii=False)
+    f.write("\n")
+PYEOF
+    rm -f "$rendered_template"
+    log_success "  Merged ~/.claude/settings.json (template keys win, local-only keys kept)"
   fi
 
   # Claude MCP servers (from mcp.json, secrets resolved via 1Password)
@@ -732,11 +783,18 @@ main() {
   configure_serena_dashboard
 
   echo
-  log_success "=== Installation Complete! ==="
+  if [[ "$SETUP_FAILED" == "true" ]]; then
+    log_error "=== Installation finished with package setup failures (see above) ==="
+  else
+    log_success "=== Installation Complete! ==="
+  fi
   log_info "Please restart your shell or run: source ~/.zshrc"
 
   # Unified summary (all config-driven)
   print_install_summary
+
+  [[ "$SETUP_FAILED" == "true" ]] && exit 1
+  return 0
 }
 
 # --- 3.9. Install pi packages from stowed settings.json ---
@@ -782,7 +840,11 @@ with open('$settings_file') as f:
 # --- 4.5. Configure rtk Claude Code hook ---
 # rtk init -g registers a Bash hook in ~/.claude/settings.json that transparently
 # rewrites commands like `git status` -> `rtk git status` for 60-90% token reduction.
-# Idempotent: skips if hook already configured.
+# --auto-patch is required: without it rtk prompts before patching settings.json,
+# and in non-interactive installs the prompt fails, leaving RTK.md claiming a
+# hook that was never installed.
+# Idempotent: skips if hook already configured. Must run after
+# generate_ai_cli_configs, whose template merge resets the hook arrays.
 configure_rtk_claude_hook() {
   if ! command_exists rtk; then
     log_warn "rtk not installed, skipping rtk Claude hook setup"
@@ -796,10 +858,10 @@ configure_rtk_claude_hook() {
   fi
 
   log_info "Configuring rtk Claude Code hook (token compression)..."
-  if rtk init -g; then
+  if rtk init -g --auto-patch; then
     log_success "rtk Claude hook configured"
   else
-    log_warn "rtk init -g failed (non-fatal)"
+    log_warn "rtk init -g --auto-patch failed (non-fatal)"
   fi
 }
 

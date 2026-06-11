@@ -39,6 +39,16 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/common/claude/.claude/hooks/genshijin-session-start.sh"
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
@@ -49,6 +59,16 @@
           {
             "type": "command",
             "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh start"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat"
           }
         ]
       }

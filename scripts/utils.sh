@@ -16,6 +16,32 @@ command_exists() {
   command -v "$1" &>/dev/null
 }
 
+# --- Install step failure tracking ---
+# run_step records failures instead of aborting, so one broken step doesn't
+# stop the rest of the setup but the script can still exit non-zero.
+# Usage:
+#   run_step install_foo
+#   run_step install_bar
+#   finish_steps "All packages installed!"   # exits 1 if any step failed
+# (string accumulation instead of an array: empty arrays break under
+#  `set -u` on macOS bash 3.2)
+FAILED_STEPS=""
+run_step() {
+  if ! "$1"; then
+    FAILED_STEPS="${FAILED_STEPS} $1"
+    log_error "Step failed: $1"
+  fi
+}
+
+finish_steps() {
+  local success_msg="$1"
+  if [[ -n "$FAILED_STEPS" ]]; then
+    log_error "Setup finished with failed steps:${FAILED_STEPS}"
+    return 1
+  fi
+  log_success "$success_msg"
+}
+
 detect_os() {
   case "$(uname -s)" in
     Darwin) echo "mac" ;;

@@ -18,7 +18,9 @@ MCP Server (stdio JSON-RPC)
 
 ## Config
 
-共有 MCP 設定は `~/.config/agent/mcp.json` で一元管理。Claude/pi 両方が参照する。
+pi の MCP 設定は `~/.config/agent/mcp.json` で管理（pi 起動パフォーマンスのため必要最小限に絞る）。
+Claude は `common/claude/.config/claude/mcp.json` を正本とし、install.sh が
+`claude mcp add-json --scope user` で登録する（秘密情報は `${NOTION_TOKEN}` を 1Password から解決）。
 詳細は [agent-layer.md](agent-layer.md) を参照。
 
 ### Format
