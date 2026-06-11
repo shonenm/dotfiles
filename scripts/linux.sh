@@ -554,8 +554,13 @@ install_rtk() {
     return
   fi
 
-  log_info "Installing rtk (AI agent token compression CLI)..."
-  curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+  # Pin to a release tag instead of mutable master: rtk proxies every shell
+  # command via the Claude hook, so an upstream compromise of master would
+  # equal full shell takeover on the next install.
+  local version="${RTK_VERSION:-v0.42.3}"
+
+  log_info "Installing rtk ${version} (AI agent token compression CLI)..."
+  curl -fsSL "https://raw.githubusercontent.com/rtk-ai/rtk/refs/tags/${version}/install.sh" | sh
   log_success "rtk installed"
 }
 
