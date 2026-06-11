@@ -22,6 +22,7 @@ set -uo pipefail
 [[ -z "${TMUX:-}" ]] && exit 0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SELF="$SCRIPT_DIR/tmux-agent-sidebar.sh"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/tmux-agent-status.sh"   # ヘルパー(is_shell, trunc_w 由来の helpers, C_*)
 set +e +o pipefail
@@ -143,7 +144,9 @@ case "${1:-toggle}" in
     printf '\033[?25l'   # カーソル非表示(ちらつき低減)
     while true; do
       tmux info &>/dev/null || { printf '\033[?25h'; exit 0; }
-      render
+      # 描画は毎回サブプロセスで実行し、スクリプト更新を自動反映する
+      # (常駐ループに関数を抱えると、起動後の更新が反映されず古い表示になるため)
+      bash "$SELF" once
       sleep "$REFRESH" & wait $! || true
     done
     ;;
