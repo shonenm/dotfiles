@@ -141,15 +141,19 @@ usage_section() {
       out=$(${TO:+$TO 6} bash "$SCRIPT_DIR/$sc.sh" 2>/dev/null)
       [[ -z "$out" ]] && continue
       # 各ウィンドウ1レコード "ICON\x1fLABEL\x1fGAUGE\x1fPCT\x1fREMAINING"。
-      # データ無しは "ICON\x1f--"。current/weekly を別ブロックで縦に並べる:
+      # データ無しは "ICON\x1f--"。icon は AI ごとに1つ(最初のウィンドウのみ)、
+      # 2つ目以降は icon を出さずインデント揃え。current/weekly を縦に並べる:
       #   {icon} {label}
       #     {gauge} {pct}  {remaining}
+      local first=1
       while IFS=$'\x1f' read -r icon label gauge pct rem; do
         [[ -z "$icon" ]] && continue
+        local head
+        if (( first )); then head="$col$icon$C_RST "; first=0; else head="  "; fi
         if [[ "$label" == "--" ]]; then
-          printf '%s%s%s %s--%s\n' "$col" "$icon" "$C_RST" "$C_DIM" "$C_RST"
+          printf '%s%s--%s\n' "$head" "$C_DIM" "$C_RST"
         else
-          printf '%s%s%s %s%s%s\n' "$col" "$icon" "$C_RST" "$C_DIM" "$label" "$C_RST"
+          printf '%s%s%s%s\n' "$head" "$C_DIM" "$label" "$C_RST"
           printf '  %s%s %s%s%s  %s%s\n' "$col" "$gauge" "$pct" "$C_RST" "$C_DIM" "$rem" "$C_RST"
         fi
       done <<< "$out"
