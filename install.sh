@@ -497,12 +497,42 @@ generate_ai_cli_configs() {
 
   local templates_dir="$DOTFILES_DIR/templates"
 
-  # Claude CLI
+  # Claude CLI — merge the template into the existing settings instead of
+  # regenerating from scratch. Template keys win (single source of truth),
+  # but keys only present locally (model, hooks registered by other steps
+  # like rtk, feedbackSurveyState, ...) are preserved.
   if [[ -f "$templates_dir/claude-settings.json" ]]; then
     mkdir -p "$HOME/.claude"
-    rm -f "$HOME/.claude/settings.json" 2>/dev/null || true
-    sed "s|__HOME__|$HOME|g" "$templates_dir/claude-settings.json" > "$HOME/.claude/settings.json"
-    log_success "  Generated ~/.claude/settings.json"
+    local rendered_template
+    rendered_template=$(mktemp)
+    sed "s|__HOME__|$HOME|g" "$templates_dir/claude-settings.json" > "$rendered_template"
+    python3 - "$rendered_template" "$HOME/.claude/settings.json" <<'PYEOF'
+import json, sys
+
+template_path, settings_path = sys.argv[1], sys.argv[2]
+with open(template_path) as f:
+    template = json.load(f)
+try:
+    with open(settings_path) as f:
+        current = json.load(f)
+except (OSError, ValueError):
+    current = {}
+
+def merge(base, override):
+    out = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(out.get(key), dict):
+            out[key] = merge(out[key], value)
+        else:
+            out[key] = value
+    return out
+
+with open(settings_path, "w") as f:
+    json.dump(merge(current, template), f, indent=2, ensure_ascii=False)
+    f.write("\n")
+PYEOF
+    rm -f "$rendered_template"
+    log_success "  Merged ~/.claude/settings.json (template keys win, local-only keys kept)"
   fi
 
   # Claude MCP servers (from mcp.json, secrets resolved via 1Password)
