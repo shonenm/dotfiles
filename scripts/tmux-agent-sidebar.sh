@@ -166,6 +166,9 @@ render() {
   W=$(tmux display-message -p -t "${TMUX_PANE}" '#{pane_width}' 2>/dev/null)
   [[ -z "$H" ]] && H=40
   [[ -z "$W" || "$W" -lt 1 ]] && W="$WIDTH"
+  # 以降の幅計算(trunc_w / per / divider)は静的 WIDTH ではなく実 pane 幅に揃える。
+  # _sb_flush は動的スコープで WIDTH を参照するため、ここで上書きすれば波及する。
+  local WIDTH="$W"
   # divider は pane 幅ちょうどの罫線(リサイズに追従、折返し防止)
   local div; div=$(printf '─%.0s' $(seq 1 "$W"))
 
