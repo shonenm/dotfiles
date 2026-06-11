@@ -60,6 +60,18 @@ cd ~/dotfiles
 ./install.sh
 ```
 
+クリップボード連携 (lemonade) を使う場合は、Mac 側で信頼ホストごとに RemoteForward を
+opt-in する (`Host *` への一括設定はセキュリティ上廃止: SSH 先の侵害ホストから
+mac のクリップボード読取・任意 URI open を許してしまうため):
+
+```bash
+mkdir -p ~/.ssh/config.d
+cat >> ~/.ssh/config.d/chronos.conf <<'EOF'
+Host chronos
+  RemoteForward 2489 localhost:2489
+EOF
+```
+
 これで以下が揃う:
 - `tmux` (pixi 経由で `~/.pixi/bin/tmux`)
 - `~/.config/tmux/tmux.conf` (stow symlink)
