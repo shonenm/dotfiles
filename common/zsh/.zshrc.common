@@ -87,13 +87,9 @@ command -v mise &>/dev/null && eval "$(mise activate zsh)"
 # --- Direnv (interactive shell hooks) ---
 command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
 
-# --- Completion Init (cached: full rebuild once per 24h) ---
-autoload -Uz compinit
-if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
-  compinit
-else
-  compinit -C
-fi
+# compinit は common/zsh/.zshrc の最後 (全 fpath 追加 + sheldon source 後) で実行する。
+# ここで実行すると後続の fpath 追加 (~/.zsh/completions, sheldon zsh-completions) が
+# 補完登録されない。
 
 # --- Conditional Aliases (runtime checks) ---
 # ls -> lsd (fallback: eza)
