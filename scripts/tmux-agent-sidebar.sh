@@ -160,10 +160,19 @@ render() {
   rows=$(collect_agents | sort -t$'\t' -k1,1 -k2,2n)
   total=$(printf '%s' "$rows" | grep -c . 2>/dev/null)
 
+  # --- pane の幅/高さを取得(divider 長・最下部揃えに使用) ---
+  local H W
+  H=$(tmux display-message -p -t "${TMUX_PANE}" '#{pane_height}' 2>/dev/null)
+  W=$(tmux display-message -p -t "${TMUX_PANE}" '#{pane_width}' 2>/dev/null)
+  [[ -z "$H" ]] && H=40
+  [[ -z "$W" || "$W" -lt 1 ]] && W="$WIDTH"
+  # divider は pane 幅ちょうどの罫線(リサイズに追従、折返し防止)
+  local div; div=$(printf '─%.0s' $(seq 1 "$W"))
+
   # --- AGENTS ブロックを配列に構築(上部) ---
   local top=()
   top+=("$(printf '%s AGENTS%s %s%s%s' "$C_BOLD" "$C_RST" "$C_DIM" "$total" "$C_RST")")
-  top+=("$(printf '%s────────────────────────%s' "$C_DIM" "$C_RST")")
+  top+=("$(printf '%s%s%s' "$C_DIM" "$div" "$C_RST")")
   if [[ -z "$rows" ]]; then
     top+=("$(printf '%s(エージェントなし)%s' "$C_DIM" "$C_RST")")
   else
@@ -184,13 +193,10 @@ render() {
   # --- USAGE ブロックを配列に構築(下部) ---
   local bot=()
   bot+=("$(printf '%s USAGE%s' "$C_BOLD" "$C_RST")")
-  bot+=("$(printf '%s────────────────────────%s' "$C_DIM" "$C_RST")")
+  bot+=("$(printf '%s%s%s' "$C_DIM" "$div" "$C_RST")")
   while IFS= read -r ln; do bot+=("$ln"); done < <(usage_section)
 
-  # --- pane 高さを取得し、USAGE を最下部に揃える ---
-  local H
-  H=$(tmux display-message -p -t "${TMUX_PANE}" '#{pane_height}' 2>/dev/null)
-  [[ -z "$H" ]] && H=40
+  # --- USAGE を最下部に揃える ---
   local n_top=${#top[@]} n_bot=${#bot[@]}
   local pad=$(( H - n_top - n_bot ))
   (( pad < 1 )) && pad=1   # 重なり防止に最低1行は空ける
