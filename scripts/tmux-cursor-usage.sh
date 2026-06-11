@@ -1,7 +1,9 @@
 #!/bin/bash
 # Cursor Agent 使用量表示 (tmux status-right 用)
 # cursor-agent OAuth トークンで api2.cursor.sh から取得しキャッシュ
-# 出力: "◆ ▃▅ 20%/3% 12d" 形式 (total% / auto% + 請求周期終了まで)
+# 出力: サイドバー用の構造化レコード(1行=1ウィンドウ、区切りは US 0x1f)
+#   "<icon>\x1f<label>\x1f<gauge>\x1f<pct>\x1f<remaining>" (total / auto、いずれも請求周期末まで)
+#   データ無しは "<icon>\x1f--"
 #
 # キャッシュ形式: "<total_pct>|<auto_pct>|<billing_cycle_end_ms>"
 
@@ -14,6 +16,9 @@ FAIL_TTL=60
 LABEL="◆"
 API_BASE="${CURSOR_API_BASE:-https://api2.cursor.sh}"
 
+# データ無しレコードを出力
+na() { printf '%s\x1f--\n' "$LABEL"; }
+
 get_mtime() {
   case "$(uname -s)" in
     Darwin) stat -f %m "$1" 2>/dev/null || echo 0 ;;
@@ -21,51 +26,46 @@ get_mtime() {
   esac
 }
 
+# "<total>|<auto>|<billing_end_ms>" を受け取り2レコード出力(total / auto)
 render() {
-  python3 - "$1" "$2" "$3" "$LABEL" <<'PY'
+  python3 - "$LABEL" "$1" "$2" "$3" <<'PY'
 import sys
 from datetime import datetime, timezone
-
-label = sys.argv[4] if len(sys.argv) > 4 else "◆"
+US = "\x1f"
+icon = sys.argv[1]
+bars = [" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"]
+# 0%は空白、それ以外は最低でも▁を表示(低%でゲージが不可視になるのを防ぐ)
+def bar(v):
+    if v <= 0:
+        return bars[0]
+    if v >= 100:
+        return bars[8]
+    return bars[max(1, v * 8 // 100)]
+def remain(ts):
+    if not ts:
+        return ""
+    try:
+        reset_ts = int(ts)
+        if reset_ts > 10_000_000_000:
+            reset_ts //= 1000
+        delta = reset_ts - int(datetime.now(timezone.utc).timestamp())
+        if delta <= 0:
+            return "0m"
+        total_min = delta // 60
+        h, m = divmod(total_min, 60)
+        if h >= 24:
+            d, h = divmod(h, 24)
+            return f"{d}d" if d > 0 else f"{h}h{m:02d}m"
+        return f"{h}h{m:02d}m" if h > 0 else f"{m}m"
+    except Exception:
+        return ""
 try:
-    s = int(sys.argv[1])
-    w = int(sys.argv[2])
-    resets_at = sys.argv[3]
-    bars = [" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"]
-    # 0%は空白、それ以外は最低でも▁を表示(低%でゲージが不可視になるのを防ぐ)
-    def bar(v):
-        if v <= 0:
-            return bars[0]
-        if v >= 100:
-            return bars[8]
-        return bars[max(1, v * 8 // 100)]
-    sb = bar(s)
-    wb = bar(w)
-    remaining = ""
-    if resets_at:
-        try:
-            reset_ts = int(resets_at)
-            if reset_ts > 10_000_000_000:
-                reset_ts //= 1000
-            now_ts = int(datetime.now(timezone.utc).timestamp())
-            delta = reset_ts - now_ts
-            if delta <= 0:
-                remaining = " 0m"
-            else:
-                total_min = delta // 60
-                h, m = divmod(total_min, 60)
-                if h >= 24:
-                    d, h = divmod(h, 24)
-                    remaining = f" {d}d" if d > 0 else f" {h}h{m:02d}m"
-                elif h > 0:
-                    remaining = f" {h}h{m:02d}m"
-                else:
-                    remaining = f" {m}m"
-        except Exception:
-            pass
-    print(f"{label} {sb}{wb} {s}%/{w}%{remaining}")
+    s = int(sys.argv[2]); w = int(sys.argv[3])
+    rem = remain(sys.argv[4])
+    print(US.join([icon, "total", bar(s), f"{s}%", rem]))
+    print(US.join([icon, "auto",  bar(w), f"{w}%", rem]))
 except Exception:
-    print(f"{label} --")
+    print(f"{icon}{US}--")
 PY
 }
 
@@ -83,14 +83,14 @@ fi
 if [[ -f "$FAIL_FILE" ]]; then
   fail_age=$(( $(date +%s) - $(get_mtime "$FAIL_FILE") ))
   if (( fail_age < FAIL_TTL )); then
-    echo "$LABEL --"
+    na
     exit 0
   fi
 fi
 
 token=$("$SCRIPT_DIR/cursor-auth-token.sh" 2>/dev/null) || {
   touch "$FAIL_FILE"
-  echo "$LABEL --"
+  na
   exit 0
 }
 
@@ -112,7 +112,7 @@ fi
 
 if [[ -z "$raw" ]]; then
   touch "$FAIL_FILE"
-  echo "$LABEL --"
+  na
   exit 0
 fi
 
@@ -152,7 +152,7 @@ except Exception:
 
 if [[ -z "$parsed" ]]; then
   touch "$FAIL_FILE"
-  echo "$LABEL --"
+  na
   exit 0
 fi
 

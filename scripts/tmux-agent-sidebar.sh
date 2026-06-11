@@ -128,7 +128,7 @@ usage_section() {
   # curl --max-time + キャッシュ + fail backoff により自己制限する)
   local TO; TO="$(command -v timeout || command -v gtimeout || true)"
   {
-    local sc out icon gauge pct rem col
+    local sc out col icon label gauge pct rem
     for sc in tmux-claude-usage tmux-codex-usage tmux-gemini-usage tmux-cursor-usage; do
       # AI ごとの色分け(ステータスバーと同じ): claude=橙 codex=水色 gemini=青 cursor=紫
       case "$sc" in
@@ -140,15 +140,19 @@ usage_section() {
       esac
       out=$(${TO:+$TO 6} bash "$SCRIPT_DIR/$sc.sh" 2>/dev/null)
       [[ -z "$out" ]] && continue
-      # 形式 "ICON GAUGE(2字) PCT/PCT REMAINING"。ゲージは低%だと空白になり read の空白圧縮で
-      # ずれるため正規表現で抽出する。マッチしなければデータなし(ICON --)扱い。
-      if [[ "$out" =~ ^([^[:space:]]+)\ (..)\ ([0-9]+%/[0-9]+%)\ ?(.*)$ ]]; then
-        icon="${BASH_REMATCH[1]}"; gauge="${BASH_REMATCH[2]}"; pct="${BASH_REMATCH[3]}"; rem="${BASH_REMATCH[4]}"
-        printf '%s%s%s %s\n  %s%s %s%s\n' "$col" "$icon" "$C_RST" "$rem" "$col" "$gauge" "$pct" "$C_RST"
-      else
-        read -r icon _ <<< "$out"
-        printf '%s%s%s %s--%s\n' "$col" "$icon" "$C_RST" "$C_DIM" "$C_RST"
-      fi
+      # 各ウィンドウ1レコード "ICON\x1fLABEL\x1fGAUGE\x1fPCT\x1fREMAINING"。
+      # データ無しは "ICON\x1f--"。current/weekly を別ブロックで縦に並べる:
+      #   {icon} {label}
+      #     {gauge} {pct}  {remaining}
+      while IFS=$'\x1f' read -r icon label gauge pct rem; do
+        [[ -z "$icon" ]] && continue
+        if [[ "$label" == "--" ]]; then
+          printf '%s%s%s %s--%s\n' "$col" "$icon" "$C_RST" "$C_DIM" "$C_RST"
+        else
+          printf '%s%s%s %s%s%s\n' "$col" "$icon" "$C_RST" "$C_DIM" "$label" "$C_RST"
+          printf '  %s%s %s%s%s  %s%s\n' "$col" "$gauge" "$pct" "$C_RST" "$C_DIM" "$rem" "$C_RST"
+        fi
+      done <<< "$out"
     done
   } | tee "$USAGE_CACHE"
 }
