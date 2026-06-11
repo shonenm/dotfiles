@@ -32,8 +32,15 @@ try:
     w = int(sys.argv[2])
     resets_at = sys.argv[3]
     bars = [" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"]
-    sb = bars[s * 8 // 100] if s < 100 else bars[8]
-    wb = bars[w * 8 // 100] if w < 100 else bars[8]
+    # 0%は空白、それ以外は最低でも▁を表示(低%でゲージが不可視になるのを防ぐ)
+    def bar(v):
+        if v <= 0:
+            return bars[0]
+        if v >= 100:
+            return bars[8]
+        return bars[max(1, v * 8 // 100)]
+    sb = bar(s)
+    wb = bar(w)
     remaining = ""
     if resets_at:
         try:
