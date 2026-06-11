@@ -47,7 +47,7 @@ def remain(iso):
     h, m = divmod(total_min, 60)
     if h >= 24:
       d, h = divmod(h, 24)
-      return f'{d}d'
+      return f'{d}d{h}h'
     return f'{h}h{m:02d}m' if h > 0 else f'{m}m'
   except Exception:
     return ''
