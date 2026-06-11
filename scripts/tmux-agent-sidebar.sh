@@ -195,11 +195,24 @@ render() {
   local pad=$(( H - n_top - n_bot ))
   (( pad < 1 )) && pad=1   # 重なり防止に最低1行は空ける
 
-  printf '\033[H'   # ホームへ(全画面クリアしない)
+  # 全行を1配列にまとめる(上: AGENTS / 中: パディング / 下: USAGE)
+  local out=()
   local i
-  for (( i = 0; i < n_top; i++ )); do printf '%s%s\n' "${top[i]}" "$ESC_K"; done
-  for (( i = 0; i < pad; i++ )); do printf '%s\n' "$ESC_K"; done
-  for (( i = 0; i < n_bot; i++ )); do printf '%s%s\n' "${bot[i]}" "$ESC_K"; done
+  for (( i = 0; i < n_top; i++ )); do out+=("${top[i]}"); done
+  for (( i = 0; i < pad; i++ )); do out+=(""); done
+  for (( i = 0; i < n_bot; i++ )); do out+=("${bot[i]}"); done
+
+  # 最終行に改行を付けると1行スクロールし先頭(AGENTS ヘッダー)が画面外へ落ちる。
+  # 最終行のみ改行なしで出力する。
+  printf '\033[H'   # ホームへ(全画面クリアしない)
+  local n_out=${#out[@]}
+  for (( i = 0; i < n_out; i++ )); do
+    if (( i < n_out - 1 )); then
+      printf '%s%s\n' "${out[i]}" "$ESC_K"
+    else
+      printf '%s%s' "${out[i]}" "$ESC_K"
+    fi
+  done
   printf '\033[J'   # 残りの古い行を消去
 }
 
