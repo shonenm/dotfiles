@@ -1,6 +1,9 @@
 #!/bin/bash
 
 # Linux (Debian/Ubuntu/Alpine) Setup Script
+# No -e: individual steps may fail without aborting the rest; failures are
+# collected via run_step and reported through finish_steps (non-zero exit).
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(dirname "$SCRIPT_DIR")"
@@ -171,9 +174,10 @@ install_nerd_font() {
 # --- Tool Installation Helpers ---
 
 # Get a tool's config field value via indirect expansion
+# (:- keeps unset optional fields safe under `set -u`)
 _tool_field() {
   local var="TOOL_${1}_${2}"
-  echo "${!var}"
+  echo "${!var:-}"
 }
 
 # Resolve architecture from arch_map
@@ -857,26 +861,26 @@ install_tmux_source() {
 
 # --- Main Execution ---
 
-check_requirements
-install_system_packages
-install_tmux_source
-install_modern_tools
-install_bun
-install_npm_packages
-install_claude_mem
-install_genshijin
-install_rtk
-install_serena
-install_context_mode
-install_code_review_graph
-install_auto_mode
-configure_claude_remote_control_autostart
-link_ai_scripts
-install_gh_extensions
-install_ghostty_terminfo
-install_fancy_cat
-install_1password_cli
-check_1password
-set_default_shell
+run_step check_requirements
+run_step install_system_packages
+run_step install_tmux_source
+run_step install_modern_tools
+run_step install_bun
+run_step install_npm_packages
+run_step install_claude_mem
+run_step install_genshijin
+run_step install_rtk
+run_step install_serena
+run_step install_context_mode
+run_step install_code_review_graph
+run_step install_auto_mode
+run_step configure_claude_remote_control_autostart
+run_step link_ai_scripts
+run_step install_gh_extensions
+run_step install_ghostty_terminfo
+run_step install_fancy_cat
+run_step install_1password_cli
+run_step check_1password
+run_step set_default_shell
 
-log_success "Linux setup complete!"
+finish_steps "Linux setup complete!"

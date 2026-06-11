@@ -13,6 +13,7 @@ source "$DOTFILES_DIR/scripts/utils.sh"
 SKIP_PROMPT=false
 NO_SUDO=false
 SKIP_1P=false
+SETUP_FAILED=false
 for arg in "$@"; do
   case "$arg" in
     -y|--skip-prompt) SKIP_PROMPT=true ;;
@@ -163,7 +164,10 @@ setup_environment() {
     mac)
       if [[ -f "$DOTFILES_DIR/scripts/mac.sh" ]]; then
         log_info "Running macOS setup script..."
-        bash "$DOTFILES_DIR/scripts/mac.sh"
+        if ! bash "$DOTFILES_DIR/scripts/mac.sh"; then
+          SETUP_FAILED=true
+          log_warn "Some macOS setup steps failed (see above); continuing"
+        fi
       else
         log_warn "scripts/mac.sh not found. Skipping package installation."
       fi
@@ -171,7 +175,10 @@ setup_environment() {
     linux)
       if [[ -f "$DOTFILES_DIR/scripts/linux.sh" ]]; then
         log_info "Running Linux setup script..."
-        bash "$DOTFILES_DIR/scripts/linux.sh"
+        if ! bash "$DOTFILES_DIR/scripts/linux.sh"; then
+          SETUP_FAILED=true
+          log_warn "Some Linux setup steps failed (see above); continuing"
+        fi
       else
         log_warn "scripts/linux.sh not found. Skipping package installation."
       fi
@@ -776,11 +783,18 @@ main() {
   configure_serena_dashboard
 
   echo
-  log_success "=== Installation Complete! ==="
+  if [[ "$SETUP_FAILED" == "true" ]]; then
+    log_error "=== Installation finished with package setup failures (see above) ==="
+  else
+    log_success "=== Installation Complete! ==="
+  fi
   log_info "Please restart your shell or run: source ~/.zshrc"
 
   # Unified summary (all config-driven)
   print_install_summary
+
+  [[ "$SETUP_FAILED" == "true" ]] && exit 1
+  return 0
 }
 
 # --- 3.9. Install pi packages from stowed settings.json ---
