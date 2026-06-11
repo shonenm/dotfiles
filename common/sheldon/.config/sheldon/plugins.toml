@@ -1,19 +1,32 @@
 # plugins.toml
 shell = "zsh"
 
+# zsh-defer: プロンプト表示後 (アイドル時) に source する遅延ロード。
+# 体感起動時間を削る。fpath 提供プラグイン (zsh-completions) と、
+# source 直後に .zshrc.local から参照されるもの (zsh-abbr の abbr) には使えない。
+[templates]
+defer = """{% for file in files %}zsh-defer source "{{ file }}"
+{% endfor %}"""
+
+[plugins.zsh-defer]
+github = "romkatv/zsh-defer"
+
 [plugins.zsh-completions]
 github = "zsh-users/zsh-completions"
 dir = "src"
 apply = ["fpath"]
 
-[plugins.forgit]
-github = "wfxr/forgit"
-
 [plugins.zsh-abbr]
 github = "olets/zsh-abbr"
 
+[plugins.forgit]
+github = "wfxr/forgit"
+apply = ["defer"]
+
 [plugins.zsh-syntax-highlighting]
 github = "zsh-users/zsh-syntax-highlighting"
+apply = ["defer"]
 
 [plugins.zsh-autosuggestions]
 github = "zsh-users/zsh-autosuggestions"
+apply = ["defer"]

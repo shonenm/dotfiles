@@ -27,8 +27,12 @@ bindkey -M emacs '^p' atuin-up-search
 
 # --- zsh-abbr syntax highlighting integration ---
 # Show abbreviations in green instead of red
+# zsh-syntax-highlighting は zsh-defer で遅延ロードされるため、ここでは
+# += でなく完全な値を設定する (+= だと plugin デフォルトの main が失われる)。
+# ZSH_HIGHLIGHT_REGEXP は plugin より先に連想配列として宣言しておく。
 if (( ${+ABBR_REGULAR_USER_ABBREVIATIONS} )); then
-  ZSH_HIGHLIGHT_HIGHLIGHTERS+=(regexp)
+  ZSH_HIGHLIGHT_HIGHLIGHTERS=(main regexp)
+  typeset -gA ZSH_HIGHLIGHT_REGEXP
   local -a abbr_keys=()
   for k in ${(k)ABBR_REGULAR_USER_ABBREVIATIONS}; do
     abbr_keys+="${k//\"/}"
