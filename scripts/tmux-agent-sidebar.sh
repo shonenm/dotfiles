@@ -111,6 +111,40 @@ _sb_flush() {
   [[ "$line" != "  " ]] && printf '%s%s\n' "$line" "$ESC_K"
 }
 
+# 各 AI の使用量(セッションリミット)を2行で出力(1行目: アイコン+残り時間 / 2行目: ゲージ+%)
+# usage スクリプト出力 "ICON GAUGE PCT/PCT REMAINING"(失敗時 "ICON --")をパースして整形。
+# 4スクリプトを毎 render 走らせると重いので結果を30秒キャッシュする。
+USAGE_CACHE="/tmp/claude/sidebar-usage"
+usage_section() {
+  local now mt age
+  now=$(date +%s)
+  if [[ -f "$USAGE_CACHE" ]]; then
+    case "$(uname -s)" in Darwin) mt=$(stat -f %m "$USAGE_CACHE" 2>/dev/null);; *) mt=$(stat -c %Y "$USAGE_CACHE" 2>/dev/null);; esac
+    age=$(( now - ${mt:-0} ))
+    (( age < 30 )) && { cat "$USAGE_CACHE"; return; }
+  fi
+  mkdir -p "$(dirname "$USAGE_CACHE")" 2>/dev/null
+  # timeout は macOS 既定で無いため、あれば使う(無ければ素で実行。各 usage は内部で
+  # curl --max-time + キャッシュ + fail backoff により自己制限する)
+  local TO; TO="$(command -v timeout || command -v gtimeout || true)"
+  {
+    local sc out icon gauge pct rem
+    for sc in tmux-claude-usage tmux-codex-usage tmux-gemini-usage tmux-cursor-usage; do
+      out=$(${TO:+$TO 6} bash "$SCRIPT_DIR/$sc.sh" 2>/dev/null)
+      [[ -z "$out" ]] && continue
+      # 形式 "ICON GAUGE(2字) PCT/PCT REMAINING"。ゲージは低%だと空白になり read の空白圧縮で
+      # ずれるため正規表現で抽出する。マッチしなければデータなし(ICON --)扱い。
+      if [[ "$out" =~ ^([^[:space:]]+)\ (..)\ ([0-9]+%/[0-9]+%)\ ?(.*)$ ]]; then
+        icon="${BASH_REMATCH[1]}"; gauge="${BASH_REMATCH[2]}"; pct="${BASH_REMATCH[3]}"; rem="${BASH_REMATCH[4]}"
+        printf '%s %s\n  %s%s %s%s\n' "$icon" "$rem" "$C_DIM" "$gauge" "$pct" "$C_RST"
+      else
+        read -r icon _ <<< "$out"
+        printf '%s %s--%s\n' "$icon" "$C_DIM" "$C_RST"
+      fi
+    done
+  } | tee "$USAGE_CACHE"
+}
+
 render() {
   local rows total cur="" s _rank glyph
   local glyphs=()
@@ -118,7 +152,11 @@ render() {
   total=$(printf '%s' "$rows" | grep -c . 2>/dev/null)
 
   printf '\033[H'   # ホームへ(全画面クリアしない)
-  printf '%s AGENTS%s %s%s%s%s\n' "$C_BOLD" "$C_RST" "$C_DIM" "$total" "$C_RST" "$ESC_K"
+  # USAGE セクション(各 AI のセッションリミット)
+  printf '%s USAGE%s%s\n' "$C_BOLD" "$C_RST" "$ESC_K"
+  printf '%s────────────────────────%s%s\n' "$C_DIM" "$C_RST" "$ESC_K"
+  usage_section | while IFS= read -r ln; do printf '%s%s\n' "$ln" "$ESC_K"; done
+  printf '\n%s AGENTS%s %s%s%s%s\n' "$C_BOLD" "$C_RST" "$C_DIM" "$total" "$C_RST" "$ESC_K"
   printf '%s────────────────────────%s%s\n' "$C_DIM" "$C_RST" "$ESC_K"
   if [[ -z "$rows" ]]; then
     printf '%s(エージェントなし)%s%s\n' "$C_DIM" "$C_RST" "$ESC_K"
