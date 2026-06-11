@@ -60,11 +60,14 @@ sb_rank_glyph() {
 # (session, rank, glyph) を収集: local pane option + file store
 collect_agents() {
   # local panes
-  while IFS=$'\x1f' read -r sess status cmd; do
+  while IFS=$'\x1f' read -r sess status cmd stashed; do
     [[ -z "$status" ]] && continue
     is_shell "$cmd" && continue
-    printf '%s\t%s\n' "$sess" "$(sb_rank_glyph "$status")"
-  done < <(tmux list-panes -a -F "#{session_name}$(printf '\x1f')#{@agent_status}$(printf '\x1f')#{pane_current_command}")
+    rg=$(sb_rank_glyph "$status")
+    # stash 済みはアイコン(グリフ)を変えず色だけ灰色(240)にして、サイドバーでも stash と分かるように
+    [[ -n "$stashed" ]] && rg=$(printf '%s' "$rg" | sed 's/38;5;[0-9]*m/38;5;240m/')
+    printf '%s\t%s\n' "$sess" "$rg"
+  done < <(tmux list-panes -a -F "#{session_name}$(printf '\x1f')#{@agent_status}$(printf '\x1f')#{pane_current_command}$(printf '\x1f')#{@agent_stashed}")
 
   # file store (リモート/コンテナ)。workspace ごと最新のみ採用。
   # tmux_session が「ローカルセッション」に一致する行はローカル pane の重複なので除外し、
