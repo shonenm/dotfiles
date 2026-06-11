@@ -97,18 +97,18 @@ collect_agents() {
 }
 
 # セッションブロックを出力(セッション名を独立行、アイコンは折返してインデント表示)。
-# 動的スコープで render の cur/glyphs/WIDTH を参照する。
+# 動的スコープで render の cur/glyphs/WIDTH/_lines を参照し、_lines 配列に追記する。
 _sb_flush() {
   [[ -z "$cur" ]] && return
-  printf '%s%s%s%s\n' "$C_BOLD" "$(trunc_w "$cur" $(( WIDTH - 2 )))" "$C_RST" "$ESC_K"
+  _lines+=("$(printf '%s%s%s' "$C_BOLD" "$(trunc_w "$cur" $(( WIDTH - 2 )))" "$C_RST")")
   local per=$(( (WIDTH - 4) / 2 )); (( per < 1 )) && per=1
   local i=0 line="  " g
   for g in "${glyphs[@]}"; do
     line+="$g "
     (( i++ ))
-    if (( i % per == 0 )); then printf '%s%s\n' "$line" "$ESC_K"; line="  "; fi
+    if (( i % per == 0 )); then _lines+=("$line"); line="  "; fi
   done
-  [[ "$line" != "  " ]] && printf '%s%s\n' "$line" "$ESC_K"
+  [[ "$line" != "  " ]] && _lines+=("$line")
 }
 
 # 各 AI の使用量(セッションリミット)を2行で出力(1行目: アイコン+残り時間 / 2行目: ゲージ+%)
@@ -156,32 +156,50 @@ usage_section() {
 render() {
   local rows total cur="" s _rank glyph
   local glyphs=()
+  local _lines=()   # AGENTS ブロックの各行(_sb_flush が追記)
   rows=$(collect_agents | sort -t$'\t' -k1,1 -k2,2n)
   total=$(printf '%s' "$rows" | grep -c . 2>/dev/null)
 
-  printf '\033[H'   # ホームへ(全画面クリアしない)
-  # USAGE セクション(各 AI のセッションリミット)
-  printf '%s USAGE%s%s\n' "$C_BOLD" "$C_RST" "$ESC_K"
-  printf '%s────────────────────────%s%s\n' "$C_DIM" "$C_RST" "$ESC_K"
-  usage_section | while IFS= read -r ln; do printf '%s%s\n' "$ln" "$ESC_K"; done
-  printf '\n%s AGENTS%s %s%s%s%s\n' "$C_BOLD" "$C_RST" "$C_DIM" "$total" "$C_RST" "$ESC_K"
-  printf '%s────────────────────────%s%s\n' "$C_DIM" "$C_RST" "$ESC_K"
+  # --- AGENTS ブロックを配列に構築(上部) ---
+  local top=()
+  top+=("$(printf '%s AGENTS%s %s%s%s' "$C_BOLD" "$C_RST" "$C_DIM" "$total" "$C_RST")")
+  top+=("$(printf '%s────────────────────────%s' "$C_DIM" "$C_RST")")
   if [[ -z "$rows" ]]; then
-    printf '%s(エージェントなし)%s%s\n' "$C_DIM" "$C_RST" "$ESC_K"
-    printf '\033[J'
-    return
+    top+=("$(printf '%s(エージェントなし)%s' "$C_DIM" "$C_RST")")
+  else
+    # セッションごとに: 名前を独立行、アイコンを折返してインデント表示
+    while IFS=$'\t' read -r s _rank glyph; do
+      [[ -z "$s" ]] && continue
+      if [[ "$s" != "$cur" ]]; then
+        _sb_flush
+        cur="$s"; glyphs=("$glyph")
+      else
+        glyphs+=("$glyph")
+      fi
+    done <<< "$rows"
+    _sb_flush
+    top+=("${_lines[@]}")
   fi
-  # セッションごとに: 名前を独立行、アイコンを折返してインデント表示
-  while IFS=$'\t' read -r s _rank glyph; do
-    [[ -z "$s" ]] && continue
-    if [[ "$s" != "$cur" ]]; then
-      _sb_flush
-      cur="$s"; glyphs=("$glyph")
-    else
-      glyphs+=("$glyph")
-    fi
-  done <<< "$rows"
-  _sb_flush
+
+  # --- USAGE ブロックを配列に構築(下部) ---
+  local bot=()
+  bot+=("$(printf '%s USAGE%s' "$C_BOLD" "$C_RST")")
+  bot+=("$(printf '%s────────────────────────%s' "$C_DIM" "$C_RST")")
+  while IFS= read -r ln; do bot+=("$ln"); done < <(usage_section)
+
+  # --- pane 高さを取得し、USAGE を最下部に揃える ---
+  local H
+  H=$(tmux display-message -p -t "${TMUX_PANE}" '#{pane_height}' 2>/dev/null)
+  [[ -z "$H" ]] && H=40
+  local n_top=${#top[@]} n_bot=${#bot[@]}
+  local pad=$(( H - n_top - n_bot ))
+  (( pad < 1 )) && pad=1   # 重なり防止に最低1行は空ける
+
+  printf '\033[H'   # ホームへ(全画面クリアしない)
+  local i
+  for (( i = 0; i < n_top; i++ )); do printf '%s%s\n' "${top[i]}" "$ESC_K"; done
+  for (( i = 0; i < pad; i++ )); do printf '%s\n' "$ESC_K"; done
+  for (( i = 0; i < n_bot; i++ )); do printf '%s%s\n' "${bot[i]}" "$ESC_K"; done
   printf '\033[J'   # 残りの古い行を消去
 }
 
