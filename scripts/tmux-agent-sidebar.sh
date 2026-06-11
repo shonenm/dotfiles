@@ -22,10 +22,11 @@ set -uo pipefail
 [[ -z "${TMUX:-}" ]] && exit 0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SELF="$SCRIPT_DIR/tmux-agent-sidebar.sh"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/tmux-agent-status.sh"   # ヘルパー(is_shell, trunc_w 由来の helpers, C_*)
 set +e +o pipefail
+# SELF は source の後に定義する(status.sh も冒頭で SELF を設定するため上書きを避ける)
+SELF="$SCRIPT_DIR/tmux-agent-sidebar.sh"
 
 REFRESH="${AGENT_SIDEBAR_REFRESH:-3}"
 WIDTH="${AGENT_SIDEBAR_WIDTH:-40}"
