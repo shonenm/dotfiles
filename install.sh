@@ -778,6 +778,7 @@ main() {
 
   # 4.5. Configure rtk Claude Code hook (token compression)
   configure_rtk_claude_hook
+  configure_rtk_passthrough
 
   # 4.6. Disable Serena MCP dashboard auto-open
   configure_serena_dashboard
@@ -863,6 +864,43 @@ configure_rtk_claude_hook() {
   else
     log_warn "rtk init -g --auto-patch failed (non-fatal)"
   fi
+}
+
+# rtk's heuristic digest corrupts machine-readable output: it truncates long
+# file reads, caps grep/ls results, mangles git porcelain, and has even
+# fabricated content. List the file-op and git commands in
+# [hooks].exclude_commands of ~/.config/rtk/config.toml so they pass through
+# raw, while test/lint/typecheck/build commands stay digested (where the token
+# savings actually are). Idempotent: rewrites only the exclude_commands array,
+# preserving rtk's other (machine-local) keys such as telemetry consent.
+configure_rtk_passthrough() {
+  command_exists rtk || return 0
+  local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/rtk/config.toml"
+  [[ -f "$cfg" ]] || rtk config --create >/dev/null 2>&1 || true
+  [[ -f "$cfg" ]] || { log_warn "rtk config.toml absent, skipping passthrough setup"; return 0; }
+
+  python3 - "$cfg" <<'PYEOF'
+import re, sys
+
+path = sys.argv[1]
+with open(path) as f:
+    text = f.read()
+
+excluded = ["cat", "head", "tail", "sed", "awk", "ls", "grep", "rg", "find", "wc", "git"]
+array = "exclude_commands = [\n" + "".join(f'    "{c}",\n' for c in excluded) + "]"
+
+pattern = re.compile(r'exclude_commands\s*=\s*\[[^\]]*\]')
+if pattern.search(text):
+    text = pattern.sub(array, text, count=1)
+elif re.search(r'^\[hooks\]\s*$', text, re.M):
+    text = re.sub(r'(^\[hooks\][^\n]*\n)', r'\1' + array + "\n", text, count=1, flags=re.M)
+else:
+    text = text.rstrip() + "\n\n[hooks]\n" + array + "\n"
+
+with open(path, "w") as f:
+    f.write(text)
+PYEOF
+  log_success "  rtk: file-op/git commands pass through raw (savings kept for test/lint/build)"
 }
 
 # --- 4.6. Disable Serena MCP dashboard auto-open ---
