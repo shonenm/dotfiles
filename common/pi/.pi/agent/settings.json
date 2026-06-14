@@ -74,7 +74,8 @@
     "npm:pi-remote-control",
     "npm:pi-cursor-agent",
     "npm:pi-commandcode-provider",
-    "npm:pi-permission-system"
+    "npm:pi-permission-system",
+    "git:github.com/DietrichGebert/ponytail"
   ],
   "lastChangelogVersion": "0.79.1"
 }
