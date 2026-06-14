@@ -31,18 +31,24 @@ if [[ -f "$CACHE_FILE" ]]; then
 fi
 
 ram_pct=""
+swap_pct=""  # used swap as percent of total; "" when unknown (e.g. macOS)
 
 case "$(uname -s)" in
   Linux)
-    # /proc/meminfo: MemTotal and MemAvailable (kernel 3.14+)
+    # /proc/meminfo: MemTotal/MemAvailable (kernel 3.14+) and swap
     while IFS=': ' read -r key val _; do
       case "$key" in
         MemTotal) mem_total=$val ;;
         MemAvailable) mem_avail=$val ;;
+        SwapTotal) swap_total=$val ;;
+        SwapFree) swap_free=$val ;;
       esac
     done < /proc/meminfo
     if [[ -n "$mem_total" && -n "$mem_avail" && "$mem_total" -gt 0 ]]; then
       ram_pct=$(( (mem_total - mem_avail) * 100 / mem_total ))
+    fi
+    if [[ -n "${swap_total:-}" && "$swap_total" -gt 0 && -n "${swap_free:-}" ]]; then
+      swap_pct=$(( (swap_total - swap_free) * 100 / swap_total ))
     fi
     ;;
   Darwin)
@@ -71,14 +77,30 @@ case "$(uname -s)" in
 esac
 
 if [[ -n "$ram_pct" && "$ram_pct" =~ ^[0-9]+$ ]]; then
-  if [[ $ram_pct -ge 90 ]]; then
-    color="#f7768e"  # red - high
+  swap_pct=${swap_pct:-0}
+  # Critical when RAM is nearly full OR swap is under real pressure. The swap
+  # term matters: a thrashing host can sit at ~88% RAM (sub-90) while swap is
+  # exhausted -- RAM% alone would stay yellow and hide the problem.
+  critical=0
+  if [[ $ram_pct -ge 90 || $swap_pct -ge 50 ]]; then
+    color="#f7768e"; critical=1  # red - critical
   elif [[ $ram_pct -ge 70 ]]; then
-    color="#e0af68"  # yellow - medium
+    color="#e0af68"              # yellow - medium
   else
-    color="#9ece6a"  # green - low
+    color="#9ece6a"              # green - low
   fi
   result="#[fg=#a9b1d6,bg=$BG]$RAM_ICON #[fg=$color,bg=$BG]$(printf '%2d%%' "$ram_pct")"
+  if [[ $critical -eq 1 ]]; then
+    # Surface what to act on: show swap when it is the trigger, and name the
+    # single largest RSS process. ps/sort run only on this rare critical path.
+    extra=""
+    [[ $swap_pct -ge 50 ]] && extra="sw$(printf '%d%%' "$swap_pct") "
+    read -r top_kb top_comm < <(ps axo rss=,comm= 2>/dev/null | sort -rn | head -1)
+    if [[ -n "${top_kb:-}" && "$top_kb" =~ ^[0-9]+$ ]]; then
+      extra="${extra}${top_comm##*/} $(( top_kb / 1048576 )).$(( (top_kb % 1048576) * 10 / 1048576 ))G"
+    fi
+    [[ -n "$extra" ]] && result="$result #[fg=#545c7e,bg=$BG]$extra"
+  fi
 else
   result="#[fg=#a9b1d6,bg=$BG]$RAM_ICON #[fg=#545c7e,bg=$BG]--"
 fi
