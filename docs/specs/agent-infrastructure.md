@@ -94,7 +94,20 @@
 | **Pi impl** | `extensions/memory.ts` — JSON-backed persistent store |
 
 
-### 6. MCP Gateway
+### 6. Ponytail (Global Rules)
+
+AI エージェントに「最も怠惰な解決策」を強制するルールセット。不要なコードを書かせ、標準ライブラリやネイティブ機能を優先させる。
+
+| 項目 | 内容 |
+|------|------|
+| **Source** | `common/ponytail/` (git submodule) |
+| **Rule Files** | Cursor: `.cursor/rules/ponytail.mdc`, Claude Code: `.claude/rules/ponytail.mdc`, Pi: `skills/ponytail/` |
+| **Pi impl** | `pi install git:github.com/DietrichGebert/ponytail` — パッケージとしてインストール、`/ponytail` コマンドでモード切替 |
+| **Claude impl** | `/plugin marketplace add DietrichGebert/ponytail` → `/plugin install ponytail@ponytail` — プラグインとしてインストール |
+| **Cursor impl** | ルールファイルをシンボリックリンクで参照 |
+| **Behavior** | YAGNI 原則の徹底、標準ライブラリ優先、1行で書けるなら1行で書く。lite/full/ultra の3段階で強度調整可能 |
+
+### 7. MCP Gateway
 
 MCP サーバーへの安全な接続レイヤー。
 
@@ -148,6 +161,7 @@ MCP サーバーへの安全な接続レイヤー。
 | Memory Persistence | ✅ | — | — | — |
 | Agent Delegation | ✅ | — | — | — |
 | Global Rules | — | ✅ | — | ✅ |
+| Ponytail | ✅ | ✅ | — | ✅ |
 | Stop Notify (詳細は [agent-stop-notification.md](./agent-stop-notification.md)) | — | ✅ | △ | △ |
 | CLI Statusline | — | ✅ | — | ✅ |
 | tmux Usage Display | — | ✅ | ✅ | ✅ |
