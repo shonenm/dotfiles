@@ -268,7 +268,7 @@ case "${1:-popup}" in
     foreign=$(tmux list-panes -t "$win" -F '#{pane_id}' 2>/dev/null | grep -vxF "$sel" | grep -vxF "${blank:-__nope__}" | head -1)
     if [[ -n "$foreign" ]]; then
       if [[ -n "$blank" ]] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$blank"; then
-        tmux swap-pane -s "$foreign" -t "$blank" 2>/dev/null || true   # 実エージェントを元 window へ
+        tmux swap-pane -d -s "$foreign" -t "$blank" 2>/dev/null || true   # 実エージェントを元 window へ
       else
         # blank 不在(異常時)。kill すると実ペインが死ぬため kill せず退避し session は残す。
         tmux break-pane -d -s "$foreign" 2>/dev/null || true
@@ -297,13 +297,14 @@ case "${1:-popup}" in
           tmux select-pane -t "$sel" 2>/dev/null || true
         fi
         if [[ -n "$blank" ]]; then
-          # 現在 swap 中の実ペインを元へ戻す(blank が popup 右へ復帰)
+          # 現在 swap 中の実ペインを元へ戻す(blank が popup 右へ復帰)。-d でフォーカスは fzf に維持。
           if [[ -n "$cur" && "$cur" == %* ]] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$cur"; then
-            tmux swap-pane -s "$cur" -t "$blank" 2>/dev/null || true
+            tmux swap-pane -d -s "$cur" -t "$blank" 2>/dev/null || true
           fi
           # @av_want がローカル実ペインなら blank と swap(実ペインが popup 右へ)。リモート/非ペインは blank のまま。
+          # -d 必須: 付けないと swap-pane が swap 先をアクティブ化し、勝手に右へフォーカスが移る。
           if [[ "$want" == %* ]] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$want"; then
-            tmux swap-pane -s "$want" -t "$blank" 2>/dev/null || true
+            tmux swap-pane -d -s "$want" -t "$blank" 2>/dev/null || true
             tmux set-option -p -t "$sel" @av_swapped "$want" 2>/dev/null || true
           else
             tmux set-option -p -t "$sel" @av_swapped "" 2>/dev/null || true
