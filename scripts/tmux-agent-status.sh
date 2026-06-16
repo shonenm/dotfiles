@@ -25,6 +25,7 @@ set -euo pipefail
 
 SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 STATUS_DIR="${AGENT_STATUS_DIR:-/tmp/claude/status}"
+JUMP_FILE="/tmp/claude/agentpop-jump"
 US=$'\x1f'
 
 C_RED=$'\e[38;5;203m'; C_AMBER=$'\e[38;5;214m'; C_DIM=$'\e[2m'; C_BOLD=$'\e[1m'; C_RST=$'\e[0m'
@@ -147,7 +148,7 @@ render_preview() {
     branch=$(branch_of "$path"); tool=$(tool_of "$cmd")
     printf '%s%s · %s · %s%s\n' "$C_DIM" "$target" "$tool" "$branch" "$C_RST"
     printf '%sタスク%s %s\n' "$C_BOLD" "$C_RST" "$title"
-    local cap needs; cap=$(tmux capture-pane -p -S -40 -t "$target" 2>/dev/null)
+    local cap needs; cap=$(tmux capture-pane -p -e -S -200 -t "$target" 2>/dev/null)
     needs=$(extract_needs "$status" "$cap")
     [[ -n "$needs" ]] && printf '%s%s%s\n' "$col" "$needs" "$C_RST"
     printf '%s%s%s\n' "$C_DIM" "────────────────────────────" "$C_RST"
@@ -157,6 +158,12 @@ render_preview() {
     printf 'jump: %s\n' "$target"
   fi
 }
+
+# --- prefix+a エージェントビュー(swap-pane 方式) ---
+# popup 右に blank placeholder を置き、選択エージェントの実ペインを swap-pane で blank と交換して
+# 表示する。swap-pane は中身だけ入替えるため元 window の構造(ペイン数/位置/サイズ)は不変で、
+# 該当スロットが一時 blank になるだけ。右は実ペインそのものなので live かつ Tab で操作可能。
+# 下記 selector / view-switch / view-focus / blankpane アクション。
 
 # source された場合(サイドバー等がヘルパー再利用)はディスパッチしない
 [[ "${BASH_SOURCE[0]}" != "${0}" ]] && return 0
@@ -190,6 +197,118 @@ case "${1:-popup}" in
     else
       tmux set-option -p -t "$p" @agent_stashed 1 2>/dev/null || true
     fi
+    ;;
+  open)
+    # prefix+a エントリ(binding の display-popup 前段)。scratch session でセレクタを起動するだけ。
+    # popup(binding 側)がこの session を attach し、中に [セレクタ | 選択エージェント実ペイン] を表示。
+    origin=$(tmux display-message -p '#{pane_id}' 2>/dev/null)
+    rows=$(build_rows)
+    if [[ -z "$rows" ]]; then tmux display-message "停止中のエージェントなし"; exit 0; fi
+    tmux kill-session -t _agentpop 2>/dev/null || true   # 残骸掃除
+    mkdir -p "$(dirname "$JUMP_FILE")" 2>/dev/null || true
+    rm -f "$JUMP_FILE" 2>/dev/null || true
+    tmux new-session -d -s _agentpop "exec '$SELF' selector '$origin'"
+    # 入れ子表示(status bar / pane 境界タイトル)を消して popup を単一画面に見せる。
+    tmux set-option -t _agentpop status off 2>/dev/null || true
+    tmux set-option -t _agentpop pane-border-status off 2>/dev/null || true
+    # detach-on-destroy on: kill-session 時に popup client を別 session へ切替えず終了させる。
+    # グローバル off のままだと popup 内に MAIN が出て閉じた後に二重化する。
+    tmux set-option -t _agentpop detach-on-destroy on 2>/dev/null || true
+    ;;
+  selector)
+    origin="${2:-}"
+    sel=$(tmux display-message -p '#{pane_id}' 2>/dev/null)
+    tmux set-option -p -t "$sel" @av_swapped "" 2>/dev/null || true
+    tmux set-option -p -t "$sel" @av_blank "" 2>/dev/null || true
+    # 単一ペインで起動。初回 focus で右に blank placeholder を遅延生成し、選択エージェントの実ペインを
+    # swap-pane で blank と交換 → 右に実ペイン(live・操作可)を表示する。swap-pane は中身だけ入替え
+    # 元 window の構造(ペイン数/位置/サイズ)を保つため、元 window は該当スロットが一時 blank に
+    # なるだけで崩れない。Tab で右(実ペイン)へフォーカスして操作、Enter でその場へジャンプ。
+    sel_out=$(build_rows | to_fzf_records \
+      | fzf --read0 --ansi --delimiter=$'\t' --with-nth=3 --no-sort --reverse --height=100% --gap --cycle \
+            --prompt 'agent> ' \
+            --header 'j/k:移動  Tab:右で操作(C-Space o で戻る)  Enter:ジャンプ  r:再走査  s:stash  /:検索  q:閉じる' \
+            --bind "focus:execute-silent(bash '$SELF' view-switch {1} '$sel')" \
+            --bind "tab:execute-silent(bash '$SELF' view-focus '$sel')" \
+            --bind 'g:first,G:last' \
+            --bind 'j:down+transform:[ {2} = divider ] && echo down' \
+            --bind 'k:up+transform:[ {2} = divider ] && echo up' \
+            --bind 'down:down+transform:[ {2} = divider ] && echo down' \
+            --bind 'up:up+transform:[ {2} = divider ] && echo up' \
+            --bind 'ctrl-d:half-page-down+transform:[ {2} = divider ] && echo down' \
+            --bind 'ctrl-u:half-page-up+transform:[ {2} = divider ] && echo up' \
+            --bind 'load:transform:[ {2} = divider ] && echo down' \
+            --bind "r:reload(bash '$SELF' rescan)" \
+            --bind 'q:abort' \
+            --bind "s:reload(bash '$SELF' stash-toggle {1}; bash '$SELF' rescan)" \
+            --bind 'change:clear-query' \
+            --bind '/:unbind(change)+unbind(j,k,g,G,r,q,s)+change-prompt(検索> )' \
+            --bind 'enter:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "rebind(j,k,g,G,r,q,s)+change-prompt(agent> )" || echo accept' \
+            --bind 'esc:transform:[ "$FZF_PROMPT" = "検索> " ] && echo "rebind(change,j,k,g,G,r,q,s)+clear-query+change-prompt(agent> )" || echo abort' \
+            --color 'pointer:203,marker:214') || true
+    # accept(Enter)された target を jump file に記録 → popup を閉じた後に binding 末尾の
+    # run-shell jump が元 client を該当ペインへ switch する(popup client では switch できない)。
+    target=$(printf '%s' "$sel_out" | head -1 | cut -f1)
+    if [[ -n "$target" && "$target" != "-" && "$target" != "divider" ]]; then
+      printf '%s' "$target" > "$JUMP_FILE" 2>/dev/null || true
+    fi
+    # 後始末(最重要): swap 中の実ペインを元 window へ戻してから session kill。戻さず kill すると
+    # 実ペインが _agentpop もろとも kill されエージェントが死ぬ。popup は selector(fzf)終了でしか
+    # 閉じない(q/esc → ここで cleanup)ので、この経路で必ず swap back される。
+    cur=$(tmux show-options -p -t "$sel" -qv @av_swapped 2>/dev/null || true)
+    blank=$(tmux show-options -p -t "$sel" -qv @av_blank 2>/dev/null || true)
+    if [[ -n "$cur" && "$cur" == %* && -n "$blank" ]] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$cur"; then
+      tmux swap-pane -s "$cur" -t "$blank" 2>/dev/null || true
+    fi
+    tmux kill-session -t _agentpop 2>/dev/null || true
+    ;;
+  view-switch)
+    # focus ハンドラ。$2=新ターゲット, $3=sel(fzf) pane。選択エージェント実ペインを blank と swap。
+    sel="${3:-}"; new="${2:-}"
+    [[ -z "$sel" ]] && exit 0
+    # 初回 focus で右に blank placeholder を遅延生成(popup attach 済み=正サイズ。起動時 split は
+    # detached サイズで崩れる)。
+    blank=$(tmux show-options -p -t "$sel" -qv @av_blank 2>/dev/null || true)
+    if [[ -z "$blank" ]] || ! tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$blank"; then
+      blank=$(tmux split-window -h -l 58% -d -P -F '#{pane_id}' -t "$sel" "exec '$SELF' blankpane" 2>/dev/null || true)
+      tmux set-option -p -t "$sel" @av_blank "$blank" 2>/dev/null || true
+      tmux select-pane -t "$sel" 2>/dev/null || true
+    fi
+    [[ -z "$blank" ]] && exit 0
+    cur=$(tmux show-options -p -t "$sel" -qv @av_swapped 2>/dev/null || true)
+    [[ "$cur" == "$new" ]] && exit 0
+    # 現在 swap 中の実ペインを元へ戻す(blank が popup 右へ復帰)
+    if [[ -n "$cur" && "$cur" == %* ]] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$cur"; then
+      tmux swap-pane -s "$cur" -t "$blank" 2>/dev/null || true
+    fi
+    # 新ターゲットがローカル実ペインなら blank と swap(実ペインが popup 右へ)。リモート/非ペインは blank のまま。
+    if [[ "$new" == %* ]] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$new"; then
+      tmux swap-pane -s "$new" -t "$blank" 2>/dev/null || true
+      tmux set-option -p -t "$sel" @av_swapped "$new" 2>/dev/null || true
+    else
+      tmux set-option -p -t "$sel" @av_swapped "" 2>/dev/null || true
+    fi
+    tmux select-pane -t "$sel" 2>/dev/null || true   # browse 中はフォーカスを fzf に維持
+    ;;
+  view-focus)
+    # Tab。swap 中の実ペイン(popup 右)へフォーカスして操作する。$2=sel pane。
+    v=$(tmux show-options -p -t "${2:-}" -qv @av_swapped 2>/dev/null || true)
+    [[ -n "$v" && "$v" == %* ]] && tmux select-pane -t "$v" 2>/dev/null || true
+    ;;
+  blankpane)
+    # swap 用 placeholder。swap で元 window 側へ出たときに「popup で表示中」と分かるよう表示し待機。
+    printf '\e[2J\e[H\n  %s(この pane は agent popup に表示中 — popup を閉じると復帰)%s\n' "$C_DIM" "$C_RST"
+    exec sleep 2147483647
+    ;;
+  jump)
+    # binding 末尾(display-popup の後)で元 client コンテキストから実行。selector が記録した
+    # target へ元 client を switch する。popup を閉じた後に走るのでここで初めて実 client が飛ぶ。
+    [[ -f "$JUMP_FILE" ]] || exit 0
+    target=$(cat "$JUMP_FILE" 2>/dev/null || true); rm -f "$JUMP_FILE" 2>/dev/null || true
+    [[ -z "$target" || "$target" == "-" ]] && exit 0
+    tmux switch-client -t "$target" 2>/dev/null || true
+    tmux select-window -t "$target" 2>/dev/null || true
+    tmux select-pane -t "$target" 2>/dev/null || true
     ;;
   popup)
     rows=$(build_rows)
@@ -242,5 +361,5 @@ case "${1:-popup}" in
     tmux display-message "agent-notify reloaded (watcher 再起動 + 状態スキャン)"
     ;;
   *)
-    echo "Usage: $0 {list|popup|reload|rescan|preview <target> <status>}" >&2; exit 1 ;;
+    echo "Usage: $0 {open|selector|list|popup|reload|rescan|preview <t> <s>|view-switch <t> <sel>|view-focus <sel>|blankpane|jump}" >&2; exit 1 ;;
 esac
