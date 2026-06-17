@@ -203,6 +203,8 @@ case "${1:-popup}" in
     # prefix+a エントリ(binding の display-popup 前段)。scratch session でセレクタを起動するだけ。
     # popup(binding 側)がこの session を attach し、中に [セレクタ | 選択エージェント実ペイン] を表示。
     origin=$(tmux display-message -p '#{pane_id}' 2>/dev/null)
+    # 現在 pane(prefix+a を押した pane)を保存。build_local_rows がこれを読んで「◀ current」強調する。
+    tmux set-option -g @agent_cur_pane "$origin" 2>/dev/null || true
     rows=$(build_rows)
     if [[ -z "$rows" ]]; then tmux display-message "停止中のエージェントなし"; exit 0; fi
     tmux kill-session -t _agentpop 2>/dev/null || true   # 残骸掃除
