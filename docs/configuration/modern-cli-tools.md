@@ -119,7 +119,8 @@ command -v xh &>/dev/null && alias http="xh"
 - `cd` 実行時に `chpwd` フックで自動的に `ls` が実行される（zoxide の `cd` でも発火）
 - エイリアスは `command -v` で存在確認してから設定されるため、ツールが未インストールでも安全
 - 元のコマンドを使いたい場合は `\command` でエイリアスをバイパス（例: `\rm file.txt`）
-- `rip` はファイルをゴミ箱（`~/.local/share/graveyard`）に移動するため、完全削除には `\rm` を使用
+- `rip` はファイルをゴミ箱（`$GRAVEYARD` = `~/.local/share/graveyard`）に移動するため、完全削除には `\rm` を使用。`rip -u` で直近の削除を復元、`rip -d` でゴミ箱を空に
+- ゴミ箱は zsh ログイン時に 30 日超のファイルを自動 purge（誤削除保険は 30 日保持）。デフォルトの `/tmp/graveyard-$USER` だと再起動消去されないサーバで無限蓄積するため `GRAVEYARD` を永続領域に固定している
 - `tldr` は初回実行時にキャッシュのダウンロードが必要（`tldr --update`）
 
 ## エイリアスなしツール
