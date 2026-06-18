@@ -90,7 +90,7 @@ claude-gc --force      # 実際に削除
 ## State Directory
 
 ```
-/tmp/ralph-schedule/
+${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph-schedule/
   jobs/<job-id>.json       # ジョブメタデータ
   prompts/<job-id>.md      # プロンプトファイル
   logs/<job-id>.log        # executor 実行ログ

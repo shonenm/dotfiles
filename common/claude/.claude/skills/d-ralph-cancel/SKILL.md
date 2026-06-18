@@ -15,12 +15,13 @@ disable-model-invocation: true
 
 ```bash
 SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
-ACTIVE_FILE="/tmp/ralph/state/active_${SESSION_HASH}"
+ACTIVE_FILE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/active_${SESSION_HASH}"
 if [ -f "$ACTIVE_FILE" ]; then
   STATE_FILE="$(cat "$ACTIVE_FILE")"
   if [ -f "$STATE_FILE" ]; then
-    # アーカイブを保存
-    ARCHIVE="/tmp/ralph/state/archive_$(date +%Y%m%d_%H%M%S).json"
+    # アーカイブを保存 (hooks と同じ STATE ディレクトリ)
+    mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/ralph"
+    ARCHIVE="${XDG_STATE_HOME:-$HOME/.local/state}/ralph/archive_$(date +%Y%m%d_%H%M%S).json"
     cp "$STATE_FILE" "$ARCHIVE"
     rm -f "$STATE_FILE"
     echo "State file archived to: $ARCHIVE"

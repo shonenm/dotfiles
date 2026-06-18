@@ -3,7 +3,7 @@
 # Always shows root filesystem usage with threshold-based coloring
 # Output: tmux-formatted string with leading separator
 
-CACHE_DIR="/tmp/tmux_sysstat"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/sysstat"
 CACHE_FILE="$CACHE_DIR/storage"
 CACHE_TTL=3  # seconds
 

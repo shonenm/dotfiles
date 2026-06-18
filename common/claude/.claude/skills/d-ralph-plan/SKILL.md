@@ -201,8 +201,8 @@ default モードではスキップする。タスクグラフを承認に出す
 
 ```bash
 SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
-mkdir -p /tmp/ralph/state
-STATE_FILE="/tmp/ralph/state/${SESSION_HASH}.json"
+mkdir -p "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state"
+STATE_FILE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/${SESSION_HASH}.json"
 echo "$STATE_FILE"
 ```
 
@@ -211,7 +211,7 @@ echo "$STATE_FILE"
 3. Bash で discovery ファイルに STATE_FILE パスを書き込む:
 
 ```bash
-echo "$STATE_FILE" > /tmp/ralph/state/latest
+echo "$STATE_FILE" > "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/latest"
 ```
 
 4. TaskCreate ツールで各タスクを Claude Code UI に登録し、`tool_task_id` を状態ファイルに書き戻す:

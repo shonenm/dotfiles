@@ -287,7 +287,7 @@ install_lemonade() {
   local plist_src="$DOTFILES_DIR/templates/com.user.lemonade.plist"
   local plist_dst="$HOME/Library/LaunchAgents/com.user.lemonade.plist"
   if [[ -f "$plist_src" ]]; then
-    mkdir -p "$HOME/Library/LaunchAgents"
+    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.local/state"
     sed "s|__HOME__|$HOME|g" "$plist_src" > "$plist_dst"
     launchctl bootout "gui/$(id -u)/com.user.lemonade" 2>/dev/null || true
     launchctl bootstrap "gui/$(id -u)" "$plist_dst"

@@ -101,7 +101,7 @@ TOOL_fzf_arch_map='x86_64:amd64 aarch64:arm64'
 TOOL_fzftmux_check_cmd="fzf-tmux"
 TOOL_fzftmux_method="curl_pipe"
 TOOL_fzftmux_depends_on="fzf"
-TOOL_fzftmux_curl_cmd='if [[ "$NO_SUDO" == "true" ]]; then mkdir -p "$HOME/.local/bin"; curl -fsSL https://raw.githubusercontent.com/junegunn/fzf/master/bin/fzf-tmux -o "$HOME/.local/bin/fzf-tmux" && chmod +x "$HOME/.local/bin/fzf-tmux"; else curl -fsSL https://raw.githubusercontent.com/junegunn/fzf/master/bin/fzf-tmux -o /tmp/fzf-tmux && $SUDO install -m 0755 /tmp/fzf-tmux /usr/local/bin/fzf-tmux && rm -f /tmp/fzf-tmux; fi'
+TOOL_fzftmux_curl_cmd='if [[ "$NO_SUDO" == "true" ]]; then mkdir -p "$HOME/.local/bin"; curl -fsSL https://raw.githubusercontent.com/junegunn/fzf/master/bin/fzf-tmux -o "$HOME/.local/bin/fzf-tmux" && chmod +x "$HOME/.local/bin/fzf-tmux"; else _ft="$(mktemp -t fzf-tmux.XXXXXX)"; curl -fsSL https://raw.githubusercontent.com/junegunn/fzf/master/bin/fzf-tmux -o "$_ft" && $SUDO install -m 0755 "$_ft" /usr/local/bin/fzf-tmux && rm -f "$_ft"; fi'
 
 TOOL_fastfetch_check_cmd="fastfetch"
 TOOL_fastfetch_method="github_release"

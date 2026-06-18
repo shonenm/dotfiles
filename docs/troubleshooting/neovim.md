@@ -40,12 +40,13 @@ rm -rf ~/.cache/nvim/luac
 
 ```bash
 # ファイルタイプ別にクラッシュを確認
-nvim --headless -c "edit /tmp/test.md" -c "sleep 3" -c "qa!"
+TEST_MD=$(mktemp --suffix=.md)  # $TMPDIR 配下の一時ファイル
+nvim --headless -c "edit $TEST_MD" -c "sleep 3" -c "qa!"
 echo $?  # 137 ならクラッシュ
 
 # treesitter パーサーが原因か確認 (パーサー削除で開けるなら確定)
 rm -rf ~/.local/share/nvim/site/parser/
-nvim --headless -c "edit /tmp/test.md" -c "sleep 3" -c "qa!"
+nvim --headless -c "edit $TEST_MD" -c "sleep 3" -c "qa!"
 
 # noice.nvim のエラーログ確認
 cat ~/.local/state/nvim/noice.log

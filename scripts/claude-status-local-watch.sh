@@ -1,11 +1,12 @@
 #!/bin/bash
 # Process notifications from local Docker containers
-# Detects /tmp/claude/status/*.json (non-workspace_*) and executes Mac-side processing
+# Detects ${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status/*.json (non-workspace_*) and executes Mac-side processing
 # Launched by launchd WatchPaths
 
 set -euo pipefail
 
-STATUS_DIR="/tmp/claude/status"
+SHARED_BASE="${DOTFILES_SHARED_DIR:-$HOME/.cache}"
+STATUS_DIR="$SHARED_BASE/claude/status"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Create directory if it doesn't exist

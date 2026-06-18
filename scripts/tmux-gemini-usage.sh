@@ -7,7 +7,7 @@
 #
 # キャッシュ形式: "<used1_pct>|<used2_pct>|<reset1_iso>|<reset2_iso>"
 
-CACHE_FILE="/tmp/tmux_gemini_usage"
+CACHE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/gemini_usage"
 CACHE_TTL=300
 FAIL_FILE="${CACHE_FILE}.fail"
 FAIL_TTL=60
@@ -15,6 +15,8 @@ FAIL_TTL=60
 CREDS_FILE="$HOME/.gemini/oauth_creds.json"
 PROJECTS_FILE="$HOME/.gemini/projects.json"
 LABEL="󰫢"
+
+mkdir -p "$(dirname "$CACHE_FILE")"
 
 # データ無しレコードを出力
 na() { printf '%s\x1f--\n' "$LABEL"; }

@@ -28,8 +28,8 @@
         <integer>__MINUTE__</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>/tmp/ralph-schedule/logs/__JOB_ID__.out</string>
+    <string>__LOG_DIR__/__JOB_ID__.out</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/ralph-schedule/logs/__JOB_ID__.err</string>
+    <string>__LOG_DIR__/__JOB_ID__.err</string>
 </dict>
 </plist>

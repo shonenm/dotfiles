@@ -24,8 +24,7 @@ main() {
 
     # Backup runtime files
     local backup_dir
-    backup_dir="/tmp/claude-migration-$(date +%s)"
-    mkdir -p "$backup_dir"
+    backup_dir="$(mktemp -d -t claude-migration.XXXXXX)"
 
     log_info "Backing up runtime files to $backup_dir..."
 

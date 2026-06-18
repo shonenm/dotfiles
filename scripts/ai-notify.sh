@@ -11,6 +11,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# host-container 共有 runtime base (docker bind mount 共有用)
+SHARED_BASE="${DOTFILES_SHARED_DIR:-$HOME/.cache}"
+
 # キャッシュディレクトリ (XDG_DATA_HOME準拠で永続化)
 CACHE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/ai-notify"
 
@@ -187,7 +190,7 @@ update_sketchybar_status() {
     "$SCRIPT_DIR/claude-status.sh" set "$project" "$status" "$workspace" "$tmux_session" "$tmux_window_index" 2>/dev/null || true
   else
     # リモート環境 - ファイルに書き込み（Macが監視）
-    local status_dir="/tmp/claude/status"
+    local status_dir="$SHARED_BASE/claude/status"
     mkdir -p "$status_dir"
     local status_file
     if [[ -n "$workspace" ]]; then

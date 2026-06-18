@@ -21,7 +21,7 @@
     <key>KeepAlive</key>
     <true/>
     <key>StandardErrorPath</key>
-    <string>/tmp/claude-status-watch.err</string>
+    <string>__HOME__/.local/state/claude/claude-status-watch.err</string>
     <key>ThrottleInterval</key>
     <integer>10</integer>
 </dict>

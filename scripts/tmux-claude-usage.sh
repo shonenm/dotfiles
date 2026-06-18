@@ -9,11 +9,13 @@
 # キャッシュ形式: "<five_hour_pct>|<seven_day_pct>|<five_hour_resets_iso>|<seven_day_resets_iso>"
 # 残り時間はキャッシュ読み出し時に現在時刻から都度計算する
 
-CACHE_FILE="/tmp/tmux_claude_usage"
+CACHE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/claude_usage"
 CACHE_TTL=300  # 5分
 FAIL_FILE="${CACHE_FILE}.fail"
 FAIL_TTL=60    # API 失敗時のバックオフ秒数（tmux 再描画ごとの再試行を防ぐ）
 ICON="󰛄"
+
+mkdir -p "$(dirname "$CACHE_FILE")"
 
 # データ無しレコードを出力
 na() { printf '%s\x1f--\n' "$ICON"; }

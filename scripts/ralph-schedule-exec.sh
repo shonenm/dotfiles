@@ -11,7 +11,7 @@ source "${SCRIPT_DIR}/wt-lib.sh"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/ralph-lib.sh"
 
-STATE_DIR="/tmp/ralph-schedule"
+STATE_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-schedule"
 JOB_ID="${1:-}"
 
 [[ -z "$JOB_ID" ]] && { echo "Usage: ralph-schedule-exec.sh <job-id>" >&2; exit 1; }

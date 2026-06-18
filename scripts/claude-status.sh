@@ -10,7 +10,8 @@
 
 set -euo pipefail
 
-STATUS_DIR="/tmp/claude/status"
+SHARED_BASE="${DOTFILES_SHARED_DIR:-$HOME/.cache}"
+STATUS_DIR="$SHARED_BASE/claude/status"
 STALE_THRESHOLD=3600  # 1時間以上更新なしは削除
 
 # 状態を設定

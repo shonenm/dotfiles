@@ -6,7 +6,7 @@
 # Get the pane's current path from argument
 PANE_PATH="${1:-.}"
 
-CACHE_DIR="/tmp/tmux_sysstat"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/sysstat"
 CACHE_TTL=3  # seconds
 
 # Create a safe cache key from the path
