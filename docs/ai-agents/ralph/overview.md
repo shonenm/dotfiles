@@ -16,7 +16,7 @@ Ralph v2 splits the workflow into two independent commands:
 - Skills (`.claude/skills/`) -- User-invocable entry points
 - Hooks (`settings.json` / skill frontmatter) -- Deterministic backpressure (CLAUDE.md is a "request", Hooks are "enforcement")
 - Agents (`.claude/agents/`) + `isolation: worktree` -- Parallel execution isolation
-- Manifest -- Session-scoped state file discovery (`/tmp/ralph/state/active_<hash>` per session, `/tmp/ralph/state/latest` for cross-session)
+- Manifest -- Session-scoped state file discovery (`${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph/state/active_<hash>` per session, `${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph/state/latest` for cross-session)
 
 ## Architecture
 
@@ -96,7 +96,7 @@ Loads the latest archive, preserves completed tasks, adds new tasks, and generat
 /d-ralph-cancel
 ```
 
-Archives state file to `/tmp/ralph/state/archive_<timestamp>.json` before cleanup.
+Archives state file to `${XDG_STATE_HOME:-$HOME/.local/state}/ralph/archive_<timestamp>.json` before cleanup.
 
 ### Parallel Execution
 
@@ -140,8 +140,8 @@ Orchestrates up to 4 concurrent workers, each in a separate git worktree + tmux 
 ```
 
 Discovery:
-- `/tmp/ralph/state/latest` -- Cross-session discovery (written by `/d-ralph-plan` and `/d-ralph-resume`, consumed by `/d-ralph`)
-- `/tmp/ralph/state/active_<session_hash>` -- Session-scoped active marker (used by Stop hook and `/d-ralph-cancel`)
+- `${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph/state/latest` -- Cross-session discovery (written by `/d-ralph-plan` and `/d-ralph-resume`, consumed by `/d-ralph`)
+- `${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph/state/active_<session_hash>` -- Session-scoped active marker (used by Stop hook and `/d-ralph-cancel`)
 
 ## How It Works
 
@@ -168,7 +168,7 @@ Blocks interactive tools that would break the autonomous loop:
 
 Session-scoped state discovery via `CLAUDE_SESSION_ID`. Phase-aware blocking. Decision logic (in priority order):
 
-1. Compute session hash from `CLAUDE_SESSION_ID`, check `/tmp/ralph/state/active_<hash>`. No active file -> `exit 0` (not a Ralph session)
+1. Compute session hash from `CLAUDE_SESSION_ID`, check `${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph/state/active_<hash>`. No active file -> `exit 0` (not a Ralph session)
 2. `stop_hook_active=true` + no state file -> `exit 0` (prevents infinite loop)
 3. No state file -> `exit 0` (not a Ralph session)
 4. Phase not `implementation`/`verification` -> `exit 0` (pass through)
@@ -300,11 +300,11 @@ dotfiles/
 
 - Plan/execute split: `/d-ralph-plan` is interactive, `/d-ralph` is autonomous. Completely independent commands
 - Skip-plan mode: `/d-ralph "task"` auto-generates minimal state file for backward compatibility
-- Session-scoped manifest: `/tmp/ralph/state/active_<hash>` per session prevents cross-session interference. `/tmp/ralph/state/latest` for cross-session discovery (ralph-plan -> ralph handoff)
+- Session-scoped manifest: `${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph/state/active_<hash>` per session prevents cross-session interference. `${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph/state/latest` for cross-session discovery (ralph-plan -> ralph handoff)
 - Phase-aware Stop hook: only blocks during `implementation`/`verification` phases
 - Stall detection via `stall_hashes` array in state file (replaces simple counter)
 - Error recording in state file `errors` array before cleanup
-- State archiving on all exit paths: completion, max_iterations, stall, and cancel all create `/tmp/ralph/state/archive_<timestamp>.json` for resume and post-mortem analysis
+- State archiving on all exit paths: completion, max_iterations, stall, and cancel all create `${XDG_STATE_HOME:-$HOME/.local/state}/ralph/archive_<timestamp>.json` for resume and post-mortem analysis
 - Atomic state updates: `jq > tmp && mv tmp state_file` pattern
 - Fail-open hooks: `jq` missing -> `exit 0` (don't break non-Ralph sessions)
 - Hooks in skill frontmatter: loaded globally (known constraint), session-scoped via `CLAUDE_SESSION_ID` in Stop hook
@@ -313,7 +313,7 @@ dotfiles/
 - Backpressure auto-fix: eslint/prettier/ruff fix before reporting remaining errors
 - Parallel execution max 4 workers: resource constraint. Workers launched via `/d-ralph` skill in tmux panes for observability. No `--dangerously-skip-permissions` (avoids "Are you sure?" confirmation; Stop hook provides autonomous loop instead)
 - `wt-lib.sh` extracted from `wt` CLI: shared library for worktree+tmux management, used by both `wt` command and `ralph-orchestrate`
-- Parallel results via `/tmp/ralph/results/`: prevents orchestrator context bloat. Orchestrator reads 1-line summaries, not full worker output
+- Parallel results via `${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph/results/`: prevents orchestrator context bloat. Orchestrator reads 1-line summaries, not full worker output
 - Model mixing: orchestrator uses session model (Opus), workers and reviewer use sonnet
 - 3-skill phased parallel model: `/d-ralph-parallel` (implementation) → human review → `/d-ralph-collect` (save/send) → `/d-ralph-cleanup`. Human review is mandatory between implementation and merge
 - No auto-merge in parallel mode: user sends PR instructions via `/d-ralph-collect send` or merges manually

@@ -93,7 +93,7 @@ pbpaste                # → "hello"
 ## トラブルシューティング
 
 - mac で `pbpaste` が変わらない → `launchctl list com.user.lemonade` 確認、
-  `tail -f /tmp/lemonade.err`
+  `tail -f ~/.local/state/lemonade.err`
 - remote で `lemonade copy` が `connection refused` → SSH の `-R 2489` が効いて
   いない (sshd `AllowTcpForwarding yes` 必要)
 - lazygit でコピーされない → `~/.config/lazygit/config.yml` の

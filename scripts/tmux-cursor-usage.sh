@@ -9,11 +9,13 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-CACHE_FILE="/tmp/tmux_cursor_usage"
+CACHE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/cursor_usage"
 CACHE_TTL=300
 FAIL_FILE="${CACHE_FILE}.fail"
 FAIL_TTL=60
 LABEL="◆"
+
+mkdir -p "$(dirname "$CACHE_FILE")"
 API_BASE="${CURSOR_API_BASE:-https://api2.cursor.sh}"
 
 # データ無しレコードを出力

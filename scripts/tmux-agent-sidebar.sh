@@ -30,7 +30,8 @@ SELF="$SCRIPT_DIR/tmux-agent-sidebar.sh"
 
 REFRESH="${AGENT_SIDEBAR_REFRESH:-3}"
 WIDTH="${AGENT_SIDEBAR_WIDTH:-40}"
-STATUS_DIR="${AGENT_STATUS_DIR:-/tmp/claude/status}"
+RUNTIME_BASE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}"
+STATUS_DIR="${AGENT_STATUS_DIR:-${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status}"
 ESC_K=$'\033[K'   # 行末までクリア(全画面クリアせず=チカチカしない)
 
 # 表示幅基準の切り詰め(全角=2幅近似)。[[:ascii:]] は macOS 非対応のため case で判定
@@ -114,7 +115,7 @@ _sb_flush() {
 # 各 AI の使用量(セッションリミット)を2行で出力(1行目: アイコン+残り時間 / 2行目: ゲージ+%)
 # usage スクリプト出力 "ICON GAUGE PCT/PCT REMAINING"(失敗時 "ICON --")をパースして整形。
 # 4スクリプトを毎 render 走らせると重いので結果を30秒キャッシュする。
-USAGE_CACHE="/tmp/claude/sidebar-usage"
+USAGE_CACHE="$RUNTIME_BASE/claude/sidebar-usage"
 usage_section() {
   local now mt age
   now=$(date +%s)

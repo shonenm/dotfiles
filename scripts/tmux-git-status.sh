@@ -8,7 +8,7 @@
 
 PANE_PATH="${1:-.}"
 
-CACHE_DIR="/tmp/tmux_sysstat"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/sysstat"
 CACHE_TTL=5  # seconds
 
 CACHE_KEY=$(echo "$PANE_PATH" | md5sum 2>/dev/null | cut -d' ' -f1 || md5 -q -s "$PANE_PATH" 2>/dev/null || echo "default")

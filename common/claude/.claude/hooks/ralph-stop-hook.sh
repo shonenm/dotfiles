@@ -23,16 +23,18 @@ stop_hook_active="$(echo "$input" | jq -r '.stop_hook_active // false')"
 # 利用不可の場合は旧マニフェストにフォールバック
 active_file=""
 state_file=""
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}"
 
 if [[ -n "${CLAUDE_SESSION_ID:-}" ]]; then
   _session_hash="$(echo "$CLAUDE_SESSION_ID" | md5sum 2>/dev/null | cut -c1-12 || echo "$CLAUDE_SESSION_ID" | md5 2>/dev/null | cut -c1-12)"
-  active_file="/tmp/ralph/state/active_${_session_hash}"
+  active_file="${RUNTIME_DIR}/ralph/state/active_${_session_hash}"
   if [[ -f "$active_file" ]]; then
     state_file="$(cat "$active_file")"
   fi
 else
   # フォールバック: 旧マニフェスト (CLAUDE_SESSION_ID 非対応環境)
-  active_file="/tmp/ralph/state/session_manifest"
+  active_file="${RUNTIME_DIR}/ralph/state/session_manifest"
   if [[ -f "$active_file" ]]; then
     state_file="$(cat "$active_file")"
   fi
@@ -62,9 +64,9 @@ fi
 
 # archive: cleanup 前に状態ファイルを保存
 archive() {
-  mkdir -p /tmp/ralph/state
+  mkdir -p "${STATE_DIR}/ralph"
   local archive_file
-  archive_file="/tmp/ralph/state/archive_$(date +%Y%m%d_%H%M%S).json"
+  archive_file="${STATE_DIR}/ralph/archive_$(date +%Y%m%d_%H%M%S).json"
   cp "$state_file" "$archive_file"
 }
 

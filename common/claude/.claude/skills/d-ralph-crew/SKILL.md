@@ -62,7 +62,7 @@ tmux new-window -d -t ralph-crew -n scheduler \
 
 - `--interval` は秒単位の tick (60 秒推奨)。per-task interval は crew.json の `schedule.minutes` で別途評価される。
 - tmux-continuum (`@continuum-restore on`) が session を復元。daemon コマンドも含めて復元したい場合は `@resurrect-processes` に `'~ralph-crew daemon'` を追加。
-- 停止: `tmux kill-window -t ralph-crew:scheduler` または `kill -TERM $(cat /tmp/ralph-crew/<project-name>/daemon.pid)`。
+- 停止: `tmux kill-window -t ralph-crew:scheduler` または `kill -TERM $(cat "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-crew/<project-name>/daemon.pid")`。
 
 ### 4. 手動ディスパッチ
 
@@ -75,7 +75,7 @@ ralph-crew dispatch
 `<project>/.claude/crew.json` (プロジェクトディレクトリから自動導出):
 
 - `tmux_session`: tmux セッション名 (default: `crew-<project-name>`)
-- `state_dir`: ランタイム状態ディレクトリ (default: `/tmp/ralph-crew/<project-name>`)
+- `state_dir`: ランタイム状態ディレクトリ (default: `${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-crew/<project-name>`)
 - `workers[]`: ワーカー定義 (id, model, mcp_config, system_prompt, permissions)
 - `tasks[]`: タスク定義 (id, pattern, worker_id, action, prompt, schedule)
   - `action`: `"fix"` (デフォルト: worktree で修正 -> PR) または `"issue-only"` (報告のみ)

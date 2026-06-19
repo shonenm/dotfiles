@@ -4,8 +4,10 @@ PLUGIN_DIR="$CONFIG_DIR/plugins"
 source "$PLUGIN_DIR/colors.sh"
 
 # Clear stale state files on startup
-rm -f /tmp/sketchybar_workspaces_state /tmp/sketchybar_apps_state
-echo "main" > /tmp/sketchybar_mode
+_sb_state="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/sketchybar"
+mkdir -p "$_sb_state"
+rm -f "$_sb_state/workspaces_state" "$_sb_state/apps_state"
+echo "main" > "$_sb_state/mode"
 
 ##### Bar Appearance #####
 sketchybar --bar position=bottom height=28 color=0x00000000 topmost=on y_offset=0 margin=0 padding_right=10

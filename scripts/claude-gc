@@ -2,13 +2,14 @@
 # claude-gc - Claude Code が残したアーティファクトを一括クリーンアップ
 #
 # 対象:
-#   1. /tmp/ralph/state/ の orphaned state/active ファイル
-#   2. /tmp/ralph/ 配下の workers, results, prompts, checkpoint
-#   3. /tmp/ralph-crew/ 配下のファイル
-#   4. /tmp/ralph-schedule/ の完了済みジョブ + 孤立plist
-#   5. git worktree (--wt-- パターン)
-#   6. orphaned git branch (ralph/*, crew/*)
-#   7. orphaned tmux sessions (数字名の空セッション)
+#   1. $XDG_RUNTIME_DIR/ralph/state/ の orphaned state/active ファイル
+#   2. $XDG_RUNTIME_DIR/ralph/ 配下の workers, results, prompts, checkpoint
+#   3. $XDG_RUNTIME_DIR/ralph-crew/ 配下のファイル
+#   4. $XDG_RUNTIME_DIR/ralph-schedule/ の完了済みジョブ + 孤立plist
+#   5. $XDG_STATE_HOME/ralph/ の archive ファイル (--all 指定時)
+#   6. git worktree (--wt-- パターン)
+#   7. orphaned git branch (ralph/*, crew/*)
+#   8. orphaned tmux sessions (数字名の空セッション)
 #
 # Usage:
 #   claude-gc              # dry-run (削除対象を表示)
@@ -32,6 +33,10 @@ while [[ $# -gt 0 ]]; do
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
+
+# --- Runtime / state bases (must match ralph scripts + hooks) ---
+RALPH_RUNTIME="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}"
+RALPH_STATE="${XDG_STATE_HOME:-$HOME/.local/state}"
 
 # --- Output ---
 _info()    { printf '\033[0;36minfo\033[0m  %s\n' "$*"; }
@@ -63,7 +68,7 @@ _do_remove_dir() {
 
 # --- 1. Ralph state files ---
 _gc_ralph_state() {
-  local state_dir="/tmp/ralph/state"
+  local state_dir="${RALPH_RUNTIME}/ralph/state"
   [[ -d "$state_dir" ]] || return 0
 
   _info "Ralph state files ($state_dir)"
@@ -121,7 +126,7 @@ _gc_ralph_state() {
 
 # --- 2. Ralph orchestrate artifacts ---
 _gc_ralph_orchestrate() {
-  local base="/tmp/ralph"
+  local base="${RALPH_RUNTIME}/ralph"
   local has_target=false
 
   for dir in "$base/workers" "$base/results" "$base/prompts"; do
@@ -149,7 +154,7 @@ _gc_ralph_orchestrate() {
 
 # --- 3. Ralph crew artifacts ---
 _gc_ralph_crew() {
-  local base="/tmp/ralph-crew"
+  local base="${RALPH_RUNTIME}/ralph-crew"
   [[ -d "$base" ]] || return 0
 
   _info "Ralph crew artifacts ($base)"
@@ -170,9 +175,36 @@ _gc_ralph_crew() {
   done
 }
 
-# --- 4. Ralph schedule artifacts ---
+# --- 4. Ralph archive files (STATE) ---
+# ralph-stop-hook.sh が ${XDG_STATE_HOME:-$HOME/.local/state}/ralph/ に
+# archive_*.json を保存する。--all 指定時のみ掃除する。
+_gc_ralph_archive() {
+  local base="${RALPH_STATE}/ralph"
+  [[ -d "$base" ]] || return 0
+
+  local has_target=false
+  for archive_file in "$base"/archive_*.json; do
+    [[ -f "$archive_file" ]] || continue
+    has_target=true
+    break
+  done
+  [[ "$has_target" == true ]] || return 0
+
+  _info "Ralph archive files ($base)"
+
+  for archive_file in "$base"/archive_*.json; do
+    [[ -f "$archive_file" ]] || continue
+    if [[ "$INCLUDE_ARCHIVE" == true ]]; then
+      _do_remove_file "$archive_file"
+    else
+      _skip "$archive_file (use --all to include archives)"
+    fi
+  done
+}
+
+# --- 5. Ralph schedule artifacts ---
 _gc_ralph_schedule() {
-  local base="/tmp/ralph-schedule"
+  local base="${RALPH_RUNTIME}/ralph-schedule"
   local jobs_dir="${base}/jobs"
   [[ -d "$jobs_dir" ]] || return 0
 
@@ -351,6 +383,7 @@ echo ""
 _gc_ralph_state
 _gc_ralph_orchestrate
 _gc_ralph_crew
+_gc_ralph_archive
 _gc_ralph_schedule
 _gc_worktrees
 _gc_branches

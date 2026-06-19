@@ -12,7 +12,7 @@ source "$(dirname "$0")/ralph-lib.sh"
 DEFAULT_CONFIG=".claude/crew.json"
 CONFIG_FILE=""
 PROJECT_DIR=""
-STATE_DIR="/tmp/ralph-crew"
+STATE_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-crew"
 TMUX_SESSION="ralph-crew"
 LOG_FILE="${STATE_DIR}/logs/dispatch.log"
 
@@ -53,7 +53,7 @@ _load_config() {
   local project_name
   project_name="$(basename "$PROJECT_DIR")"
   TMUX_SESSION="$(jq -r --arg default "crew-${project_name}" '.tmux_session // $default' "$config_file")"
-  STATE_DIR="$(jq -r --arg default "/tmp/ralph-crew/${project_name}" '.state_dir // $default' "$config_file")"
+  STATE_DIR="$(jq -r --arg default "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-crew/${project_name}" '.state_dir // $default' "$config_file")"
   LOG_FILE="${STATE_DIR}/logs/dispatch.log"
 
   CONFIG_FILE="$abs_config"

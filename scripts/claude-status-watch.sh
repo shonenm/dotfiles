@@ -33,17 +33,19 @@ trap cleanup EXIT INT TERM
   INOTIFYWAIT="$HOME/.local/bin/inotifywait"
   if [ ! -x "$INOTIFYWAIT" ]; then INOTIFYWAIT="inotifywait"; fi
 
-  mkdir -p /tmp/claude/status
-  stdbuf -oL "$INOTIFYWAIT" -m -e modify,create --format "%f" /tmp/claude/status/ 2>/dev/null | while read file; do
+  SHARED_BASE="${DOTFILES_SHARED_DIR:-$HOME/.cache}"
+  STATUS_DIR="$SHARED_BASE/claude/status"
+  mkdir -p "$STATUS_DIR"
+  stdbuf -oL "$INOTIFYWAIT" -m -e modify,create --format "%f" "$STATUS_DIR/" 2>/dev/null | while read file; do
     case "$file" in
       workspace_*.json)
         # workspace形式: 読み取り後に削除（Macに転送済み）
-        cat "/tmp/claude/status/$file" 2>/dev/null
-        rm -f "/tmp/claude/status/$file" 2>/dev/null
+        cat "$STATUS_DIR/$file" 2>/dev/null
+        rm -f "$STATUS_DIR/$file" 2>/dev/null
         ;;
       *.json)
         # 旧形式: 読み取りのみ（互換性維持）
-        cat "/tmp/claude/status/$file" 2>/dev/null
+        cat "$STATUS_DIR/$file" 2>/dev/null
         ;;
     esac
   done

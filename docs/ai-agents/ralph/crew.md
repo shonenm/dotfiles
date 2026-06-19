@@ -98,7 +98,7 @@ tmux new-window -d -t ralph-crew -n scheduler \
 ```
 1. project_dir でチェック実行 (read-only)
 2. 問題検出
-3. git worktree add /tmp/ralph-crew/fix/<task-id>-<ts> -b crew/<task-id>-<ts> HEAD
+3. git worktree add ${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph-crew/fix/<task-id>-<ts> -b crew/<task-id>-<ts> HEAD
 4. worktree 内で修正 → commit → push
 5. gh pr create
 6. worktree 削除、project_dir に戻る
@@ -145,7 +145,7 @@ Notification hook ベースの状態検出:
 ## Runtime Directory
 
 ```
-/tmp/ralph-crew/<project-name>/
+${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph-crew/<project-name>/
   workers/           # {worker_id}.json (pane_id, started, restart_timestamps)
                      # {worker_id}.status (idle / running / unknown)
   dispatch/          # {task_id}.last (最終実行 epoch)
@@ -164,7 +164,7 @@ Notification hook ベースの状態検出:
 ```jsonc
 {
   // "tmux_session": "crew-<project-name>",  // optional (default: derived from project dir)
-  // "state_dir": "/tmp/ralph-crew/<project-name>",  // optional (default: derived from project dir)
+  // "state_dir": "${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph-crew/<project-name>",  // optional (default: derived from project dir)
   "workers": [
     {
       "id": "qa",

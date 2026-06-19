@@ -552,7 +552,7 @@ DBUI 内での操作:
 - `root_spec` を `{ ".git", "lsp", "cwd" }` に設定し、fuzzy search 等のルートディレクトリを git root 優先に変更（モノレポでサブディレクトリに限定される問題を回避）
 - snacks.nvim picker で frecency（頻度+新しさ）ベースのファイルソート
 - snacks.nvim picker で `--no-ignore-vcs` により `.gitignore` されたファイルも表示（`~/.config/fd/ignore` で node_modules 等は除外）
-- `:ProfileStart` / `:ProfileStop` でカーソル移動等のプロファイリング（`/tmp/nvim-profile.log` に出力）
+- `:ProfileStart` / `:ProfileStop` でカーソル移動等のプロファイリング（`stdpath('state')`（`~/.local/state/nvim/`）配下に出力）
 - LazyVim デフォルトの `lazyvim_wrap_spell` を無効化（日本語テキストが SpellBad 扱いされるのを防止）
 - **大きいファイル最適化**: 100KB 以上のファイルを開いた際、syntax / filetype / swapfile / undofile / fold を自動無効化（リモート環境での遅延対策）
 - **キャッシュ自動クリーンアップ**: Neovim起動時に古いキャッシュ・ログ・undoファイルを自動削除し、パフォーマンス低下を防止

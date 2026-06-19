@@ -146,12 +146,12 @@ Neovim の `:lua` コマンドでウィンドウ/バッファ/タブの状態を
 
 ```bash
 # 全タブとウィンドウ数の一覧
-tmux send-keys -t 0:1.1 ':lua local tabs=vim.api.nvim_list_tabpages(); local lines={"tabs="..#tabs}; for i,t in ipairs(tabs) do local wins=vim.api.nvim_tabpage_list_wins(t); local cur=vim.api.nvim_get_current_tabpage()==t and " *" or ""; table.insert(lines, string.format("  [%d] id=%d wins=%d%s", i, t, #wins, cur)) end; vim.fn.writefile(lines, "/tmp/nvim_state.log")' Enter
-cat /tmp/nvim_state.log
+tmux send-keys -t 0:1.1 ':lua local tabs=vim.api.nvim_list_tabpages(); local lines={"tabs="..#tabs}; for i,t in ipairs(tabs) do local wins=vim.api.nvim_tabpage_list_wins(t); local cur=vim.api.nvim_get_current_tabpage()==t and " *" or ""; table.insert(lines, string.format("  [%d] id=%d wins=%d%s", i, t, #wins, cur)) end; vim.fn.writefile(lines, (os.getenv("TMPDIR") or "/tmp").."/nvim_state.log")' Enter
+cat "${TMPDIR:-/tmp}/nvim_state.log"
 
 # 現在のタブのウィンドウ詳細（filetype, buffer name, サイズ）
-tmux send-keys -t 0:1.1 ':lua local t=vim.api.nvim_get_current_tabpage(); local wins=vim.api.nvim_tabpage_list_wins(t); local lines={}; for i,w in ipairs(wins) do local b=vim.api.nvim_win_get_buf(w); table.insert(lines, string.format("w%d buf=%d ft=%s %dx%d %s", i, b, vim.bo[b].filetype, vim.api.nvim_win_get_width(w), vim.api.nvim_win_get_height(w), vim.api.nvim_buf_get_name(b))) end; vim.fn.writefile(lines, "/tmp/nvim_state.log")' Enter
-cat /tmp/nvim_state.log
+tmux send-keys -t 0:1.1 ':lua local t=vim.api.nvim_get_current_tabpage(); local wins=vim.api.nvim_tabpage_list_wins(t); local lines={}; for i,w in ipairs(wins) do local b=vim.api.nvim_win_get_buf(w); table.insert(lines, string.format("w%d buf=%d ft=%s %dx%d %s", i, b, vim.bo[b].filetype, vim.api.nvim_win_get_width(w), vim.api.nvim_win_get_height(w), vim.api.nvim_buf_get_name(b))) end; vim.fn.writefile(lines, (os.getenv("TMPDIR") or "/tmp").."/nvim_state.log")' Enter
+cat "${TMPDIR:-/tmp}/nvim_state.log"
 ```
 
 #### モンキーパッチによるトレース
@@ -164,7 +164,7 @@ local target_mod = require("some.plugin.module")
 local orig_fn = target_mod.some_function
 target_mod.some_function = function(...)
   local info = debug.getinfo(2, "Sl")
-  local f = io.open("/tmp/trace.log", "a")
+  local f = io.open((os.getenv("TMPDIR") or "/tmp").."/trace.log", "a")
   if f then
     f:write(string.format("[%s] some_function called from %s:%s\n",
       os.date("%H:%M:%S"), info.short_src, tostring(info.currentline)))

@@ -8,13 +8,15 @@
 # キャッシュ形式: "<primary_pct>|<secondary_pct>|<primary_resets_unix>|<secondary_resets_unix>"
 # 残り時間はキャッシュ読み出し時に現在時刻から都度計算する
 
-CACHE_FILE="/tmp/tmux_codex_usage"
+CACHE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/codex_usage"
 CACHE_TTL=300  # 5分
 FAIL_FILE="${CACHE_FILE}.fail"
 FAIL_TTL=60    # API 失敗時のバックオフ秒数
 
 AUTH_FILE="$HOME/.codex/auth.json"
 LABEL="󰝨"
+
+mkdir -p "$(dirname "$CACHE_FILE")"
 
 # データ無しレコードを出力
 na() { printf '%s\x1f--\n' "$LABEL"; }

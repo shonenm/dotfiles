@@ -60,16 +60,16 @@ Ralph ループ内では以下のグローバルルールを上書きする:
 
 ```bash
 SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
-ACTIVE_FILE="/tmp/ralph/state/active_${SESSION_HASH}"
+ACTIVE_FILE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/active_${SESSION_HASH}"
 
 # 1. 既存の active ファイルを確認 (中断からの再開)
 # 2. なければ latest_state を確認 (ralph-plan/ralph-resume から引き継ぎ)
 if [ -f "$ACTIVE_FILE" ]; then
   STATE_FILE="$(cat "$ACTIVE_FILE")"
-elif [ -f /tmp/ralph/state/latest ]; then
-  STATE_FILE="$(cat /tmp/ralph/state/latest)"
+elif [ -f "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/latest" ]; then
+  STATE_FILE="$(cat "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/latest")"
   echo "$STATE_FILE" > "$ACTIVE_FILE"
-  rm -f /tmp/ralph/state/latest
+  rm -f "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/latest"
 fi
 
 if [ -n "$STATE_FILE" ] && [ -f "$STATE_FILE" ]; then
@@ -96,9 +96,9 @@ Ralph loop started (plan mode).
 
 ```bash
 SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
-mkdir -p /tmp/ralph/state
-STATE_FILE="/tmp/ralph/state/${SESSION_HASH}.json"
-ACTIVE_FILE="/tmp/ralph/state/active_${SESSION_HASH}"
+mkdir -p "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state"
+STATE_FILE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/${SESSION_HASH}.json"
+ACTIVE_FILE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/active_${SESSION_HASH}"
 
 jq -n \
   --arg sid "$SESSION_HASH" \
@@ -173,7 +173,7 @@ Synthesis を書いてから実装に着手する。
 
 ```bash
 SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5sum 2>/dev/null | cut -c1-12 || echo "${CLAUDE_SESSION_ID:-$(date +%s)}" | md5 2>/dev/null | cut -c1-12)"
-STATE_FILE="$(cat "/tmp/ralph/state/active_${SESSION_HASH}")"
+STATE_FILE="$(cat "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/active_${SESSION_HASH}")"
 jq '.task_graph |= map(if .id == "T-N" then .status = "done" else . end)' \
   "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
 ```

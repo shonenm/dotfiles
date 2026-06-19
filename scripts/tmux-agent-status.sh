@@ -24,8 +24,9 @@ set -euo pipefail
 [[ -z "${TMUX:-}" ]] && exit 0
 
 SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-STATUS_DIR="${AGENT_STATUS_DIR:-/tmp/claude/status}"
-JUMP_FILE="/tmp/claude/agentpop-jump"
+RUNTIME_BASE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}"
+STATUS_DIR="${AGENT_STATUS_DIR:-${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status}"
+JUMP_FILE="$RUNTIME_BASE/claude/agentpop-jump"
 US=$'\x1f'
 
 C_RED=$'\e[38;5;203m'; C_AMBER=$'\e[38;5;214m'; C_DIM=$'\e[2m'; C_BOLD=$'\e[1m'; C_RST=$'\e[0m'
@@ -380,7 +381,7 @@ case "${1:-popup}" in
       ps axo command 2>/dev/null | grep 'tmux-agent-hang-watch.sh' | grep -v grep | grep -q '/bin/bash' || break
       sleep 0.5
     done
-    rm -f /tmp/claude/hang-watch.pid
+    rm -f "$RUNTIME_BASE/claude/hang-watch.pid"
     tmux run-shell -b "$reload_dir/tmux-agent-hang-watch.sh >/dev/null 2>&1 || true"
     bash "$reload_dir/tmux-claude-pane.sh" hang-scan 2>/dev/null || true
     tmux refresh-client -S 2>/dev/null || true

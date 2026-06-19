@@ -4,7 +4,7 @@
 # Linux: nvidia-smi (NVIDIA GPU)
 # Output: tmux-formatted string or empty if unavailable
 
-CACHE_DIR="/tmp/tmux_sysstat"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/sysstat"
 CACHE_FILE="$CACHE_DIR/gpu"
 CACHE_TTL=3  # seconds
 

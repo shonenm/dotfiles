@@ -46,7 +46,7 @@ phase が `none` 以外であれば途中再開。該当フェーズの次のス
 ### Step 1: タスク分析
 
 優先順位:
-1. 引数なし: `/tmp/ralph/state/latest` または `/tmp/ralph/state/active_*` から状態ファイルを発見し、`task_graph` を使用
+1. 引数なし: `${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/latest` または `${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/state/active_*` から状態ファイルを発見し、`task_graph` を使用
 2. ファイルパス指定: ファイルを読み込みタスクを抽出
 3. テキスト指定: カンマ区切りまたは改行区切りでタスクに分割
 
@@ -73,14 +73,14 @@ ralph-orchestrate checkpoint initialized
 タスク情報を JSON ファイルにまとめて一括生成:
 
 ```bash
-# /tmp/ralph/task-spec.json を Write ツールで生成
+# ${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/task-spec.json を Write ツールで生成
 # フォーマット:
 # [
 #   {"id": "T-1", "name": "...", "completion_condition": "...", "files": "...", "context_file": "..."},
 #   ...
 # ]
 
-ralph-orchestrate gen-prompt-batch /tmp/ralph/task-spec.json
+ralph-orchestrate gen-prompt-batch "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/task-spec.json"
 ```
 
 gen-prompt テンプレートには完了条件のみ記載すること。RALPH_COMPLETE は ralph の SKILL.md (Step 6) が自動出力するため、テンプレートでは触れない。
@@ -96,7 +96,7 @@ ralph-orchestrate checkpoint prompts_generated
 実行可能タスク (deps が全て完了済み) を最大4つまで起動:
 
 ```bash
-ralph-orchestrate launch <task-id> /tmp/ralph/prompts/<task-id>.md --model sonnet
+ralph-orchestrate launch <task-id> "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/prompts/<task-id>.md" --model sonnet
 ```
 
 各起動により:

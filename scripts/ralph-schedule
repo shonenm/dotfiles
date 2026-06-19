@@ -15,7 +15,7 @@ SCRIPT_DIR="$(dirname "$0")"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/wt-lib.sh"
 
-STATE_DIR="/tmp/ralph-schedule"
+STATE_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-schedule"
 TEMPLATE_DIR="$(cd "${SCRIPT_DIR}/../templates" && pwd)"
 
 # --- Output ---
@@ -150,10 +150,12 @@ _register_launchd() {
   minute="$(_epoch_to_calendar_field "$epoch" minute)"
 
   mkdir -p "$HOME/Library/LaunchAgents"
+  mkdir -p "${STATE_DIR}/logs"
   sed \
     -e "s|__LABEL__|${label}|g" \
     -e "s|__HOME__|${HOME}|g" \
     -e "s|__JOB_ID__|${job_id}|g" \
+    -e "s|__LOG_DIR__|${STATE_DIR}/logs|g" \
     -e "s|__MONTH__|${month}|g" \
     -e "s|__DAY__|${day}|g" \
     -e "s|__HOUR__|${hour}|g" \

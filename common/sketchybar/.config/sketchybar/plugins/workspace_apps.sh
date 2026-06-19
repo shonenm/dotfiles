@@ -14,7 +14,8 @@ FOCUSED_APP=$(aerospace list-windows --focused --format '%{app-name}' 2>/dev/nul
 APPS=$(aerospace list-windows --workspace "$FOCUSED_WS" --format '%{app-name}' 2>/dev/null | sort -u)
 
 # State file to track current apps
-STATE_FILE="/tmp/sketchybar_apps_state"
+STATE_FILE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/sketchybar/apps_state"
+mkdir -p "$(dirname "$STATE_FILE")"
 CURRENT_APPS=$(echo "$APPS" | tr '\n' '|')
 
 # Check if apps list changed (workspace switch) or just focus changed

@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-STATE_DIR="/tmp/sketchybar_pomodoro"
+STATE_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/sketchybar/pomodoro"
 STATE_FILE="$STATE_DIR/state"
 END_FILE="$STATE_DIR/end_time"
 REMAIN_FILE="$STATE_DIR/remaining"

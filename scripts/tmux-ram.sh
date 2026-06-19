@@ -4,7 +4,7 @@
 # macOS: vm_stat (standard, same as tmux-cpu plugin)
 # Output: tmux-formatted string with icon and colored percentage
 
-CACHE_DIR="/tmp/tmux_sysstat"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/sysstat"
 CACHE_FILE="$CACHE_DIR/ram"
 CACHE_TTL=3  # seconds
 

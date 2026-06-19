@@ -15,6 +15,9 @@ source "$SCRIPT_DIR/utils.sh"
 : "${NO_SUDO:=false}"
 export NO_SUDO
 
+# Temp directory base (honors TMPDIR; falls back to ~/.cache to avoid hardcoded paths)
+_td="${TMPDIR:-$HOME/.cache}"
+
 # Setup SUDO variable (empty in NO_SUDO mode so $SUDO-prefixed commands run as user)
 if [[ "$NO_SUDO" == "true" ]]; then
   SUDO=""
@@ -164,9 +167,10 @@ install_nerd_font() {
   local url="${NERD_FONT_URL:-https://github.com/yuru7/udev-gothic/releases/download/${version}/${zip_file}}"
 
   curl -fLO "$url"
-  unzip -o "$zip_file" -d /tmp/udev-gothic-nf
-  cp /tmp/udev-gothic-nf/UDEVGothic_NF_*/UDEVGothicNF-*.ttf "$font_dir/"
-  rm -rf "$zip_file" /tmp/udev-gothic-nf
+  mkdir -p "$_td/udev-gothic-nf"
+  unzip -o "$zip_file" -d "$_td/udev-gothic-nf"
+  cp "$_td"/udev-gothic-nf/UDEVGothic_NF_*/UDEVGothicNF-*.ttf "$font_dir/"
+  rm -rf "$zip_file" "$_td/udev-gothic-nf"
   fc-cache -fv >/dev/null 2>&1
   log_success "UDEV Gothic Nerd Font installed"
 }
@@ -218,7 +222,7 @@ _install_github_release() {
   if [[ -n "$custom_cmd" ]]; then
     local archive_pattern archive
     archive_pattern=$(eval echo "$(_tool_field "$tool" "archive_pattern")")
-    archive="/tmp/$archive_pattern"
+    archive="$_td/$archive_pattern"
     curl -fLo "$archive" "https://github.com/$repo/releases/download/$VERSION/$archive_pattern"
     eval "$custom_cmd"
     rm -f "$archive"
@@ -226,20 +230,20 @@ _install_github_release() {
     local archive_pattern binary_path
     archive_pattern=$(eval echo "$(_tool_field "$tool" "archive_pattern")")
     binary_path=$(eval echo "$(_tool_field "$tool" "binary_path")")
-    curl -fLo "/tmp/$archive_pattern" "https://github.com/$repo/releases/download/$VERSION/$archive_pattern"
+    curl -fLo "$_td/$archive_pattern" "https://github.com/$repo/releases/download/$VERSION/$archive_pattern"
     if [[ "$archive_pattern" == *.zip ]]; then
-      unzip -o "/tmp/$archive_pattern" -d /tmp
+      unzip -o "$_td/$archive_pattern" -d "$_td"
     else
-      tar xf "/tmp/$archive_pattern" -C /tmp
+      tar xf "$_td/$archive_pattern" -C "$_td"
     fi
     # Target dir: ~/.local/bin in NO_SUDO mode, else /usr/local/bin
     if [[ "$NO_SUDO" == "true" ]]; then
       mkdir -p "$HOME/.local/bin"
-      install "/tmp/$binary_path" "$HOME/.local/bin/"
+      install "$_td/$binary_path" "$HOME/.local/bin/"
     else
-      $SUDO install "/tmp/$binary_path" /usr/local/bin/
+      $SUDO install "$_td/$binary_path" /usr/local/bin/
     fi
-    rm -rf "/tmp/$archive_pattern" "/tmp/${binary_path%/*}"
+    rm -rf "$_td/$archive_pattern" "$_td/${binary_path%/*}"
   fi
 }
 
@@ -789,7 +793,7 @@ install_fancy_cat() {
   fi
 
   log_info "Building fancy-cat from source..."
-  local build_dir="/tmp/fancy-cat-build"
+  local build_dir="$_td/fancy-cat-build"
   rm -rf "$build_dir"
   git clone --recursive https://github.com/freref/fancy-cat.git "$build_dir"
   (
@@ -841,12 +845,12 @@ install_tmux_source() {
   fi
 
   log_info "Building tmux $target_version from source..."
-  local src_dir="/tmp/tmux-$target_version"
+  local src_dir="$_td/tmux-$target_version"
   local url="https://github.com/tmux/tmux/releases/download/$target_version/tmux-$target_version.tar.gz"
-  rm -rf "$src_dir" "/tmp/tmux-$target_version.tar.gz"
+  rm -rf "$src_dir" "$_td/tmux-$target_version.tar.gz"
   (
     set -e
-    cd /tmp
+    cd "$_td"
     wget -q "$url" -O "tmux-$target_version.tar.gz"
     tar xf "tmux-$target_version.tar.gz"
     cd "tmux-$target_version"
@@ -854,7 +858,7 @@ install_tmux_source() {
     make -j4 >/dev/null 2>&1
     make install >/dev/null 2>&1
   )
-  rm -rf "$src_dir" "/tmp/tmux-$target_version.tar.gz"
+  rm -rf "$src_dir" "$_td/tmux-$target_version.tar.gz"
 
   if [[ -x "$current_bin" ]]; then
     log_success "tmux $("$current_bin" -V) installed to ~/.local/bin/tmux"

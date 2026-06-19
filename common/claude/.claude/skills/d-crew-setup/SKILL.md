@@ -82,7 +82,7 @@ crew.json 自体は container 内 (bind mount 経由で host からも見える)
 | origin push 認証 | fix モード時致命 | `git -C "$PROJECT" ls-remote --heads origin` |
 | 既存 `.claude/crew.json` | 警告 | 上書き確認材料 |
 | 既存 `ralph-crew` tmux session | 警告 | `tmux has-session -t ralph-crew` |
-| 既存 daemon pidfile `/tmp/ralph-crew/${PROJECT_NAME}/daemon.pid` が生きている | 警告 | 既存 daemon の停止を案内 |
+| 既存 daemon pidfile `${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-crew/${PROJECT_NAME}/daemon.pid` が生きている | 警告 | 既存 daemon の停止を案内 |
 | `~/.claude.json` | 警告無し (無くても OK、ralph-lib の `ralph_preaccept_trust` が no-op) | `[[ -f ~/.claude.json ]]` |
 
 致命があれば `### 致命的な前提不足` セクションで列挙し中断。
@@ -187,12 +187,12 @@ tmux new-window -d -t ralph-crew -n scheduler \
 
 # 3. 即時発火の目視確認 (数秒後に log に dispatch 行が出るはず)
 sleep 3
-tail -n 20 "/tmp/ralph-crew/${PROJECT_NAME}/logs/dispatch.log" 2>/dev/null || true
+tail -n 20 "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-crew/${PROJECT_NAME}/logs/dispatch.log" 2>/dev/null || true
 ralph-crew status --config "$CONFIG"
 ```
 
 - `tmux list-windows -t ralph-crew` で `scheduler` window の存在を確認
-- `tail -f /tmp/ralph-crew/${PROJECT_NAME}/logs/dispatch.log` で daemon 動作をリアルタイム監視
+- `tail -f "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-crew/${PROJECT_NAME}/logs/dispatch.log"` で daemon 動作をリアルタイム監視
 
 **Option 2 (書き込みのみ)**:
 
@@ -212,17 +212,17 @@ mv "$PROJECT/.claude/crew.json.preview" "$PROJECT/.claude/crew.json"
 
 - 設置パス: `$PROJECT/.claude/crew.json`
 - tmux session/window: `ralph-crew:scheduler` で daemon が常駐
-- pidfile: `/tmp/ralph-crew/${PROJECT_NAME}/daemon.pid`
+- pidfile: `${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-crew/${PROJECT_NAME}/daemon.pid`
 - 観察コマンド
   - `tmux attach -t ralph-crew`
-  - `tail -f /tmp/ralph-crew/${PROJECT_NAME}/logs/dispatch.log`
+  - `tail -f "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-crew/${PROJECT_NAME}/logs/dispatch.log"`
   - `ralph-crew status --config "$PROJECT/.claude/crew.json"`
 - 撤去コマンド
   ```bash
   # daemon を停止 (pidfile の pid に TERM を送るか、tmux window を kill)
   tmux kill-window -t ralph-crew:scheduler 2>/dev/null || true
-  [[ -f /tmp/ralph-crew/${PROJECT_NAME}/daemon.pid ]] \
-    && kill -TERM "$(cat /tmp/ralph-crew/${PROJECT_NAME}/daemon.pid)" 2>/dev/null || true
+  [[ -f "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-crew/${PROJECT_NAME}/daemon.pid" ]] \
+    && kill -TERM "$(cat "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-crew/${PROJECT_NAME}/daemon.pid")" 2>/dev/null || true
 
   # worker + state を一括撤去
   ralph-crew teardown --config "$PROJECT/.claude/crew.json"

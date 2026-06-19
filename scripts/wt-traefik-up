@@ -83,7 +83,7 @@ echo "[wt-traefik-up] Running wt-up.sh ${*}"
 "$WT_UP" "$@"
 
 # --- Locate generated compose ---
-compose_dir="/tmp/ralph/wt-compose-${USER:-unknown}/${wt_name}"
+compose_dir="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph/wt-compose-${USER:-unknown}/${wt_name}"
 compose_file="${compose_dir}/compose.yml"
 if [[ ! -f "$compose_file" ]]; then
   echo "Error: expected ${compose_file} after wt-up.sh" >&2

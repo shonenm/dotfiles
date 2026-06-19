@@ -14,8 +14,13 @@ if [[ -n "$SSH_CONNECTION" && -z "$TERM_PROGRAM" && "$TERM" == *ghostty* ]]; the
 fi
 
 # --- XDG Base Directory ---
-# Ensure consistent config paths across macOS/Linux
+# Ensure consistent paths across macOS/Linux. dotfiles は /tmp を使わず
+# これらの XDG ディレクトリに runtime/cache/state を集約する。
 export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+# tmux socket を /tmp から退避 (Linux: /run/user/UID, macOS: ~/.cache)
+export TMUX_TMPDIR="${TMUX_TMPDIR:-${XDG_RUNTIME_DIR:-$HOME/.cache}}"
 
 # --- Path ---
 # Local bin (sheldon, zoxide, mise, etc.)
@@ -517,14 +522,16 @@ dotsync() {
 # When this shell runs inside a docker container whose tmux pane was opened
 # via tmux-docker-enter (host-side tmux-pane-context uses these files), write
 # the current cwd to a per-pane state file on every chpwd. The host-side
-# helper resolves /tmp/tmux-pane-state-<container>/cwd-<pane-num> (via bind
-# mount from /tmp/tmux-pane-state inside the container).
+# helper resolves ~/.cache/tmux-pane-state-<container>/cwd-<pane-num>, bind-
+# mounted into the container at $DOTFILES_SHARED_DIR/tmux-pane-state (default
+# ~/.cache/tmux-pane-state).
 #
 # If the mount is missing the hook silently no-ops — graceful degradation.
-if [[ -f /.dockerenv ]] && [[ -n "${TMUX_PANE:-}" ]] && [[ -d /tmp/tmux-pane-state ]]; then
+_pane_state_dir="${DOTFILES_SHARED_DIR:-$HOME/.cache}/tmux-pane-state"
+if [[ -f /.dockerenv ]] && [[ -n "${TMUX_PANE:-}" ]] && [[ -d "$_pane_state_dir" ]]; then
   _tmux_track_container_cwd() {
     local num="${TMUX_PANE#%}"
-    print -r -- "$PWD" > "/tmp/tmux-pane-state/cwd-${num}" 2>/dev/null
+    print -r -- "$PWD" > "${_pane_state_dir}/cwd-${num}" 2>/dev/null
   }
   typeset -ga chpwd_functions
   chpwd_functions+=(_tmux_track_container_cwd)

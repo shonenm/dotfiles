@@ -83,7 +83,7 @@ _install_1password_cli_user_scope() {
   fi
   version="${version:-2.33.1}"
 
-  local zip="/tmp/op.zip"
+  local zip; zip="$(mktemp -t op.XXXXXX.zip)"
   local url="https://cache.agilebits.com/dist/1P/op2/pkg/v${version}/op_linux_${arch}_v${version}.zip"
 
   log_info "Installing 1Password CLI v${version} (user-scope, no sudo)..."

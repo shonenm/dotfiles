@@ -2,7 +2,7 @@
 # tmux-thumbs wrapper - thumbs を正しく起動するラッパー
 
 THUMBS_BIN="$HOME/.tmux/plugins/tmux-thumbs/target/release/thumbs"
-TMP_FILE="/tmp/thumbs-last-$$"
+TMP_FILE="${TMPDIR:-$HOME/.cache}/thumbs-last-$$"
 
 # 現在のペイン・ウィンドウ情報を取得
 PANE_ID=$(tmux display -p '#{pane_id}')

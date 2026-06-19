@@ -18,9 +18,10 @@ CONF="$HOME/.config/tmux/tmux.conf"
 [ -r "$CONF" ] || exit 0
 
 # Iterate every tmux server socket owned by the current user.
-# tmux stores sockets under $TMUX_TMPDIR (default /tmp) in tmux-<uid>/<name>.
+# tmux stores sockets under $TMUX_TMPDIR (dotfiles sets it off /tmp; falls back
+# to XDG_RUNTIME_DIR / TMPDIR / ~/.cache) in tmux-<uid>/<name>.
 shopt -s nullglob 2>/dev/null || true
-sockets=( /tmp/tmux-*/* "${TMPDIR:-/tmp}"/tmux-*/* )
+sockets=( "${TMUX_TMPDIR:-${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}}"/tmux-*/* )
 
 reloaded=0
 for sock in "${sockets[@]}"; do

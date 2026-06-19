@@ -7,8 +7,10 @@
 source "$CONFIG_DIR/plugins/colors.sh"
 
 # モード取得・キャッシュ
+MODE_FILE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/sketchybar/mode"
+mkdir -p "$(dirname "$MODE_FILE")"
 MODE=$(aerospace list-modes --current 2>/dev/null || echo "main")
-echo "$MODE" > /tmp/sketchybar_mode
+echo "$MODE" > "$MODE_FILE"
 
 # 現在のモード色を取得
 MODE_COLOR=$(get_mode_color "$MODE")

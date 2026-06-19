@@ -2,7 +2,9 @@
 # Claude Code statusLine command — Dracula palette, pair-per-line layout
 
 input=$(cat)
-echo "$input" > /tmp/statusline-input.json
+__state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/claude"
+mkdir -p "$__state_dir" 2>/dev/null
+echo "$input" > "$__state_dir/statusline-input.json"
 
 # --- Extract fields ---
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // empty')

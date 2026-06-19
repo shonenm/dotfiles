@@ -21,8 +21,8 @@ Aerospace workspace numbers are not accessible from CLI applications — there i
 ### File Structure
 
 ```
-# Status files
-/tmp/claude/status/workspace_${workspace}_${timestamp}.json
+# Status files (DOTFILES_SHARED_DIR default ~/.cache, docker bind mount で共有)
+${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status/workspace_${workspace}_${timestamp}.json
 
 # Workspace mapping
 ~/.local/share/claude/workspace_map.json
@@ -70,7 +70,7 @@ This saves a mapping in `~/.local/share/claude/workspace_map.json`:
 
 1. **Environment Key**: Generated from git repository root (`git rev-parse --show-toplevel`), with `pwd` as fallback for non-git directories
 2. **Priority**: Manual mapping is required for notifications to work correctly
-3. **Persistence**: Mapping persists until system restart (stored in /tmp)
+3. **Persistence**: Mapping persists across restarts (stored in `~/.local/share/claude/workspace_map.json`)
 
 ### When to Use
 
@@ -99,7 +99,7 @@ For details on the `/d-beacon` skill, see [`claude-skills.md`](claude-skills.md)
 Claude Code (hooks)
     | ai-notify.sh <tool> <event>
     | claude-status.sh set <project> <status> <workspace>
-/tmp/claude/status/workspace_*.json
+${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status/workspace_*.json
     | sketchybar --trigger claude_status_change
 SketchyBar badge update
 ```
@@ -109,9 +109,9 @@ SketchyBar badge update
 ```
 Claude Code (hooks) @ Container
     | ai-notify.sh (file write)
-/tmp/claude/status/*.json @ Container
-    | bind mount (docker run -v /tmp/claude/status:/tmp/claude/status)
-/tmp/claude/status/*.json @ Mac
+${DOTFILES_SHARED_DIR}/claude/status/*.json @ Container
+    | bind mount (host ~/.cache/claude/status → container ${DOTFILES_SHARED_DIR}/claude/status)
+~/.cache/claude/status/*.json @ Mac
     | sketchybar --trigger (ai-notify.sh executes directly)
 SketchyBar badge update
 ```
@@ -121,13 +121,13 @@ SketchyBar badge update
 ```
 Claude Code (hooks) @ Remote
     | ai-notify.sh (file write)
-/tmp/claude/status/workspace_*.json @ Remote
+${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status/workspace_*.json @ Remote
     | inotifywait (file change detection)
     | Read content + delete file
     | Persistent SSH connection
 Mac (claude-status-watch.sh)
     | claude-status.sh set
-/tmp/claude/status/workspace_*.json @ Mac
+~/.cache/claude/status/workspace_*.json @ Mac
     | sketchybar --trigger
 SketchyBar badge update
 ```
@@ -139,15 +139,15 @@ Note: Remote files are deleted after transfer to prevent stale notifications fro
 ```
 Claude Code (hooks) @ Container
     | ai-notify.sh (file write)
-/tmp/claude/status/workspace_*.json @ Container
-    | bind mount (configured in devcontainer.json)
-/tmp/claude/status/workspace_*.json @ Remote Host
+${DOTFILES_SHARED_DIR}/claude/status/workspace_*.json @ Container
+    | bind mount (host ~/.cache/claude/status → container ${DOTFILES_SHARED_DIR}/claude/status, configured in devcontainer.json)
+~/.cache/claude/status/workspace_*.json @ Remote Host
     | inotifywait (file change detection)
     | Read content + delete file
     | Persistent SSH connection
 Mac (claude-status-watch.sh)
     | claude-status.sh set
-/tmp/claude/status/workspace_*.json @ Mac
+~/.cache/claude/status/workspace_*.json @ Mac
     | sketchybar --trigger
 SketchyBar badge update
 ```
@@ -161,7 +161,7 @@ In Ghostty + tmux environments, badges are displayed on the tmux status bar in a
 ```
 Claude Code (hooks)
     | ai-notify.sh (records tmux_session, tmux_window_index)
-/tmp/claude/status/workspace_*.json
+${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status/workspace_*.json
     | tmux refresh-client -S
 tmux status bar update
     | tmux-claude-badge.sh (called from window-status-format)
@@ -304,7 +304,7 @@ Saves mapping to `~/.local/share/claude/workspace_map.json`. This mapping is use
 
 ### scripts/claude-status-watch.sh
 
-Monitors `/tmp/claude/status/` on remote host and transfers changes to Mac.
+Monitors `${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status/` on remote host and transfers changes to Mac (`~/.cache/claude/status/`).
 
 ```bash
 claude-status-watch.sh <remote-host>
@@ -426,9 +426,9 @@ CLAUDE_PROJECT=my-project dexec my-container zsh
 ```
 
 **Prerequisites**:
-- Add bind mount:
+- Add bind mount (host `~/.cache/claude/status` → container `${DOTFILES_SHARED_DIR}/claude/status`、container 内 user が devuser なら `/home/devuser/.cache/claude/status`):
   ```bash
-  docker run -v /tmp/claude/status:/tmp/claude/status ...
+  docker run -v ~/.cache/claude/status:/home/devuser/.cache/claude/status ...
   ```
 
 #### Method B: Using VS Code Dev Container
@@ -437,8 +437,9 @@ CLAUDE_PROJECT=my-project dexec my-container zsh
 
    ```yaml
    # docker-compose.yml
+   # host ~/.cache/claude/status を container の ${DOTFILES_SHARED_DIR}/claude/status にマウント
    volumes:
-     - /tmp/claude/status:/tmp/claude/status
+     - ~/.cache/claude/status:/home/devuser/.cache/claude/status
    ```
 
 2. **Set DEVCONTAINER_NAME environment variable**
@@ -473,7 +474,7 @@ claude
    sudo apt install inotify-tools
 
    # If no sudo, build from source
-   cd /tmp
+   cd "$(mktemp -d)"   # $TMPDIR 配下の build 用一時ディレクトリ
    curl -LO https://github.com/inotify-tools/inotify-tools/archive/refs/tags/4.23.9.0.tar.gz
    tar xzf 4.23.9.0.tar.gz
    cd inotify-tools-4.23.9.0
@@ -516,9 +517,9 @@ claude
 ```
 
 **Prerequisites**:
-- Add bind mount to container:
+- Add bind mount to container (host `~/.cache/claude/status` → container `${DOTFILES_SHARED_DIR}/claude/status`):
   ```bash
-  docker run -v /tmp/claude/status:/tmp/claude/status ...
+  docker run -v ~/.cache/claude/status:/home/devuser/.cache/claude/status ...
   ```
 
 #### Connecting from VS Code Dev Container
@@ -528,7 +529,7 @@ claude
    ```json
    {
      "mounts": [
-       "source=/tmp/claude/status,target=/tmp/claude/status,type=bind"
+       "source=${localEnv:HOME}/.cache/claude/status,target=/home/devuser/.cache/claude/status,type=bind"
      ]
    }
    ```
@@ -609,8 +610,8 @@ Enter Service Mode with Aerospace `alt+shift+;`:
 
 2. Check status files:
    ```bash
-   ls -la /tmp/claude/status/
-   cat /tmp/claude/status/workspace_*.json
+   ls -la ~/.cache/claude/status/
+   cat ~/.cache/claude/status/workspace_*.json
    ```
 
 3. Manually trigger SketchyBar:
@@ -637,16 +638,16 @@ Enter Service Mode with Aerospace `alt+shift+;`:
 
 3. Check launchd logs:
    ```bash
-   cat /tmp/claude-status-watch.err
+   cat ~/.local/state/claude-status-watch.err
    ```
 
 4. Check bind mount:
    ```bash
    # From inside Container
-   ls -la /tmp/claude/status/
+   ls -la "${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status/"
 
    # From Remote host
-   ls -la /tmp/claude/status/
+   ls -la ~/.cache/claude/status/
    ```
 
 ### Cannot Retrieve Webhook

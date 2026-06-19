@@ -57,7 +57,8 @@ done
 ALL_WS=$(echo "$ALL_WS" | xargs | tr ' ' '|')
 
 # State file to track existing workspace items
-STATE_FILE="/tmp/sketchybar_workspaces_state"
+STATE_FILE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/sketchybar/workspaces_state"
+mkdir -p "$(dirname "$STATE_FILE")"
 # Include monitor count in state to detect display changes
 CURRENT_STATE="$MONITOR_COUNT:$ALL_WS"
 PREV_STATE=""
