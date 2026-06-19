@@ -15,8 +15,8 @@
     <key>KeepAlive</key>
     <true/>
     <key>StandardErrorPath</key>
-    <string>/tmp/lemonade.err</string>
+    <string>__HOME__/.local/state/lemonade.err</string>
     <key>StandardOutPath</key>
-    <string>/tmp/lemonade.log</string>
+    <string>__HOME__/.local/state/lemonade.log</string>
 </dict>
 </plist>

@@ -120,7 +120,7 @@ dotfiles/
 Ralph ループの継続/終了を制御します。`CLAUDE_SESSION_ID` ベースのセッション固有状態管理。
 
 **動作**:
-1. セッションハッシュから `/tmp/ralph/state/active_<hash>` を確認
+1. セッションハッシュから `${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph/state/active_<hash>` を確認
 2. 状態ファイルが存在し phase が `implementation`/`verification` なら継続判定
 3. 完了トークン検出、max_iterations 到達、3回連続 stall で終了
 4. それ以外は `decision: "block"` で継続

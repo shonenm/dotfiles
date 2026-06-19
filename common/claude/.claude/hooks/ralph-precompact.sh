@@ -10,7 +10,8 @@ SESSION_HASH="$(echo "${CLAUDE_SESSION_ID:-}" | md5sum 2>/dev/null | cut -c1-12 
 
 [[ -z "$SESSION_HASH" ]] && exit 0
 
-ACTIVE_FILE="/tmp/ralph/state/active_${SESSION_HASH}"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}"
+ACTIVE_FILE="${RUNTIME_DIR}/ralph/state/active_${SESSION_HASH}"
 [[ ! -f "$ACTIVE_FILE" ]] && exit 0
 
 STATE_FILE="$(cat "$ACTIVE_FILE")"

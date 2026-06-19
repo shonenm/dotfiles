@@ -2,7 +2,7 @@
 # conflict-save: コンフリクト発生時に base/ours/theirs の3状態をディレクトリ構造で保存する
 set -euo pipefail
 
-SESSION_DIR="/tmp/conflict_session/$(printf '%s' "$(git rev-parse --absolute-git-dir)" | (md5sum 2>/dev/null || md5) | cut -c1-12)"
+SESSION_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/conflict_session/$(printf '%s' "$(git rev-parse --absolute-git-dir)" | (md5sum 2>/dev/null || md5) | cut -c1-12)"
 # --- type 判定 ---
 GIT_DIR="$(git rev-parse --git-dir)"
 if [[ -f "${GIT_DIR}/CHERRY_PICK_HEAD" ]]; then

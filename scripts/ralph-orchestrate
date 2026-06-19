@@ -10,10 +10,11 @@ source "$(dirname "$0")/wt-lib.sh"
 # shellcheck source=/dev/null
 source "$(dirname "$0")/ralph-lib.sh"
 
-readonly RESULTS_DIR="/tmp/ralph/results"
-readonly WORKERS_DIR="/tmp/ralph/workers"
-readonly PROMPTS_DIR="/tmp/ralph/prompts"
-readonly CHECKPOINT_FILE="/tmp/ralph/checkpoint.json"
+readonly RALPH_RUNTIME="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph"
+readonly RESULTS_DIR="$RALPH_RUNTIME/results"
+readonly WORKERS_DIR="$RALPH_RUNTIME/workers"
+readonly PROMPTS_DIR="$RALPH_RUNTIME/prompts"
+readonly CHECKPOINT_FILE="$RALPH_RUNTIME/checkpoint.json"
 
 # --- Helpers ---
 
@@ -388,7 +389,7 @@ ${context}
 1. Implement the task described above
 2. Follow test-driven development when possible
 3. Run type checks and linting to verify changes
-4. Write result report to /tmp/ralph/results/${task_id}.md:
+4. Write result report to ${RALPH_RUNTIME}/results/${task_id}.md:
 
    Status: DONE / PARTIAL / BLOCKED
    Files changed:

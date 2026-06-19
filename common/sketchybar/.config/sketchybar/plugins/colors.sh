@@ -42,7 +42,7 @@ get_accent_color() {
 # 現在のモードに応じた色を取得
 # 使用法: COLOR=$(get_mode_color) または COLOR=$(get_mode_color "service")
 get_mode_color() {
-    local mode="${1:-$(cat /tmp/sketchybar_mode 2>/dev/null || echo 'main')}"
+    local mode="${1:-$(cat "${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/sketchybar/mode" 2>/dev/null || echo 'main')}"
     case "$mode" in
         service) echo "$SERVICE_MODE_COLOR" ;;
         timer)   echo "$TIMER_MODE_COLOR" ;;

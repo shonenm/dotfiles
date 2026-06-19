@@ -38,7 +38,7 @@ cp "$OURS.orig" "$OURS"
 
 # 5-7. セッションディレクトリ準備
 SHA=$(git rev-parse --short REBASE_HEAD)
-SESSION_DIR="/tmp/conflict_session/$(printf '%s' "$(git rev-parse --absolute-git-dir)" | (md5sum 2>/dev/null || md5) | cut -c1-12)"
+SESSION_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/conflict_session/$(printf '%s' "$(git rev-parse --absolute-git-dir)" | (md5sum 2>/dev/null || md5) | cut -c1-12)"
 SAVE_DIR="${SESSION_DIR}/$SHA/$PATH_NAME"
 mkdir -p "$SAVE_DIR"
 

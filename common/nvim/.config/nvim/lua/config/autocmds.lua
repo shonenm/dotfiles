@@ -162,14 +162,14 @@ vim.api.nvim_create_autocmd("BufLeave", {
 
 -- :ProfileStart → カーソル移動等を操作 → :ProfileStop で profile.log に出力
 vim.api.nvim_create_user_command("ProfileStart", function()
-  vim.cmd("profile start /tmp/nvim-profile.log")
+  vim.cmd("profile start " .. vim.fn.stdpath("state") .. "/nvim-profile.log")
   vim.cmd("profile func *")
   vim.cmd("profile file *")
 end, {})
 
 vim.api.nvim_create_user_command("ProfileStop", function()
   vim.cmd("profile pause")
-  vim.notify("Profile saved to /tmp/nvim-profile.log", vim.log.levels.INFO)
+  vim.notify("Profile saved to " .. vim.fn.stdpath("state") .. "/nvim-profile.log", vim.log.levels.INFO)
 end, {})
 
 -- Large file optimization (disable heavy features for files > 100KB)

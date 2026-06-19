@@ -5,8 +5,9 @@
 # shellcheck source=/dev/null
 source "$CONFIG_DIR/plugins/colors.sh"
 
-STATUS_DIR="/tmp/claude/status"
-FOCUS_STATE_FILE="/tmp/sketchybar_workspace_focus"
+STATUS_DIR="${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status"
+FOCUS_STATE_FILE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/sketchybar/workspace_focus"
+mkdir -p "$(dirname "$FOCUS_STATE_FILE")"
 
 # Badge colors
 BADGE_COLOR="$SERVICE_MODE_COLOR"

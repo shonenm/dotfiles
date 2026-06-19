@@ -54,7 +54,7 @@ if [[ -z "$both_files" ]]; then
   exit 0
 fi
 
-TMPDIR=$(mktemp -d /tmp/rebase_review_XXXXXX)
+TMPDIR=$(mktemp -d "${TMPDIR:-$HOME/.cache}/rebase_review_XXXXXX")
 trap 'rm -rf "$TMPDIR"' EXIT
 
 # レビュー対象ファイル特定 (hash 比較でフィルタ)

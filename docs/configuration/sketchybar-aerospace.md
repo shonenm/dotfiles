@@ -273,8 +273,8 @@ claude.sh → Clear notifications if editor/terminal
 ## Performance Optimization
 
 - **State file-based differential updates**
-  - `/tmp/sketchybar_workspaces_state` - Workspace state
-  - `/tmp/sketchybar_apps_state` - App state
+  - `${XDG_RUNTIME_DIR:-$HOME/.cache}/sketchybar/workspaces_state` - Workspace state
+  - `${XDG_RUNTIME_DIR:-$HOME/.cache}/sketchybar/apps_state` - App state
   - Skip UI rebuild if no changes
 
 - **Dynamic item management**

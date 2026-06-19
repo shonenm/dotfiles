@@ -10,13 +10,13 @@
     </array>
     <key>WatchPaths</key>
     <array>
-        <string>/tmp/claude/status</string>
+        <string>__HOME__/.cache/claude/status</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>StandardErrorPath</key>
-    <string>/tmp/claude-status-local-watch.err</string>
+    <string>__HOME__/.local/state/claude/claude-status-local-watch.err</string>
     <key>StandardOutPath</key>
-    <string>/tmp/claude-status-local-watch.log</string>
+    <string>__HOME__/.local/state/claude/claude-status-local-watch.log</string>
 </dict>
 </plist>

@@ -51,7 +51,7 @@
 - 正本は tmux pane user option `@agent_status`（および `@agent_icon`）とする。
   - 理由: pane と寿命が一致 → ペーン消滅で状態も自動消滅し、残留しない。`scan` ヒューリスティックを廃止できる。
 - ウィンドウバッジ・SketchyBar・横断ビューはすべて pane option の集約から導出する（派生ビュー）。
-- リモート/コンテナはローカルに tmux pane が無いため、ファイルベース (`/tmp/claude/status` 相当) を補助 store として維持し、ローカルの watcher が取り込む（4.4）。
+- リモート/コンテナはローカルに tmux pane が無いため、ファイルベース (`${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status` 相当) を補助 store として維持し、ローカルの watcher が取り込む（4.4）。
 
 ## 4. 状態遷移
 
@@ -99,7 +99,7 @@
 
 ### 4.4 リモート / コンテナ
 
-- リモート側 hook はファイル (`/tmp/claude/status/workspace_*.json`) に状態を書き、ローカル watcher（inotifywait over SSH / launchd）が取り込む（現行踏襲）。
+- リモート側 hook はファイル (`${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status/workspace_*.json`) に状態を書き、ローカル watcher（inotifywait over SSH / launchd）が取り込む（現行踏襲）。
 - 取り込んだ状態は、対応する tmux ペーン（ローカルに SSH/コンテナ接続している面）の pane option に反映する。マッピングは `workspace_map.json`（beacon 登録）を使う。
 - リモートはハング検知の heartbeat も同経路で転送する。
 
@@ -267,7 +267,7 @@
 | 3 ハング検知 | 完了 | `tmux-claude-pane.sh hang-scan`(出力ハッシュ併用)、`tmux-agent-hang-watch.sh`(単一インスタンス watcher)、`claude-hooks.tmux` 起動 |
 | 4 ペーン表示 | 完了(a) / 保留(b) | (a) 6テーマ `pane-border-format` にアイコン+緊急度色。(b) SketchyBar 派生化は保留 |
 | 5 横断集約ビュー | 完了 | `tmux-agent-status.sh`(list/popup)、`prefix + a` バインド |
-| 6 リモート/コンテナ統合 | 完了 | 横断ビューが file store(`/tmp/claude/status`)を集約・ホスト識別・ウィンドウ単位ジャンプ・local 重複排除 |
+| 6 リモート/コンテナ統合 | 完了 | 横断ビューが file store(`${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status`)を集約・ホスト識別・ウィンドウ単位ジャンプ・local 重複排除 |
 | 7 クリーンアップ | 進行中 | 本仕様の進捗反映、`agent-infrastructure.md` ポインタ更新 |
 
 注: 全て dotfiles 内の編集のみ。反映には settings 再生成（install.sh 相当）+ tmux 設定リロードが必要。

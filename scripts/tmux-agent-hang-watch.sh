@@ -12,7 +12,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INTERVAL="${AGENT_HANG_INTERVAL:-15}"
 
-LOCK_DIR="/tmp/claude"
+RUNTIME_BASE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}"
+LOCK_DIR="$RUNTIME_BASE/claude"
 LOCK_FILE="${LOCK_DIR}/hang-watch.pid"
 mkdir -p "$LOCK_DIR"
 

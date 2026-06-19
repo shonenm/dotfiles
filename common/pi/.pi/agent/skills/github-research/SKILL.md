@@ -27,19 +27,19 @@ web_search("site:github.com <topic OR package-name>")
 
 ```bash
 # Shallow clone (1 commit depth, fast)
-git clone --depth 1 https://github.com/<owner>/<repo>.git /tmp/research-<repo>
+git clone --depth 1 https://github.com/<owner>/<repo>.git "${XDG_CACHE_HOME:-$HOME/.cache}/research-<repo>"
 
 # If you need release tags
-git clone --depth 1 --branch <tag> https://github.com/<owner>/<repo>.git /tmp/research-<repo>
+git clone --depth 1 --branch <tag> https://github.com/<owner>/<repo>.git "${XDG_CACHE_HOME:-$HOME/.cache}/research-<repo>"
 
 # If you need to search commit history
-git clone https://github.com/<owner>/<repo>.git /tmp/research-<repo>
+git clone https://github.com/<owner>/<repo>.git "${XDG_CACHE_HOME:-$HOME/.cache}/research-<repo>"
 ```
 
 ### 3. Search Source Code
 
 ```bash
-cd /tmp/research-<repo>
+cd "${XDG_CACHE_HOME:-$HOME/.cache}/research-<repo>"
 
 # Find relevant files
 rg -l "search-term" --type-add 'source:*.{ts,js,py,rs,go}' --type source
@@ -64,7 +64,7 @@ gh api repos/<owner>/<repo>/releases --jq '.[].tag_name' | head -10
 ### 5. Clean Up
 
 ```bash
-rm -rf /tmp/research-<repo>
+rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/research-<repo>"
 ```
 
 ## Output Format

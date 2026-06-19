@@ -35,7 +35,7 @@ push が失敗すれば ailab pull もスキップされる。ailab 側で `--ff
 
 `scripts/git-hooks/post-merge` を `.git/hooks/post-merge` に symlink (`install.sh` の `setup_git_hooks` step が実行)。
 
-`git pull` 完了後に `/tmp/tmux-*/` 配下の全 socket に対して `tmux source-file ~/.config/tmux/tmux.conf` を broadcast。`prefix+r` を手で叩く必要がなくなる。
+`git pull` 完了後に `$TMUX_TMPDIR`（dotfiles では `~/.cache` もしくは `/run/user/UID`）配下の全 socket に対して `tmux source-file ~/.config/tmux/tmux.conf` を broadcast。`prefix+r` を手で叩く必要がなくなる。
 
 > 注: `default-terminal` 等 server-startup-only な option は live reload では適用されない。99% の編集は live で OK だが、稀にズレた時だけ手動で `tmux kill-server` 検討。
 

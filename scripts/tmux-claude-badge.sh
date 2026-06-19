@@ -3,8 +3,9 @@
 # Usage:
 #   tmux-claude-badge.sh window <index> [focused] <session_name>  # ウィンドウ用バッジ
 
-STATUS_DIR="/tmp/claude/status"
-CACHE_DIR="/tmp/tmux_cache"
+SHARED_BASE="${DOTFILES_SHARED_DIR:-$HOME/.cache}"
+STATUS_DIR="$SHARED_BASE/claude/status"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/cache"
 CACHE_TTL=3  # キャッシュ有効期間（秒）
 BADGE_BG="#ff6600"
 BADGE_BG_DIM="#cc5500"  # 薄い版（フォーカス中）- tmuxはアルファ非対応のため暗めの色で代用
