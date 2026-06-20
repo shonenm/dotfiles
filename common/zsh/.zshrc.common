@@ -140,6 +140,33 @@ alias -s {png,jpg,jpeg,gif,webp}=open
 command -v starship &>/dev/null && eval "$(starship init zsh)"
 command -v zoxide &>/dev/null && eval "$(zoxide init zsh --cmd cd)"
 
+# --- Transient prompt (starship): 確定済みプロンプトを ❯ のみへ縮小 ---
+# starship の $fill 全幅罫線・右寄せは描画時の幅に固定された hard line で、tmux pane
+# リサイズ時に reflow されず崩れる。プロンプトは全コマンドの前に出る → scrollback 全域が
+# 崩れて見える主因。行確定直前に PROMPT/RPROMPT を最小化し reset-prompt で再描画すると、
+# scrollback には幅非依存の ❯ だけが残り、リサイズしても崩れない。zsh は starship transient
+# 非対応のため手動実装。starship は PROMPT='$(starship prompt …)' を prompt_subst で 1 回
+# だけ設定し毎回再評価する(precmd で再代入しない) → リテラル上書きすると永久破壊される。
+# よってフル文字列を退避し、line-finish で transient 化 → 次の precmd で復元する。
+# zle -N の上書きでなく add-zle-hook-widget を使い、sheldon 管理の autosuggestions /
+# syntax-highlighting が握る line-finish フックに非破壊で相乗りする。
+if command -v starship &>/dev/null; then
+  autoload -Uz add-zle-hook-widget add-zsh-hook
+  _STARSHIP_PROMPT_FULL="$PROMPT"      # starship init 直後の prompt_subst 文字列を退避
+  _STARSHIP_RPROMPT_FULL="$RPROMPT"
+  _starship_transient_set() {          # 行確定時: 過去プロンプトを ❯ に縮小
+    PROMPT='%B%F{green}❯%f%b '
+    RPROMPT=''
+    zle && zle .reset-prompt
+  }
+  _starship_transient_restore() {      # 次プロンプト直前: フル starship を復元
+    PROMPT="$_STARSHIP_PROMPT_FULL"
+    RPROMPT="$_STARSHIP_RPROMPT_FULL"
+  }
+  add-zle-hook-widget line-finish _starship_transient_set
+  add-zsh-hook precmd _starship_transient_restore
+fi
+
 # --- Auto ls on cd (chpwd hook) ---
 chpwd() {
   ls
