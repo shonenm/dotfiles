@@ -1,4 +1,5 @@
 {
+  "tui": "fullscreen",
   "statusLine": {
     "type": "command",
     "command": "__HOME__/.claude/statusline-command.sh"
