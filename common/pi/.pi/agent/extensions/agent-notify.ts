@@ -9,9 +9,13 @@
 //
 // マッピング:
 //   session_start    -> start      (running 化 + heartbeat)
+//   turn_start       -> start      (ターン開始=実行中。tool_call を待たず即 running 化)
 //   tool_call        -> heartbeat   (実行中の生存信号。hang からの復帰も担う)
 //   turn_end         -> set idle    (ターン終了=入力待ちで停止)
 //   session_shutdown -> clear       (終了時に通知をクリア)
+//
+// 注: pi は turn_start まで running シグナルが無く、最初の tool_call まで idle のままだった
+//     (テキスト生成のみのターンは tool_call が無く idle 表示のまま)。turn_start で解消。
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFile } from "node:child_process";
@@ -31,6 +35,7 @@ function agent(...args: string[]): void {
 
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async () => agent("start"));
+  pi.on("turn_start", async () => agent("start"));
   pi.on("tool_call", async () => agent("heartbeat"));
   pi.on("turn_end", async () => agent("set", "idle"));
   pi.on("session_shutdown", async () => agent("clear"));
