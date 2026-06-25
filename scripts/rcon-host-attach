@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Called by rcon for host-only targets.
+# Start tmux server OUTSIDE nix-user-chroot to avoid cross-namespace fork failures.
+# Each pane shell enters the chroot via default-command (tmux-default-shell).
+sess="${1:-main}"
+
+# Resolve best available tmux outside chroot
+_tmux=$(command -v tmux 2>/dev/null || echo tmux)
+
+cwd="$HOME"
+[ -d "$HOME/$sess" ] && cwd="$HOME/$sess"
+
+# Start/attach session
+TERM=xterm-256color "$_tmux" new-session -A -d -s "$sess" -c "$cwd" 2>/dev/null || true
+
+# Apply essential settings that ~/.config/tmux/tmux.conf can't provide
+# (it's a nix store symlink, unreadable outside chroot)
+if [ -x "$HOME/.local/bin/nix-user-chroot" ] && [ -d "$HOME/.nix-store/nix" ]; then
+  "$_tmux" set-option -t "$sess" -g default-command \
+    "exec ~/dotfiles/scripts/tmux-default-shell" 2>/dev/null || true
+fi
+
+"$_tmux" set-option -t "$sess" '@rcon-host' "${RCON_HOST_MACHINE:-}" 2>/dev/null || true
+exec "$_tmux" attach-session -t "$sess"

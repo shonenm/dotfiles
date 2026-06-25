@@ -100,3 +100,7 @@
 [credential "https://gist.github.com"]
 	helper = 
 	helper = !gh auth git-credential
+[pack]
+	threads = 4
+	windowMemory = 128m
+	deltaCacheSize = 128m
