@@ -46,7 +46,7 @@ eval "$(${DOTFILES_DIR:-$HOME/dotfiles}/scripts/env-context)"
 
 ### 1.5. container 内で呼ばれた場合は host にリダイレクト
 
-`$ENV_TYPE == "linux-container"` (= `/.dockerenv` あり) の場合、`ralph-crew init` を **container-local tmux** に着地させてはいけない (opensessions が観察できず、container 再起動で消える)。以下の案内だけ出してスキルは終了する:
+`$ENV_TYPE == "linux-container"` (= `/.dockerenv` あり) の場合、`ralph-crew init` を **container-local tmux** に着地させてはいけない (container 再起動で session が消える)。以下の案内だけ出してスキルは終了する:
 
 ```
 このプロジェクトは container 内にあります (container=$CONTAINER_NAME).

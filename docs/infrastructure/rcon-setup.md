@@ -2,7 +2,7 @@
 
 ホスト集約 tmux + docker exec 構成でリモート開発環境をセットアップする手順。
 
-`rcon` の動作原理は [rcon.md](./rcon.md)、opensessions の運用方針は [opensessions.md](./opensessions.md) を参照。本ドキュメントは「新しいターゲットを追加するときに何を設定すればよいか」のレシピ集。
+`rcon` の動作原理は [rcon.md](./rcon.md) を参照。本ドキュメントは「新しいターゲットを追加するときに何を設定すればよいか」のレシピ集。
 
 ## アーキテクチャ前提
 
@@ -18,7 +18,7 @@ Mac (Ghostty)
 - tmux はリモートホスト側で **1サーバーに集約**
 - 各 session が docker container と1対1対応
 - pane分割 / 新window で `default-command` 経由で自動 docker exec
-- opensessions が複数 container を1つのサイドバーに集約表示
+- 複数 container が1つのホスト tmux サーバーに集約される
 
 ## セットアップ層別の責務
 
@@ -76,7 +76,7 @@ EOF
 - `tmux` (pixi 経由で `~/.pixi/bin/tmux`)
 - `~/.config/tmux/tmux.conf` (stow symlink)
 - `~/dotfiles/scripts/tmux-docker-enter` (wrapper)
-- TPM + opensessions plugin
+- TPM + tmux plugins
 - zsh / stow / その他 CLI ツール
 
 確認:
@@ -84,7 +84,7 @@ EOF
 ssh chronos
 which tmux                                    # ~/.pixi/bin/tmux
 ls -la ~/dotfiles/scripts/tmux-docker-enter   # 実行可能
-ls ~/.tmux/plugins/opensessions               # plugin 展開済
+ls ~/.tmux/plugins/tpm                         # TPM 展開済
 which docker                                   # docker CLI 存在
 ```
 
@@ -92,7 +92,7 @@ which docker                                   # docker CLI 存在
 
 ## 3. Docker container: volume mount を追加
 
-opensessions の AI agent watcher (Claude Code / Codex / Amp) はホスト側のファイルシステムを読む。コンテナ内で agent を動かすなら `~/.claude` 等を mount しておく必要がある。
+AI agent watcher (Claude Code / Codex / Amp) はホスト側のファイルシステムを読む。コンテナ内で agent を動かすなら `~/.claude` 等を mount しておく必要がある。
 
 ### docker-compose.yml の場合
 
@@ -100,7 +100,7 @@ opensessions の AI agent watcher (Claude Code / Codex / Amp) はホスト側の
 services:
   syntopic-dev:
     volumes:
-      # AI agent state (opensessions 連携用)
+      # AI agent state (agent watcher 連携用)
       - ~/.claude:/home/devuser/.claude
       - ~/.codex:/home/devuser/.codex
       - ~/.local/share/amp:/home/devuser/.local/share/amp
@@ -169,21 +169,18 @@ prefix+d
 exit        # ssh 抜ける
 ```
 
-## 5. opensessions サイドバー確認
+## 5. AI agent サイドバー確認
 
 attach 中の host tmux で:
 
 ```
-prefix+o → s    # サイドバー focus
-prefix+o → t    # トグル
-prefix+o → 1-9  # 番号で session切替
+prefix+b   # AI agent サイドバー toggle
+prefix+a   # agent status popup → ペインへジャンプ
 ```
 
 期待:
 - container 名で session が並ぶ
 - container 内で Claude/Codex を起動 → status が反映 (volume mount 効いてれば)
-
-詳細は [opensessions.md](./opensessions.md)。
 
 ## 日常運用フロー
 
@@ -234,7 +231,7 @@ container 起動後、pane を `exit` で閉じて新規分割するか `tmux re
 
 cwd 完全一致が難しい場合は wrapper の fallback で container の WORKDIR で開くが、毎回 `cd` が必要になる。
 
-### opensessions に AI status が出ない
+### AI agent サイドバーに status が出ない
 
 container 内で動いてる Claude が ホスト `~/.claude/projects/` に書き込めていない (volume mount 不足)。
 
@@ -264,5 +261,4 @@ tmux 制限のため `rcon` 内で自動的に `-` に sanitize される (`synt
 ## 関連ドキュメント
 
 - [rcon.md](./rcon.md) — rcon コマンド本体の動作原理
-- [opensessions.md](./opensessions.md) — opensessions 運用方針
 - [install-no-sudo.md](./install-no-sudo.md) — sudoless 環境向け install
