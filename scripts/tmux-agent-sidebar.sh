@@ -220,18 +220,20 @@ render() {
   for (( i = 0; i < pad; i++ )); do out+=(""); done
   for (( i = 0; i < n_bot; i++ )); do out+=("${bot[i]}"); done
 
-  # 最終行に改行を付けると1行スクロールし先頭(AGENTS ヘッダー)が画面外へ落ちる。
-  # 最終行のみ改行なしで出力する。
-  printf '\033[H'   # ホームへ(全画面クリアしない)
-  local n_out=${#out[@]}
+  # 1フレームを1文字列に組み立て、同期更新(DEC 2026)で囲んで1回の write でアトミックに出す。
+  # 行ごとに printf するとティアリング(部分描画)でちらつくため必ずまとめて出力する。
+  # 最終行に改行を付けると1行スクロールし先頭(AGENTS ヘッダー)が画面外へ落ちるため改行なし。
+  local frame="" n_out=${#out[@]}
   for (( i = 0; i < n_out; i++ )); do
     if (( i < n_out - 1 )); then
-      printf '%s%s\n' "${out[i]}" "$ESC_K"
+      frame+="${out[i]}${ESC_K}"$'\n'
     else
-      printf '%s%s' "${out[i]}" "$ESC_K"
+      frame+="${out[i]}${ESC_K}"
     fi
   done
-  printf '\033[J'   # 残りの古い行を消去
+  # \033[?2026h/l = 同期更新の開始/終了(tmux 3.3+/Ghostty 対応。非対応端末では無視され無害)。
+  # 間に ホーム移動 → フレーム → 残行消去 をまとめ、端末が完成フレームのみ表示する。
+  printf '\033[?2026h\033[H%s\033[J\033[?2026l' "$frame"
 }
 
 case "${1:-toggle}" in
