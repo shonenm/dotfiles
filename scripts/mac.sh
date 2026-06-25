@@ -91,48 +91,6 @@ disable_claude_mem_stop_hook() {
   fi
 }
 
-install_genshijin() {
-  if ! command_exists claude; then
-    log_warn "claude CLI not found, skipping genshijin"
-    return
-  fi
-
-  if claude plugin list 2>/dev/null | grep -q "genshijin@genshijin"; then
-    log_success "genshijin plugin already installed"
-  else
-    log_info "Installing genshijin Claude Code plugin..."
-    if ! claude plugin marketplace list 2>/dev/null | grep -q "^  ❯ genshijin$"; then
-      claude plugin marketplace add InterfaceX-co-jp/genshijin
-    fi
-    claude plugin install genshijin@genshijin
-  fi
-
-  if ! command_exists jq; then
-    log_warn "jq not found, skipping genshijin SessionStart hook"
-    return
-  fi
-
-  local settings="$HOME/.claude/settings.json"
-  local hook_cmd="$DOTFILES_DIR/common/claude/.claude/hooks/genshijin-session-start.sh"
-
-  [[ -f "$settings" ]] || echo '{}' > "$settings"
-
-  if jq -r '.hooks.SessionStart // [] | .[]?.hooks[]?.command' "$settings" 2>/dev/null \
-      | grep -qxF "$hook_cmd"; then
-    log_success "genshijin SessionStart hook already registered"
-    return
-  fi
-
-  log_info "Registering genshijin SessionStart hook..."
-  local tmp="${settings}.tmp"
-  jq --arg cmd "$hook_cmd" '
-    .hooks //= {}
-    | .hooks.SessionStart //= []
-    | .hooks.SessionStart += [{hooks: [{type: "command", command: $cmd}]}]
-  ' "$settings" > "$tmp" && mv "$tmp" "$settings"
-  log_success "genshijin SessionStart hook registered"
-}
-
 install_serena() {
   if ! command_exists uv; then
     log_warn "uv not found, skipping serena"
@@ -366,7 +324,6 @@ run_step install_brew_bundle
 run_step install_mise_tools
 run_step install_npm_packages
 run_step install_claude_mem
-run_step install_genshijin
 run_step install_serena
 run_step install_context_mode
 run_step install_code_review_graph
