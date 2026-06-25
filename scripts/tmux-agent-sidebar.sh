@@ -242,6 +242,9 @@ case "${1:-toggle}" in
     printf '\033[?25l'   # カーソル非表示(ちらつき低減)
     while true; do
       tmux info &>/dev/null || { printf '\033[?25h'; exit 0; }
+      # window-size latest の比例リサイズ丸め誤差で session 切替毎に幅がドリフトする。
+      # 毎ループ固定幅へ戻す(既に正しければ no-op=チラつき無し)。
+      tmux resize-pane -t "${TMUX_PANE}" -x "$WIDTH" 2>/dev/null || true
       # 描画は毎回サブプロセスで実行し、スクリプト更新を自動反映する
       # (常駐ループに関数を抱えると、起動後の更新が反映されず古い表示になるため)
       bash "$SELF" once
@@ -267,8 +270,17 @@ case "${1:-toggle}" in
       tmux select-pane -t "$src" 2>/dev/null || true   # 作業 pane にフォーカスを残す
     fi
     ;;
+  resize-all)
+    # 全 window のサイドバー pane を固定幅へ即時補正(client-resized/session-changed hook 用)。
+    # window option @agent_sidebar_pane を辿り、生存している pane のみ resize。
+    while IFS=$'\t' read -r win pane; do
+      [[ -z "$pane" ]] && continue
+      tmux list-panes -t "$win" -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane" || continue
+      tmux resize-pane -t "$pane" -x "$WIDTH" 2>/dev/null || true
+    done < <(tmux list-windows -a -F "#{window_id}$(printf '\t')#{@agent_sidebar_pane}" 2>/dev/null)
+    ;;
   once)
     render ;;
   *)
-    echo "Usage: $0 {run|toggle|once}" >&2; exit 1 ;;
+    echo "Usage: $0 {run|toggle|once|resize-all}" >&2; exit 1 ;;
 esac
