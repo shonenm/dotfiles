@@ -152,6 +152,48 @@ install_system_packages() {
   fi
 }
 
+# Upgrade system git to a recent stable release on Ubuntu via the git-core PPA.
+# Ubuntu ships an old git (22.04 = 2.34) that lacks in-place partial-clone
+# conversion (`git fetch --refetch`, added in 2.36) and other modern fetch
+# fixes. The git project itself recommends ppa:git-core/ppa for current git.
+# Version-guarded and idempotent: no-op once git is new enough.
+install_git_latest() {
+  local target_major=2 target_minor=36
+
+  # Debian/Ubuntu sudo path only. The PPA is Ubuntu-specific.
+  command_exists apt || return 0
+  if [[ "$NO_SUDO" == "true" ]]; then
+    log_info "No-sudo mode: git is upgraded via pixi (config/pixi-packages.txt), not the PPA"
+    return 0
+  fi
+  if ! grep -qi ubuntu /etc/os-release 2>/dev/null; then
+    log_info "Non-Ubuntu apt host: skipping git-core PPA (use distro backports for newer git)"
+    return 0
+  fi
+
+  if command_exists git; then
+    local ver major rest minor
+    ver=$(git --version | awk '{print $3}')
+    major=${ver%%.*}
+    rest=${ver#*.}
+    minor=${rest%%.*}
+    if (( major > target_major || (major == target_major && minor >= target_minor) )); then
+      log_success "git $ver already >= ${target_major}.${target_minor}"
+      return 0
+    fi
+    log_info "git $ver older than ${target_major}.${target_minor}, upgrading via git-core PPA..."
+  fi
+
+  if ! command_exists add-apt-repository; then
+    $SUDO apt update
+    $SUDO apt install -y software-properties-common
+  fi
+  $SUDO add-apt-repository -y ppa:git-core/ppa
+  $SUDO apt update
+  $SUDO apt install -y git
+  log_success "git upgraded to $(git --version | awk '{print $3}')"
+}
+
 install_nerd_font() {
   local font_dir="$HOME/.local/share/fonts"
   mkdir -p "$font_dir"
@@ -872,6 +914,7 @@ install_tmux_source() {
 
 run_step check_requirements
 run_step install_system_packages
+run_step install_git_latest
 run_step install_tmux_source
 run_step install_modern_tools
 run_step install_bun

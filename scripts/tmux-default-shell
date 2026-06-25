@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# tmux default-command wrapper.
+# ~/.nix-profile/bin/zsh accessible → already inside chroot or native nix.
+# Not accessible + nix-user-chroot present → enter chroot first.
+# Fallback to system zsh or bash.
+_nix_zsh="$HOME/.nix-profile/bin/zsh"
+if [ -x "$_nix_zsh" ]; then
+  exec "$_nix_zsh"
+elif [ -x "$HOME/.local/bin/nix-user-chroot" ] && [ -d "$HOME/.nix-store/nix" ]; then
+  exec "$HOME/.local/bin/nix-user-chroot" "$HOME/.nix-store/nix" "$_nix_zsh"
+else
+  exec "$(command -v zsh 2>/dev/null || echo /bin/bash)"
+fi
