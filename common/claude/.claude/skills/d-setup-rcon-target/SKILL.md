@@ -106,7 +106,7 @@ ssh <host> "docker inspect <container> --format '{{json .Mounts}}' 2>&1"
 
 | mount | 用途 |
 |-------|------|
-| `~/.claude` → container 内 home の `.claude` | opensessions の Claude watcher |
+| `~/.claude` → container 内 home の `.claude` | Claude agent watcher |
 | `~/.codex` → 同 `.codex` | Codex watcher |
 | `~/.local/share/amp` → 同 `.local/share/amp` | Amp watcher |
 | プロジェクトディレクトリをホストと同じパスで | cwd 引き継ぎ (pane分割時) |

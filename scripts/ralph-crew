@@ -284,7 +284,7 @@ LAUNCH_EOF
       tmux kill-window -t "${TMUX_SESSION}:${window_name}" 2>/dev/null || true
     fi
     # Using -P -F is robust against after-new-window hooks that split the window
-    # (e.g. the opensessions sidebar) and shift active-pane focus.
+    # and shift active-pane focus.
     pane_id="$(tmux new-window -t "$TMUX_SESSION" -n "$window_name" -c "$PROJECT_DIR" -P -F '#{pane_id}' "bash $(printf '%q' "$launch_script")")"
   else
     tmux respawn-pane -k -t "$pane_id" "bash $(printf '%q' "$launch_script")" 2>/dev/null || {
@@ -710,10 +710,9 @@ _run_init() {
 }
 
 _ensure_host_tmux_or_die() {
-  # ralph-crew creates long-lived tmux sessions that opensessions observes
-  # and that survive across reboots. These MUST live on the canonical host
-  # tmux (typically ailab) — NOT on a container-local tmux server, which
-  # would be invisible to opensessions and die with the container.
+  # ralph-crew creates long-lived tmux sessions that survive across reboots.
+  # These MUST live on the canonical host tmux (typically ailab) — NOT on a
+  # container-local tmux server, which would die with the container.
   #
   # If we detect we're inside a container, refuse with an actionable error
   # unless the user explicitly opts in via RCON_ALLOW_CONTAINER_TMUX=1.
@@ -727,7 +726,7 @@ _ensure_host_tmux_or_die() {
   Run this on ${host} instead:
     ssh ${host} 'env RCON_CONTAINER=<container> ralph-crew $_orig_subcmd <args>'
 
-  Or override (not recommended — session will be invisible to opensessions):
+  Or override (not recommended — session will die with the container):
     RCON_ALLOW_CONTAINER_TMUX=1 ralph-crew $_orig_subcmd <args>
 EOF
   return 2

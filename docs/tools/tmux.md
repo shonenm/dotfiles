@@ -348,9 +348,6 @@ common/tmux/.config/tmux/
 └── plugins/tmux-which-key/
     └── config.yaml    # which-key メニュー設定
 
-common/opensessions/.config/opensessions/
-└── config.json        # opensessions 設定（テーマ、サイドバー幅、詳細パネル高さ）
-
 scripts/
 ├── regenerate-tmux-theme.sh  # テーマ再生成
 ├── tmux-utils.sh             # 共通ユーティリティ（get_mtime: クロスプラットフォーム対応）
@@ -378,7 +375,6 @@ scripts/
 | tmux-continuum | 自動復元（`@continuum-restore on`） |
 | tmux-thumbs | Vimium風ヒントベーステキスト選択（URL、パス、gitハッシュ等を即コピー） |
 | tmux-which-key | which-key スタイルのキーバインドヘルプポップアップ |
-| opensessions | セッション管理サイドバー + AI エージェント状態監視 |
 
 Resurrect 設定:
 - `@resurrect-capture-pane-contents on` — Pane の表示内容も保存
@@ -395,38 +391,15 @@ tmux-which-key 設定:
 - `tmux.conf` でプラグインディレクトリへシンボリックリンクを自動作成
 - TokyoNight テーマに合わせたスタイリング
 
-opensessions 設定:
-- 設定ファイル: `common/opensessions/.config/opensessions/config.json`（stow 管理）
-- Bun ランタイム必須（macOS: `oven-sh/bun` tap、Linux: curl インストール）
-- サイドバーで全セッション一覧 + Claude Code / Amp / Codex 等の AI エージェント状態をリアルタイム表示
-- テーマ: tokyo-night（tmux テーマと統一）
-- サーバー: `127.0.0.1:7391` で自動起動、WebSocket クライアント接続なしで 30 秒後に自動終了
-- config 変更の反映にはサーバー再起動が必要（`curl -X POST localhost:7391/quit` → toggle）
-
-opensessions キーバインド:
+AI エージェント状態監視（自前スクリプト）:
+- `scripts/tmux-agent-status.sh` が `~/.claude/projects/**/*.jsonl` を監視し、各セッションの Claude Code / Codex / Amp の running / done / error 状態を判定
+- `scripts/tmux-agent-sidebar.sh` が全エージェント状態を常時表示する pane を管理
 
 | キー | 動作 |
 |------|------|
-| `prefix o s` | サイドバーにフォーカス |
-| `prefix o t` | サイドバー toggle |
-| `prefix o 1-9` | インデックスでセッション切替 |
-| `C-s` | サイドバーフォーカス（prefix 不要） |
-| `C-t` | サイドバー toggle（prefix 不要） |
-
-サイドバー内操作:
-
-| キー | 動作 |
-|------|------|
-| `j/k` | フォーカス移動 |
-| `Enter` | セッション切替 / エージェントペインにジャンプ |
-| `Tab/Shift+Tab` | 次/前セッションに切替 |
-| `l` / 右矢印 | エージェントモード（個別スレッド操作） |
-| `h` / 左矢印 | セッションモードに戻る |
-| `Alt+Up/Down` | セッション順序変更（永続化） |
-| `f` | フィルタ切替（all / active / running） |
-| `n` | 新規セッション |
-| `d` | セッション非表示 / エージェント dismiss |
-| `x` | セッション kill（確認あり） |
+| `prefix a` | エージェント状態 popup を開き、選択したペインへジャンプ |
+| `prefix b` | AI エージェントサイドバー pane を toggle |
+| `prefix R` | watcher 再起動 + 即時スキャン（残留/ハング検出の GC） |
 
 以前使用していた tmux-sensible、tmux-yank、tmux-cpu は削除済み:
 - tmux-sensible: 自前設定でカバー（`focus-events`、`history-limit` 等を明示指定）

@@ -48,7 +48,6 @@
 ## Configuration
 - [configuration/git-config.md](configuration/git-config.md) — Git configuration
 - [configuration/1password-integration.md](configuration/1password-integration.md) — 1Password CLI integration
-- [configuration/opensessions.md](configuration/opensessions.md) — opensessions tmux plugin
 - [configuration/modern-cli-tools.md](configuration/modern-cli-tools.md) — Modern CLI tool guide
 - [configuration/sketchybar-aerospace.md](configuration/sketchybar-aerospace.md) — Sketchybar + Aerospace
 
