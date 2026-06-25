@@ -185,13 +185,13 @@
 
 ## 10. 既存ツール調査 (Prior Art)
 
-「処理が止まったエージェントの視覚通知 / 複数セッション監視」は需要が大きく、複数の既存ツールがある。現状 [opensessions](https://github.com/ataraxy-labs/opensessions) を採用中で、これを脱却しようとしている。車輪の再発明を避けるため調査結果を記録する。
+「処理が止まったエージェントの視覚通知 / 複数セッション監視」は需要が大きく、複数の既存ツールがある。以前は [opensessions](https://github.com/ataraxy-labs/opensessions) を採用していたが、自作 watcher (`tmux-agent-status.sh`) へ移行済み。車輪の再発明を避けるため調査結果を記録する。
 
 ### 10.1 主要ツール比較
 
 | ツール | 形態 | 検知方式 | 状態 | tmux | マルチツール | ハング検知 |
 |--------|------|---------|------|:--:|:--:|:--:|
-| [opensessions](https://github.com/ataraxy-labs/opensessions)（現行） | tmux サイドバー (Rust) | JSONL transcript ポーリング + HTTP push API | done / error / interrupted | ◯ サイドバー pane | Amp/Claude/Codex/OpenCode | × |
+| [opensessions](https://github.com/ataraxy-labs/opensessions)（旧採用・撤去済） | tmux サイドバー (Rust) | JSONL transcript ポーリング + HTTP push API | done / error / interrupted | ◯ サイドバー pane | Amp/Claude/Codex/OpenCode | × |
 | [Recon](https://agent-wars.com/news/2026-03-14-recon-tmux-tui-claude-code-sessions) | tmux-native TUI (Rust) | ペーン status-bar スキャン + `~/.claude/sessions/{PID}.json` + JSONL | working / input / idle / new | ◯ popup overlay + table | Claude のみ | × |
 | [Claude Code Agent View](https://code.claude.com/docs/en/agent-view)（公式 `claude agents`） | CC 内蔵画面 | ネイティブ（background session） | Needs input / Working / Completed | △ CC 自身の画面のみ | Claude のみ | × |
 | [tap-to-tmux](https://github.com/flavio87/tap-to-tmux) | hooks → 通知 | hooks | 完了/要対応（通知のみ） | △ | 複数 | × |
@@ -212,7 +212,7 @@
 |--------|----|----------------|:--:|:--:|
 | [agent-mux](https://github.com/leonardcser/agent-mux) | 観測型 | Claude / OpenCode / Gemini / Codex | ◯ 既存ペーンを発見・プレビュー・ジャンプ。`~/.tmux.conf` に watcher 追加のみ | 採用候補（マルチツール×非破壊で最適合） |
 | [Recon](https://agent-wars.com/news/2026-03-14-recon-tmux-tui-claude-code-sessions) | 観測型 | Claude のみ | ◯ CC 無改変・introspection | Claude 専用で不足 |
-| [opensessions](https://github.com/ataraxy-labs/opensessions)（現行） | 観測型寄り | Amp/Claude/Codex/OpenCode | ◯ transcript 監視 + サイドバー pane / `_os_stash` | 現行・脱却検討中 |
+| [opensessions](https://github.com/ataraxy-labs/opensessions)（旧採用） | 観測型寄り | Amp/Claude/Codex/OpenCode | ◯ transcript 監視 + サイドバー pane / `_os_stash` | 撤去済（自作 watcher へ移行） |
 | [Agent of Empires](https://github.com/njbrake/agent-of-empires) | 管理型 | Pi 等多数 | × `aoe add --cmd claude` で自前セッション専有・worktree/Docker | 却下（ワークフロー置換） |
 | [agtx](https://github.com/fynnfluegge/agtx) | 管理型 | Claude/Codex/Gemini/OpenCode/Cursor/Copilot | × 専用 tmux server・task ごとに window/worktree・kanban orchestrator | 却下（ワークフロー置換） |
 
@@ -226,7 +226,7 @@
 ペーン文字列 grep（現行 `scan`、Recon の status-bar スキャン）以外に、より堅牢な状態源がある:
 
 - hooks（settings.json）: イベント駆動。最も即時・確実だが idle は idle_prompt の制約あり（§4.1）。
-- JSONL transcript tailing（`~/.claude/projects/**/*.jsonl`）: 最終メッセージ種別から running/stop を判定。opensessions が採用。hooks 補完に有効。
+- JSONL transcript tailing（`~/.claude/projects/**/*.jsonl`）: 最終メッセージ種別から running/stop を判定。opensessions が採用していた方式で、現自作 watcher も踏襲。hooks 補完に有効。
 - PID 連携セッション JSON（`~/.claude/sessions/{PID}.json`）: tmux ペーン PID → CC セッションを確実に対応付け。Recon が採用。`workspace_map.json` ヒューリスティックより堅牢で、正本マッピングに使える可能性。
 
 → 本仕様の正本は pane option（hooks 駆動）を維持しつつ、マッピングと取りこぼし救済に PID 連携 JSON / JSONL tailing を補助採用する方針を検討する。
