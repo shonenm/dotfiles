@@ -376,6 +376,14 @@ TOOL_cursor_check_cmd="cursor-agent"
 TOOL_cursor_method="curl_pipe"
 TOOL_cursor_curl_cmd='curl https://cursor.com/install -fsS | bash'
 
+# Jujutsu VCS (jj)
+TOOL_jj_check_cmd="jj"
+TOOL_jj_method="github_release"
+TOOL_jj_github_repo="jj-vcs/jj"
+TOOL_jj_archive_pattern='jj-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
+TOOL_jj_binary_path='jj'
+TOOL_jj_arch_map='x86_64:x86_64 aarch64:aarch64'
+
 # ════════════════════════════════════════
 # Install order (dependencies must come before dependents)
 # ════════════════════════════════════════
@@ -385,7 +393,7 @@ LINUX_TOOL_ORDER=(
   bun starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
   fzf fzftmux fastfetch delta lazygit ghq dops yazi rainfrog typst
-  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh lemonade
+  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh lemonade jj
   # Cursor CLI (headless AI coding agent)
   cursor
   # APT-only (skipped on Alpine)

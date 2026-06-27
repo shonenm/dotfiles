@@ -157,7 +157,7 @@ git pull
 | -------- | ----------------------------------------------------------------------------------------- |
 | Shell    | zsh, starship, sheldon, atuin, zoxide                                                     |
 | Editor   | neovim                                                                                    |
-| Git      | lazygit, gh, gh-dash, ghq, git-absorb, gitleaks                                           |
+| Git      | lazygit, gh, gh-dash, ghq, jj, git-absorb, gitleaks                                      |
 | CLI      | lsd, eza, bat, ripgrep, fd, fzf, jq, yazi, tealdeer, procs, sd, dust, bottom, rip2, xh, ouch, glow, viddy, doggo, grex, quay |
 | Dev      | mise, uv, direnv, just, watchexec, hyperfine, topgrade, cargo-update                      |
 | Terminal | ghostty, tmux                                                                             |
@@ -171,7 +171,7 @@ git pull
 | System   | build-essential, zsh, tmux, jq, stow, rsync                     |
 | Editor   | neovim                                                          |
 | CLI      | lsd, ripgrep, fzf, eza, bat, tealdeer, procs, sd, dust, bottom, rip2, quay, cargo-update |
-| Git      | lazygit, ghq                                                    |
+| Git      | lazygit, ghq, jj                                               |
 | Dev      | mise, starship, sheldon, zoxide, atuin, uv, dotenvx             |
 | Font     | UDEV Gothic Nerd Font                                           |
 

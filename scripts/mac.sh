@@ -22,6 +22,17 @@ install_brew_bundle() {
   log_success "Brewfile packages installed"
 }
 
+install_jj_cli() {
+  if command_exists jj; then
+    log_success "jj already installed"
+    return
+  fi
+
+  log_info "Installing jj..."
+  brew install jj
+  log_success "jj installed"
+}
+
 install_npm_packages() {
   if ! command_exists npm; then
     log_warn "npm not found, skipping npm packages"
@@ -321,6 +332,7 @@ install_cursor_cli() {
 
 # --- Main Execution ---
 run_step install_brew_bundle
+run_step install_jj_cli
 run_step install_mise_tools
 run_step install_npm_packages
 run_step install_claude_mem

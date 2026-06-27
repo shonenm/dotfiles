@@ -31,6 +31,7 @@ brew "lazydocker"
 brew "git-delta"
 brew "gh"
 brew "ghq"
+brew "jj"            # Jujutsu VCS
 brew "mise"
 brew "uv"
 brew "rust"
