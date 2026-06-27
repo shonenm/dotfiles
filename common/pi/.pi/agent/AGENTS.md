@@ -16,6 +16,21 @@ Tool-agnostic config is in `~/.config/agent/`:
 - `skills/` — Agent Skills Standard (github, research, quality, debug)
 - `knowledge/` — Shared principles (communication, security, web-research)
 
+## Version Control
+
+When `.jj/` exists in a repository, use Jujutsu (`jj`) as the default version-control write layer.
+
+- Run `jj status` before editing to snapshot and inspect state.
+- Use `jj status` / `jj diff` / `jj log` for state and review.
+- Prefer jj change IDs over Git hashes when referring to local work.
+- Use `jj describe -m "<message>"` to name the current change.
+- Use `jj new` when the current logical change is done.
+- Clean up agent-made messy history with `jj split` / `jj squash` / `jj describe`.
+- Recover with `jj undo`, or `jj op log` → `jj op restore <op>` when needed.
+- Bookmarks are not active branches; create or move them only when pushing.
+- Push to GitHub with `jj git push --change @-` or an explicit bookmark.
+- In `.jj/` repos, avoid mutating Git commands such as `git commit`, `git add`, `git reset`, `git checkout`, `git rebase`, and `git clean`; read-only Git commands are OK.
+
 ## Skills
 
 Invoke via `/skill:<name>`. Shared skills are auto-discovered from `~/.config/agent/skills/`.
