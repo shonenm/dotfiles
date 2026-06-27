@@ -249,44 +249,61 @@ def find_siblings(sig: str) -> list[str]:
     return out
 
 
-def cmd_apply(args: argparse.Namespace) -> int:
-    ensure_dir()
-    path = LAYOUT_DIR / f"{args.name}.layout"
-    if not path.exists():
-        print(f"preset {args.name!r} not found", file=sys.stderr)
-        return 1
-    preset_raw = path.read_text(encoding="utf-8").strip()
-    preset_tree = parse_layout(strip_checksum(preset_raw))
+def apply_preset(name: str, win: str, *, quiet: bool = False) -> int:
+    """Resize current panes of `win` to match preset `name`.
 
-    win = current_window_id(args.pane)
-    current_raw = tmux_get("#{window_layout}", win)
-    current_tree = parse_layout(strip_checksum(current_raw))
+    On success, records the preset on the window as `@layout-preset` so the
+    autoapply hook can re-snap it on later window/session switches. Returns 0 on
+    success, 1 if missing, 2 on topology mismatch (no pane create/destroy).
+    """
+    path = LAYOUT_DIR / f"{name}.layout"
+    if not path.exists():
+        if not quiet:
+            print(f"preset {name!r} not found", file=sys.stderr)
+        return 1
+    preset_tree = parse_layout(strip_checksum(path.read_text(encoding="utf-8").strip()))
+    current_tree = parse_layout(strip_checksum(tmux_get("#{window_layout}", win)))
 
     preset_sig = topology(preset_tree)
     current_sig = topology(current_tree)
-
     if preset_sig != current_sig:
-        print(f"topology mismatch — cannot apply without creating/destroying panes", file=sys.stderr)
-        print(f"  current:  {current_sig}", file=sys.stderr)
-        print(f"  preset:   {preset_sig}", file=sys.stderr)
-        alts = find_siblings(current_sig)
-        if alts:
-            print(f"  presets matching current topology: {', '.join(alts)}", file=sys.stderr)
-        else:
-            print(f"  no preset matches current topology", file=sys.stderr)
+        if not quiet:
+            print("topology mismatch — cannot apply without creating/destroying panes", file=sys.stderr)
+            print(f"  current:  {current_sig}", file=sys.stderr)
+            print(f"  preset:   {preset_sig}", file=sys.stderr)
+            alts = find_siblings(current_sig)
+            if alts:
+                print(f"  presets matching current topology: {', '.join(alts)}", file=sys.stderr)
+            else:
+                print("  no preset matches current topology", file=sys.stderr)
         return 2
 
-    cur_leaves = leaves(current_tree)
-    pre_leaves = leaves(preset_tree)
-    for src, dst in zip(pre_leaves, cur_leaves):
+    for src, dst in zip(leaves(preset_tree), leaves(current_tree)):
         src.pane_id = dst.pane_id
-
     rescale(preset_tree, current_tree.w, current_tree.h, current_tree.x, current_tree.y)
+    run(["tmux", "select-layout", "-t", win, with_checksum(serialize(preset_tree))])
+    run(["tmux", "set-window-option", "-t", win, "@layout-preset", name])
+    if not quiet:
+        print(f"applied {name} to {win}")
+    return 0
 
-    body = serialize(preset_tree)
-    new_layout = with_checksum(body)
-    run(["tmux", "select-layout", "-t", win, new_layout])
-    print(f"applied {args.name} to {win}")
+
+def cmd_apply(args: argparse.Namespace) -> int:
+    ensure_dir()
+    return apply_preset(args.name, current_window_id(args.pane))
+
+
+def cmd_autoapply(args: argparse.Namespace) -> int:
+    """Hook entry: re-snap the focused window to its remembered preset, if any.
+
+    Silent and idempotent — windows without `@layout-preset` cost nothing, and a
+    drifted/changed topology is a no-op rather than an error (runs in tmux hooks).
+    """
+    win = current_window_id(args.pane)
+    name = tmux_get("#{@layout-preset}", win)
+    if not name:
+        return 0
+    apply_preset(name, win, quiet=True)
     return 0
 
 
@@ -311,6 +328,11 @@ def build_parser() -> argparse.ArgumentParser:
     a = sub.add_parser("apply", help="apply preset <name> to current window")
     a.add_argument("name")
     a.set_defaults(func=cmd_apply)
+
+    sub.add_parser(
+        "autoapply",
+        help="re-snap focused window to its @layout-preset (silent hook entry)",
+    ).set_defaults(func=cmd_autoapply)
 
     sub.add_parser("list", help="list saved presets with topology signature").set_defaults(func=cmd_list)
 
