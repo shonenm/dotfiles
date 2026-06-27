@@ -5,7 +5,7 @@ set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TMUX_LAYOUT="$SCRIPT_DIR/tmux-layout"
-LAYOUT_DIR="${TMUX_LAYOUT_DIR:-$HOME/.config/tmux/layouts}"
+LAYOUT_DIR="${TMUX_LAYOUT_DIR:-$HOME/.local/share/tmux-layout}"
 mkdir -p "$LAYOUT_DIR"
 
 if ! command -v fzf >/dev/null 2>&1; then
