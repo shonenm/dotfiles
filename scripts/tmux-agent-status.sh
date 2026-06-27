@@ -167,6 +167,24 @@ render_preview() {
 # 交換は swapper(background)が 0.5秒デバウンスして実行 → スクロール中は swap せず移動を妨げない。
 # 下記 selector / swapper / view-focus / blankpane アクション。
 
+# 実ペインを swap-pane で入替える。関与する2 window にサイドバー pane があれば、その幅を
+# swap と同一 tmux バッチ内で元幅へ resize し直す。tmux はコマンドリストを処理し終えてから1回
+# 描画するため、サイドバーが比例配分で広がった中間状態が一切描画されず「一瞬広がる」を防ぐ。
+av_swap() {
+  local src="$1" dst="$2" w sb sbw
+  local -a cmd=(swap-pane -d -s "$src" -t "$dst")
+  for w in "$(tmux display-message -p -t "$src" '#{window_id}' 2>/dev/null)" \
+           "$(tmux display-message -p -t "$dst" '#{window_id}' 2>/dev/null)"; do
+    [[ -z "$w" ]] && continue
+    sb=$(tmux show-options -w -t "$w" -qv @agent_sidebar_pane 2>/dev/null || true)
+    [[ -z "$sb" ]] && continue
+    tmux list-panes -t "$w" -F '#{pane_id}' 2>/dev/null | grep -qxF "$sb" || continue
+    sbw=$(tmux display-message -p -t "$sb" '#{pane_width}' 2>/dev/null || true)
+    [[ -n "$sbw" ]] && cmd+=( ';' resize-pane -t "$sb" -x "$sbw" )
+  done
+  tmux "${cmd[@]}" 2>/dev/null || true
+}
+
 # source された場合(サイドバー等がヘルパー再利用)はディスパッチしない
 [[ "${BASH_SOURCE[0]}" != "${0}" ]] && return 0
 
@@ -271,7 +289,7 @@ case "${1:-popup}" in
     foreign=$(tmux list-panes -t "$win" -F '#{pane_id}' 2>/dev/null | grep -vxF "$sel" | grep -vxF "${blank:-__nope__}" | head -1)
     if [[ -n "$foreign" ]]; then
       if [[ -n "$blank" ]] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$blank"; then
-        tmux swap-pane -d -s "$foreign" -t "$blank" 2>/dev/null || true   # 実エージェントを元 window へ
+        av_swap "$foreign" "$blank"   # 実エージェントを元 window へ(サイドバー幅も同一バッチで補正)
       else
         # blank 不在(異常時)。kill すると実ペインが死ぬため kill せず退避し session は残す。
         tmux break-pane -d -s "$foreign" 2>/dev/null || true
@@ -300,14 +318,14 @@ case "${1:-popup}" in
           tmux select-pane -t "$sel" 2>/dev/null || true
         fi
         if [[ -n "$blank" ]]; then
-          # 現在 swap 中の実ペインを元へ戻す(blank が popup 右へ復帰)。-d でフォーカスは fzf に維持。
+          # 現在 swap 中の実ペインを元へ戻す(blank が popup 右へ復帰)。av_swap は -d でフォーカスを
+          # fzf に維持し、関与 window のサイドバー幅を同一バッチで補正してちらつきを防ぐ。
           if [[ -n "$cur" && "$cur" == %* ]] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$cur"; then
-            tmux swap-pane -d -s "$cur" -t "$blank" 2>/dev/null || true
+            av_swap "$cur" "$blank"
           fi
           # @av_want がローカル実ペインなら blank と swap(実ペインが popup 右へ)。リモート/非ペインは blank のまま。
-          # -d 必須: 付けないと swap-pane が swap 先をアクティブ化し、勝手に右へフォーカスが移る。
           if [[ "$want" == %* ]] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "$want"; then
-            tmux swap-pane -d -s "$want" -t "$blank" 2>/dev/null || true
+            av_swap "$want" "$blank"
             tmux set-option -p -t "$sel" @av_swapped "$want" 2>/dev/null || true
           else
             tmux set-option -p -t "$sel" @av_swapped "" 2>/dev/null || true
