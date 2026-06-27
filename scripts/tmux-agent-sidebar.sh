@@ -271,11 +271,18 @@ case "${1:-toggle}" in
     fi
     ;;
   resize-all)
-    # 全 window のサイドバー pane を固定幅へ即時補正(client-resized/session-changed hook 用)。
-    # window option @agent_sidebar_pane を辿り、生存している pane のみ resize。
+    # サイドバー pane を固定幅へ即時補正(client-resized/session-changed/window-layout-changed hook 用)。
+    # tmux はリサイズを比例配分するため、prefix+a の swap-pane 等でレイアウトが変わると固定幅が
+    # 崩れて広がる。それを WIDTH へ snap し直す。$2 に window_id があればその window のみ対象。
+    # 既に WIDTH の pane は resize しない: resize 自体が window-layout-changed を再発火するため、
+    # 無条件 resize だと hook 経由で無限ループになる(差分があるときだけ補正 → 1回で収束)。
+    target_win="${2:-}"
     while IFS=$'\t' read -r win pane; do
       [[ -z "$pane" ]] && continue
+      [[ -n "$target_win" && "$win" != "$target_win" ]] && continue
       tmux list-panes -t "$win" -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane" || continue
+      cw=$(tmux display-message -p -t "$pane" '#{pane_width}' 2>/dev/null || echo "")
+      [[ "$cw" == "$WIDTH" ]] && continue
       tmux resize-pane -t "$pane" -x "$WIDTH" 2>/dev/null || true
     done < <(tmux list-windows -a -F "#{window_id}$(printf '\t')#{@agent_sidebar_pane}" 2>/dev/null)
     ;;
