@@ -123,6 +123,14 @@ TOOL_ghq_archive_pattern='ghq_linux_${ARCH}.zip'
 TOOL_ghq_binary_path='ghq_linux_${ARCH}/ghq'
 TOOL_ghq_arch_map='x86_64:amd64 aarch64:arm64'
 
+# smug: declarative tmux session/pane scaffolding (flat tarball, binary `smug`)
+TOOL_smug_check_cmd="smug"
+TOOL_smug_method="github_release"
+TOOL_smug_github_repo="ivaaaan/smug"
+TOOL_smug_archive_pattern='smug_${VERSION_NOTAG}_Linux_${ARCH}.tar.gz'
+TOOL_smug_binary_path='smug'
+TOOL_smug_arch_map='x86_64:x86_64 aarch64:arm64'
+
 TOOL_neovim_check_cmd="nvim"
 TOOL_neovim_method="github_release"
 TOOL_neovim_github_repo="neovim/neovim"
@@ -392,7 +400,7 @@ LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
   bun starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
-  fzf fzftmux fastfetch delta lazygit ghq dops yazi rainfrog typst
+  fzf fzftmux fastfetch delta lazygit ghq smug dops yazi rainfrog typst
   just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh lemonade jj
   # Cursor CLI (headless AI coding agent)
   cursor

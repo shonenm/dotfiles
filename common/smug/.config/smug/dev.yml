@@ -1,0 +1,37 @@
+# smug session template — `smug start dev`
+# Declarative pane scaffolding: creates panes and launches apps in one command.
+# Edit freely; this is an example. Configs here are stow-synced across all envs.
+#
+# Geometry: smug applies a named tmux layout (main-vertical / main-horizontal /
+# tiled / even-*). For an EXACT saved geometry, set `@layout-preset` (below) to a
+# tmux-layout preset whose pane topology matches this window — the autoapply hook
+# then snaps it precisely on attach/window-switch. Topologies must match (same
+# split structure), or the snap is silently skipped.
+
+session: dev
+attach: true
+root: ~
+
+windows:
+  - name: dev
+    layout: main-vertical
+    # Remember a saved geometry preset for this window. The pane-focus-in /
+    # client-session-changed hooks run `tmux-layout autoapply`, which snaps to
+    # ~/.local/share/tmux-layout/<name>.layout when its topology matches.
+    # Leave commented unless you have a matching preset (run: tmux-layout list).
+    # commands:
+    #   - tmux set-window-option @layout-preset dev
+    panes:
+      # main pane (left, widest under main-vertical): coding agent
+      - commands:
+          - claude
+      # editor
+      - type: vertical
+        commands:
+          - nvim
+      # scratch shell (no command — plain shell)
+      - type: vertical
+
+# Ambient AI sidebar (prefix+b). Opening it adds a pane and changes the window
+# topology, so enable this only if your @layout-preset includes the sidebar pane.
+# attach_hook: ~/dotfiles/scripts/tmux-agent-sidebar.sh toggle
