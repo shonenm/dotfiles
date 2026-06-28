@@ -82,6 +82,7 @@ brew "viddy"
 brew "doggo"
 brew "topgrade"
 brew "grex"
+brew "gittype"
 
 # --- System Monitoring ---
 brew "macmon"      # Apple Silicon GPU/CPU monitoring (tmux status bar)
