@@ -10,6 +10,9 @@ command-code
 # Claude Code token usage analytics (local JSONL parser)
 ccusage
 
+# Review-first terminal diff viewer for agent-authored changesets (hunk binary)
+hunkdiff
+
 # Claude Code token optimizer (auto-config hooks via global install)
 @ooples/token-optimizer-mcp
 
