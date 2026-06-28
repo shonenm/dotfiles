@@ -9,7 +9,7 @@
 THEME=$(tmux show-option -gqv @theme-name 2>/dev/null || echo "tokyonight")
 
 case "$THEME" in
-  syntopic)
+  myproject)
     COLORS=(
       "#047857" "#8B5A2B" "#22C55E" "#3B82F6"
       "#F59E0B" "#A855F7" "#EF4444" "#64748B"

@@ -154,9 +154,9 @@ items:
       - name: rosepine
         key: r
         command: "run-shell '~/dotfiles/scripts/tmux-theme-toggle.sh rosepine'"
-      - name: syntopic
+      - name: myproject
         key: s
-        command: "run-shell '~/dotfiles/scripts/tmux-theme-toggle.sh syntopic'"
+        command: "run-shell '~/dotfiles/scripts/tmux-theme-toggle.sh myproject'"
   - name: Reload config
     key: r
     macro: reload-config

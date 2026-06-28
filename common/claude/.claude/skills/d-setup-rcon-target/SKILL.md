@@ -23,7 +23,7 @@ when_to_use: "Use when the user wants to register a new rcon target (remote host
 
 ```
 /d-setup-rcon-target devhost
-/d-setup-rcon-target devhost:syntopic-dev
+/d-setup-rcon-target devhost:myproject-dev
 /d-setup-rcon-target devhost:another-container --apply
 ```
 

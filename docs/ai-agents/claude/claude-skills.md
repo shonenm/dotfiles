@@ -38,7 +38,7 @@ Ralph 系スキルは [`ralph.md`](ralph.md) を参照。
 
 ```json
 {
-  "/Users/matsushimakouta/dotfiles": {
+  "~/dotfiles": {
     "workspace": "3",
     "registered_at": "1768789301"
   }
@@ -150,7 +150,7 @@ interests:
 
 ```
 /d-setup-rcon-target devhost
-/d-setup-rcon-target devhost:syntopic-dev
+/d-setup-rcon-target devhost:myproject-dev
 /d-setup-rcon-target devhost:another-container
 ```
 

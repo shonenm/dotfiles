@@ -2,7 +2,7 @@
 # tmux テーマファイルを再生成（powerline文字を正しいバイトで埋め込む）
 # Linux環境でgit clone後に角丸が表示されない場合に使用
 #
-# Usage: regenerate-tmux-theme.sh <tokyonight|syntopic> [target_file]
+# Usage: regenerate-tmux-theme.sh <tokyonight|myproject> [target_file]
 #
 # 重要: *.tmux を直接編集せず、このスクリプトを編集して再生成すること
 # powerline文字がgit操作で破損する可能性があるため
@@ -11,7 +11,7 @@ set -euo pipefail
 
 THEME="${1:-}"
 if [ -z "$THEME" ]; then
-  echo "Usage: $0 <tokyonight|syntopic> [target_file]" >&2
+  echo "Usage: $0 <tokyonight|myproject> [target_file]" >&2
   exit 1
 fi
 
@@ -42,10 +42,10 @@ case "$THEME" in
     WINDOW_INACTIVE_BG="#3b4261"
     WINDOW_INACTIVE_FG="#a9b1d6"
     ;;
-  syntopic)
-    TARGET="${2:-$HOME/.config/tmux/syntopic.tmux}"
-    THEME_LABEL="SynTopic"
-    # Palette derived from @syntopic/design-system token.js (dark mode CSS variables).
+  myproject)
+    TARGET="${2:-$HOME/.config/tmux/myproject.tmux}"
+    THEME_LABEL="MyProject"
+    # Palette derived from @myproject/design-system token.js (dark mode CSS variables).
     # HSL origin shown alongside hex for traceability; tmux needs hex literals.
     BG_DARK="#0F1A15"          # topic-base    hsl(153 27% 8%)
     FG_SUBTLE="#64748B"        # text-subtle   hsl(215 16% 47%)
@@ -145,7 +145,7 @@ case "$THEME" in
     WINDOW_INACTIVE_FG="#e0def4"
     ;;
   *)
-    echo "Unknown theme: $THEME (available: tokyonight, syntopic, catppuccin, gruvbox, rosepine)" >&2
+    echo "Unknown theme: $THEME (available: tokyonight, myproject, catppuccin, gruvbox, rosepine)" >&2
     exit 1
     ;;
 esac

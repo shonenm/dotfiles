@@ -10,7 +10,7 @@
 Mac (Ghostty)
   └─ ssh devhost
       └─ host tmux server (devhost 上)
-          ├─ session "syntopic-dev"      → docker exec syntopic-dev
+          ├─ session "myproject-dev"      → docker exec myproject-dev
           ├─ session "another-container" → docker exec another-container
           └─ session "main"              → host shell (container なし target)
 ```
@@ -34,14 +34,14 @@ Mac (Ghostty)
 mkdir -p ~/.config/rcon
 cat >> ~/.config/rcon/targets <<'EOF'
 devhost
-devhost:syntopic-dev
+devhost:myproject-dev
 devhost:another-container
 EOF
 ```
 
 形式: `<host>` または `<host>:<container>`。`<host>` は `~/.ssh/config` で解決可能な名前。コメントは `#` で開始。
 
-`rcon` (引数なし) で fzf 選択、`rcon devhost:syntopic-dev` で直接指定。
+`rcon` (引数なし) で fzf 選択、`rcon devhost:myproject-dev` で直接指定。
 
 ## 2. リモートホスト (devhost 等): 一度だけのセットアップ
 
@@ -98,7 +98,7 @@ AI agent watcher (Claude Code / Codex / Amp) はホスト側のファイルシ�
 
 ```yaml
 services:
-  syntopic-dev:
+  myproject-dev:
     volumes:
       # AI agent state (agent watcher 連携用)
       - ~/.claude:/home/devuser/.claude
@@ -109,12 +109,12 @@ services:
       # host 側ディレクトリは container ごとに分け、container 側は
       # DOTFILES_SHARED_DIR (default ~/.cache) 配下の tmux-pane-state にマウント:
       #   ~/.cache/tmux-pane-state-<container>:${DOTFILES_SHARED_DIR}/tmux-pane-state
-      - ~/.cache/tmux-pane-state-syntopic-dev:/home/devuser/.cache/tmux-pane-state
+      - ~/.cache/tmux-pane-state-myproject-dev:/home/devuser/.cache/tmux-pane-state
 
       # プロジェクトファイル (cwd 引き継ぎを動かすため、ホストとパス揃える)
-      - ~/proj/syntopic:/home/devuser/proj/syntopic
+      - ~/proj/myproject:/home/devuser/proj/myproject
 
-    working_dir: /home/devuser/proj/syntopic
+    working_dir: /home/devuser/proj/myproject
 ```
 
 container 内 user が `root` なら `/root/.claude` 等。
@@ -125,21 +125,21 @@ mount を省略した場合は機能が degrade するだけ (lazygit 等は con
 
 反映:
 ```bash
-docker compose down syntopic-dev
-docker compose up -d syntopic-dev
+docker compose down myproject-dev
+docker compose up -d myproject-dev
 ```
 
 ### docker run の場合
 
 ```bash
-docker stop syntopic-dev && docker rm syntopic-dev
+docker stop myproject-dev && docker rm myproject-dev
 docker run -d \
-  --name syntopic-dev \
+  --name myproject-dev \
   -v ~/.claude:/root/.claude \
   -v ~/.codex:/root/.codex \
-  -v ~/.cache/tmux-pane-state-syntopic-dev:/root/.cache/tmux-pane-state \
-  -v ~/proj/syntopic:/root/proj/syntopic \
-  --workdir /root/proj/syntopic \
+  -v ~/.cache/tmux-pane-state-myproject-dev:/root/.cache/tmux-pane-state \
+  -v ~/proj/myproject:/root/proj/myproject \
+  --workdir /root/proj/myproject \
   <image>
 ```
 
@@ -152,8 +152,8 @@ docker run -d \
 rcon devhost                    # host のみ (sanity check)
 # → host tmux session "main" に attach
 
-rcon devhost:syntopic-dev       # container 接続
-# → host tmux session "syntopic-dev" 作成、最初の pane が container 内 zsh
+rcon devhost:myproject-dev       # container 接続
+# → host tmux session "myproject-dev" 作成、最初の pane が container 内 zsh
 
 # 動作確認
 hostname    # container のホスト名 (= short container ID 等)
@@ -186,7 +186,7 @@ prefix+a   # agent status popup → ペインへジャンプ
 
 ```
 朝:
-  Mac: rcon devhost:syntopic-dev
+  Mac: rcon devhost:myproject-dev
   作業 (nvim, server起動, claude起動 等)
   prefix+d で detach (tmux session は host 側で生き続ける)
 
@@ -227,7 +227,7 @@ container 起動後、pane を `exit` で閉じて新規分割するか `tmux re
 
 ### pane 分割で cwd が引き継がれない
 
-ホストとコンテナで対応するパスが存在しない。docker run の `-v` で同じパスでマウントする (例: `-v ~/proj/syntopic:~/proj/syntopic` ではなく `-v ~/proj/syntopic:/root/proj/syntopic` のときは host の `/home/user/proj/syntopic` と container の `/root/proj/syntopic` が異なるパスになる)。
+ホストとコンテナで対応するパスが存在しない。docker run の `-v` で同じパスでマウントする (例: `-v ~/proj/myproject:~/proj/myproject` ではなく `-v ~/proj/myproject:/root/proj/myproject` のときは host の `/home/user/proj/myproject` と container の `/root/proj/myproject` が異なるパスになる)。
 
 cwd 完全一致が難しい場合は wrapper の fallback で container の WORKDIR で開くが、毎回 `cd` が必要になる。
 
@@ -246,7 +246,7 @@ mount 設定を見直して container を recreate。
 
 ### session 名に `:` `.` がある
 
-tmux 制限のため `rcon` 内で自動的に `-` に sanitize される (`syntopic.dev` → `syntopic-dev`)。混乱を避けるなら container 名にこれらを使わない方が良い。
+tmux 制限のため `rcon` 内で自動的に `-` に sanitize される (`myproject.dev` → `myproject-dev`)。混乱を避けるなら container 名にこれらを使わない方が良い。
 
 ## 自動化
 

@@ -94,7 +94,7 @@ wt_copy_ignored() {
   local dst="$2"
 
   # TODO: Make configurable via .wt-config or similar per-project config
-  # Currently hardcoded for SynTopic monorepo structure
+  # Currently hardcoded for MyProject monorepo structure
 
   # Directories to symlink instead of copy (large, shared safely)
   local -a symlink_dirs=(

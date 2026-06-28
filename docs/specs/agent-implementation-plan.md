@@ -122,7 +122,7 @@ QoL 機能の追加と技術的負債の解消。
 - [ ] **Package Migration**
   - 自作 `mcp-gateway.ts` → `pi-mcp-adapter` への移行方針を決定（互換性確認後）
   - 移行する場合: `pi install git:github.com/earendil-works/pi-mcp-adapter`
-  - 移行しない場合: 自作 gateway の HTTP MCP (syntopic) 対応を追加
+  - 移行しない場合: 自作 gateway の HTTP MCP (myproject) 対応を追加
 - [ ] **Auto Research Loop**
   - `skills/research/deep-research.md` 強化
   - search → fetch → summarize → refine → search の自動反復ロジック

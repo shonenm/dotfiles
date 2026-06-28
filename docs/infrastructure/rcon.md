@@ -8,7 +8,7 @@ SSH + ホスト側 tmux + Docker をワンコマンドで接続するツール�
 
 ```bash
 rcon                      # fzf でターゲット選択
-rcon devhost:syntopic-dev   # host:container 形式で直接指定
+rcon devhost:myproject-dev   # host:container 形式で直接指定
 rcon pi-500               # host のみ（コンテナなし）
 rcon pi-500 dev           # tmux セッション名を明示指定
 ```
@@ -18,7 +18,7 @@ rcon pi-500 dev           # tmux セッション名を明示指定
 `~/.config/rcon/targets` に1行1ターゲットで記載:
 
 ```
-devhost:syntopic-dev
+devhost:myproject-dev
 devhost:another-container
 pi-500
 ```
@@ -31,7 +31,7 @@ pi-500
 Ghostty
   └─ ssh host
       └─ tmux (ホスト側、1 server)
-          ├─ session "syntopic-dev"      → docker exec -it syntopic-dev
+          ├─ session "myproject-dev"      → docker exec -it myproject-dev
           ├─ session "another-container" → docker exec -it another-container
           └─ session "main"              → ホスト shell (container なし target)
 ```
@@ -113,7 +113,7 @@ tmux_session = "main"
 [[targets]]
 name = "devhost-dev"
 host = "devhost"
-container = "syntopic-dev"
+container = "myproject-dev"
 transport = "et"  # オーバーライド可能
 
 [[targets]]

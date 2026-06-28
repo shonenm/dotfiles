@@ -14,7 +14,7 @@
 #   https://api-<wt>.localhost:48080  (and ws-/s3-)
 #
 # Prerequisites:
-#   - syntopic repo at $SYNTOPIC_DIR (default: ~/syntopic)
+#   - myproject repo at $MYPROJECT_DIR (default: ~/myproject)
 #   - dev-gateway up (creates dev-edge network)
 #
 # Why a wrapper (vs editing wt-up.sh): keeps Traefik integration entirely in
@@ -23,8 +23,8 @@
 
 set -euo pipefail
 
-SYNTOPIC_DIR="${SYNTOPIC_DIR:-$HOME/syntopic}"
-WT_UP="${SYNTOPIC_DIR}/scripts/wt-up.sh"
+MYPROJECT_DIR="${MYPROJECT_DIR:-$HOME/myproject}"
+WT_UP="${MYPROJECT_DIR}/scripts/wt-up.sh"
 
 usage() {
   cat <<USAGE
@@ -34,7 +34,7 @@ Usage:
   wt-traefik-up <wt-name> [--services svc1,svc2] [--port-offset auto|N]
 
 Environment:
-  SYNTOPIC_DIR   path to syntopic repo (default: \$HOME/syntopic)
+  MYPROJECT_DIR   path to myproject repo (default: \$HOME/myproject)
 
 Prereqs:
   - dev-gateway up <host>  (creates docker network 'dev-edge')
@@ -49,7 +49,7 @@ fi
 # --- Pre-flight ---
 if [[ ! -x "$WT_UP" ]]; then
   echo "Error: wt-up.sh not found or not executable: $WT_UP" >&2
-  echo "Set SYNTOPIC_DIR to the path of your syntopic checkout." >&2
+  echo "Set MYPROJECT_DIR to the path of your myproject checkout." >&2
   exit 1
 fi
 

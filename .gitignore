@@ -12,6 +12,8 @@
 .env.*.local
 
 # === Dotfiles: machine-specific configs ===
+# aerc: contains real name + email accounts (personal, kept local only)
+common/aerc/.config/aerc/accounts.conf
 common/configstore/
 common/github-copilot/
 mac/raycast/.config/raycast/config.json

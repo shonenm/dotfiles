@@ -25,7 +25,7 @@ when_to_use: "Use when the user wants to set up ralph-crew autonomous dispatch o
 
 ```
 /d-crew-setup
-/d-crew-setup ~/works/syntopic-bot
+/d-crew-setup ~/works/myproject-bot
 ```
 
 ## 手順
