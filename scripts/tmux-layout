@@ -298,8 +298,19 @@ def cmd_autoapply(args: argparse.Namespace) -> int:
 
     Silent and idempotent — windows without `@layout-preset` cost nothing, and a
     drifted/changed topology is a no-op rather than an error (runs in tmux hooks).
+
+    Fires from `pane-focus-in`, which triggers on EVERY pane focus — including
+    moving between panes within the same window. Re-snapping on every intra-window
+    move would constantly fight manual resizes, so only act when the focused window
+    actually changed since the last call (tracked in a global option). `@last` is
+    updated on every window change regardless of preset, so returning to a window
+    after visiting another still re-snaps it.
     """
     win = current_window_id(args.pane)
+    last = run(["tmux", "show-options", "-gqv", "@layout-autoapply-last"])
+    if last == win:
+        return 0
+    run(["tmux", "set-option", "-g", "@layout-autoapply-last", win])
     name = tmux_get("#{@layout-preset}", win)
     if not name:
         return 0
