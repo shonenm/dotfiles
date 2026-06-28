@@ -23,7 +23,7 @@ when_to_use: "Use when the user wants to register a new rcon target (remote host
 
 ```
 /d-setup-rcon-target chronos
-/d-setup-rcon-target chronos:syntopic-dev
+/d-setup-rcon-target chronos:myproject-dev
 /d-setup-rcon-target ailab:another-container --apply
 ```
 

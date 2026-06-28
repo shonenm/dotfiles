@@ -59,7 +59,7 @@ Example:
 This saves a mapping in `~/.local/share/claude/workspace_map.json`:
 ```json
 {
-  "/Users/matsushimakouta/dotfiles": {
+  "~/dotfiles": {
     "workspace": "3",
     "registered_at": "1768789301"
   }
@@ -199,7 +199,7 @@ Environment variable for properly handling notifications inside containers. Auto
 ```json
 {
   "project": "my-project",
-  "device": "matsushima-mbp",
+  "device": "example-mac",
   "workspace": "3",
   "tmux_session": "main",
   "tmux_window": "0"

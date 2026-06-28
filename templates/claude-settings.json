@@ -18,7 +18,7 @@
       "Read(**/credentials*)"
     ],
     "allow": [
-      "mcp__syntopic__*",
+      "mcp__myproject__*",
       "mcp__notion__*",
       "mcp__tmux__*",
       "Skill",

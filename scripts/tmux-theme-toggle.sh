@@ -3,13 +3,13 @@
 # server start.
 #
 # State file: $XDG_STATE_HOME/tmux/current-theme (fallback ~/.local/state)
-# Usage:      tmux-theme-toggle.sh <tokyonight|syntopic>
+# Usage:      tmux-theme-toggle.sh <tokyonight|myproject>
 
 set -eu
 
 name="${1:-}"
 if [ -z "$name" ]; then
-    tmux display-message "usage: tmux-theme-toggle.sh <tokyonight|syntopic>"
+    tmux display-message "usage: tmux-theme-toggle.sh <tokyonight|myproject>"
     exit 1
 fi
 

@@ -45,7 +45,7 @@ push が失敗すれば ailab pull もスキップされる。ailab 側で `--ff
 
 ```yaml
 volumes:
-  - /home/matsushima/dotfiles:/home/devuser/dotfiles:ro
+  - ${HOME}/dotfiles:/home/devuser/dotfiles:ro
 ```
 
 container 内では:
@@ -59,7 +59,7 @@ container 内では:
 
 #### compose.yml 設定例
 
-`syntopic-dev`, `fluid-sbi-dev`, `geniac-patent-pipeline` 等の compose.yml `services.<name>.volumes` に追加:
+`myproject-dev`, `fluid-sbi-dev`, `geniac-patent-pipeline` 等の compose.yml `services.<name>.volumes` に追加:
 
 ```yaml
 volumes:

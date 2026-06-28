@@ -17,7 +17,7 @@
 # Information flow for rcon-managed docker containers:
 #   rcon (Mac) → ssh remote → docker exec (-e RCON_*)
 # The RCON_* env vars propagate the origin context into the container so
-# env-context inside the container can reconstruct "I am syntopic-dev
+# env-context inside the container can reconstruct "I am myproject-dev
 # on ailab, the tmux I should target is ailab's host tmux". Without those
 # vars (e.g. someone ran `docker exec` manually), env-context reports
 # `unknown` for the missing dimensions — tools should fail loudly rather

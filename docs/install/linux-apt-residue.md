@@ -50,7 +50,7 @@ Everything else from the previous apt list (`config/packages.linux.apt.txt`) is 
    # or, if ghq is your convention, symlink:
    #   ghq get shonenm/dotfiles && ln -s ~/ghq/github.com/shonenm/dotfiles ~/dotfiles
    cd ~/dotfiles
-   nix run home-manager/master -- switch --flake .#matsushimakouta@linux-x86_64
+   nix run home-manager/master -- switch --flake .#<user>@linux-x86_64
    ```
 
 ## Migrating from legacy stow setup

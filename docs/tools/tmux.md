@@ -282,8 +282,8 @@ OFF 中の視覚的変化:
 
 | プレフィックス | 用途 | 例 |
 |---------------|------|-----|
-| `rcon-` | `rcon host[:container]` で起動したリモート/コンテナ作業 | `rcon-ailab-syntopic-dev`、`rcon-prod1` |
-| `proj-` | ローカルのプロジェクト作業 | `proj-syntopic-api`、`proj-growth` |
+| `rcon-` | `rcon host[:container]` で起動したリモート/コンテナ作業 | `rcon-ailab-myproject-dev`、`rcon-prod1` |
+| `proj-` | ローカルのプロジェクト作業 | `proj-myproject-api`、`proj-growth` |
 | `pers-` | dotfiles / 雑務 / 個人メモ | `pers-dotfiles`、`pers-notes` |
 | `ops-` | 監視・運用・インシデント対応 | `ops-grafana`、`ops-oncall` |
 

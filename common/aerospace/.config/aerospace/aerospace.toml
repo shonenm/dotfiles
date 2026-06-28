@@ -284,15 +284,15 @@ if.app-id = 'us.zoom.xos'
 run = 'move-node-to-workspace Z'
 
 # VS Code プロジェクトごとのワークスペース配置
-# 注意: より具体的なパターンを先に記述（syntopic-dev-review → syntopic-dev の順）
+# 注意: より具体的なパターンを先に記述（myproject-dev-review → myproject-dev の順）
 [[on-window-detected]]
 if.app-id = 'com.microsoft.VSCode'
-if.window-title-regex-substring = 'syntopic-dev-review'
+if.window-title-regex-substring = 'myproject-dev-review'
 run = 'move-node-to-workspace 2'
 
 [[on-window-detected]]
 if.app-id = 'com.microsoft.VSCode'
-if.window-title-regex-substring = 'syntopic-deploy'
+if.window-title-regex-substring = 'myproject-deploy'
 run = 'move-node-to-workspace 3'
 
 [[on-window-detected]]
@@ -302,7 +302,7 @@ run = 'move-node-to-workspace 4'
 
 [[on-window-detected]]
 if.app-id = 'com.microsoft.VSCode'
-if.window-title-regex-substring = 'syntopic-dev'
+if.window-title-regex-substring = 'myproject-dev'
 run = 'move-node-to-workspace 1'
 
 [workspace-to-monitor-force-assignment]
