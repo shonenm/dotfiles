@@ -220,6 +220,11 @@ TOOL_gitabsorb_method="cargo"
 TOOL_gitabsorb_cargo_crate="git-absorb"
 TOOL_gitabsorb_depends_on="rust"
 
+TOOL_gittype_check_cmd="gittype"
+TOOL_gittype_method="cargo"
+TOOL_gittype_cargo_crate="gittype"
+TOOL_gittype_depends_on="rust"
+
 TOOL_cargoupdate_check_cmd="cargo-install-update"
 TOOL_cargoupdate_method="cargo"
 TOOL_cargoupdate_cargo_crate="cargo-update"
@@ -407,7 +412,7 @@ LINUX_TOOL_ORDER=(
   # APT-only (skipped on Alpine)
   gh neovim eza bat postgresql
   # Cargo tools (depend on rust)
-  tokei tealdeer procs sd dust bottom rip2 lsd quay gitabsorb cargoupdate keifu
+  tokei tealdeer procs sd dust bottom rip2 lsd quay gitabsorb cargoupdate keifu gittype
   # Python tools (depend on uv)
   pgcli
 )
