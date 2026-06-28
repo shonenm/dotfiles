@@ -397,6 +397,14 @@ TOOL_jj_archive_pattern='jj-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
 TOOL_jj_binary_path='jj'
 TOOL_jj_arch_map='x86_64:x86_64 aarch64:aarch64'
 
+# jjui: jj 用 TUI (lazygit ライク)。zip 内バイナリは version+arch 名なので install_cmd で jjui へ rename
+TOOL_jjui_check_cmd="jjui"
+TOOL_jjui_method="github_release"
+TOOL_jjui_github_repo="idursun/jjui"
+TOOL_jjui_archive_pattern='jjui-${VERSION_NOTAG}-linux-${ARCH}.zip'
+TOOL_jjui_arch_map='x86_64:amd64 aarch64:arm64'
+TOOL_jjui_install_cmd='unzip -o "$archive" -d "$_td" >/dev/null; if [[ "$NO_SUDO" == "true" ]]; then mkdir -p "$HOME/.local/bin"; install -m755 "$_td/jjui-${VERSION_NOTAG}-linux-${ARCH}" "$HOME/.local/bin/jjui"; else $SUDO install -m755 "$_td/jjui-${VERSION_NOTAG}-linux-${ARCH}" /usr/local/bin/jjui; fi'
+
 # ════════════════════════════════════════
 # Install order (dependencies must come before dependents)
 # ════════════════════════════════════════
@@ -406,7 +414,7 @@ LINUX_TOOL_ORDER=(
   bun starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
   # GitHub releases (no deps)
   fzf fzftmux fastfetch delta lazygit ghq smug dops yazi rainfrog typst
-  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh lemonade jj
+  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh lemonade jj jjui
   # Cursor CLI (headless AI coding agent)
   cursor
   # APT-only (skipped on Alpine)
