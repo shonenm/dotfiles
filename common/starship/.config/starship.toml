@@ -5,6 +5,7 @@ $os\
 $directory\
 $git_branch\
 $git_status\
+${custom.jj}\
 ${custom.git_diff}\
 $fill\
 $cmd_duration\
@@ -69,6 +70,15 @@ format = '[─](fg:current_line)[](fg:cyan)[󰊤 ](fg:primary bg:cyan)[](f
 command = "~/dotfiles/scripts/starship-git-diff.sh"
 when = true
 detect_folders = [".git"]
+shell = ["bash", "--noprofile", "--norc"]
+
+# jj working-copy change-id + bookmark (.jj が存在する repo でのみ表示)
+# colocated repo では git_branch は detached でほぼ空になるため衝突しない
+[custom.jj]
+format = '[─](fg:current_line)[](fg:purple)[󰁨 ](fg:primary bg:purple)[](fg:purple bg:box)[ $output ](fg:foreground bg:box)[](fg:box)'
+command = "~/dotfiles/scripts/starship-jj.sh"
+when = true
+detect_folders = [".jj"]
 shell = ["bash", "--noprofile", "--norc"]
 
 [fill]

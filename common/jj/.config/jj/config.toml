@@ -1,0 +1,11 @@
+#:schema https://docs.jj-vcs.dev/latest/config-schema.json
+
+# user identity (name/email) は machine 固有のため追跡しない。
+# ~/.config/jj/conf.d/user.toml に分離 (install.sh が git config から scaffold)。
+# git の ~/.gitconfig.local と同じ規約。
+
+[ui]
+# 引数なし `jj` で log を表示する
+default-command = "log"
+
+# ponytail: log default のみ。alias / delta pager / revset は必要になってから追加する。

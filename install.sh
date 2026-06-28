@@ -405,6 +405,16 @@ link_dotfiles() {
     log_info "Run 'setup_git_from_op' to configure git user from 1Password"
   fi
 
+  # jj user identity is machine-specific (not tracked). Scaffold conf.d/user.toml
+  # from git config so jj reuses the same name/email as git (~/.gitconfig.local).
+  if [[ ! -f "$HOME/.config/jj/conf.d/user.toml" ]]; then
+    mkdir -p "$HOME/.config/jj/conf.d"
+    printf '[user]\nname = "%s"\nemail = "%s"\n' \
+      "$(git config user.name)" "$(git config user.email)" \
+      > "$HOME/.config/jj/conf.d/user.toml"
+    log_info "Created ~/.config/jj/conf.d/user.toml from git config"
+  fi
+
   # Verify critical symlinks were created
   verify_stow
 
