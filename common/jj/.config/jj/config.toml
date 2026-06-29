@@ -8,4 +8,14 @@
 # 引数なし `jj` で log を表示する
 default-command = "log"
 
-# ponytail: log default のみ。alias / delta pager / revset は必要になってから追加する。
+[git]
+# fetch 時に remote bookmark を自動で追跡 local bookmark 化する。
+# main@origin に対する `jj bookmark track` を毎回打たずに済む。
+auto-local-bookmark = true
+
+[experimental-advance-branches]
+# main の上で commit すると local main bookmark を自動で前進させる
+# (git の branch 追従と同じ挙動)。main 直 push を `commit` → `jj git push` で完結させる。
+enabled-branches = ["main"]
+
+# ponytail: 必要になってから alias / delta pager / revset / develop 等を追加する。
