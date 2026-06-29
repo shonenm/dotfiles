@@ -124,6 +124,15 @@ command -v viddy &>/dev/null && alias watch="viddy"
 command -v doggo &>/dev/null && alias dig="doggo"
 command -v xh &>/dev/null && alias http="xh"
 
+# --- hunk (review-first diff viewer / agent レビュー) ---
+# delta は通常の git pager として温存。hunk はここの alias で限定的に使う。
+if command -v hunk &>/dev/null; then
+  alias hd='hunk diff'                      # 作業ツリーをインタラクティブレビュー
+  alias hs='hunk show'                      # コミットをレビュー
+  alias hdw='hunk diff --watch'             # 編集に追従して自動リロード
+  alias jhd='jj diff --git | hunk patch -'  # jj の変更を hunk でレビュー
+fi
+
 # --- Global Aliases (pipe modifiers) ---
 # Usage: git log L → git log | bat
 alias -g L='| bat'
