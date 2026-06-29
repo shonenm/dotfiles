@@ -220,6 +220,22 @@ install_quay() {
   log_success "quay installed"
 }
 
+install_tmux_expose() {
+  if command_exists tmux-expose; then
+    log_success "tmux-expose already installed"
+    return
+  fi
+
+  if ! command_exists cargo; then
+    log_warn "cargo not found, skipping tmux-expose"
+    return
+  fi
+
+  log_info "Installing tmux-expose (Mission Control session switcher)..."
+  cargo install tmux-expose
+  log_success "tmux-expose installed"
+}
+
 install_cargo_update() {
   if command_exists cargo-install-update; then
     log_success "cargo-update already installed"
@@ -356,6 +372,7 @@ run_step install_cursor_cli
 run_step configure_claude_remote_control_autostart
 run_step install_dops
 run_step install_quay
+run_step install_tmux_expose
 run_step install_cargo_update
 run_step install_lemonade
 run_step install_gh_extensions
