@@ -90,6 +90,8 @@
 [alias]
     secrets = !gitleaks detect --verbose
     absorb = !git-absorb --and-rebase
+	hdiff = -c core.pager=hunk pager diff
+	hshow = -c core.pager=hunk pager show
 
 # === ghq (Repository Management) ===
 [ghq]
