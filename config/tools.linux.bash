@@ -389,12 +389,6 @@ TOOL_pgcli_method="curl_pipe"
 TOOL_pgcli_curl_cmd='uv tool install pgcli'
 TOOL_pgcli_depends_on="uv"
 
-# 1Password CLI (op): GitHub release ではなく agilebits の zip 配布。
-# 最新版を product_history から取得し、zip 内の op バイナリを展開する。
-TOOL_op_check_cmd="op"
-TOOL_op_method="curl_pipe"
-TOOL_op_curl_cmd='_a=$(uname -m); case "$_a" in x86_64) _a=amd64;; aarch64|arm64) _a=arm64;; esac; _v=$(curl -fsSL https://app-updates.agilebits.com/product_history/CLI2 | grep -oE "v2\.[0-9]+\.[0-9]+" | head -1); _d=$(mktemp -d); curl -fsSL -o "$_d/op.zip" "https://cache.agilebits.com/dist/1P/op2/pkg/${_v}/op_linux_${_a}_${_v}.zip" && unzip -oq "$_d/op.zip" -d "$_d" && if [[ "$NO_SUDO" == "true" ]]; then mkdir -p "$HOME/.local/bin"; install -m 0755 "$_d/op" "$HOME/.local/bin/op"; else $SUDO install -m 0755 "$_d/op" /usr/local/bin/op; fi; rm -rf "$_d"'
-
 # Cursor CLI (headless AI coding agent, Composer 2.5)
 TOOL_cursor_check_cmd="cursor-agent"
 TOOL_cursor_method="curl_pipe"
@@ -426,8 +420,6 @@ LINUX_TOOL_ORDER=(
   # GitHub releases (no deps)
   fzf fzftmux fastfetch delta lazygit ghq smug dops yazi rainfrog typst
   just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh lemonade jj jjui
-  # 1Password CLI
-  op
   # Cursor CLI (headless AI coding agent)
   cursor
   # APT-only (skipped on Alpine)
