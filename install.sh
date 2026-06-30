@@ -127,11 +127,14 @@ check_1password_cli() {
 
   # Check if signed in
   if ! op whoami &>/dev/null; then
+    # op のフルパスを解決して案内に使う。interactive shell の PATH に ~/.local/bin が
+    # 無くても (stow 前 / 古い shell) この 1 行をコピペすれば必ず動く。
+    local op_bin
+    op_bin="$(command -v op)"
     log_error "1Password CLI is not signed in."
     echo
-    echo "  Run the following to sign in (op がまだ PATH に無い shell でも動くよう PATH も通す):"
-    echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
-    echo "    eval \"\$(op signin)\""
+    echo "  Run the following to sign in (この 1 行をそのまま実行):"
+    echo "    eval \"\$($op_bin signin)\""
     echo
     echo "  Or skip 1Password secrets entirely:"
     echo "    $0 --skip-1p (combine with --skip-prompt --no-sudo as needed)"
