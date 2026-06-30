@@ -130,9 +130,18 @@ if command -v hunk &>/dev/null; then
   alias hd='hunk diff'                      # 作業ツリーをインタラクティブレビュー
   alias hs='hunk show'                      # コミットをレビュー
   alias hdw='hunk diff --watch'             # 編集に追従して自動リロード
-  # default branch との3点diff (jj: trunk()..@ / git: <default>...)
-  alias hdd='hunk diff "$(jj root >/dev/null 2>&1 && echo "trunk()..@" || echo "$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d/ -f2-)...")"'
-  alias hddw='hunk diff "$(jj root >/dev/null 2>&1 && echo "trunk()..@" || echo "$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d/ -f2-)...")" --watch'
+  # default branch との3点diff target を返す (hunk の VCS 判定に合わせる:
+  # repo root に .jj があれば jj、なければ git。jj root は祖先まで遡り誤判定するため使わない)
+  _hunk_default_ref() {
+    local root
+    if root=$(git rev-parse --show-toplevel 2>/dev/null) && [[ ! -d $root/.jj ]]; then
+      printf '%s...' "$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d/ -f2-)"
+    else
+      printf 'trunk()..@'
+    fi
+  }
+  alias hdd='hunk diff "$(_hunk_default_ref)"'          # default branch と3点diff
+  alias hddw='hunk diff "$(_hunk_default_ref)" --watch' # それに --watch
   alias jhd='jj diff --git | hunk patch -'  # jj の変更を hunk でレビュー
 fi
 
