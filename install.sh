@@ -14,6 +14,7 @@ SKIP_PROMPT=false
 NO_SUDO=false
 SKIP_1P=false
 SETUP_FAILED=false
+NOT_SIGNED_IN=false
 for arg in "$@"; do
   case "$arg" in
     -y|--skip-prompt) SKIP_PROMPT=true ;;
@@ -125,21 +126,21 @@ check_1password_cli() {
     install_1password_cli
   fi
 
-  # Check if signed in
+  # Check if signed in.
+  #
+  # 未 signin でも exit せず継続する (これが根本治療)。
+  # signin gate を fatal にすると、その先の link_dotfiles (stow) に到達できず
+  # ~/.zshenv がリンクされない。すると ~/.local/bin が PATH に入らず、sudoless で
+  # op を入れても interactive shell から永遠に見えない (毎回フルパス回避が必要)。
+  # sudo モードは op が /usr/local/bin (既に PATH) に入るのでこの問題が出ず、
+  # 両モードで挙動が非対称になっていた。
+  # 継続すれば stow が ~/.zshenv を配線し、次の shell で両モードとも素の `op` が通る。
+  # secret 依存ステップは op read が no-op fallback するので未 signin でも安全。
   if ! op whoami &>/dev/null; then
-    # op のフルパスを解決して案内に使う。interactive shell の PATH に ~/.local/bin が
-    # 無くても (stow 前 / 古い shell) この 1 行をコピペすれば必ず動く。
-    local op_bin
-    op_bin="$(command -v op)"
-    log_error "1Password CLI is not signed in."
-    echo
-    echo "  Run the following to sign in (この 1 行をそのまま実行):"
-    echo "    eval \"\$($op_bin signin)\""
-    echo
-    echo "  Or skip 1Password secrets entirely:"
-    echo "    $0 --skip-1p (combine with --skip-prompt --no-sudo as needed)"
-    echo
-    exit 1
+    NOT_SIGNED_IN=true
+    log_warn "1Password CLI is not signed in. Secret-dependent steps will no-op this run."
+    log_warn "Sign in after install completes (see final summary), then re-run to populate secrets."
+    return 0
   fi
 
   log_success "1Password CLI: ready"
@@ -809,6 +810,19 @@ main() {
     log_success "=== Installation Complete! ==="
   fi
   log_info "Please restart your shell or run: source ~/.zshrc"
+
+  # 未 signin だった場合、PATH 配線済みの新 shell で signin → 再 install を案内。
+  # ここまで来れば ~/.zshenv は配線済みなので、新 shell では素の `op` が通る。
+  if [[ "$NOT_SIGNED_IN" == "true" ]]; then
+    echo
+    log_warn "1Password はまだ signin していません。新しい shell を開いて以下を実行:"
+    echo "    op signin       # 新 shell なら PATH 配線済みでそのまま通る"
+    if [[ "$NO_SUDO" == "true" ]]; then
+      echo "    ./install.sh --no-sudo   # secret 依存ステップを再実行して反映"
+    else
+      echo "    ./install.sh             # secret 依存ステップを再実行して反映"
+    fi
+  fi
 
   # Unified summary (all config-driven)
   print_install_summary
