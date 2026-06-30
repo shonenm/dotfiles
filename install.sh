@@ -23,6 +23,11 @@ for arg in "$@"; do
 done
 export NO_SUDO SKIP_1P
 
+# ~/.local/bin を PATH 先頭に追加。no-sudo install したツール (op など) を
+# install.sh プロセス全体で参照可能にし、再実行時の不要な再インストールを防ぐ。
+# (interactive shell では dotfiles の zsh 設定が同じことをするが、stow 前は未反映)
+export PATH="$HOME/.local/bin:$PATH"
+
 # --- 0. 1Password CLI Check (Required) ---
 install_1password_cli() {
   local os
@@ -124,8 +129,9 @@ check_1password_cli() {
   if ! op whoami &>/dev/null; then
     log_error "1Password CLI is not signed in."
     echo
-    echo "  Run the following command to sign in:"
-    echo "    eval \$(op signin)"
+    echo "  Run the following to sign in (op がまだ PATH に無い shell でも動くよう PATH も通す):"
+    echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
+    echo "    eval \"\$(op signin)\""
     echo
     echo "  Or skip 1Password secrets entirely:"
     echo "    $0 --skip-1p (combine with --skip-prompt --no-sudo as needed)"
