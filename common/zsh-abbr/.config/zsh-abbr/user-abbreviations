@@ -16,10 +16,6 @@ abbr grh="git reset --hard HEAD"
 abbr grs="git reset --soft HEAD^"
 abbr gpf="git push --force"
 
-# hunk (default branch との3点diff。jj は trunk()..@、git は <default>...)
-abbr hd='hunk diff $(jj root >/dev/null 2>&1 && echo "trunk()..@" || echo "$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d/ -f2-)...")'
-abbr hdw='hunk diff $(jj root >/dev/null 2>&1 && echo "trunk()..@" || echo "$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d/ -f2-)...") --watch'
-
 # ghq
 abbr gq="ghq get"
 abbr gql="ghq list"

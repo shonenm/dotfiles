@@ -130,6 +130,9 @@ if command -v hunk &>/dev/null; then
   alias hd='hunk diff'                      # 作業ツリーをインタラクティブレビュー
   alias hs='hunk show'                      # コミットをレビュー
   alias hdw='hunk diff --watch'             # 編集に追従して自動リロード
+  # default branch との3点diff (jj: trunk()..@ / git: <default>...)
+  alias hdd='hunk diff "$(jj root >/dev/null 2>&1 && echo "trunk()..@" || echo "$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d/ -f2-)...")"'
+  alias hddw='hunk diff "$(jj root >/dev/null 2>&1 && echo "trunk()..@" || echo "$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d/ -f2-)...")" --watch'
   alias jhd='jj diff --git | hunk patch -'  # jj の変更を hunk でレビュー
 fi
 
