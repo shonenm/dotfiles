@@ -314,6 +314,13 @@ def cmd_autoapply(args: argparse.Namespace) -> int:
     name = tmux_get("#{@layout-preset}", win)
     if not name:
         return 0
+    # Yield to the user's active zoom / pane mode. apply_preset runs `select-layout`,
+    # which force-unzooms and cancels choose-tree/copy-mode — so a background
+    # focus/session event (agent churn while Claude works) would snap a manually
+    # zoomed pane back to the preset. Skip here; the next window switch re-snaps
+    # once the user has left the zoom/mode.
+    if tmux_get("#{window_zoomed_flag}", win) == "1" or tmux_get("#{pane_in_mode}", win) == "1":
+        return 0
     apply_preset(name, win, quiet=True)
     return 0
 
