@@ -36,7 +36,7 @@ set -g window-active-style 'fg=colour255,bg=default'
 
 # --- Status Bar (transparent) ---
 set -g status "on"
-set -g status-interval 10
+set -g status-interval 30
 set -g status-justify "left"
 set -g status-style "fg=#9ccfd8,bg=default"
 
