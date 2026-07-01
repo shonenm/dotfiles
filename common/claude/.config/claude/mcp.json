@@ -2,8 +2,8 @@
   "mcpServers": {
     "tmux": {
       "type": "stdio",
-      "command": "bash",
-      "args": ["-c", "export PATH=\"$HOME/.local/bin:$PATH\"; exec npx -y tmux-mcp"]
+      "command": "npx",
+      "args": ["-y", "tmux-mcp"]
     },
     "notion": {
       "type": "stdio",
