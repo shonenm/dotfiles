@@ -37,7 +37,7 @@ require("lazy").setup({
     -- { import = "lazyvim.plugins.extras.lang.omnisharp" }, -- SIGKILL on startup (plugin reinstall needed)
 
     -- Formatting & Linting
-    { import = "lazyvim.plugins.extras.formatting.biome" },
+    { import = "lazyvim.plugins.extras.lang.typescript.biome" },
     { import = "lazyvim.plugins.extras.formatting.prettier" },
     { import = "lazyvim.plugins.extras.linting.eslint" },
 
