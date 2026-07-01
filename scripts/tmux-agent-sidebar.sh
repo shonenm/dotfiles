@@ -242,6 +242,10 @@ case "${1:-toggle}" in
     printf '\033[?25l'   # カーソル非表示(ちらつき低減)
     while true; do
       tmux info &>/dev/null || { printf '\033[?25h'; exit 0; }
+      # 自分の pane が消えたらループを畳む。kill-pane / window・session 破棄で pane だけ
+      # 消えてもサーバは生存するため、tmux info チェックだけでは孤児ループがリークする。
+      # display-message -t deadpane は default pane にフォールバックして成功するため使えない。
+      tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "${TMUX_PANE}" || { printf '\033[?25h'; exit 0; }
       # window-size latest の比例リサイズ丸め誤差で session 切替毎に幅がドリフトする。
       # 毎ループ固定幅へ戻す(既に正しければ no-op=チラつき無し)。
       tmux resize-pane -t "${TMUX_PANE}" -x "$WIDTH" 2>/dev/null || true
