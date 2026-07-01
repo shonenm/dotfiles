@@ -34,6 +34,14 @@ RUNTIME_BASE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}"
 STATUS_DIR="${AGENT_STATUS_DIR:-${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status}"
 ESC_K=$'\033[K'   # 行末までクリア(全画面クリアせず=チカチカしない)
 
+# どれかの client が zoom / choose-tree / copy-mode 中なら true。
+# その間は sidebar の幅補正 resize を止める: 補正 resize が window-size(smallest) の
+# window 再計算を誘発し、zoom 中 window の pane まで resize して unzoom してしまう
+# (= ユーザの prefix-z / prefix-s(choose-tree -Z) が操作中に潰れる)。
+sidebar_user_busy() {
+  tmux list-clients -F '#{window_zoomed_flag}#{pane_in_mode}' 2>/dev/null | grep -q 1
+}
+
 # 表示幅基準の切り詰め(全角=2幅近似)。[[:ascii:]] は macOS 非対応のため case で判定
 trunc_w() {
   local s="$1" max="$2" out="" w=0 ch cw i
@@ -248,7 +256,11 @@ case "${1:-toggle}" in
       tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "${TMUX_PANE}" || { printf '\033[?25h'; exit 0; }
       # window-size latest の比例リサイズ丸め誤差で session 切替毎に幅がドリフトする。
       # 毎ループ固定幅へ戻す(既に正しければ no-op=チラつき無し)。
-      tmux resize-pane -t "${TMUX_PANE}" -x "$WIDTH" 2>/dev/null || true
+      # ただし、どれかの client が zoom / choose-tree / copy-mode 中は幅補正を一切行わない。
+      # 幅補正の resize は window-size(smallest) の window 再計算を誘発し、zoom 中 window の
+      # pane まで resize されて unzoom する(= prefix-z / prefix-s が操作中に潰れる)。transient
+      # な状態なので、抜けた後の tick で補正すれば十分。
+      sidebar_user_busy || tmux resize-pane -t "${TMUX_PANE}" -x "$WIDTH" 2>/dev/null || true
       # 描画は毎回サブプロセスで実行し、スクリプト更新を自動反映する
       # (常駐ループに関数を抱えると、起動後の更新が反映されず古い表示になるため)
       bash "$SELF" once
@@ -280,6 +292,10 @@ case "${1:-toggle}" in
     # 崩れて広がる。それを WIDTH へ snap し直す。$2 に window_id があればその window のみ対象。
     # 既に WIDTH の pane は resize しない: resize 自体が window-layout-changed を再発火するため、
     # 無条件 resize だと hook 経由で無限ループになる(差分があるときだけ補正 → 1回で収束)。
+    # ユーザが zoom / choose-tree / copy-mode 中は補正パス全体をスキップ。
+    # 他 window の sidebar を resize するだけでも window-size 再計算の連鎖で zoom が
+    # 潰れるため、対象 window 単位ではなくパス全体を止める必要がある。
+    sidebar_user_busy && exit 0
     target_win="${2:-}"
     while IFS=$'\t' read -r win pane; do
       [[ -z "$pane" ]] && continue
