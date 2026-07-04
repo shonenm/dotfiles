@@ -12,3 +12,9 @@ ulimit -S -n 2048
 
 # zsh-abbr
 export ABBR_USER_ABBREVIATIONS_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/zsh-abbr/user-abbreviations"
+
+# 共有 dev サーバーの /tmp を汚さないよう一時ファイルを user-local に移す。
+# Claude Code が注入する scratchpad (os.tmpdir() 由来) もこれで /tmp の外になる。
+# XDG_RUNTIME_DIR (tmpfs) は logout で消え tmux 常駐と相性が悪いため disk-backed にする
+export TMPDIR="$HOME/.cache/tmp"
+mkdir -p "$TMPDIR"
