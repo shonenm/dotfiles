@@ -171,7 +171,11 @@ render_preview() {
 # swap と同一 tmux バッチ内で元幅へ resize し直す。tmux はコマンドリストを処理し終えてから1回
 # 描画するため、サイドバーが比例配分で広がった中間状態が一切描画されず「一瞬広がる」を防ぐ。
 av_swap() {
-  local src="$1" dst="$2" w sb sbw
+  local src="$1" dst="$2" w sb
+  # 補正先は現在幅ではなく固定幅。現在幅を読んで書き戻すと window-size latest の丸めで
+  # 広がった幅を固定してしまい、移動の度にサイドバーが単調に広がる(正のフィードバック)。
+  # run ループ/resize-all と同じ固定幅を目標にして不動点補正にする。
+  local width="${AGENT_SIDEBAR_WIDTH:-40}"
   local -a cmd=(swap-pane -d -s "$src" -t "$dst")
   for w in "$(tmux display-message -p -t "$src" '#{window_id}' 2>/dev/null)" \
            "$(tmux display-message -p -t "$dst" '#{window_id}' 2>/dev/null)"; do
@@ -179,8 +183,7 @@ av_swap() {
     sb=$(tmux show-options -w -t "$w" -qv @agent_sidebar_pane 2>/dev/null || true)
     [[ -z "$sb" ]] && continue
     tmux list-panes -t "$w" -F '#{pane_id}' 2>/dev/null | grep -qxF "$sb" || continue
-    sbw=$(tmux display-message -p -t "$sb" '#{pane_width}' 2>/dev/null || true)
-    [[ -n "$sbw" ]] && cmd+=( ';' resize-pane -t "$sb" -x "$sbw" )
+    cmd+=( ';' resize-pane -t "$sb" -x "$width" )
   done
   tmux "${cmd[@]}" 2>/dev/null || true
 }
