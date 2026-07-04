@@ -61,7 +61,8 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 
 | キー | 動作 |
 |------|------|
-| `s` | セッション選択（choose-tree、**名前順固定**） |
+| `s` | セッショングループ二段 picker（グループ menu → グループ内 choose-tree。グループ未使用時は従来のフラットな choose-tree） |
+| `C-g` | 現 session のグループ設定/解除（fzf popup、後述の Session グループ参照） |
 | `Tab` | 直前のセッションへトグル切替（`switch-client -l`、sesh 非依存） |
 | `L` | 直前のセッションへ（`sesh last`、picker 履歴を参照） |
 | `9` | 親プロジェクト session へジャンプ（`sesh connect --root`、worktree 等のネストから復帰） |
@@ -69,6 +70,13 @@ TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 | `)` | 次のセッション（名前順、リピート可） |
 | `f` | 色付きセッション picker（既存 tmux session のみ、`tmux-session-color.sh`）|
 | `C-f` | sesh picker（多段フィルタ: `^a` all / `^t` tmux / `^g` config / `^x` zoxide / `^f` find / `^d` kill）|
+
+prefix 不要のグループ移動キー（root table）:
+
+| キー | 動作 |
+|------|------|
+| `M-h` / `M-l` | 同グループ内の前/次 session へ（名前順・循環） |
+| `M-j` / `M-k` | 次/前のグループの先頭 session へ（ungrouped は末尾の 1 バケツ扱い・循環） |
 
 `choose-tree` と `( / )` は共に名前順で巡回するため、後述の命名規約 (`rcon-*`, `proj-*`, `pers-*`, `ops-*`) に従うとカテゴリ単位で束ねて見える／辿れる。`prefix f` と `prefix C-f` の使い分けは [sesh.md](./sesh.md) 参照。
 
@@ -290,6 +298,26 @@ OFF 中の視覚的変化:
 プレフィックスがアルファベット順で並ぶため、`prefix s` の choose-tree でも `prefix+( / )` の巡回でも近い用途のセッションが隣接する。rcon 由来のセッション名は既に `host-container` 形式で sanitize されているため `rcon-` プレフィックスを足すだけで整合する。
 
 固定セッション（`scratch`、`MAIN`）はプレフィックスなしで運用しても構わないが、choose-tree ではリスト末尾にまとめて並ぶ（大文字 → 小文字、プレフィックスあり → なしの順で分かれる）。
+
+## Session グループ (`@group`)
+
+名前規約に依存しない明示的なセッショングループ。各 session の `@group` user option
+(session-scoped) を唯一の真実とし、session 名は自由に付けられる。実装は
+`scripts/tmux-session-group.sh`。
+
+- 設定: `prefix C-g` の fzf popup で既存グループ選択 / 新規入力 / `(none)` で解除。
+  CLI からは `tmux-session-group.sh set <group> [session]`（グループ名は `A-Za-z0-9_-` のみ）
+- 移動: `M-h/l` で同グループ内、`M-j/k` でグループ間（前述のキー表参照）
+- 一覧: `prefix s` がグループ menu → 選択グループのみの choose-tree という二段 picker になる。
+  menu の `u` で ungrouped、`a` で全 session のフラット表示
+- 永続化: user option は tmux server 再起動で消え resurrect も復元しないため、
+  `$XDG_STATE_HOME/tmux/session-groups`（`session名<TAB>group`）に同期し、
+  session-created hook / config load で再適用する。死んだ session のエントリは
+  保持され、同名 session の再作成（resurrect 復元含む）時に自動でグループが戻る
+
+worktree 毎に session を切る運用では、session 作成側で
+`tmux-session-group.sh set <repo名> <session名>` を呼べば同一プロジェクトの
+worktree 群が 1 グループにまとまる。
 
 ## Per-session アクセントカラー
 
