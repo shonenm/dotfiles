@@ -75,8 +75,12 @@ prefix 不要のグループ移動キー（root table）:
 
 | キー | 動作 |
 |------|------|
-| `M-h` / `M-l` | 同グループ内の前/次 session へ（名前順・循環） |
-| `M-j` / `M-k` | 次/前のグループの先頭 session へ（ungrouped は末尾の 1 バケツ扱い・循環） |
+| `M-h` / `M-l` (`C-M-h` / `C-M-l`) | 同グループ内の前/次 session へ（名前順・循環） |
+| `M-j` / `M-k` (`C-M-j` / `C-M-k`) | 次/前のグループの先頭 session へ（ungrouped は末尾の 1 バケツ扱い・循環） |
+
+ローカル macOS では aerospace が `alt-hjkl` / `alt-shift-hjkl` をウィンドウ操作で
+グローバルに掴んでいるため、`C-M-hjkl`（Ctrl+Option+hjkl）を使う。aerospace の
+いない環境（リモート Linux 等）では `M-hjkl` がそのまま届く。
 
 `choose-tree` と `( / )` は共に名前順で巡回するため、後述の命名規約 (`rcon-*`, `proj-*`, `pers-*`, `ops-*`) に従うとカテゴリ単位で束ねて見える／辿れる。`prefix f` と `prefix C-f` の使い分けは [sesh.md](./sesh.md) 参照。
 
