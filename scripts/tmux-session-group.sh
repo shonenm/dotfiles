@@ -84,45 +84,51 @@ nav_target() {
   esac
 }
 
-# $1: client, $2: cur session — 4 方向の行き先を1行のヒントで status-line に表示。
-# C-Option 押しっぱなしで hjkl 連打すると押す度に更新される (display-message は
-# 直近を上書きする)。表示秒数は NAV_HINT_MS (既定 2500ms)。
-# $1: cur session — 4 方向ヒント文字列を stdout に出力 (display も move もしない=テスト可能)。
-build_nav_hint() {
-  local cur="$1" grp th tl tk tj dash
-  printf -v dash '\342\200\224'   # — em dash: 行き先が無い方向の表示
+# $1: client, [$2: cur session] — 現在地から行ける4方向を display-menu(浮くpopup)で提示。
+# 開いた時点では移動しない (迷った時に「どこへ行けるか」を見て決めるため)。menu 内で
+# h/j/k/l を押すとその方向へ移動し、移動先の menu を開き直す (常に現在地の行き先が見える)。
+# status-line の display-message は環境により描画されないため popup を採用。
+# menu は未束縛キーを消費し modifier を確実には拾えないため、キーは素の h/j/k/l にする
+# (C-M-hjkl で開いた後は Ctrl+Option を離して h/j/k/l を叩く)。
+cmd_navmenu() {
+  local client="${1:-}" cur="${2:-}" grp th tl tk tj
+  [ -z "$cur" ] && cur=$(client_session "$client")
+  [ -z "$cur" ] && cur=$(tmux display-message -p '#{session_name}')
   grp=$(cur_group "$cur")
   th=$(nav_target prev "$cur")
   tl=$(nav_target next "$cur")
   tk=$(nav_target prev-group "$cur")
   tj=$(nav_target next-group "$cur")
-  # glyph は format 側に置く (printf が octal を解釈)。session 名は %s 引数 (エスケープ非解釈)。
-  # ⌥ [group]  ◀h <prev>  ▶l <next>  ▲k <prevGroup>  ▼j <nextGroup>
-  printf '\342\214\245 [%s]  \342\227\200h %s  \342\226\266l %s  \342\226\262k %s  \342\226\274j %s' \
-    "${grp:-ungrouped}" "${th:-$dash}" "${tl:-$dash}" "${tk:-$dash}" "${tj:-$dash}"
+  local args=()
+  [ -n "$client" ] && args+=(-c "$client")
+  args+=(-T " ⌥ ${cur} [${grp:-ungrouped}] " -x C -y C)
+  # 行き先がある方向のみ選択可能に。無い方向は — 表示・キー無し(disabled)。
+  # 空間対応で ▲k(上/前グループ) → ◀h ▶l(同グループ) → ▼j(下/次グループ) の順に並べる。
+  _mi() { # $1 label $2 key $3 dir $4 target
+    if [ -n "$4" ]; then
+      args+=("$1  $4" "$2" "run-shell -b '$0 navgo $3 $client'")
+    else
+      args+=("$1  —" "" "")
+    fi
+  }
+  _mi "k ▲ group" k prev-group "$tk"
+  _mi "h ◀ prev"  h prev       "$th"
+  _mi "l ▶ next"  l next       "$tl"
+  _mi "j ▼ group" j next-group "$tj"
+  args+=("")
+  # キー無しの説明ラベル。q は item に束縛しない (tmux 組込みの q/Esc 閉じを潰さないため)。
+  args+=("Esc/q close" "" "")
+  tmux display-menu "${args[@]}"
 }
 
-show_nav_hint() {
-  local client="$1" cur="$2" msg opts=()
-  msg=$(build_nav_hint "$cur")
-  [ -n "$client" ] && opts=(-c "$client")
-  tmux display-message "${opts[@]}" -d "${NAV_HINT_MS:-2500}" "$msg"
-}
-
-# $1: dir, $2: client, $3: cur session — 移動してから現在地の行き先ヒントを出す。
-cmd_navhint() {
-  local dir="$1" client="${2:-}" cur now
-  cur=$(sess_of "${3:-}")
-  case "$dir" in
-    prev)       cmd_step -1 "$client" "$cur" ;;
-    next)       cmd_step 1 "$client" "$cur" ;;
-    prev-group) cmd_step_group -1 "$client" "$cur" ;;
-    next-group) cmd_step_group 1 "$client" "$cur" ;;
-    *) return 1 ;;
-  esac
-  now=$(client_session "$client")
-  [ -z "$now" ] && now="$cur"
-  show_nav_hint "$client" "$now"
+# $1: dir, $2: client — 指定方向へ移動してから移動先の navmenu を開き直す。
+cmd_navgo() {
+  local dir="$1" client="${2:-}" cur dest
+  cur=$(client_session "$client")
+  [ -z "$cur" ] && cur=$(tmux display-message -p '#{session_name}')
+  dest=$(nav_target "$dir" "$cur")
+  [ -n "$dest" ] && switch_to "$client" "$dest"
+  cmd_navmenu "$client" "${dest:-$cur}"
 }
 
 cmd_sync() {
@@ -300,15 +306,16 @@ case "${1:-}" in
   prev)       cmd_step -1 "${2:-}" "${3:-}" ;;
   next-group) cmd_step_group 1 "${2:-}" "${3:-}" ;;
   prev-group) cmd_step_group -1 "${2:-}" "${3:-}" ;;
-  navhint)    cmd_navhint "${2:-}" "${3:-}" "${4:-}" ;;
-  hint)       build_nav_hint "$(sess_of "${2:-}")"; echo ;;
+  navmenu)    cmd_navmenu "${2:-}" "${3:-}" ;;
+  navgo)      cmd_navgo "${2:-}" "${3:-}" ;;
   picker)     cmd_picker "${2:-}" "${3:-}" ;;
   apply)      cmd_apply "${2:-}" ;;
   restore)    cmd_restore ;;
   sync)       cmd_sync ;;
   *)
     echo "usage: $(basename "$0") {set <group> [session]|unset [session]|menu [session]" \
-         "|next|prev|next-group|prev-group [client] [session]|navhint <dir> [client] [session]" \
+         "|next|prev|next-group|prev-group [client] [session]" \
+         "|navmenu [client] [session]|navgo <dir> [client]" \
          "|picker [client] [pane]|apply <session>|restore|sync}" >&2
     exit 1
     ;;
