@@ -281,7 +281,18 @@ def apply_preset(name: str, win: str, *, quiet: bool = False) -> int:
     for src, dst in zip(leaves(preset_tree), leaves(current_tree)):
         src.pane_id = dst.pane_id
     rescale(preset_tree, current_tree.w, current_tree.h, current_tree.x, current_tree.y)
-    run(["tmux", "select-layout", "-t", win, with_checksum(serialize(preset_tree))])
+    # Skip select-layout when the window already matches the preset. Autoapply fires
+    # on every session/window switch (pane-focus-in / client-session-changed); an
+    # unconditional select-layout re-lays-out (and force-unzooms) even when nothing
+    # drifted, which shows as a flicker on each move — worse on a fork-latency-bound
+    # server where the async hook lands a frame after the switch already redrew.
+    target = serialize(preset_tree)
+    if target == serialize(current_tree):
+        run(["tmux", "set-window-option", "-t", win, "@layout-preset", name])
+        if not quiet:
+            print(f"applied {name} to {win}")
+        return 0
+    run(["tmux", "select-layout", "-t", win, with_checksum(target)])
     run(["tmux", "set-window-option", "-t", win, "@layout-preset", name])
     if not quiet:
         print(f"applied {name} to {win}")
