@@ -44,6 +44,87 @@ switch_to() {
   fi
 }
 
+# client の現在 session (run-shell -b は文脈を持たないため client 名で引く)
+client_session() {
+  [ -n "${1:-}" ] && tmux display-message -c "$1" -p '#{session_name}' 2>/dev/null
+}
+
+# $1: dir (prev|next|prev-group|next-group), $2: cur session
+# → 行き先 session 名を出力 (無ければ空)。cmd_step/cmd_step_group と同じ順序規則。
+nav_target() {
+  local dir="$1" cur="$2" grp s n i idx=0 d
+  grp=$(cur_group "$cur")
+  case "$dir" in
+    prev | next)
+      local members=()
+      while IFS= read -r s; do members+=("$s"); done \
+        < <(list_all | awk -F "$TAB" -v g="$grp" '$2 == g { print $1 }')
+      n=${#members[@]}
+      [ "$n" -le 1 ] && return 0
+      for ((i = 0; i < n; i++)); do [ "${members[$i]}" = "$cur" ] && idx=$i; done
+      d=1; [ "$dir" = prev ] && d=-1
+      printf '%s' "${members[$(((idx + d + n) % n))]}"
+      ;;
+    prev-group | next-group)
+      local all target
+      local grps=()
+      all=$(list_all)
+      while IFS= read -r s; do grps+=("$s"); done \
+        < <(printf '%s\n' "$all" | awk -F "$TAB" '$2 != "" { print $2 }' | sort -u)
+      if printf '%s\n' "$all" | awk -F "$TAB" '$2 == "" { f = 1 } END { exit !f }'; then
+        grps+=("")
+      fi
+      n=${#grps[@]}
+      [ "$n" -le 1 ] && return 0
+      for ((i = 0; i < n; i++)); do [ "${grps[$i]}" = "$grp" ] && idx=$i; done
+      d=1; [ "$dir" = prev-group ] && d=-1
+      target="${grps[$(((idx + d + n) % n))]}"
+      printf '%s' "$(printf '%s\n' "$all" | awk -F "$TAB" -v g="$target" '$2 == g { print $1; exit }')"
+      ;;
+  esac
+}
+
+# $1: client, $2: cur session — 4 方向の行き先を1行のヒントで status-line に表示。
+# C-Option 押しっぱなしで hjkl 連打すると押す度に更新される (display-message は
+# 直近を上書きする)。表示秒数は NAV_HINT_MS (既定 2500ms)。
+# $1: cur session — 4 方向ヒント文字列を stdout に出力 (display も move もしない=テスト可能)。
+build_nav_hint() {
+  local cur="$1" grp th tl tk tj dash
+  printf -v dash '\342\200\224'   # — em dash: 行き先が無い方向の表示
+  grp=$(cur_group "$cur")
+  th=$(nav_target prev "$cur")
+  tl=$(nav_target next "$cur")
+  tk=$(nav_target prev-group "$cur")
+  tj=$(nav_target next-group "$cur")
+  # glyph は format 側に置く (printf が octal を解釈)。session 名は %s 引数 (エスケープ非解釈)。
+  # ⌥ [group]  ◀h <prev>  ▶l <next>  ▲k <prevGroup>  ▼j <nextGroup>
+  printf '\342\214\245 [%s]  \342\227\200h %s  \342\226\266l %s  \342\226\262k %s  \342\226\274j %s' \
+    "${grp:-ungrouped}" "${th:-$dash}" "${tl:-$dash}" "${tk:-$dash}" "${tj:-$dash}"
+}
+
+show_nav_hint() {
+  local client="$1" cur="$2" msg opts=()
+  msg=$(build_nav_hint "$cur")
+  [ -n "$client" ] && opts=(-c "$client")
+  tmux display-message "${opts[@]}" -d "${NAV_HINT_MS:-2500}" "$msg"
+}
+
+# $1: dir, $2: client, $3: cur session — 移動してから現在地の行き先ヒントを出す。
+cmd_navhint() {
+  local dir="$1" client="${2:-}" cur now
+  cur=$(sess_of "${3:-}")
+  case "$dir" in
+    prev)       cmd_step -1 "$client" "$cur" ;;
+    next)       cmd_step 1 "$client" "$cur" ;;
+    prev-group) cmd_step_group -1 "$client" "$cur" ;;
+    next-group) cmd_step_group 1 "$client" "$cur" ;;
+    *) return 1 ;;
+  esac
+  now=$(client_session "$client")
+  [ -z "$now" ] && now="$cur"
+  show_nav_hint "$client" "$now"
+}
+
 cmd_sync() {
   mkdir -p "$STATE_DIR"
   local tmp
@@ -219,13 +300,16 @@ case "${1:-}" in
   prev)       cmd_step -1 "${2:-}" "${3:-}" ;;
   next-group) cmd_step_group 1 "${2:-}" "${3:-}" ;;
   prev-group) cmd_step_group -1 "${2:-}" "${3:-}" ;;
+  navhint)    cmd_navhint "${2:-}" "${3:-}" "${4:-}" ;;
+  hint)       build_nav_hint "$(sess_of "${2:-}")"; echo ;;
   picker)     cmd_picker "${2:-}" "${3:-}" ;;
   apply)      cmd_apply "${2:-}" ;;
   restore)    cmd_restore ;;
   sync)       cmd_sync ;;
   *)
     echo "usage: $(basename "$0") {set <group> [session]|unset [session]|menu [session]" \
-         "|next|prev|next-group|prev-group [client] [session]|picker [client] [pane]|apply <session>|restore|sync}" >&2
+         "|next|prev|next-group|prev-group [client] [session]|navhint <dir> [client] [session]" \
+         "|picker [client] [pane]|apply <session>|restore|sync}" >&2
     exit 1
     ;;
 esac
