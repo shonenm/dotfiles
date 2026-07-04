@@ -325,6 +325,15 @@ def cmd_autoapply(args: argparse.Namespace) -> int:
     name = tmux_get("#{@layout-preset}", win)
     if not name:
         return 0
+    # Defer to the agent sidebar's own width management. A window with an open
+    # sidebar pane force-holds it at a fixed width (tmux-agent-sidebar resize-all).
+    # If the preset was saved at a different sidebar width, autoapply keeps re-applying
+    # the preset width while resize-all snaps it back — an endless fight visible as a
+    # sidebar flicker on every session switch. The idempotency guard can't break it
+    # because the two never converge. Skip while a sidebar is open; the preset applies
+    # once it's closed.
+    if tmux_get("#{@agent_sidebar_pane}", win):
+        return 0
     # Yield to the user's active zoom / pane mode. apply_preset runs `select-layout`,
     # which force-unzooms and cancels choose-tree/copy-mode — so a background
     # focus/session event (agent churn while Claude works) would snap a manually
