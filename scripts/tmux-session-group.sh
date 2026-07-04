@@ -44,93 +44,6 @@ switch_to() {
   fi
 }
 
-# client の現在 session (run-shell -b は文脈を持たないため client 名で引く)
-client_session() {
-  [ -n "${1:-}" ] && tmux display-message -c "$1" -p '#{session_name}' 2>/dev/null
-}
-
-# $1: dir (prev|next|prev-group|next-group), $2: cur session
-# → 行き先 session 名を出力 (無ければ空)。cmd_step/cmd_step_group と同じ順序規則。
-nav_target() {
-  local dir="$1" cur="$2" grp s n i idx=0 d
-  grp=$(cur_group "$cur")
-  case "$dir" in
-    prev | next)
-      local members=()
-      while IFS= read -r s; do members+=("$s"); done \
-        < <(list_all | awk -F "$TAB" -v g="$grp" '$2 == g { print $1 }')
-      n=${#members[@]}
-      [ "$n" -le 1 ] && return 0
-      for ((i = 0; i < n; i++)); do [ "${members[$i]}" = "$cur" ] && idx=$i; done
-      d=1; [ "$dir" = prev ] && d=-1
-      printf '%s' "${members[$(((idx + d + n) % n))]}"
-      ;;
-    prev-group | next-group)
-      local all target
-      local grps=()
-      all=$(list_all)
-      while IFS= read -r s; do grps+=("$s"); done \
-        < <(printf '%s\n' "$all" | awk -F "$TAB" '$2 != "" { print $2 }' | sort -u)
-      if printf '%s\n' "$all" | awk -F "$TAB" '$2 == "" { f = 1 } END { exit !f }'; then
-        grps+=("")
-      fi
-      n=${#grps[@]}
-      [ "$n" -le 1 ] && return 0
-      for ((i = 0; i < n; i++)); do [ "${grps[$i]}" = "$grp" ] && idx=$i; done
-      d=1; [ "$dir" = prev-group ] && d=-1
-      target="${grps[$(((idx + d + n) % n))]}"
-      printf '%s' "$(printf '%s\n' "$all" | awk -F "$TAB" -v g="$target" '$2 == g { print $1; exit }')"
-      ;;
-  esac
-}
-
-# $1: client, [$2: cur session] — 現在地から行ける4方向を display-menu(浮くpopup)で提示。
-# 開いた時点では移動しない (迷った時に「どこへ行けるか」を見て決めるため)。menu 内で
-# h/j/k/l を押すとその方向へ移動し、移動先の menu を開き直す (常に現在地の行き先が見える)。
-# status-line の display-message は環境により描画されないため popup を採用。
-# menu は未束縛キーを消費し modifier を確実には拾えないため、キーは素の h/j/k/l にする
-# (C-M-hjkl で開いた後は Ctrl+Option を離して h/j/k/l を叩く)。
-cmd_navmenu() {
-  local client="${1:-}" cur="${2:-}" grp th tl tk tj
-  [ -z "$cur" ] && cur=$(client_session "$client")
-  [ -z "$cur" ] && cur=$(tmux display-message -p '#{session_name}')
-  grp=$(cur_group "$cur")
-  th=$(nav_target prev "$cur")
-  tl=$(nav_target next "$cur")
-  tk=$(nav_target prev-group "$cur")
-  tj=$(nav_target next-group "$cur")
-  local args=()
-  [ -n "$client" ] && args+=(-c "$client")
-  args+=(-T " ⌥ ${cur} [${grp:-ungrouped}] " -x C -y C)
-  # 行き先がある方向のみ選択可能に。無い方向は — 表示・キー無し(disabled)。
-  # 空間対応で ▲k(上/前グループ) → ◀h ▶l(同グループ) → ▼j(下/次グループ) の順に並べる。
-  _mi() { # $1 label $2 key $3 dir $4 target
-    if [ -n "$4" ]; then
-      args+=("$1  $4" "$2" "run-shell -b '$0 navgo $3 $client'")
-    else
-      args+=("$1  —" "" "")
-    fi
-  }
-  _mi "k ▲ group" k prev-group "$tk"
-  _mi "h ◀ prev"  h prev       "$th"
-  _mi "l ▶ next"  l next       "$tl"
-  _mi "j ▼ group" j next-group "$tj"
-  args+=("")
-  # キー無しの説明ラベル。q は item に束縛しない (tmux 組込みの q/Esc 閉じを潰さないため)。
-  args+=("Esc/q close" "" "")
-  tmux display-menu "${args[@]}"
-}
-
-# $1: dir, $2: client — 指定方向へ移動してから移動先の navmenu を開き直す。
-cmd_navgo() {
-  local dir="$1" client="${2:-}" cur dest
-  cur=$(client_session "$client")
-  [ -z "$cur" ] && cur=$(tmux display-message -p '#{session_name}')
-  dest=$(nav_target "$dir" "$cur")
-  [ -n "$dest" ] && switch_to "$client" "$dest"
-  cmd_navmenu "$client" "${dest:-$cur}"
-}
-
 cmd_sync() {
   mkdir -p "$STATE_DIR"
   local tmp
@@ -306,17 +219,13 @@ case "${1:-}" in
   prev)       cmd_step -1 "${2:-}" "${3:-}" ;;
   next-group) cmd_step_group 1 "${2:-}" "${3:-}" ;;
   prev-group) cmd_step_group -1 "${2:-}" "${3:-}" ;;
-  navmenu)    cmd_navmenu "${2:-}" "${3:-}" ;;
-  navgo)      cmd_navgo "${2:-}" "${3:-}" ;;
   picker)     cmd_picker "${2:-}" "${3:-}" ;;
   apply)      cmd_apply "${2:-}" ;;
   restore)    cmd_restore ;;
   sync)       cmd_sync ;;
   *)
     echo "usage: $(basename "$0") {set <group> [session]|unset [session]|menu [session]" \
-         "|next|prev|next-group|prev-group [client] [session]" \
-         "|navmenu [client] [session]|navgo <dir> [client]" \
-         "|picker [client] [pane]|apply <session>|restore|sync}" >&2
+         "|next|prev|next-group|prev-group [client] [session]|picker [client] [pane]|apply <session>|restore|sync}" >&2
     exit 1
     ;;
 esac
