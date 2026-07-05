@@ -6,11 +6,13 @@
 # 仕様: docs/specs/agent-stop-notification.md §5.3
 #
 # 表示例:
-#   AGENTS 5
+#   SESSIONS 4  AGENTS 5
 #   ──────────────
-#   main      󰌆 󰔟 ●
-#   scratch   ●
-#   ailab     󰔟
+#   ▸ work
+#     ▶ main  󰌆 󰔟 ●
+#       api   ●
+#   ▾ ungrouped
+#       scratch
 #
 # Usage:
 #   tmux-agent-sidebar.sh run      # サイドバー pane 内ループ(自動更新・非フリッカー)
@@ -32,6 +34,7 @@ REFRESH="${AGENT_SIDEBAR_REFRESH:-3}"
 WIDTH="${AGENT_SIDEBAR_WIDTH:-40}"
 RUNTIME_BASE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}"
 STATUS_DIR="${AGENT_STATUS_DIR:-${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status}"
+TAB=$'\t'
 ESC_K=$'\033[K'   # 行末までクリア(全画面クリアせず=チカチカしない)
 
 # どれかの client が zoom / choose-tree / copy-mode 中なら true。
@@ -106,19 +109,9 @@ collect_agents() {
     ' "${files[@]}" 2>/dev/null)
 }
 
-# セッションブロックを出力(セッション名を独立行、アイコンは折返してインデント表示)。
-# 動的スコープで render の cur/glyphs/WIDTH/_lines を参照し、_lines 配列に追記する。
-_sb_flush() {
-  [[ -z "$cur" ]] && return
-  _lines+=("$(printf '%s%s%s' "$C_BOLD" "$(trunc_w "$cur" $(( WIDTH - 2 )))" "$C_RST")")
-  local per=$(( (WIDTH - 4) / 2 )); (( per < 1 )) && per=1
-  local i=0 line="  " g
-  for g in "${glyphs[@]}"; do
-    line+="$g "
-    (( i++ ))
-    if (( i % per == 0 )); then _lines+=("$line"); line="  "; fi
-  done
-  [[ "$line" != "  " ]] && _lines+=("$line")
+session_glyphs() {
+  local rows="$1" sess="$2"
+  printf '%s\n' "$rows" | awk -F "$TAB" -v s="$sess" '$1 == s { printf "%s ", $3 }'
 }
 
 # 各 AI の使用量(セッションリミット)を2行で出力(1行目: アイコン+残り時間 / 2行目: ゲージ+%)
@@ -172,11 +165,13 @@ usage_section() {
 }
 
 render() {
-  local rows total cur="" s _rank glyph
-  local glyphs=()
-  local _lines=()   # AGENTS ブロックの各行(_sb_flush が追記)
+  local rows total sessions session_count cur_session cur_group
   rows=$(collect_agents | sort -t$'\t' -k1,1 -k2,2n)
   total=$(printf '%s' "$rows" | grep -c . 2>/dev/null)
+  sessions=$(tmux list-sessions -F "#{session_name}${TAB}#{@group}" 2>/dev/null | sort)
+  session_count=$(printf '%s' "$sessions" | grep -c . 2>/dev/null)
+  cur_session=$(tmux display-message -p -t "${TMUX_PANE}" '#{session_name}' 2>/dev/null || true)
+  cur_group=$(tmux show-options -t "$cur_session" -qv @group 2>/dev/null || true)
 
   # --- pane の幅/高さを取得(divider 長・最下部揃えに使用) ---
   local H W
@@ -190,25 +185,38 @@ render() {
   # divider は pane 幅ちょうどの罫線(リサイズに追従、折返し防止)
   local div; div=$(printf '─%.0s' $(seq 1 "$W"))
 
-  # --- AGENTS ブロックを配列に構築(上部) ---
+  # --- SESSIONS ブロックを配列に構築(上部) ---
   local top=()
-  top+=("$(printf '%s AGENTS%s %s%s%s' "$C_BOLD" "$C_RST" "$C_DIM" "$total" "$C_RST")")
+  top+=("$(printf '%s SESSIONS%s %s%s  AGENTS %s%s' "$C_BOLD" "$C_RST" "$C_DIM" "$session_count" "$total" "$C_RST")")
   top+=("$(printf '%s%s%s' "$C_DIM" "$div" "$C_RST")")
-  if [[ -z "$rows" ]]; then
-    top+=("$(printf '%s(エージェントなし)%s' "$C_DIM" "$C_RST")")
+  if [[ -z "$sessions" ]]; then
+    top+=("$(printf '%s(セッションなし)%s' "$C_DIM" "$C_RST")")
   else
-    # セッションごとに: 名前を独立行、アイコンを折返してインデント表示
-    while IFS=$'\t' read -r s _rank glyph; do
-      [[ -z "$s" ]] && continue
-      if [[ "$s" != "$cur" ]]; then
-        _sb_flush
-        cur="$s"; glyphs=("$glyph")
+    local groups=() g s label marker name icons line
+    while IFS= read -r g; do [[ -n "$g" ]] && groups+=("$g"); done < <(printf '%s\n' "$sessions" | awk -F "$TAB" '$2 != "" { print $2 }' | sort -u)
+    if printf '%s\n' "$sessions" | awk -F "$TAB" '$2 == "" { found = 1 } END { exit !found }'; then groups+=(""); fi
+    for g in "${groups[@]}"; do
+      label="${g:-ungrouped}"
+      if [[ "$g" == "$cur_group" ]]; then
+        top+=("$(printf '%s▸ %s%s' "$C_CUR$C_BOLD" "$(trunc_w "$label" $(( WIDTH - 3 )))" "$C_RST")")
       else
-        glyphs+=("$glyph")
+        top+=("$(printf '%s▾ %s%s' "$C_DIM" "$(trunc_w "$label" $(( WIDTH - 3 )))" "$C_RST")")
       fi
-    done <<< "$rows"
-    _sb_flush
-    top+=("${_lines[@]}")
+      while IFS= read -r s; do
+        [[ -z "$s" ]] && continue
+        icons=$(session_glyphs "$rows" "$s")
+        marker="  "
+        [[ "$s" == "$cur_session" ]] && marker="▶ "
+        name=$(trunc_w "$s" $(( WIDTH - 6 )))
+        line="  ${marker}${name}"
+        [[ -n "$icons" ]] && line+=" $icons"
+        if [[ "$s" == "$cur_session" ]]; then
+          top+=("$(printf '%s%s%s' "$C_CUR$C_BOLD" "$line" "$C_RST")")
+        else
+          top+=("$line")
+        fi
+      done < <(printf '%s\n' "$sessions" | awk -F "$TAB" -v g="$g" '$2 == g { print $1 }')
+    done
   fi
 
   # --- USAGE ブロックを配列に構築(下部) ---
@@ -222,7 +230,7 @@ render() {
   local pad=$(( H - n_top - n_bot ))
   (( pad < 1 )) && pad=1   # 重なり防止に最低1行は空ける
 
-  # 全行を1配列にまとめる(上: AGENTS / 中: パディング / 下: USAGE)
+  # 全行を1配列にまとめる(上: SESSIONS / 中: パディング / 下: USAGE)
   local out=()
   local i
   for (( i = 0; i < n_top; i++ )); do out+=("${top[i]}"); done
@@ -231,7 +239,7 @@ render() {
 
   # 1フレームを1文字列に組み立て、同期更新(DEC 2026)で囲んで1回の write でアトミックに出す。
   # 行ごとに printf するとティアリング(部分描画)でちらつくため必ずまとめて出力する。
-  # 最終行に改行を付けると1行スクロールし先頭(AGENTS ヘッダー)が画面外へ落ちるため改行なし。
+  # 最終行に改行を付けると1行スクロールし先頭(SESSIONS ヘッダー)が画面外へ落ちるため改行なし。
   local frame="" n_out=${#out[@]}
   for (( i = 0; i < n_out; i++ )); do
     if (( i < n_out - 1 )); then
