@@ -76,7 +76,7 @@ prefix 不要のグループ移動キー（root table）:
 | キー | 動作 |
 |------|------|
 | `M-h` / `M-l` (`C-M-h` / `C-M-l`) | 同グループ内の前/次 session へ（名前順・循環） |
-| `M-j` / `M-k` (`C-M-j` / `C-M-k`) | 次/前のグループの先頭 session へ（ungrouped は末尾の 1 バケツ扱い・循環） |
+| `M-j` / `M-k` (`C-M-j` / `C-M-k`) | 次/前のグループで最後に見ていた session へ（未記録なら先頭、ungrouped は末尾の 1 バケツ扱い・循環） |
 
 ローカル macOS では aerospace が `alt-hjkl` / `alt-shift-hjkl` をウィンドウ操作で
 グローバルに掴んでいるため、`C-M-hjkl`（Ctrl+Option+hjkl）を使う。aerospace の
@@ -461,7 +461,7 @@ tmux-which-key 設定:
 
 AI エージェント状態監視（自前スクリプト）:
 - `scripts/tmux-agent-status.sh` が `~/.claude/projects/**/*.jsonl` を監視し、各セッションの Claude Code / Codex / Amp の running / done / error 状態を判定
-- `scripts/tmux-agent-sidebar.sh` が全エージェント状態を常時表示する pane を管理
+- `scripts/tmux-agent-sidebar.sh` がセッショングループ別のセッション一覧と全エージェント状態を常時表示する pane を管理（現在のグループ/セッションをハイライト）
 
 | キー | 動作 |
 |------|------|

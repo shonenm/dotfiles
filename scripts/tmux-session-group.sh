@@ -10,11 +10,12 @@
 #   unset                   — 現在の session からグループを外す
 #   menu                    — fzf popup: 既存グループ選択 / 新規入力 / (none) で解除
 #   next | prev             — 同グループ内の次/前の session へ (名前順・循環)
-#   next-group | prev-group — 隣のグループの先頭 session へ (循環)
+#   next-group | prev-group — 隣のグループで最後に見ていた session へ (循環)
 #   picker                  — グループ一覧メニュー → グループ内 choose-tree の二段 picker
 #   apply <session>         — state file からグループを再適用 (session-created hook 用)
 #   restore                 — 全 live session に apply (config load 用)
 #   sync                    — live の @group を state file へ書き出し (session-renamed hook 用)
+#   remember <session>      — その session をグループの直近表示 session として記録
 #
 # state file: $XDG_STATE_HOME/tmux/session-groups (session_name<TAB>group)
 # 死んでいる session のエントリは保持する (resurrect 後の同名 session に再適用するため)。
@@ -32,7 +33,9 @@ list_all() {
 # 「最後に使った session」等へ勝手に解決し誤動作する) ため、bind 側の format 展開で
 # '#{client_name}' '#{client_session}' 等を引数として受け取る。引数がなければ
 # (pane 内での手動実行など) 文脈解決にフォールバック。
-sess_of()     { [ -n "${1:-}" ] && printf '%s' "$1" || tmux display-message -p '#{session_name}'; }
+sess_of() {
+  if [ -n "${1:-}" ]; then printf '%s' "$1"; else tmux display-message -p '#{session_name}'; fi
+}
 cur_group()   { tmux show-options -t "$1" -qv @group; }
 
 # $1: client_name ('' なら文脈解決), $2: target session
@@ -41,6 +44,26 @@ switch_to() {
     tmux switch-client -c "$1" -t "$2"
   else
     tmux switch-client -t "$2"
+  fi
+}
+
+group_key() {
+  if [ -n "$1" ]; then printf '%s' "$1"; else printf '__ungrouped__'; fi
+}
+
+remember_group_session() {
+  local grp="$1" sess="$2"
+  [ -n "$sess" ] || return 0
+  tmux set-option -g "@session_group_last_$(group_key "$grp")" "$sess" 2>/dev/null || true
+}
+
+session_for_group() {
+  local all="$1" grp="$2" last
+  last=$(tmux show-options -gqv "@session_group_last_$(group_key "$grp")" 2>/dev/null || true)
+  if [ -n "$last" ] && printf '%s\n' "$all" | awk -F "$TAB" -v g="$grp" -v s="$last" '$1 == s && $2 == g { found = 1 } END { exit !found }'; then
+    printf '%s' "$last"
+  else
+    printf '%s\n' "$all" | awk -F "$TAB" -v g="$grp" '$2 == g { print $1; exit }'
   fi
 }
 
@@ -83,12 +106,20 @@ cmd_set() {
       ;;
   esac
   tmux set-option -t "$sess" @group "$grp"
+  remember_group_session "$grp" "$sess"
   cmd_sync
 }
 
 cmd_unset() {
   tmux set-option -t "$1" -u @group
+  remember_group_session "" "$1"
   cmd_sync
+}
+
+cmd_remember() {
+  local sess
+  sess=$(sess_of "${1:-}")
+  remember_group_session "$(cur_group "$sess")" "$sess"
 }
 
 # $1: client_name, $2: client_session — menu popup を開くラッパー。
@@ -143,12 +174,14 @@ cmd_step() {
   for ((i = 0; i < n; i++)); do
     [ "${members[$i]}" = "$cur" ] && idx=$i
   done
-  switch_to "$client" "${members[$(((idx + dir + n) % n))]}"
+  local target="${members[$(((idx + dir + n) % n))]}"
+  remember_group_session "$grp" "$target"
+  switch_to "$client" "$target"
 }
 
 # $1: 1 (next-group) / -1 (prev-group), $2: client_name, $3: current session —
-# グループ間を循環し先頭 session へ。
-# ungrouped session 群は末尾の 1 バケツ (空文字グループ) として扱う
+# グループ間を循環し、戻り先グループで最後に見ていた session へ。
+# 未記録なら先頭 session。ungrouped session 群は末尾の 1 バケツ (空文字グループ) として扱う
 cmd_step_group() {
   local dir="$1" client="${2:-}" cur grp all g n i idx=0 target
   local grps=()
@@ -169,8 +202,9 @@ cmd_step_group() {
   for ((i = 0; i < n; i++)); do
     [ "${grps[$i]}" = "$grp" ] && idx=$i
   done
+  remember_group_session "$grp" "$cur"
   target="${grps[$(((idx + dir + n) % n))]}"
-  switch_to "$client" "$(printf '%s\n' "$all" | awk -F "$TAB" -v g="$target" '$2 == g { print $1; exit }')"
+  switch_to "$client" "$(session_for_group "$all" "$target")"
 }
 
 # $1: client_name, $2: pane_id — menu 表示先の client と choose-tree を開く pane。
@@ -223,9 +257,10 @@ case "${1:-}" in
   apply)      cmd_apply "${2:-}" ;;
   restore)    cmd_restore ;;
   sync)       cmd_sync ;;
+  remember)   cmd_remember "${2:-}" ;;
   *)
     echo "usage: $(basename "$0") {set <group> [session]|unset [session]|menu [session]" \
-         "|next|prev|next-group|prev-group [client] [session]|picker [client] [pane]|apply <session>|restore|sync}" >&2
+         "|next|prev|next-group|prev-group [client] [session]|picker [client] [pane]|apply <session>|restore|sync|remember [session]}" >&2
     exit 1
     ;;
 esac
