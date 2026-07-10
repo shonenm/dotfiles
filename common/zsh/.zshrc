@@ -25,3 +25,11 @@ if [[ -o interactive ]]; then
 fi
 
 command -v fzf &>/dev/null && source <(fzf --zsh)
+
+# pnpm
+export PNPM_HOME="/home/matsushima/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end

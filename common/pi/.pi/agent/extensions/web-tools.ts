@@ -30,7 +30,7 @@ const CITATIONS_FILE = join(RESEARCH_DIR, "citations.jsonl");
 const AUDIT_FILE = join(RESEARCH_DIR, "audit.log.jsonl");
 const STATS_FILE = join(RESEARCH_DIR, "stats.json");
 
-const SEARXNG_URL = "http://localhost:8888";
+const SEARXNG_URL = "http://localhost:8899";
 const JINA_SEARCH_URL = "https://s.jina.ai";
 const JINA_FETCH_URL = "https://r.jina.ai";
 
