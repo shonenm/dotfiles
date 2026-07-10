@@ -263,10 +263,19 @@ case "${1:-toggle}" in
       # 消えてもサーバは生存するため、tmux info チェックだけでは孤児ループがリークする。
       # display-message -t deadpane は default pane にフォールバックして成功するため使えない。
       tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "${TMUX_PANE}" || { printf '\033[?25h'; exit 0; }
+      # detached session のサイドバーは描画しても誰も見ないので、tmux 全体走査を止める。
+      attached=$(tmux display-message -p -t "${TMUX_PANE}" '#{session_attached}' 2>/dev/null || echo 0)
+      if [[ -z "$attached" || "$attached" == 0 ]]; then
+        sleep "$REFRESH" & wait $! || true
+        continue
+      fi
       # window-size latest の比例リサイズ丸め誤差で session 切替毎に幅がドリフトする。
-      # 毎ループ固定幅へ戻す(既に正しければ no-op=チラつき無し)。
+      # resize 自体が window-layout-changed hook を発火するため、差分がある時だけ補正する。
       # zoom / choose-tree / copy-mode 中はスキップ (resize が zoom を潰すため)。
-      sidebar_user_busy || tmux resize-pane -t "${TMUX_PANE}" -x "$WIDTH" 2>/dev/null || true
+      if ! sidebar_user_busy; then
+        cw=$(tmux display-message -p -t "${TMUX_PANE}" '#{pane_width}' 2>/dev/null || echo "")
+        [[ "$cw" == "$WIDTH" ]] || tmux resize-pane -t "${TMUX_PANE}" -x "$WIDTH" 2>/dev/null || true
+      fi
       # 描画は毎回サブプロセスで実行し、スクリプト更新を自動反映する
       # (常駐ループに関数を抱えると、起動後の更新が反映されず古い表示になるため)
       bash "$SELF" once
@@ -309,14 +318,15 @@ case "${1:-toggle}" in
     # zoom はレイアウト変更→window-layout-changed→本 resize-all を撃つので即時に unzoom する)。
     sidebar_user_busy && exit 0
     target_win="${2:-}"
-    while IFS=$'\t' read -r win pane; do
+    while IFS=$'\t' read -r win attached pane; do
       [[ -z "$pane" ]] && continue
       [[ -n "$target_win" && "$win" != "$target_win" ]] && continue
+      [[ -z "$attached" || "$attached" == 0 ]] && continue
       tmux list-panes -t "$win" -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane" || continue
       cw=$(tmux display-message -p -t "$pane" '#{pane_width}' 2>/dev/null || echo "")
       [[ "$cw" == "$WIDTH" ]] && continue
       tmux resize-pane -t "$pane" -x "$WIDTH" 2>/dev/null || true
-    done < <(tmux list-windows -a -F "#{window_id}$(printf '\t')#{@agent_sidebar_pane}" 2>/dev/null)
+    done < <(tmux list-windows -a -F "#{window_id}$(printf '\t')#{session_attached}$(printf '\t')#{@agent_sidebar_pane}" 2>/dev/null)
     ;;
   once)
     render ;;
