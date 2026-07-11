@@ -304,7 +304,10 @@ case "${1:-toggle}" in
       # リサイズ/swap の度にサイドバーが一瞬広がってから戻る=ちらつく。直接コマンドは command
       # queue 内で同期実行され中間フレームを描画前に潰す(fork なし=fork-latency にも無害)。
       # 既に WIDTH の時 resize-pane は no-op でレイアウト不変=再発火せず1回で収束。
-      tmux set-hook -w -t "$win" window-layout-changed "resize-pane -t $pane -x $WIDTH" 2>/dev/null || true
+      # zoom 中は補正しない: zoom もレイアウト変更なので本 hook を撃つが、resize-pane は
+      # zoom 中の window を unzoom してしまう(prefix-z が一瞬で戻る)。if-shell -F は format
+      # 評価のみで shell を fork しないため、同期・無 fork のまま zoom を素通しできる。
+      tmux set-hook -w -t "$win" window-layout-changed "if-shell -F '#{?window_zoomed_flag,0,1}' 'resize-pane -t $pane -x $WIDTH'" 2>/dev/null || true
       tmux select-pane -t "$src" 2>/dev/null || true   # 作業 pane にフォーカスを残す
     fi
     ;;
