@@ -82,7 +82,9 @@ collect_agents() {
     # stash 済みはアイコン(グリフ)を変えず色だけ灰色(240)にして、サイドバーでも stash と分かるように
     [[ -n "$stashed" ]] && rg=$(printf '%s' "$rg" | sed 's/38;5;[0-9]*m/38;5;240m/')
     printf '%s\t%s\n' "$sess" "$rg"
-  done < <(tmux list-panes -a -F "#{session_name}$(printf '\x1f')#{@agent_status}$(printf '\x1f')#{pane_current_command}$(printf '\x1f')#{@agent_stashed}")
+  done < <(agent_index_panes | while IFS="$US" read -r _pid sess _win status _hb _path cmd _title stashed _sidebar; do
+    printf '%s\x1f%s\x1f%s\x1f%s\n' "$sess" "$status" "$cmd" "$stashed"
+  done)
 
   # file store (リモート/コンテナ)。workspace ごと最新のみ採用。
   # tmux_session が「ローカルセッション」に一致する行はローカル pane の重複なので除外し、
@@ -90,7 +92,7 @@ collect_agents() {
   [[ -d "$STATUS_DIR" ]] || return 0
   command -v jq >/dev/null 2>&1 || return 0
   local local_sessions ws_seen="" status ws tsess project _u
-  local_sessions="|$(tmux list-sessions -F '#{session_name}' 2>/dev/null | tr '\n' '|')"
+  local_sessions="|$(agent_index_sessions | awk -F "$US" '{print $1}' | tr '\n' '|')"
   # 全ファイルを1回の jq で処理(ファイル数分 jq を spawn しない)
   local files=("$STATUS_DIR"/*.json)
   [[ -e "${files[0]}" ]] || return 0
@@ -168,7 +170,7 @@ render() {
   local rows total sessions session_count cur_session cur_group
   rows=$(collect_agents | sort -t$'\t' -k1,1 -k2,2n)
   total=$(printf '%s' "$rows" | grep -c . 2>/dev/null)
-  sessions=$(tmux list-sessions -F "#{session_name}${TAB}#{@group}" 2>/dev/null | sort)
+  sessions=$(agent_index_sessions | awk -F "$US" -v tab="$TAB" '{print $1 tab $2}' | sort)
   session_count=$(printf '%s' "$sessions" | grep -c . 2>/dev/null)
   cur_session=$(tmux display-message -p -t "${TMUX_PANE}" '#{session_name}' 2>/dev/null || true)
   cur_group=$(tmux show-options -t "$cur_session" -qv @group 2>/dev/null || true)
