@@ -23,11 +23,22 @@ set -euo pipefail
 
 [[ -z "${TMUX:-}" ]] && exit 0
 
-SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SELF="$SCRIPT_DIR/$(basename "${BASH_SOURCE[0]}")"
 RUNTIME_BASE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}"
 STATUS_DIR="${AGENT_STATUS_DIR:-${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status}"
 JUMP_FILE="$RUNTIME_BASE/claude/agentpop-jump"
 US=$'\x1f'
+
+agent_index_panes() {
+  "$SCRIPT_DIR/tmux-agent-index.sh" panes 2>/dev/null || tmux list-panes -a -F \
+    "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}${US}#{@agent_stashed}${US}#{@agent_sidebar_pane}"
+}
+
+agent_index_sessions() {
+  "$SCRIPT_DIR/tmux-agent-index.sh" sessions 2>/dev/null || tmux list-sessions -F \
+    "#{session_name}${US}#{@group}${US}#{session_attached}"
+}
 
 C_RED=$'\e[38;5;203m'; C_AMBER=$'\e[38;5;214m'; C_DIM=$'\e[2m'; C_BOLD=$'\e[1m'; C_RST=$'\e[0m'
 C_CUR=$'\e[38;5;45m'   # 現在の pane 強調(シアン)。prefix+a を押した pane を枠線で示す
@@ -48,7 +59,7 @@ trunc() { local s="$1" n="$2"; s="${s//$'\t'/ }"; if (( ${#s} > n )); then print
 build_local_rows() {
   # 現在 pane(prefix+a を押した pane)は bind が @agent_cur_pane に保存している
   local now cur; now=$(date +%s); cur="$(tmux show-options -gv @agent_cur_pane 2>/dev/null || echo "")"
-  while IFS="$US" read -r pid sess win status hb path cmd title stashed; do
+  while IFS="$US" read -r pid sess win status hb path cmd title stashed _sidebar; do
     is_agent "$status" || continue          # 停止状態 + running を対象
     is_shell "$cmd" && continue             # シェル復帰(終了済み)は除外
     local rank icon col task branch elapsed loc tool line1 line2 g1 g2 mk
@@ -67,8 +78,7 @@ build_local_rows() {
     line1=$(printf '%s%s%s %-10s%s %s%s' "$g1" "$col" "$icon" "$status" "$C_RST" "$task" "$mk")
     line2=$(printf '%s%s%s · %s · %s · %s · %s%s' "$g2" "$C_DIM" "$sess" "$branch" "$loc" "$tool" "${elapsed}前" "$C_RST")
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$rank" "$pid" "$loc" "$status" "$line1" "$line2"
-  done < <(tmux list-panes -a -F \
-    "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}${US}#{@agent_stashed}")
+  done < <(agent_index_panes)
 }
 
 # リモート/コンテナ(file store)行 → sortable 6 フィールド。seen_windows の window は除外
