@@ -2,7 +2,7 @@
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.5",
   "defaultThinkingLevel": "high",
-  "theme": "dark",
+  "theme": "tokyonight-high-contrast",
   "quietStartup": false,
   "collapseChangelog": true,
   "doubleEscapeAction": "tree",
