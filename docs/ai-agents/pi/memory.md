@@ -6,6 +6,7 @@
 
 ```
 セッション開始
+  ├─ /pin-goal の pinned note を inject
   ├─ SCRATCHPAD.md の未完了項目を inject
   ├─ 今日の daily log 末尾を inject
   └─ MEMORY.md を inject（middle-truncate）
@@ -49,11 +50,12 @@
 
 | Priority | Source | Budget |
 |:--------:|--------|:------:|
+| 0 | `/pin-goal` の pinned note | 1K |
 | 1 | 未完了 scratchpad 項目 | 2K |
 | 2 | 今日の daily log (末尾) | 3K |
 | 3 | MEMORY.md (middle-truncate) | 4K |
 
-注入は `pi.sendMessage()` で行い、会話履歴には表示されない（`display: false`）。
+注入は `pi.sendMessage()` で行い、会話履歴には表示されない（`display: false`）。`/goal` は `pi-goal` package の autonomous goal mode 用に予約し、軽量な固定コンテキストは `/pin-goal` を使う。
 
 ## Handoff
 

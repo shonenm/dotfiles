@@ -102,7 +102,7 @@ function readStats(): StatsSnapshot {
   return s;
 }
 
-// Pinned goal (set via /goal in the memory extension). Tiny file — read directly.
+// Pinned session note (set via /pin-goal in the memory extension). Tiny file — read directly.
 const GOAL_FILE = join(homedir(), ".pi", "agent", "goal");
 function readGoal(): string {
   try { return readFileSync(GOAL_FILE, "utf-8").trim(); } catch { return ""; }
@@ -245,7 +245,7 @@ export default function (pi: ExtensionAPI) {
 
           const lines: string[] = [];
 
-          // Pinned goal (top, most visible)
+          // Pinned session note (top, most visible)
           const goal = readGoal();
           if (goal) lines.push(truncateToWidth(theme.fg("warning", `🎯 ${goal}`), width));
 
