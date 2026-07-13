@@ -89,13 +89,13 @@ guarantees, prefer adopting it over maintaining the custom one.
 
 ## Workflow Orchestration
 
-Deterministic multi-agent orchestration over headless `pi` sub-agents (`workflow.ts`):
-
-- `agent_parallel` — fan out independent tasks concurrently, collect structured results + total token/cost.
-- `agent_pipeline` — push each item through ordered stages ({input} = prev output, {item} = original).
-- Sub-agents run as `pi --mode json --no-session`; usage is parsed from the event stream for a real budget (`budgetUSD`).
-- `jsonKeys` per task/stage requests + parses JSON output (pi CLI has no schema enforcement; best-effort parse).
-- Recursion capped at depth 1 (sub-agents cannot fan out further).
+- `@quintinshaw/pi-dynamic-workflows` provides Claude Code-style dynamic workflows:
+  - `workflow` tool for JavaScript orchestration with `agent()`, `parallel()`, `pipeline()`, and `phase()`.
+  - `/workflows`, `/workflows run <prompt>`, `/deep-research`, `/adversarial-review`, `/code-review`, `/ultracode`.
+  - Use for broad codebase audits, multi-perspective reviews, deep research, and worktree-isolated fan-out.
+- Legacy `workflow.ts` still provides lightweight tools until it is retired:
+  - `agent_parallel` — fan out independent tasks concurrently, collect structured results + total token/cost.
+  - `agent_pipeline` — push each item through ordered stages ({input} = prev output, {item} = original).
 
 ## Session Management
 
