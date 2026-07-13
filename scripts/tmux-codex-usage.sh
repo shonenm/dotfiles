@@ -2,10 +2,10 @@
 # Codex (OpenAI) 使用量表示 (tmux status-right 用)
 # ~/.codex/auth.json の OAuth トークンで使用量を取得しキャッシュ
 # 出力: サイドバー用の構造化レコード(1行=1ウィンドウ、区切りは US 0x1f)
-#   "<icon>\x1f<label>\x1f<gauge>\x1f<pct>\x1f<remaining>" (current=primary / weekly=secondary)
+#   "<icon>\x1f<label>\x1f<gauge>\x1f<pct>\x1f<remaining>" (current=短期 window / weekly=週次 window)
 #   データ無しは "<icon>\x1f--"
 #
-# キャッシュ形式: "<primary_pct>|<secondary_pct>|<primary_resets_unix>|<secondary_resets_unix>"
+# キャッシュ形式: "v2|<current_pct>|<weekly_pct>|<current_resets_unix>|<weekly_resets_unix>"
 # 残り時間はキャッシュ読み出し時に現在時刻から都度計算する
 
 CACHE_FILE="${CODEX_USAGE_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/tmux/codex_usage}"
@@ -32,7 +32,7 @@ get_mtime() {
   esac
 }
 
-# "<s>|<w>|<primary_resets_unix>|<secondary_resets_unix>" を受け取り2レコード出力
+# "<current>|<weekly>|<current_resets_unix>|<weekly_resets_unix>" を受け取り2レコード出力
 render() {
   python3 - "$LABEL" "$1" "$2" "$3" "$4" <<'PY'
 import sys
@@ -71,8 +71,8 @@ PY
 if [[ -f "$CACHE_FILE" ]]; then
   age=$(( $(date +%s) - $(get_mtime "$CACHE_FILE") ))
   if (( age < CACHE_TTL )); then
-    IFS='|' read -r cs cw crp crsec < "$CACHE_FILE" 2>/dev/null
-    if [[ -n "$cs" && -n "$cw" ]]; then
+    IFS='|' read -r ver cs cw crp crsec < "$CACHE_FILE" 2>/dev/null
+    if [[ "$ver" == "v2" && -n "$cs" && -n "$cw" ]]; then
       render "$cs" "$cw" "${crp:-}" "${crsec:-}"
       exit 0
     fi
@@ -263,20 +263,32 @@ fi
 
 parsed=$(echo "$raw" | python3 -c "
 import sys, json
+WEEK = 7 * 24 * 60 * 60
+
 def ts(v):
   return str(int(v)) if v is not None else ''
+def pct(w):
+  return max(0, min(100, int(round(w.get('used_percent') or 0))))
+def is_weekly(w):
+  sec = int(w.get('limit_window_seconds') or 0)
+  return WEEK * 0.95 <= sec <= WEEK * 1.05
+def pick(windows):
+  weekly = next((w for w in windows if is_weekly(w)), None)
+  current = next((w for w in windows if not is_weekly(w)), None)
+  # 古い/未知 payload では従来通り primary=current, secondary=weekly にフォールバック。
+  if current is None and windows:
+    current = windows[0]
+  if weekly is None and len(windows) > 1:
+    weekly = windows[1]
+  return current or {}, weekly or {}
 try:
   d = json.load(sys.stdin)
   rl = d.get('rate_limit') or {}
-  pw = rl.get('primary_window') or {}
-  sw = rl.get('secondary_window') or {}
-  s = int(round(pw.get('used_percent') or 0))
-  w = int(round(sw.get('used_percent') or 0))
-  s = max(0, min(100, s))
-  w = max(0, min(100, w))
-  rp = ts(pw.get('reset_at'))
-  rsec = ts(sw.get('reset_at'))
-  print(f'{s}|{w}|{rp}|{rsec}')
+  windows = [w for w in (rl.get('primary_window') or {}, rl.get('secondary_window') or {}) if w]
+  current, weekly = pick(windows)
+  print('v2|{}|{}|{}|{}'.format(
+    pct(current), pct(weekly), ts(current.get('reset_at')), ts(weekly.get('reset_at'))
+  ))
 except Exception:
   print('')
 " 2>/dev/null)
@@ -289,5 +301,5 @@ fi
 
 echo "$parsed" > "$CACHE_FILE"
 rm -f "$FAIL_FILE"
-IFS='|' read -r s w rp rsec <<< "$parsed"
+IFS='|' read -r _ver s w rp rsec <<< "$parsed"
 render "$s" "$w" "$rp" "$rsec"
