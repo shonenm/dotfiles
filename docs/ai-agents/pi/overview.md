@@ -124,6 +124,10 @@ dotfiles の拡張により Web Research Layer が利用可能。SearXNG + Jina 
 
 `common/pi/.pi/agent/AGENTS.md` の "Model selection" セクションを編集。プロバイダ / モデル名 / effort を変えれば次回起動から反映される (シンボリックリンクなので即時反映)。
 
+### TUI テーマ
+
+`tokyonight-high-contrast` を標準テーマとして `common/pi/.pi/agent/themes/` で管理する。通常は `settings.json` の `theme` がこれを選ぶ。Pi を再起動すると反映され、調整中のテーマファイルは Pi 上で自動再読込される。
+
 ### 拡張機能
 
 pi packages 経由で extensions / skills を追加:
