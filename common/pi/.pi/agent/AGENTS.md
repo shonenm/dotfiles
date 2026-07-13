@@ -66,9 +66,16 @@ guarantees, prefer adopting it over maintaining the custom one.
 - Persistent across sessions via plain Markdown files in `~/.pi/agent/memory/`
 - Tools: `memory_write`, `memory_read`, `memory_search`, `scratchpad`
 - Format: pi-memory compatible (MEMORY.md, SCRATCHPAD.md, daily/)
-- Context auto-injected on session start (goal + scratchpad + today/yesterday log + MEMORY.md)
+- Context auto-injected on session start (pinned note + scratchpad + today/yesterday log + MEMORY.md)
 - Install `qmd` for semantic/vector search upgrade
-- `/goal <text>` — set a pinned session goal (injected as context + shown in the statusline). `/goal` shows it, `/goal clear` clears it.
+- `/pin-goal <text>` — set a pinned session note (injected as context + shown in the statusline). `/pin-goal` shows it, `/pin-goal clear` clears it.
+
+## Goal Mode
+
+- `@narumitw/pi-goal` owns `/goal` for autonomous, verifiable task completion.
+- Use `/goal <goal>` when the agent should continue until it calls `goal_complete` or reports a true blocker.
+- Use `/goal pause`, `/goal resume`, and `/goal clear` to control an active goal.
+- Use `/pin-goal` only for lightweight session context that should not auto-continue.
 
 ## Agent Delegation (pi-subagents + custom)
 
@@ -89,13 +96,20 @@ guarantees, prefer adopting it over maintaining the custom one.
 
 ## Workflow Orchestration
 
-Deterministic multi-agent orchestration over headless `pi` sub-agents (`workflow.ts`):
+- `@quintinshaw/pi-dynamic-workflows` provides Claude Code-style dynamic workflows:
+  - `workflow` tool for JavaScript orchestration with `agent()`, `parallel()`, `pipeline()`, and `phase()`.
+  - `/workflows`, `/workflows run <prompt>`, `/deep-research`, `/adversarial-review`, `/code-review`, `/ultracode`.
+  - Use for broad codebase audits, multi-perspective reviews, deep research, and worktree-isolated fan-out.
+- Legacy `workflow.ts` still provides lightweight tools until it is retired:
+  - `agent_parallel` — fan out independent tasks concurrently, collect structured results + total token/cost.
+  - `agent_pipeline` — push each item through ordered stages ({input} = prev output, {item} = original).
 
-- `agent_parallel` — fan out independent tasks concurrently, collect structured results + total token/cost.
-- `agent_pipeline` — push each item through ordered stages ({input} = prev output, {item} = original).
-- Sub-agents run as `pi --mode json --no-session`; usage is parsed from the event stream for a real budget (`budgetUSD`).
-- `jsonKeys` per task/stage requests + parses JSON output (pi CLI has no schema enforcement; best-effort parse).
-- Recursion capped at depth 1 (sub-agents cannot fan out further).
+## Loop Automation
+
+- `@trevonistrevon/pi-loop` provides cron/event-based agent re-wake loops and background monitors.
+- Use `/loop [interval] [prompt]` for interactive loop creation.
+- Tools: `LoopCreate`, `LoopList`, `LoopDelete`, `MonitorCreate`, `MonitorList`, `MonitorStop`.
+- Prefer session-scoped loops unless a project explicitly needs shared automation.
 
 ## Session Management
 
