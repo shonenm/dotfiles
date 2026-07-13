@@ -97,6 +97,13 @@ guarantees, prefer adopting it over maintaining the custom one.
   - `agent_parallel` — fan out independent tasks concurrently, collect structured results + total token/cost.
   - `agent_pipeline` — push each item through ordered stages ({input} = prev output, {item} = original).
 
+## Loop Automation
+
+- `@trevonistrevon/pi-loop` provides cron/event-based agent re-wake loops and background monitors.
+- Use `/loop [interval] [prompt]` for interactive loop creation.
+- Tools: `LoopCreate`, `LoopList`, `LoopDelete`, `MonitorCreate`, `MonitorList`, `MonitorStop`.
+- Prefer session-scoped loops unless a project explicitly needs shared automation.
+
 ## Session Management
 
 - `/session-name <name>` — set session display name (auto-set from git branch)

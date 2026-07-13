@@ -72,6 +72,7 @@
   "packages": [
     "npm:pi-subagents",
     "npm:@quintinshaw/pi-dynamic-workflows",
+    "npm:@trevonistrevon/pi-loop",
     "npm:pi-remote-control",
     "npm:pi-cursor-agent",
     "npm:pi-commandcode-provider",
