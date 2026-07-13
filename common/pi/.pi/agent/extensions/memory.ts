@@ -30,7 +30,7 @@ const MEMORY_DIR = join(homedir(), ".pi", "agent", "memory");
 const MEMORY_FILE = join(MEMORY_DIR, "MEMORY.md");
 const SCRATCHPAD_FILE = join(MEMORY_DIR, "SCRATCHPAD.md");
 const DAILY_DIR = join(MEMORY_DIR, "daily");
-// Pinned session goal (set via /goal). statusline.ts reads the same path.
+// Pinned session note (set via /pin-goal). statusline.ts reads the same path.
 const GOAL_FILE = join(homedir(), ".pi", "agent", "goal");
 
 const INJECTION_MAX = 8000;
@@ -105,7 +105,7 @@ function buildInjection(): string {
   const parts: string[] = [];
   let used = 0;
 
-  // 0. Pinned goal (set via /goal)
+  // 0. Pinned session note (set via /pin-goal)
   const goal = readIfExists(GOAL_FILE).trim();
   if (goal) {
     const text = `## Current Goal\n${goal}`;
@@ -219,22 +219,23 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_before_compact", async () => writeHandoff());
 
   // -----------------------------------------------------------------------
-  // Command: /goal <text> | /goal | /goal clear
-  // Pinned goal: injected as context (session start + on set) and shown in the
-  // statusline (statusline.ts reads GOAL_FILE).
+  // Command: /pin-goal <text> | /pin-goal | /pin-goal clear
+  // Pinned session note: injected as context (session start + on set) and shown
+  // in the statusline (statusline.ts reads GOAL_FILE). `/goal` is reserved for
+  // the pi-goal package.
   // -----------------------------------------------------------------------
-  pi.registerCommand("goal", {
-    description: "Set/show/clear the pinned session goal (injected as context + shown in statusline)",
+  pi.registerCommand("pin-goal", {
+    description: "Set/show/clear the pinned session note (injected as context + shown in statusline)",
     handler: async (args, ctx) => {
       const arg = (args || "").trim();
       if (!arg) {
         const g = readIfExists(GOAL_FILE).trim();
-        ctx.ui.notify(g ? `🎯 Goal: ${g}` : "No goal set. Usage: /goal <text> (or /goal clear)", "info");
+        ctx.ui.notify(g ? `🎯 Pinned: ${g}` : "No pinned note set. Usage: /pin-goal <text> (or /pin-goal clear)", "info");
         return;
       }
       if (arg === "clear") {
         writeFile(GOAL_FILE, "");
-        ctx.ui.notify("Goal cleared", "info");
+        ctx.ui.notify("Pinned note cleared", "info");
         return;
       }
       writeFile(GOAL_FILE, arg);
@@ -243,7 +244,7 @@ export default function (pi: ExtensionAPI) {
         { customType: "goal", content: `## Current Goal\n${arg}`, display: false },
         { deliverAs: "nextTurn" }
       );
-      ctx.ui.notify(`🎯 Goal set: ${arg}`, "info");
+      ctx.ui.notify(`🎯 Pinned note set: ${arg}`, "info");
     },
   });
 
