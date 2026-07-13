@@ -19,6 +19,9 @@ fi
 export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+# pi-permission-system の実行モードを node_modules 外に置き、package update で
+# 自走セッションのポリシーが暗黙にリセットされないようにする。
+export PI_PERMISSION_SYSTEM_CONFIG_PATH="$HOME/.pi/agent/permission-system.json"
 # tmux socket を /tmp から退避 (Linux: /run/user/UID, macOS: ~/.cache)
 export TMUX_TMPDIR="${TMUX_TMPDIR:-${XDG_RUNTIME_DIR:-$HOME/.cache}}"
 

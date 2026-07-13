@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "debug": false,
+  "yoloMode": true,
+  "forwardedPromptTimeoutSeconds": 30
+}

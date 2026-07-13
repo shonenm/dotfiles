@@ -2,19 +2,19 @@
   "mcpServers": {
     "tmux": {
       "type": "stdio", "command": "npx", "args": ["-y", "tmux-mcp"],
-      "description": "", "permission": "allow", "enabled": false
+      "description": "", "enabled": false
     },
     "serena": {
       "type": "stdio", "command": "serena", "args": ["start-mcp-server", "--context", "claude-code", "--project-from-cwd"],
-      "description": "", "permission": "allow", "enabled": false
+      "description": "", "enabled": false
     },
     "token-optimizer": {
       "type": "stdio", "command": "npx", "args": ["-y", "token-optimizer-mcp"],
-      "description": "", "permission": "allow", "enabled": false
+      "description": "", "enabled": false
     },
     "woodpecker-ci": {
       "type": "stdio", "command": "woodpecker-mcp", "args": ["serve"],
-      "description": "", "permission": "allow"
+      "description": ""
     }
   }
 }

@@ -1,12 +1,12 @@
 // MCP Gateway Extension for pi
 //
-// Provides a permission-controlled, audited bridge to MCP (Model Context Protocol)
-// servers. Follows the principle: "MCP is a privileged external connection layer,
-// not a convenience extension."
+// Provides an audited bridge to MCP (Model Context Protocol) servers.
+// Registered MCP tools are authorized solely by pi-permission-system, so its
+// policy and session mode apply consistently to interactive and headless runs.
 //
 // Architecture:
 //   LLM → pi tool (mcp_<server>_<tool>)
-//       → permission gate (allow/ask/deny)
+//       → pi-permission-system (allow/ask/deny)
 //       → audit log
 //       → MCP stdio client
 //       → MCP server process
@@ -34,8 +34,6 @@ interface MCPServerConfig {
   args: string[];
   env?: Record<string, string>;
   description?: string;
-  /** allow | ask | deny */
-  permission?: "allow" | "ask" | "deny";
   enabled?: boolean;
   /** Maximum result size in characters (default 10000) */
   maxResultSize?: number;
@@ -349,7 +347,6 @@ class MCPManager {
   private registerTools(pi: ExtensionAPI): void {
     for (const [tname, { server, tool }] of this.tools) {
       const serverCfg = this.config.mcpServers[server];
-      const perm = serverCfg?.permission ?? "ask";
       const desc = serverCfg?.description ?? server;
 
       // Build TypeBox schema from JSON schema. Keys listed in the MCP tool's
@@ -389,14 +386,13 @@ class MCPManager {
         ],
         parameters: schema,
         execute: async (_toolCallId, params, _signal, onUpdate) => {
-          return this.executeTool(tname, server, tool.name, params, onUpdate);
+          return this.executeTool(server, tool.name, params, onUpdate);
         },
       });
     }
   }
 
   private async executeTool(
-    tname: string,
     server: string,
     toolName: string,
     params: Record<string, unknown>,
@@ -406,24 +402,9 @@ class MCPManager {
     details: Record<string, unknown>;
   }> {
     const serverCfg = this.config.mcpServers[server];
-    const permission = serverCfg?.permission ?? "ask";
 
     // Build details for audit (secrets redacted)
     const argsSummary = redactSecrets(JSON.stringify(params)).slice(0, 200);
-
-    // Handle permission: deny
-    if (permission === "deny") {
-      logMCPAudit(server, toolName, argsSummary, "denied", "Permission policy: deny");
-      return {
-        content: [{ type: "text", text: `❌ MCP tool "${tname}" is denied by permission policy.` }],
-        details: { server, tool: toolName, permission, status: "denied" },
-      };
-    }
-
-    // Note: allow/ask/deny is enforced earlier in the `tool_call` event handler
-    // (the only place pi exposes interactive ctx.ui.confirm). By the time
-    // execute() runs, the call has already passed that gate. The `deny`
-    // short-circuit above is kept as defense-in-depth.
 
     onUpdate?.({ content: [{ type: "text", text: `🔌 MCP: ${server}/${toolName}...` }] });
 
@@ -468,7 +449,6 @@ class MCPManager {
         details: {
           server,
           tool: toolName,
-          permission,
           status: "success",
           elapsedMs: elapsed,
           resultLength: result.length,
@@ -485,12 +465,11 @@ class MCPManager {
       return {
         content: [{
           type: "text",
-          text: `❌ MCP tool "${tname}" failed: ${msg}`,
+          text: `❌ MCP tool "${server}/${toolName}" failed: ${msg}`,
         }],
         details: {
           server,
           tool: toolName,
-          permission,
           status: "error",
           error: msg,
           elapsedMs: elapsed,
@@ -512,12 +491,6 @@ class MCPManager {
     return this.tools;
   }
 
-  /** Permission for a registered MCP tool name, or undefined if not an MCP tool. */
-  getPermission(toolName: string): "allow" | "ask" | "deny" | undefined {
-    const server = this.tools.get(toolName)?.server;
-    if (!server) return undefined;
-    return this.config.mcpServers[server]?.permission ?? "ask";
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -597,32 +570,6 @@ export default async function (pi: ExtensionAPI) {
     }
   });
 
-  // Permission gate for MCP tools. pi only exposes interactive ctx.ui in the
-  // tool_call event (not inside a tool's execute()), so allow/ask/deny is
-  // enforced here. In headless (-p) mode ctx.ui.confirm() returns false, so
-  // "ask" tools are blocked — the safe default (never auto-approve).
-  pi.on("tool_call", async (event, ctx) => {
-    const perm = manager.getPermission(event.toolName);
-    if (!perm || perm === "allow") return; // not MCP, or explicitly allowed
-
-    const argsSummary = JSON.stringify(event.input ?? {}).slice(0, 300);
-
-    if (perm === "deny") {
-      return {
-        block: true,
-        reason: `MCP tool "${event.toolName}" is denied by permission policy.`,
-      };
-    }
-
-    // perm === "ask"
-    const ok = await ctx.ui.confirm(
-      "🔌 MCP tool call",
-      `Allow MCP tool "${event.toolName}"?\n\nArgs: ${argsSummary}`
-    );
-    if (!ok) {
-      return { block: true, reason: "Declined by user (MCP permission: ask)." };
-    }
-  });
 
   // Cleanup on shutdown
   pi.on("session_shutdown", async () => {
@@ -643,8 +590,7 @@ export default async function (pi: ExtensionAPI) {
       const lines: string[] = ["## MCP Servers", ""];
       for (const [name, cfg] of servers) {
         const status = cfg.enabled !== false ? "✅" : "❌";
-        const perm = cfg.permission ?? "ask";
-        lines.push(`- ${status} **${name}** — ${cfg.description ?? "no description"} (permission: ${perm})`);
+        lines.push(`- ${status} **${name}** — ${cfg.description ?? "no description"} (policy: pi-permissions)`);
         const tools = [...manager.getTools().entries()]
           .filter(([, v]) => v.server === name);
         for (const [tname] of tools) {

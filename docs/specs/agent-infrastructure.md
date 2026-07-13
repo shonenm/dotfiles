@@ -114,10 +114,10 @@ MCP サーバーへの安全な接続レイヤー。
 | 項目 | 内容 |
 |------|------|
 | **Config** | `~/.config/agent/mcp.json` (共有) |
-| **Permission** | 3段階: `allow` / `ask` / `deny` |
+| **Permission** | 3段階: `allow` / `ask` / `deny`。自走時の `yoloMode` は `~/.pi/agent/permission-system.json`（`PI_PERMISSION_SYSTEM_CONFIG_PATH`）で永続化 |
 | **Audit** | `~/.pi/research/mcp-audit.jsonl` |
 | **Stats** | `~/.pi/research/mcp-stats.json` |
-| **Pi impl** | `extensions/mcp-gateway.ts` — JSON-RPC stdio client + tool registration. allow/ask/deny enforced via `tool_call` gate; protocol version negotiated (advertises latest). stdio only (HTTP deferred) |
+| **Pi impl** | `extensions/mcp-gateway.ts` — JSON-RPC stdio client + tool registration。認可は `pi-permission-system` の `mcp_*` tool policy に一元化し、interactive / headless / subagent で同じ決定を使う。protocol version negotiated (advertises latest). stdio only (HTTP deferred) |
 | **Claude impl** | ネイティブ MCP 対応。`common/claude/.config/claude/mcp.json` を正本に install.sh が `claude mcp add-json --scope user` で登録 |
 
 ## Shared Configuration

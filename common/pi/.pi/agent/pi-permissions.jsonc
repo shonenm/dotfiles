@@ -31,10 +31,13 @@
     "web_fetch": "allow",
     "web_cache_write": "allow",
     "web_citation_add": "allow",
-    // MCP ツール: 許可（別途 MCP セクションで制御）
+    // MCP proxy: 許可
     "mcp": "allow",
     // その他ツール: 許可
-    "*": "allow"
+    "*": "allow",
+    // mcp-gateway が登録する direct MCP tools はこの policy で一元制御する。
+    // YOLO 中は自動許可、通常モードでは Allow Once / Always を選択する。
+    "mcp_*": "ask"
   },
 
   "bash": {
