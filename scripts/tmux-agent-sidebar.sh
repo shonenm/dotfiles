@@ -333,8 +333,19 @@ case "${1:-toggle}" in
       tmux resize-pane -t "$pane" -x "$WIDTH" 2>/dev/null || true
     done < <(tmux list-windows -a -F "#{window_id}$(printf '\t')#{session_attached}$(printf '\t')#{@agent_sidebar_pane}" 2>/dev/null)
     ;;
+  rehook)
+    # 既存サイドバー window の window-layout-changed hook を最新版へ張り直す。
+    # per-window hook は toggle 時に window 単位で焼き込まれるため、スクリプト更新は
+    # 「新規サイドバー」にしか効かず既存 window には古い hook が残る。config reload
+    # (prefix r) から本コマンドを呼ぶことで、稼働中の全 window(リモート含む)に反映する。
+    while IFS=$'\t' read -r win pane; do
+      [[ -z "$pane" ]] && continue
+      tmux list-panes -t "$win" -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane" || continue
+      tmux set-hook -w -t "$win" window-layout-changed "if-shell -F '#{?window_zoomed_flag,0,1}' 'resize-pane -t $pane -x $WIDTH'" 2>/dev/null || true
+    done < <(tmux list-windows -a -F "#{window_id}$(printf '\t')#{@agent_sidebar_pane}" 2>/dev/null)
+    ;;
   once)
     render ;;
   *)
-    echo "Usage: $0 {run|toggle|once|resize-all}" >&2; exit 1 ;;
+    echo "Usage: $0 {run|toggle|once|resize-all|rehook}" >&2; exit 1 ;;
 esac
