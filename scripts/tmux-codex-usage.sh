@@ -8,12 +8,15 @@
 # キャッシュ形式: "<primary_pct>|<secondary_pct>|<primary_resets_unix>|<secondary_resets_unix>"
 # 残り時間はキャッシュ読み出し時に現在時刻から都度計算する
 
-CACHE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/tmux/codex_usage"
+CACHE_FILE="${CODEX_USAGE_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/tmux/codex_usage}"
 CACHE_TTL=300  # 5分
 FAIL_FILE="${CACHE_FILE}.fail"
 FAIL_TTL=60    # API 失敗時のバックオフ秒数
 
-AUTH_FILE="$HOME/.codex/auth.json"
+AUTH_FILE="${CODEX_AUTH_FILE:-$HOME/.codex/auth.json}"
+REFRESH_URL="${CODEX_REFRESH_URL:-https://auth.openai.com/oauth/token}"
+USAGE_URL="${CODEX_USAGE_URL:-https://chatgpt.com/backend-api/wham/usage}"
+CLIENT_ID="${CODEX_CLIENT_ID:-app_EMoamEEZ73f0CkXaXp7hrann}"
 LABEL="󰝨"
 
 mkdir -p "$(dirname "$CACHE_FILE")"
@@ -92,32 +95,136 @@ if [[ ! -f "$AUTH_FILE" ]]; then
   exit 0
 fi
 
-# access_token と account_id を取り出す
+# access_token / account_id / refresh_token / exp を取り出す
 # account_id は tokens.account_id を優先、無ければ id_token JWT のクレームから抽出
-read -r token account_id < <(python3 - "$AUTH_FILE" <<'PY'
+read_auth() {
+  python3 - "$AUTH_FILE" <<'PY'
 import json, base64, sys
+
+def jwt_payload(jwt):
+  parts = (jwt or '').split('.')
+  if len(parts) < 2:
+    return {}
+  try:
+    return json.loads(base64.urlsafe_b64decode(parts[1] + '=' * (-len(parts[1]) % 4)))
+  except Exception:
+    return {}
+
+def account_id(tokens, d):
+  acc = tokens.get('account_id') or d.get('account_id') or ''
+  if acc:
+    return acc
+  auth_claim = jwt_payload(tokens.get('id_token') or '').get('https://api.openai.com/auth') or {}
+  return auth_claim.get('chatgpt_account_id') or ''
+
 try:
   with open(sys.argv[1]) as f:
     d = json.load(f)
   tokens = d.get('tokens') or {}
   access = tokens.get('access_token') or ''
-  acc = tokens.get('account_id') or d.get('account_id') or ''
-  if not acc:
-    idt = tokens.get('id_token') or ''
-    parts = idt.split('.')
-    if len(parts) >= 2:
-      pad = '=' * (-len(parts[1]) % 4)
-      try:
-        payload = json.loads(base64.urlsafe_b64decode(parts[1] + pad))
-        auth_claim = payload.get('https://api.openai.com/auth') or {}
-        acc = auth_claim.get('chatgpt_account_id') or ''
-      except Exception:
-        pass
-  print(f'{access} {acc}')
+  print('\t'.join([
+    access,
+    account_id(tokens, d),
+    tokens.get('refresh_token') or '',
+    str(jwt_payload(access).get('exp') or ''),
+  ]))
 except Exception:
-  print(' ')
+  print('\t\t\t')
 PY
-)
+}
+
+# Codex CLI と同じ refresh-token flow。期限切れ access_token を使い続けると usage が 401 で落ちる。
+refresh_auth() {
+  python3 - "$AUTH_FILE" "${CACHE_FILE}.refresh.lock" "$CLIENT_ID" "$REFRESH_URL" <<'PY'
+import base64, datetime as dt, fcntl, json, os, sys, time, urllib.error, urllib.request
+
+auth_file, lock_file, client_id, refresh_url = sys.argv[1:]
+
+def jwt_payload(jwt):
+  parts = (jwt or '').split('.')
+  if len(parts) < 2:
+    return {}
+  try:
+    return json.loads(base64.urlsafe_b64decode(parts[1] + '=' * (-len(parts[1]) % 4)))
+  except Exception:
+    return {}
+
+def account_id(tokens, d):
+  acc = tokens.get('account_id') or d.get('account_id') or ''
+  if acc:
+    return acc
+  auth_claim = jwt_payload(tokens.get('id_token') or '').get('https://api.openai.com/auth') or {}
+  return auth_claim.get('chatgpt_account_id') or ''
+
+def load():
+  with open(auth_file) as f:
+    return json.load(f)
+
+try:
+  os.makedirs(os.path.dirname(lock_file), exist_ok=True)
+  with open(lock_file, 'w') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    d = load()
+    tokens = d.get('tokens') or {}
+    access = tokens.get('access_token') or ''
+    acc = account_id(tokens, d)
+    exp = int(jwt_payload(access).get('exp') or 0)
+    if access and exp > int(time.time()) + 60:
+      print(f'{access}\t{acc}')
+      raise SystemExit(0)
+
+    refresh = tokens.get('refresh_token') or ''
+    if not refresh:
+      raise SystemExit(1)
+
+    body = json.dumps({
+      'client_id': client_id,
+      'grant_type': 'refresh_token',
+      'refresh_token': refresh,
+    }).encode()
+    req = urllib.request.Request(refresh_url, data=body, headers={'Content-Type': 'application/json'})
+    with urllib.request.urlopen(req, timeout=10) as res:
+      r = json.load(res)
+
+    new_access = r.get('access_token') or access
+    new_refresh = r.get('refresh_token') or refresh
+    new_id = r.get('id_token') or tokens.get('id_token') or ''
+    tokens.update(access_token=new_access, refresh_token=new_refresh)
+    if new_id:
+      tokens['id_token'] = new_id
+    new_acc = account_id(tokens, d)
+    if new_acc:
+      tokens['account_id'] = new_acc
+    d['tokens'] = tokens
+    d['last_refresh'] = dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')
+
+    tmp = f'{auth_file}.tmp.{os.getpid()}'
+    with open(tmp, 'w') as f:
+      json.dump(d, f, indent=2)
+      f.write('\n')
+    try:
+      os.chmod(tmp, os.stat(auth_file).st_mode & 0o777)
+    except OSError:
+      pass
+    os.replace(tmp, auth_file)
+    print(f'{new_access}\t{new_acc}')
+except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError, json.JSONDecodeError):
+  raise SystemExit(1)
+PY
+}
+
+IFS=$'\t' read -r token account_id refresh_token access_exp < <(read_auth)
+
+refresh_attempted=0
+now=$(date +%s)
+if [[ -n "$refresh_token" && ( -z "$token" || ( -n "$access_exp" && "$access_exp" =~ ^[0-9]+$ && $access_exp -le $((now + 60)) ) ) ]]; then
+  refresh_attempted=1
+  if IFS=$'\t' read -r token account_id < <(refresh_auth); [[ -z "$token" ]]; then
+    touch "$FAIL_FILE"
+    na
+    exit 0
+  fi
+fi
 
 if [[ -z "$token" ]]; then
   touch "$FAIL_FILE"
@@ -125,17 +232,28 @@ if [[ -z "$token" ]]; then
   exit 0
 fi
 
-# 使用量を取得 (ChatGPT login の wham/usage エンドポイント)
-curl_args=(
-  -sf --max-time 5
-  -H "Authorization: Bearer $token"
-  -H "User-Agent: codex-cli"
-)
-if [[ -n "$account_id" ]]; then
-  curl_args+=(-H "ChatGPT-Account-Id: $account_id")
-fi
+fetch_usage() {
+  local -a curl_args=(
+    -sf --max-time 5
+    -H "Authorization: Bearer $token"
+    -H "User-Agent: codex-cli"
+  )
+  if [[ -n "$account_id" ]]; then
+    curl_args+=(-H "ChatGPT-Account-Id: $account_id")
+  fi
+  curl "${curl_args[@]}" "$USAGE_URL" 2>/dev/null
+}
 
-raw=$(curl "${curl_args[@]}" "https://chatgpt.com/backend-api/wham/usage" 2>/dev/null)
+# 使用量を取得 (ChatGPT login の wham/usage エンドポイント)
+raw=$(fetch_usage)
+
+# access_token がサーバ側で無効化済みでも、refresh_token が生きていれば1回だけ復旧する。
+if [[ -z "$raw" && -n "$refresh_token" && "$refresh_attempted" == 0 ]]; then
+  refresh_attempted=1
+  if IFS=$'\t' read -r token account_id < <(refresh_auth); [[ -n "$token" ]]; then
+    raw=$(fetch_usage)
+  fi
+fi
 
 if [[ -z "$raw" ]]; then
   touch "$FAIL_FILE"
