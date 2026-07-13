@@ -66,9 +66,16 @@ guarantees, prefer adopting it over maintaining the custom one.
 - Persistent across sessions via plain Markdown files in `~/.pi/agent/memory/`
 - Tools: `memory_write`, `memory_read`, `memory_search`, `scratchpad`
 - Format: pi-memory compatible (MEMORY.md, SCRATCHPAD.md, daily/)
-- Context auto-injected on session start (goal + scratchpad + today/yesterday log + MEMORY.md)
+- Context auto-injected on session start (pinned note + scratchpad + today/yesterday log + MEMORY.md)
 - Install `qmd` for semantic/vector search upgrade
-- `/goal <text>` — set a pinned session goal (injected as context + shown in the statusline). `/goal` shows it, `/goal clear` clears it.
+- `/pin-goal <text>` — set a pinned session note (injected as context + shown in the statusline). `/pin-goal` shows it, `/pin-goal clear` clears it.
+
+## Goal Mode
+
+- `@narumitw/pi-goal` owns `/goal` for autonomous, verifiable task completion.
+- Use `/goal <goal>` when the agent should continue until it calls `goal_complete` or reports a true blocker.
+- Use `/goal pause`, `/goal resume`, and `/goal clear` to control an active goal.
+- Use `/pin-goal` only for lightweight session context that should not auto-continue.
 
 ## Agent Delegation (pi-subagents + custom)
 
