@@ -462,6 +462,7 @@ tmux-which-key 設定:
 AI エージェント状態監視（自前スクリプト）:
 - `scripts/tmux-agent-status.sh` が `~/.claude/projects/**/*.jsonl` を監視し、各セッションの Claude Code / Codex / Amp の running / done / error 状態を判定
 - `scripts/tmux-agent-sidebar.sh` がセッショングループ別のセッション一覧と全エージェント状態を常時表示する pane を管理（現在のグループ/セッションをハイライト）
+- サイドバー下部に Claude / Codex / Gemini / Cursor の使用量を表示。Codex は `~/.codex/auth.json` の OAuth token を自動 refresh するが、refresh token invalidated の場合は `codex login` が必要
 
 | キー | 動作 |
 |------|------|
