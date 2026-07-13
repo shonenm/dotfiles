@@ -21,6 +21,7 @@
 ### pi
 - [ai-agents/pi/overview.md](ai-agents/pi/overview.md) — pi coding agent
 - [ai-agents/pi/web-research.md](ai-agents/pi/web-research.md) — Web Research Layer
+- [ai-agents/pi/improvement-plan-2026-07.md](ai-agents/pi/improvement-plan-2026-07.md) — pi 改善 PR backlog
 
 ### Cursor
 - [ai-agents/cursor/overview.md](ai-agents/cursor/overview.md) — Cursor Agent CLI
