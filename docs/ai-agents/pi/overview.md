@@ -128,6 +128,15 @@ dotfiles の拡張により Web Research Layer が利用可能。SearXNG + Jina 
 
 `tokyonight-high-contrast` を標準テーマとして `common/pi/.pi/agent/themes/` で管理する。通常は `settings.json` の `theme` がこれを選ぶ。Pi を再起動すると反映され、調整中のテーマファイルは Pi 上で自動再読込される。
 
+### 表示を簡潔にする
+
+標準設定では思考ブロックを隠し、起動ヘッダーを省略し、`/tree` はツール結果を除外して開く。必要な詳細だけをキーバインドで表示する。
+
+- `Ctrl+T`: 思考ブロックを展開/折り畳み
+- `Ctrl+O`: ツール出力を展開/折り畳み
+- `Esc` を2回: `/tree` を開く。tree 内の `Ctrl+T` でツール結果を表示/非表示
+- `/statusline compact`: フッターを1行表示に切り替え
+
 ### 拡張機能
 
 pi packages 経由で extensions / skills を追加:
