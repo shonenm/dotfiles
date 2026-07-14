@@ -468,3 +468,4 @@ cs
 - [Ralph Pattern](ralph.md) - 自律開発ループ
 - [Claude Neovim](claude-neovim.md) - Neovim 連携
 - [Claude Fallback](claude-fallback.md) - API フォールバック
+- [ccusage](ccusage.md) - ローカル利用統計・月次証跡
