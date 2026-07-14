@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# ccusage-snapshot の月次スケジュールを明示的に管理する。
+set -euo pipefail
+
+LABEL="com.user.ccusage-snapshot"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SNAPSHOT_SCRIPT="$SCRIPT_DIR/ccusage-snapshot"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ccusage"
+
+usage() {
+  echo "Usage: ccusage-schedule {enable|disable|status}" >&2
+}
+
+mac_enable() {
+  local destination="$HOME/Library/LaunchAgents/$LABEL.plist"
+  mkdir -p "$HOME/Library/LaunchAgents" "$STATE_DIR/log"
+  cat > "$destination" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>$LABEL</string>
+  <key>ProgramArguments</key><array><string>$SNAPSHOT_SCRIPT</string></array>
+  <key>EnvironmentVariables</key><dict>
+    <key>HOME</key><string>$HOME</string>
+    <key>PATH</key><string>$HOME/.local/share/mise/shims:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StartCalendarInterval</key><dict>
+    <key>Day</key><integer>1</integer><key>Hour</key><integer>0</integer><key>Minute</key><integer>10</integer>
+  </dict>
+  <key>StandardOutPath</key><string>$STATE_DIR/log/snapshot.out</string>
+  <key>StandardErrorPath</key><string>$STATE_DIR/log/snapshot.err</string>
+</dict></plist>
+EOF
+  plutil -lint "$destination" >/dev/null
+  launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" "$destination"
+  echo "Enabled launchd job: $LABEL"
+}
+
+mac_disable() {
+  launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+  rm -f "$HOME/Library/LaunchAgents/$LABEL.plist"
+  echo "Disabled launchd job: $LABEL"
+}
+
+linux_unit_dir() {
+  printf '%s' "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+}
+
+linux_enable() {
+  local unit_dir
+  unit_dir="$(linux_unit_dir)"
+  mkdir -p "$unit_dir" "$STATE_DIR/log"
+  cat > "$unit_dir/ccusage-snapshot.service" <<EOF
+[Unit]
+Description=Save monthly ccusage snapshot
+
+[Service]
+Type=oneshot
+Environment=PATH=$HOME/.local/share/mise/shims:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
+StandardOutput=append:$STATE_DIR/log/snapshot.out
+StandardError=append:$STATE_DIR/log/snapshot.err
+ExecStart=$SNAPSHOT_SCRIPT
+EOF
+  cat > "$unit_dir/ccusage-snapshot.timer" <<'EOF'
+[Unit]
+Description=Run ccusage monthly snapshot
+
+[Timer]
+OnCalendar=*-*-01 00:10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+  systemctl --user daemon-reload
+  systemctl --user enable --now ccusage-snapshot.timer
+  echo "Enabled systemd user timer: ccusage-snapshot.timer"
+}
+
+linux_disable() {
+  systemctl --user disable --now ccusage-snapshot.timer 2>/dev/null || true
+  rm -f "$(linux_unit_dir)/ccusage-snapshot.service" "$(linux_unit_dir)/ccusage-snapshot.timer"
+  systemctl --user daemon-reload
+  echo "Disabled systemd user timer: ccusage-snapshot.timer"
+}
+
+[[ $# -eq 1 ]] || { usage; exit 2; }
+case "$(uname -s):$1" in
+  Darwin:enable) mac_enable ;;
+  Darwin:disable) mac_disable ;;
+  Darwin:status) launchctl print "gui/$(id -u)/$LABEL" 2>&1 ;;
+  Linux:enable) linux_enable ;;
+  Linux:disable) linux_disable ;;
+  Linux:status) systemctl --user status ccusage-snapshot.timer ;;
+  Darwin:*|Linux:*) usage; exit 2 ;;
+  *) echo "Unsupported OS: $(uname -s)" >&2; exit 1 ;;
+esac

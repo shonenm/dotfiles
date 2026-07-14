@@ -1,0 +1,7 @@
+{
+  "defaults": {
+    "timezone": "Asia/Tokyo",
+    "offline": true,
+    "mode": "auto"
+  }
+}

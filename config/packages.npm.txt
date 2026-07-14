@@ -8,7 +8,7 @@
 command-code
 
 # Claude Code token usage analytics (local JSONL parser)
-ccusage
+ccusage@20.0.17
 
 # Review-first terminal diff viewer for agent-authored changesets (hunk binary)
 hunkdiff
