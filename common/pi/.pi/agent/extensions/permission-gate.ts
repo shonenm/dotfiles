@@ -2,7 +2,11 @@
 // Blocks dangerous bash commands pending user confirmation.
 // Install: place in ~/.pi/agent/extensions/permission-gate.ts
 
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+
+const execFileAsync = promisify(execFile);
 
 // Defense-in-depth only. This is a denylist and is inherently bypassable
 // (e.g. `rm -r -f`, base64-encoded commands, obscure flag spellings); it is not
@@ -35,6 +39,55 @@ const DANGEROUS_PATTERNS = [
 // are matched defensively (harmless if they don't exist — the gate never fires).
 const SHELL_TOOLS = new Set(["bash", "shell", "sh", "exec", "run"]);
 
+// The exemption deliberately accepts a tiny shell grammar: a standalone `rm`
+// with relative, non-traversing arguments, or a standalone force-push from the
+// current repository. Everything else retains the confirmation dialog.
+function isRepoLocalRm(command: string): boolean {
+  const parts = command.trim().split(/\s+/);
+  if (parts.shift() !== "rm") return false;
+
+  let recursive = false;
+  let force = false;
+  let options = true;
+  const targets: string[] = [];
+  for (const part of parts) {
+    if (options && part === "--") {
+      options = false;
+    } else if (options && /^-[A-Za-z]+$/.test(part)) {
+      recursive ||= part.includes("r") || part.includes("R");
+      force ||= part.includes("f");
+    } else if (options && part === "--recursive") {
+      recursive = true;
+    } else if (options && part === "--force") {
+      force = true;
+    } else {
+      targets.push(part);
+    }
+  }
+
+  return recursive && force && targets.length > 0 && targets.every(
+    (target) => !target.startsWith("/") && !target.split("/").includes("..") && !/["'`$;&|()\\]/.test(target),
+  );
+}
+
+function isRepoLocalForceWithLease(command: string): boolean {
+  return /^git\s+push\b(?=[\s\S]*--force-with-lease)[^;&|`$()\n]*$/.test(command.trim());
+}
+
+async function isGitWorktree(cwd: string): Promise<boolean> {
+  try {
+    const { stdout } = await execFileAsync("git", ["-C", cwd, "rev-parse", "--is-inside-work-tree"]);
+    return stdout.trim() === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function isTrustedGitProjectCommand(command: string, cwd: string): Promise<boolean> {
+  if (!isRepoLocalRm(command) && !isRepoLocalForceWithLease(command)) return false;
+  return isGitWorktree(cwd);
+}
+
 export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
     if (!SHELL_TOOLS.has(event.toolName)) return;
@@ -44,6 +97,8 @@ export default function (pi: ExtensionAPI) {
 
     const matched = DANGEROUS_PATTERNS.find((p) => p.test(command));
     if (!matched) return;
+
+    if (await isTrustedGitProjectCommand(command, ctx.cwd)) return;
 
     const ok = await ctx.ui.confirm(
       "🛡️ Dangerous command detected",
