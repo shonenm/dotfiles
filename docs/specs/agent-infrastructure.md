@@ -20,7 +20,7 @@
 | **Triggers** | `rm -rf`, `sudo`, `chmod 777`, `chown`, `docker system prune`, `kubectl delete`, `terraform apply`, `npm publish`, `git push --force`, `git reset --hard`, `DROP`, `DELETE FROM`, `TRUNCATE TABLE` |
 | **Pi impl** | `extensions/permission-gate.ts` — `tool_call` event + `ctx.ui.confirm` |
 | **Claude impl** | 検討中（`hooks/` で実装可能） |
-| **Behavior** | ユーザーに確認ダイアログを表示。拒否時は理由をログに記録 |
+| **Behavior** | ユーザーに確認ダイアログを表示。拒否時は理由をログに記録。Git worktree 内では、相対パスのみの単独 `rm -rf` と単独 `git push --force-with-lease` は自動許可（それ以外の危険操作は確認） |
 
 ### 2. Protected Paths
 
