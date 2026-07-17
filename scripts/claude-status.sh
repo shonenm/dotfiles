@@ -50,16 +50,15 @@ set_status() {
   local timestamp
   timestamp=$(date +%s%N)
 
-  cat > "$STATUS_DIR/workspace_${workspace}_${timestamp}.json" <<EOF
-{
-  "status": "$status",
-  "project": "$project",
-  "workspace": "$workspace",
-  "tmux_session": "$tmux_session",
-  "tmux_window_index": "$tmux_window_index",
-  "updated": $(date +%s)
-}
-EOF
+  jq -n \
+    --arg status "$status" \
+    --arg project "$project" \
+    --arg workspace "$workspace" \
+    --arg tmux_session "$tmux_session" \
+    --arg tmux_window_index "$tmux_window_index" \
+    --argjson updated "$(date +%s)" \
+    '{status:$status, project:$project, workspace:$workspace, tmux_session:$tmux_session, tmux_window_index:$tmux_window_index, updated:$updated}' \
+    > "$STATUS_DIR/workspace_${workspace}_${timestamp}.json"
 
   # SketchyBar 通知
   if command -v sketchybar &>/dev/null; then
