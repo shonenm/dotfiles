@@ -72,7 +72,8 @@ if [[ -d "supabase/migrations" ]]; then
     # shellcheck disable=SC2012  # known filenames, no special chars
     types_file="$(ls supabase/database.types.ts src/database.types.ts 2>/dev/null | head -1)"
     if [[ -n "$types_file" ]]; then
-      tables="$(grep -oP '(?<=")[a-z_]+(?="\s*:\s*\{)' "$types_file" 2>/dev/null | sort -u | head -30)" || true
+      # POSIX-portable: BSD grep has no -P. Match "<name>": { then strip to the name.
+      tables="$(grep -oE '"[a-z_]+"[[:space:]]*:[[:space:]]*[{]' "$types_file" 2>/dev/null | sed -E 's/^"([a-z_]+)".*/\1/' | sort -u | head -30)" || true
     fi
   fi
   supabase_info=""

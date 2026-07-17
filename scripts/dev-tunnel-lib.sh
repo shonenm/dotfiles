@@ -68,10 +68,13 @@ dt_start() {
       -o "ServerAliveCountMax=3" \
       -o "ExitOnForwardFailure=yes" \
       "$host"
-  # autossh -f forks; capture child pid from pgrep filtered by host
+  # autossh -f forks; capture child pid from pgrep filtered by host.
+  # Anchor host as the final whitespace-delimited arg and escape regex metachars,
+  # so a shared host suffix (e.g. "web" vs "myweb") can't capture the wrong pid.
   sleep 0.3
-  local pid
-  pid="$(pgrep -f "autossh.*${host}\$" | head -1 || true)"
+  local pid host_re
+  host_re="$(printf '%s' "$host" | sed 's/[][\\.^$*+?(){}|]/\\&/g')"
+  pid="$(pgrep -f "autossh .*[[:space:]]${host_re}\$" | head -1 || true)"
   if [[ -z "$pid" ]]; then
     echo "Error: failed to capture autossh pid for $host (check $logfile)" >&2
     return 1
