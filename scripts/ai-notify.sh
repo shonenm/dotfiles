@@ -203,7 +203,15 @@ update_sketchybar_status() {
       local safe_project="${project//\//_}"
       status_file="$status_dir/${safe_project}.json"
     fi
-    echo "{\"project\":\"$project\",\"status\":\"$status\",\"workspace\":\"$workspace\",\"tmux_session\":\"$tmux_session\",\"tmux_window_index\":\"$tmux_window_index\",\"timestamp\":$(date +%s)}" > "$status_file"
+    jq -n \
+      --arg project "$project" \
+      --arg status "$status" \
+      --arg workspace "$workspace" \
+      --arg tmux_session "$tmux_session" \
+      --arg tmux_window_index "$tmux_window_index" \
+      --argjson updated "$(date +%s)" \
+      '{project:$project, status:$status, workspace:$workspace, tmux_session:$tmux_session, tmux_window_index:$tmux_window_index, updated:$updated}' \
+      > "$status_file"
   fi
 }
 
@@ -315,28 +323,31 @@ get_webhook() {
   TIMESTAMP=$(date "+%H:%M:%S")
 
   # Slack 通知送信（App のアイコン・名前はSlack App設定で管理）
-  curl -s -X POST "$WEBHOOK" \
-    -H "Content-Type: application/json" \
-    -d "{
-      \"text\": \"${MENTION} ${ICON} ${TITLE} - ${PROJECT} (${DEVICE})\",
-      \"attachments\": [{
-        \"color\": \"$COLOR\",
-        \"blocks\": [
-          {
-            \"type\": \"header\",
-            \"text\": {\"type\": \"plain_text\", \"text\": \"$ICON $TITLE - $PROJECT\", \"emoji\": true}
-          },
-          {
-            \"type\": \"section\",
-            \"fields\": [
-              {\"type\": \"mrkdwn\", \"text\": \"*Project:*\n\`$PROJECT\`\"},
-              {\"type\": \"mrkdwn\", \"text\": \"*Device:*\n\`$DEVICE\`\"},
-              {\"type\": \"mrkdwn\", \"text\": \"*Time:*\n$TIMESTAMP\"}
-            ]
-          }
+  PAYLOAD=$(jq -n \
+    --arg mention "$MENTION" \
+    --arg icon "$ICON" \
+    --arg title "$TITLE" \
+    --arg project "$PROJECT" \
+    --arg device "$DEVICE" \
+    --arg color "$COLOR" \
+    --arg ts "$TIMESTAMP" \
+    '{
+      text: "\($mention) \($icon) \($title) - \($project) (\($device))",
+      attachments: [{
+        color: $color,
+        blocks: [
+          {type: "header", text: {type: "plain_text", text: "\($icon) \($title) - \($project)", emoji: true}},
+          {type: "section", fields: [
+            {type: "mrkdwn", text: "*Project:*\n`\($project)`"},
+            {type: "mrkdwn", text: "*Device:*\n`\($device)`"},
+            {type: "mrkdwn", text: "*Time:*\n\($ts)"}
+          ]}
         ]
       }]
-    }" >/dev/null
+    }')
+  curl -s -X POST "$WEBHOOK" \
+    -H "Content-Type: application/json" \
+    -d "$PAYLOAD" >/dev/null
 ) &>/dev/null & # バックグラウンドで実行
 
 disown
