@@ -11,18 +11,10 @@
 | pi CLI | エージェント本体 | `config/packages.npm.txt` の `@earendil-works/pi-coding-agent` (npm global) |
 | pi-cursor-agent | Cursor サブスク → pi プロバイダ | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
-| pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
+| pi-loop | cron/event-based agent re-wake loops と background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
 | pi-goal | `/goal` で完了まで継続する goal mode | `settings.json` の `packages` → `pi install npm:@narumitw/pi-goal` |
 | AGENTS.md | グローバル指示書 | `common/pi/.pi/agent/AGENTS.md` → `~/.pi/agent/AGENTS.md` |
 | pueue | バックグラウンドタスク・並列 delegation 用キュー | `config/Brewfile` (mac), `packages.linux.{apt,alpine}.txt` (linux) |
-
-## LoopとGoalの使い分け
-
-「全件完了まで継続」のように作業完了を停止条件とする実装には`/goal <goal>`を使う。利用者が「loop」と表現しても、時間間隔に意味がなければcron loopへ変換しない。
-
-`/loop <goal>`のdynamic loopは、iteration上限内の反復作業に使う。各iterationの完了後に`LoopUpdate`で次回wakeを設定するため、agent実行中のtimer tickでは`maxFires`を消費しないが、iteration上限に達すると終了する。
-
-`LoopCreate`によるcron loopはCI監視など、時間間隔そのものに意味がある観測・polling専用とする。cron loopの`maxFires`は実作業の完了回数ではなくschedule発火回数を数え、agent実行中に通知がcoalesceされても増加する。
 
 ## セットアップ
 
