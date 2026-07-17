@@ -61,7 +61,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| **Search** | SearXNG (primary, localhost:8888) → Jina AI (fallback) |
+| **Search** | SearXNG (primary, localhost:8899) → Jina AI (fallback) |
 | **Fetch** | Jina Reader (r.jina.ai) → raw curl |
 | **Cache** | `~/.pi/research/sources/<sha256>.md` |
 | **Citation** | `~/.pi/research/citations.jsonl` |

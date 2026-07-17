@@ -5,8 +5,8 @@
 #   cd common/pi/services
 #   docker compose -f docker-compose.searxng.yml up -d
 #
-# Access: http://localhost:8888
-# API:    http://localhost:8888/search?q=<query>&format=json
+# Access: http://localhost:8899
+# API:    http://localhost:8899/search?q=<query>&format=json
 
 services:
   searxng:
@@ -14,12 +14,12 @@ services:
     container_name: searxng
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8888:8080"
+      - "127.0.0.1:8899:8080"
     volumes:
       - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
       - ./searxng/limiter.toml:/etc/searxng/limiter.toml:ro
     environment:
-      - SEARXNG_BASE_URL=http://localhost:8888/
+      - SEARXNG_BASE_URL=http://localhost:8899/
     cap_drop:
       - ALL
     cap_add:
