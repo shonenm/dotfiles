@@ -43,22 +43,25 @@ cmd_list() {
   repo="$(wt_repo_name)"
 
   local found=false
+  local wt_dir="" branch_info=""
   while IFS= read -r line; do
-    local wt_dir branch_info
-    wt_dir="$(echo "$line" | awk '{print $1}')"
-    branch_info="$(echo "$line" | sed 's/.*\[//' | sed 's/\]//')"
-
-    [[ "$wt_dir" == *--wt--* ]] || continue
-    found=true
-
-    local win="${repo}#${branch_info}"
-    local win_status=""
-    if wt_window_exists "$win"; then
-      win_status="[tmux]"
-    fi
-
-    printf "  %-40s %-20s %s\n" "$branch_info" "$wt_dir" "$win_status"
-  done < <(git worktree list)
+    case "$line" in
+      "worktree "*) wt_dir="${line#worktree }"; branch_info="" ;;
+      "branch "*)   branch_info="${line#branch }"; branch_info="${branch_info#refs/heads/}" ;;
+      "")  # blank line terminates each porcelain record
+        if [[ -n "$wt_dir" && "$wt_dir" == *--wt--* ]]; then
+          found=true
+          local win="${repo}#${branch_info}"
+          local win_status=""
+          if wt_window_exists "$win"; then
+            win_status="[tmux]"
+          fi
+          printf "  %-40s %-20s %s\n" "$branch_info" "$wt_dir" "$win_status"
+        fi
+        wt_dir=""; branch_info=""
+        ;;
+    esac
+  done < <(git worktree list --porcelain)
 
   if [[ "$found" == false ]]; then
     wt_info "No worktrees found"

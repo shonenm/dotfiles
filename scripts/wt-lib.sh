@@ -72,9 +72,9 @@ wt_exists() {
   local branch="$1"
   local path
   path="$(wt_path "$branch")"
-  local escaped
-  escaped="$(printf '%s' "$path" | sed 's/[][\\.^$*+?{}()|]/\\&/g')"
-  git worktree list | grep -q "$escaped"
+  # Exact whole-line match against the porcelain "worktree <path>" record,
+  # so a path that is a prefix of another worktree can't false-positive.
+  git worktree list --porcelain | grep -qxF "worktree $path"
 }
 
 wt_window_exists() {
@@ -92,9 +92,6 @@ wt_select_window() {
 wt_copy_ignored() {
   local src="$1"
   local dst="$2"
-
-  # TODO: Make configurable via .wt-config or similar per-project config
-  # Currently hardcoded for MyProject monorepo structure
 
   # Directories to symlink instead of copy (large, shared safely)
   local -a symlink_dirs=(
@@ -123,6 +120,13 @@ wt_copy_ignored() {
     "agents/.mypy_cache"
     "__pycache__"
   )
+
+  # Per-project override: a .wt-config at the main worktree root may reassign
+  # symlink_dirs / skip_dirs. Absent config keeps the defaults above unchanged.
+  if [[ -f "$src/.wt-config" ]]; then
+    # shellcheck source=/dev/null
+    source "$src/.wt-config"
+  fi
 
   local entries
   entries="$(git -C "$src" ls-files --others --ignored --exclude-standard --directory --no-empty-directory 2>/dev/null)" || return 0
@@ -271,26 +275,29 @@ wt_clean() {
   repo="$(wt_repo_name)"
 
   local found=false
+  local wt_dir="" branch_info=""
   while IFS= read -r line; do
-    local wt_dir branch_info
-    wt_dir="$(echo "$line" | awk '{print $1}')"
-    branch_info="$(echo "$line" | sed 's/.*\[//' | sed 's/\]//')"
-
-    [[ "$wt_dir" == *--wt--* ]] || continue
-    found=true
-
-    local win="${repo}#${branch_info}"
-    if wt_window_exists "$win"; then
-      tmux kill-window -t "$win"
-      wt_info "Closed window: $win"
-    fi
-
-    if git worktree remove "$wt_dir" 2>/dev/null; then
-      wt_success "Removed: $wt_dir"
-    else
-      wt_error "Failed to remove: $wt_dir (uncommitted changes?)"
-    fi
-  done < <(git worktree list)
+    case "$line" in
+      "worktree "*) wt_dir="${line#worktree }"; branch_info="" ;;
+      "branch "*)   branch_info="${line#branch }"; branch_info="${branch_info#refs/heads/}" ;;
+      "")  # blank line terminates each porcelain record
+        if [[ -n "$wt_dir" && "$wt_dir" == *--wt--* ]]; then
+          found=true
+          local win="${repo}#${branch_info}"
+          if wt_window_exists "$win"; then
+            tmux kill-window -t "$win"
+            wt_info "Closed window: $win"
+          fi
+          if git worktree remove "$wt_dir" 2>/dev/null; then
+            wt_success "Removed: $wt_dir"
+          else
+            wt_error "Failed to remove: $wt_dir (uncommitted changes?)"
+          fi
+        fi
+        wt_dir=""; branch_info=""
+        ;;
+    esac
+  done < <(git worktree list --porcelain)
 
   git worktree prune
   if [[ "$found" == false ]]; then
