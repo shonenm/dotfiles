@@ -1,0 +1,53 @@
+# Linux-only mise tool set.
+#
+# These tools were previously installed by the github_release / github_release_binary
+# engine in scripts/linux.sh, which eval'd manifest data and scraped GitHub's
+# /releases/latest with `grep -Po tag_name` unauthenticated. They are now installed
+# by mise via the aqua / ubi backends (release resolution + platform asset selection
+# handled by mise, no eval-on-data, no unauthenticated scrape).
+#
+# scripts/linux.sh copies this file to ~/.config/mise/conf.d/dotfiles-linux.toml at
+# install time. conf.d is auto-loaded by mise. It is NOT stowed, so macOS (which
+# installs these via Brewfile) never sees it — no cross-platform duplication.
+#
+# aqua backend: binary name is resolved from the aqua registry (e.g. bottom -> btm).
+# ubi backend:  binary name defaults to the repo name; [exe=NAME] overrides where the
+#               binary differs (rip2 -> rip, better-docker-ps -> dops, tealdeer -> tldr).
+
+[tools]
+# --- aqua registry (25) ---
+"aqua:junegunn/fzf" = "latest"
+"aqua:fastfetch-cli/fastfetch" = "latest"
+"aqua:dandavison/delta" = "latest"
+"aqua:jesseduffield/lazygit" = "latest"
+"aqua:x-motemen/ghq" = "latest"
+"aqua:neovim/neovim" = "latest"
+"aqua:chmln/sd" = "latest"
+"aqua:bootandy/dust" = "latest"
+"aqua:ClementTsang/bottom" = "latest"
+"aqua:lsd-rs/lsd" = "latest"
+"aqua:sxyazi/yazi" = "latest"
+"aqua:casey/just" = "latest"
+"aqua:watchexec/watchexec" = "latest"
+"aqua:sharkdp/hyperfine" = "latest"
+"aqua:gitleaks/gitleaks" = "latest"
+"aqua:ducaale/xh" = "latest"
+"aqua:charmbracelet/glow" = "latest"
+"aqua:sachaos/viddy" = "latest"
+"aqua:mr-karan/doggo" = "latest"
+"aqua:topgrade-rs/topgrade" = "latest"
+"aqua:pemistahl/grex" = "latest"
+"aqua:typst/typst" = "latest"
+"aqua:jj-vcs/jj" = "latest"
+"aqua:idursun/jjui" = "latest"
+"aqua:direnv/direnv" = "latest"
+
+# --- ubi (8; not in aqua registry) ---
+"ubi:ivaaaan/smug" = "latest"
+"ubi:MilesCranmer/rip2[exe=rip]" = "latest"
+"ubi:ouch-org/ouch" = "latest"
+"ubi:joshmedeski/sesh" = "latest"
+"ubi:achristmascarl/rainfrog" = "latest"
+"ubi:lemonade-command/lemonade" = "latest"
+"ubi:Mikescher/better-docker-ps[exe=dops]" = "latest"
+"ubi:tealdeer-rs/tealdeer[exe=tldr]" = "latest"

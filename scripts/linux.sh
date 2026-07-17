@@ -228,113 +228,6 @@ _tool_field() {
   echo "${!var:-}"
 }
 
-# Resolve architecture from arch_map
-_resolve_arch() {
-  local arch_map="$1"
-  local uname_arch
-  uname_arch=$(uname -m)
-  for mapping in $arch_map; do
-    local key="${mapping%%:*}"
-    local val="${mapping##*:}"
-    if [[ "$uname_arch" == "$key" ]]; then
-      echo "$val"
-      return 0
-    fi
-  done
-  return 1
-}
-
-# Install via GitHub release tarball
-_install_github_release() {
-  local tool="$1"
-  local repo arch_map ARCH VERSION VERSION_NOTAG
-  repo=$(_tool_field "$tool" "github_repo")
-  arch_map=$(_tool_field "$tool" "arch_map")
-
-  # shellcheck disable=SC2034  # used in eval'd archive_pattern/install_cmd
-  ARCH=$(_resolve_arch "$arch_map") || {
-    log_error "Unsupported architecture for $tool: $(uname -m)"
-    return 1
-  }
-
-  VERSION=$(curl -s "https://api.github.com/repos/$repo/releases/latest" | grep -Po '"tag_name": "\K[^"]*')
-  # shellcheck disable=SC2034  # used in eval'd archive_pattern/install_cmd
-  VERSION_NOTAG="${VERSION#v}"
-
-  local custom_cmd
-  custom_cmd=$(_tool_field "$tool" "install_cmd")
-  if [[ -n "$custom_cmd" ]]; then
-    local archive_pattern archive
-    archive_pattern=$(eval echo "$(_tool_field "$tool" "archive_pattern")")
-    archive="$_td/$archive_pattern"
-    curl -fLo "$archive" "https://github.com/$repo/releases/download/$VERSION/$archive_pattern"
-    eval "$custom_cmd"
-    rm -f "$archive"
-  else
-    local archive_pattern binary_path
-    archive_pattern=$(eval echo "$(_tool_field "$tool" "archive_pattern")")
-    binary_path=$(eval echo "$(_tool_field "$tool" "binary_path")")
-    curl -fLo "$_td/$archive_pattern" "https://github.com/$repo/releases/download/$VERSION/$archive_pattern"
-    if [[ "$archive_pattern" == *.zip ]]; then
-      unzip -o "$_td/$archive_pattern" -d "$_td"
-    else
-      tar xf "$_td/$archive_pattern" -C "$_td"
-    fi
-    # Target dir: ~/.local/bin in NO_SUDO mode, else /usr/local/bin
-    if [[ "$NO_SUDO" == "true" ]]; then
-      mkdir -p "$HOME/.local/bin"
-      install "$_td/$binary_path" "$HOME/.local/bin/"
-    else
-      $SUDO install "$_td/$binary_path" /usr/local/bin/
-    fi
-    rm -rf "$_td/$archive_pattern" "$_td/${binary_path%/*}"
-  fi
-}
-
-# Install neovim tarball (extracted to ~/.local/opt in NO_SUDO mode, /opt otherwise)
-_install_neovim_tarball() {
-  local archive="$1" arch="$2"
-  if [[ "$NO_SUDO" == "true" ]]; then
-    local opt="$HOME/.local/opt"
-    mkdir -p "$opt" "$HOME/.local/bin"
-    rm -rf "$opt/nvim-linux-${arch}"
-    tar -C "$opt" -xzf "$archive"
-    ln -sf "$opt/nvim-linux-${arch}/bin/nvim" "$HOME/.local/bin/nvim"
-  else
-    $SUDO rm -rf "/opt/nvim-linux-${arch}"
-    $SUDO tar -C /opt -xzf "$archive"
-    $SUDO ln -sf "/opt/nvim-linux-${arch}/bin/nvim" /usr/local/bin/nvim
-  fi
-}
-
-# Install via GitHub release single binary
-_install_github_release_binary() {
-  local tool="$1"
-  local repo binary_map install_dir
-  repo=$(_tool_field "$tool" "github_repo")
-  binary_map=$(_tool_field "$tool" "binary_map")
-  install_dir=$(_tool_field "$tool" "install_dir")
-  install_dir="${install_dir:-$HOME/.local/bin}"
-
-  local uname_arch binary
-  uname_arch=$(uname -m)
-  for mapping in $binary_map; do
-    local key="${mapping%%:*}" val="${mapping##*:}"
-    [[ "$uname_arch" == "$key" ]] && binary="$val" && break
-  done
-  if [[ -z "$binary" ]]; then
-    log_error "Unsupported architecture for $tool: $uname_arch"
-    return 1
-  fi
-
-  local check_cmd
-  check_cmd=$(_tool_field "$tool" "check_cmd")
-  mkdir -p "$install_dir"
-  curl -fsSL "https://github.com/$repo/releases/latest/download/$binary" \
-    -o "$install_dir/$check_cmd"
-  chmod +x "$install_dir/$check_cmd"
-}
-
 # --- APT repo install functions (Debian/Ubuntu only) ---
 
 install_gh_apt() {
@@ -429,12 +322,6 @@ install_modern_tools() {
       curl_pipe)
         eval "$(_tool_field "$tool" "curl_cmd")"
         ;;
-      github_release)
-        _install_github_release "$tool"
-        ;;
-      github_release_binary)
-        _install_github_release_binary "$tool"
-        ;;
       cargo)
         cargo install "$(_tool_field "$tool" "cargo_crate")"
         ;;
@@ -466,6 +353,10 @@ install_modern_tools() {
   if command_exists mise || [[ -f "$HOME/.local/bin/mise" ]]; then
     export PATH="$HOME/.local/bin:$PATH"
     eval "$("$HOME/.local/bin/mise" activate bash 2>/dev/null || true)"
+    # Linux-only tool set (github releases migrated off the eval/scrape engine).
+    # conf.d is auto-loaded by mise and NOT stowed, so macOS never sees it.
+    mkdir -p "$HOME/.config/mise/conf.d"
+    cp "$CONFIG_DIR/mise-linux.toml" "$HOME/.config/mise/conf.d/dotfiles-linux.toml"
     log_info "Installing mise-managed tools..."
     "$HOME/.local/bin/mise" install -y 2>/dev/null || true
   fi

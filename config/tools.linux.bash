@@ -4,21 +4,17 @@
 # Each tool: TOOL_<name>_<field> variables
 # Fields:
 #   check_cmd     - command to verify installation
-#   method        - curl_pipe | github_release | github_release_binary | cargo | apt_repo
+#   method        - curl_pipe | cargo | apt_repo
 #   curl_cmd      - (curl_pipe) install command
 #   cargo_crate   - (cargo) crate name
-#   github_repo   - (github_release) owner/repo
-#   archive_pattern - (github_release) tarball name template (vars: VERSION, VERSION_NOTAG, ARCH)
-#   binary_path   - (github_release) path to binary inside tarball
-#   binary_map    - (github_release_binary) "uname_arch:filename" pairs
-#   arch_map      - architecture mapping "uname_arch:tool_arch" pairs
-#   install_cmd   - (github_release) custom install command
 #   install_fn    - (apt_repo) function name to call
-#   install_dir   - (github_release_binary) target directory
 #   depends_on    - tool name that must be installed first
 #   post_install  - command to run after installation
 #   apt_only      - "true" to skip on Alpine
 #   alt_check_cmd - alternative check command (e.g., batcat for bat)
+#
+# GitHub-release tools were migrated to mise (config/mise-linux.toml); the
+# github_release / github_release_binary methods and their engine are removed.
 
 # Nerd Font config (handled separately by install_nerd_font)
 NERD_FONT_NAME="UDEVGothic"
@@ -70,84 +66,12 @@ TOOL_lazydocker_check_cmd="lazydocker"
 TOOL_lazydocker_method="curl_pipe"
 TOOL_lazydocker_curl_cmd='curl https://raw.githubusercontent.com/jesseduffield/lazydocker/master/scripts/install_update_linux.sh | bash'
 
-TOOL_direnv_check_cmd="direnv"
-TOOL_direnv_method="github_release_binary"
-TOOL_direnv_github_repo="direnv/direnv"
-TOOL_direnv_binary_map='x86_64:direnv.linux-amd64 aarch64:direnv.linux-arm64'
-TOOL_direnv_install_dir="$HOME/.local/bin"
-
-# ════════════════════════════════════════
-# GitHub release installs (tarball)
-# ════════════════════════════════════════
-
-TOOL_fzf_check_cmd="fzf"
-TOOL_fzf_method="github_release"
-TOOL_fzf_github_repo="junegunn/fzf"
-TOOL_fzf_archive_pattern='fzf-${VERSION_NOTAG}-linux_${ARCH}.tar.gz'
-TOOL_fzf_binary_path='fzf'
-TOOL_fzf_arch_map='x86_64:amd64 aarch64:arm64'
-
 # fzf-tmux は fzf の release tarball に含まれておらず、master ブランチの単体スクリプト。
-# 独立 tool として登録しておくと、fzf が既に入っている環境でも post-add でこれだけ
-# 補完インストールできる (sesh の popup prefix+C-f が依存)。
+# fzf 本体は mise (config/mise-linux.toml) で入る。この script は install 時に fzf を
+# 必要とせず (実行時のみ依存) 単体 download できるため depends_on は付けない。
 TOOL_fzftmux_check_cmd="fzf-tmux"
 TOOL_fzftmux_method="curl_pipe"
-TOOL_fzftmux_depends_on="fzf"
 TOOL_fzftmux_curl_cmd='if [[ "$NO_SUDO" == "true" ]]; then mkdir -p "$HOME/.local/bin"; curl -fsSL https://raw.githubusercontent.com/junegunn/fzf/master/bin/fzf-tmux -o "$HOME/.local/bin/fzf-tmux" && chmod +x "$HOME/.local/bin/fzf-tmux"; else _ft="$(mktemp -t fzf-tmux.XXXXXX)"; curl -fsSL https://raw.githubusercontent.com/junegunn/fzf/master/bin/fzf-tmux -o "$_ft" && $SUDO install -m 0755 "$_ft" /usr/local/bin/fzf-tmux && rm -f "$_ft"; fi'
-
-TOOL_fastfetch_check_cmd="fastfetch"
-TOOL_fastfetch_method="github_release"
-TOOL_fastfetch_github_repo="fastfetch-cli/fastfetch"
-TOOL_fastfetch_archive_pattern='fastfetch-linux-${ARCH}.tar.gz'
-TOOL_fastfetch_binary_path='fastfetch-linux-${ARCH}/usr/bin/fastfetch'
-TOOL_fastfetch_arch_map='x86_64:amd64 aarch64:aarch64'
-
-TOOL_delta_check_cmd="delta"
-TOOL_delta_method="github_release"
-TOOL_delta_github_repo="dandavison/delta"
-TOOL_delta_archive_pattern='delta-${VERSION}-${ARCH}-unknown-linux-gnu.tar.gz'
-TOOL_delta_binary_path='delta-${VERSION}-${ARCH}-unknown-linux-gnu/delta'
-TOOL_delta_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-TOOL_lazygit_check_cmd="lazygit"
-TOOL_lazygit_method="github_release"
-TOOL_lazygit_github_repo="jesseduffield/lazygit"
-TOOL_lazygit_archive_pattern='lazygit_${VERSION_NOTAG}_Linux_${ARCH}.tar.gz'
-TOOL_lazygit_binary_path='lazygit'
-TOOL_lazygit_arch_map='x86_64:x86_64 aarch64:arm64'
-
-TOOL_ghq_check_cmd="ghq"
-TOOL_ghq_method="github_release"
-TOOL_ghq_github_repo="x-motemen/ghq"
-TOOL_ghq_archive_pattern='ghq_linux_${ARCH}.zip'
-TOOL_ghq_binary_path='ghq_linux_${ARCH}/ghq'
-TOOL_ghq_arch_map='x86_64:amd64 aarch64:arm64'
-
-# smug: declarative tmux session/pane scaffolding (flat tarball, binary `smug`)
-TOOL_smug_check_cmd="smug"
-TOOL_smug_method="github_release"
-TOOL_smug_github_repo="ivaaaan/smug"
-TOOL_smug_archive_pattern='smug_${VERSION_NOTAG}_Linux_${ARCH}.tar.gz'
-TOOL_smug_binary_path='smug'
-TOOL_smug_arch_map='x86_64:x86_64 aarch64:arm64'
-
-TOOL_neovim_check_cmd="nvim"
-TOOL_neovim_method="github_release"
-TOOL_neovim_github_repo="neovim/neovim"
-TOOL_neovim_archive_pattern='nvim-linux-${ARCH}.tar.gz'
-TOOL_neovim_arch_map='x86_64:x86_64 aarch64:arm64'
-TOOL_neovim_install_cmd='_install_neovim_tarball "$archive" "$ARCH"'
-TOOL_neovim_apt_only="true"
-
-# ════════════════════════════════════════
-# GitHub release installs (single binary)
-# ════════════════════════════════════════
-
-TOOL_dops_check_cmd="dops"
-TOOL_dops_method="github_release_binary"
-TOOL_dops_github_repo="Mikescher/better-docker-ps"
-TOOL_dops_binary_map='x86_64:dops_linux-amd64-static aarch64:dops_linux-arm64'
-TOOL_dops_install_dir="$HOME/.local/bin"
 
 # ════════════════════════════════════════
 # Cargo installs (all depend on rust)
@@ -158,62 +82,15 @@ TOOL_tokei_method="cargo"
 TOOL_tokei_cargo_crate="tokei"
 TOOL_tokei_depends_on="rust"
 
-# tealdeer: single binary, renamed to `tldr` at $install_dir via check_cmd
-TOOL_tealdeer_check_cmd="tldr"
-TOOL_tealdeer_method="github_release_binary"
-TOOL_tealdeer_github_repo="tealdeer-rs/tealdeer"
-TOOL_tealdeer_binary_map='x86_64:tealdeer-linux-x86_64-musl aarch64:tealdeer-linux-aarch64-musl'
-TOOL_tealdeer_install_dir="$HOME/.local/bin"
-
 TOOL_procs_check_cmd="procs"
 TOOL_procs_method="cargo"
 TOOL_procs_cargo_crate="procs"
 TOOL_procs_depends_on="rust"
 
-# sd: tarball, binary under sd-VERSION-ARCH-unknown-linux-musl/sd
-TOOL_sd_check_cmd="sd"
-TOOL_sd_method="github_release"
-TOOL_sd_github_repo="chmln/sd"
-TOOL_sd_archive_pattern='sd-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
-TOOL_sd_binary_path='sd-${VERSION}-${ARCH}-unknown-linux-musl/sd'
-TOOL_sd_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-# dust: tarball, binary under dust-VERSION-ARCH-unknown-linux-musl/dust
-TOOL_dust_check_cmd="dust"
-TOOL_dust_method="github_release"
-TOOL_dust_github_repo="bootandy/dust"
-TOOL_dust_archive_pattern='dust-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
-TOOL_dust_binary_path='dust-${VERSION}-${ARCH}-unknown-linux-musl/dust'
-TOOL_dust_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-# bottom (btm): tarball is flat, binary name is `btm`
-TOOL_bottom_check_cmd="btm"
-TOOL_bottom_method="github_release"
-TOOL_bottom_github_repo="ClementTsang/bottom"
-TOOL_bottom_archive_pattern='bottom_${ARCH}-unknown-linux-musl.tar.gz'
-TOOL_bottom_binary_path='btm'
-TOOL_bottom_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-# rip2 (rip): tarball is flat, binary name is `rip`
-TOOL_rip2_check_cmd="rip"
-TOOL_rip2_method="github_release"
-TOOL_rip2_github_repo="MilesCranmer/rip2"
-TOOL_rip2_archive_pattern='rip-Linux-${ARCH}-musl.tar.gz'
-TOOL_rip2_binary_path='rip'
-TOOL_rip2_arch_map='x86_64:x86_64 aarch64:aarch64'
-
 TOOL_quay_check_cmd="quay"
 TOOL_quay_method="cargo"
 TOOL_quay_cargo_crate="quay-tui"
 TOOL_quay_depends_on="rust"
-
-# lsd: tarball, binary under lsd-VERSION-ARCH-unknown-linux-musl/lsd
-TOOL_lsd_check_cmd="lsd"
-TOOL_lsd_method="github_release"
-TOOL_lsd_github_repo="lsd-rs/lsd"
-TOOL_lsd_archive_pattern='lsd-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
-TOOL_lsd_binary_path='lsd-${VERSION}-${ARCH}-unknown-linux-musl/lsd'
-TOOL_lsd_arch_map='x86_64:x86_64 aarch64:aarch64'
 
 TOOL_gitabsorb_check_cmd="git-absorb"
 TOOL_gitabsorb_method="cargo"
@@ -239,124 +116,6 @@ TOOL_tmuxexpose_check_cmd="tmux-expose"
 TOOL_tmuxexpose_method="cargo"
 TOOL_tmuxexpose_cargo_crate="tmux-expose"
 TOOL_tmuxexpose_depends_on="rust"
-
-TOOL_yazi_check_cmd="yazi"
-TOOL_yazi_method="github_release"
-TOOL_yazi_github_repo="sxyazi/yazi"
-TOOL_yazi_archive_pattern='yazi-${ARCH}-unknown-linux-gnu.zip'
-TOOL_yazi_binary_path='yazi-${ARCH}-unknown-linux-gnu/yazi'
-TOOL_yazi_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-TOOL_just_check_cmd="just"
-TOOL_just_method="github_release"
-TOOL_just_github_repo="casey/just"
-TOOL_just_archive_pattern='just-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
-TOOL_just_binary_path='just'
-TOOL_just_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-TOOL_watchexec_check_cmd="watchexec"
-TOOL_watchexec_method="github_release"
-TOOL_watchexec_github_repo="watchexec/watchexec"
-TOOL_watchexec_archive_pattern='watchexec-${VERSION_NOTAG}-${ARCH}-unknown-linux-musl.tar.xz'
-TOOL_watchexec_binary_path='watchexec-${VERSION_NOTAG}-${ARCH}-unknown-linux-musl/watchexec'
-TOOL_watchexec_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-TOOL_hyperfine_check_cmd="hyperfine"
-TOOL_hyperfine_method="github_release"
-TOOL_hyperfine_github_repo="sharkdp/hyperfine"
-TOOL_hyperfine_archive_pattern='hyperfine-${VERSION}-${ARCH}-unknown-linux-gnu.tar.gz'
-TOOL_hyperfine_binary_path='hyperfine-${VERSION}-${ARCH}-unknown-linux-gnu/hyperfine'
-TOOL_hyperfine_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-TOOL_gitleaks_check_cmd="gitleaks"
-TOOL_gitleaks_method="github_release"
-TOOL_gitleaks_github_repo="gitleaks/gitleaks"
-TOOL_gitleaks_archive_pattern='gitleaks_${VERSION_NOTAG}_linux_${ARCH}.tar.gz'
-TOOL_gitleaks_binary_path='gitleaks'
-TOOL_gitleaks_arch_map='x86_64:x64 aarch64:arm64'
-
-TOOL_xh_check_cmd="xh"
-TOOL_xh_method="github_release"
-TOOL_xh_github_repo="ducaale/xh"
-TOOL_xh_archive_pattern='xh-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
-TOOL_xh_binary_path='xh-${VERSION}-${ARCH}-unknown-linux-musl/xh'
-TOOL_xh_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-TOOL_ouch_check_cmd="ouch"
-TOOL_ouch_method="github_release"
-TOOL_ouch_github_repo="ouch-org/ouch"
-TOOL_ouch_archive_pattern='ouch-${ARCH}-unknown-linux-musl.tar.gz'
-TOOL_ouch_binary_path='ouch-${ARCH}-unknown-linux-musl/ouch'
-TOOL_ouch_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-TOOL_glow_check_cmd="glow"
-TOOL_glow_method="github_release"
-TOOL_glow_github_repo="charmbracelet/glow"
-TOOL_glow_archive_pattern='glow_${VERSION_NOTAG}_Linux_${ARCH}.tar.gz'
-TOOL_glow_binary_path='glow_${VERSION_NOTAG}_Linux_${ARCH}/glow'
-TOOL_glow_arch_map='x86_64:x86_64 aarch64:arm64'
-
-TOOL_viddy_check_cmd="viddy"
-TOOL_viddy_method="github_release"
-TOOL_viddy_github_repo="sachaos/viddy"
-TOOL_viddy_archive_pattern='viddy-${VERSION}-linux-${ARCH}.tar.gz'
-TOOL_viddy_binary_path='viddy'
-TOOL_viddy_arch_map='x86_64:x86_64 aarch64:arm64'
-
-TOOL_doggo_check_cmd="doggo"
-TOOL_doggo_method="github_release"
-TOOL_doggo_github_repo="mr-karan/doggo"
-TOOL_doggo_archive_pattern='doggo_${VERSION_NOTAG}_Linux_${ARCH}.tar.gz'
-TOOL_doggo_binary_path='doggo_${VERSION_NOTAG}_Linux_${ARCH}/doggo'
-TOOL_doggo_arch_map='x86_64:x86_64 aarch64:arm64'
-
-TOOL_sesh_check_cmd="sesh"
-TOOL_sesh_method="github_release"
-TOOL_sesh_github_repo="joshmedeski/sesh"
-TOOL_sesh_archive_pattern='sesh_Linux_${ARCH}.tar.gz'
-TOOL_sesh_binary_path='sesh'
-TOOL_sesh_arch_map='x86_64:x86_64 aarch64:arm64'
-
-TOOL_topgrade_check_cmd="topgrade"
-TOOL_topgrade_method="github_release"
-TOOL_topgrade_github_repo="topgrade-rs/topgrade"
-TOOL_topgrade_archive_pattern='topgrade-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
-TOOL_topgrade_binary_path='topgrade'
-TOOL_topgrade_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-TOOL_grex_check_cmd="grex"
-TOOL_grex_method="github_release"
-TOOL_grex_github_repo="pemistahl/grex"
-TOOL_grex_archive_pattern='grex-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
-TOOL_grex_binary_path='grex'
-TOOL_grex_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-TOOL_typst_check_cmd="typst"
-TOOL_typst_method="github_release"
-TOOL_typst_github_repo="typst/typst"
-TOOL_typst_archive_pattern='typst-${ARCH}-unknown-linux-musl.tar.xz'
-TOOL_typst_binary_path='typst-${ARCH}-unknown-linux-musl/typst'
-TOOL_typst_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-TOOL_rainfrog_check_cmd="rainfrog"
-TOOL_rainfrog_method="github_release"
-TOOL_rainfrog_github_repo="achristmascarl/rainfrog"
-TOOL_rainfrog_archive_pattern='rainfrog-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
-TOOL_rainfrog_binary_path='rainfrog'
-TOOL_rainfrog_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-# remote → host clipboard relay (tmux popup OSC52 不能対策)
-# 用途: SSH 接続元 (mac) で lemonade-server 起動 + 接続時 RemoteForward 2489
-# → remote 側で `lemonade copy` 実行で host clipboard に届く。
-# clipboard-copy wrapper が SSH session を検出してこれを呼び出す。
-# 注: upstream に arm64 binary なし (v1.1.1 は amd64/386 のみ)。
-# arm64 環境では go install での self-build が必要 (本 tool は skip される)。
-TOOL_lemonade_check_cmd="lemonade"
-TOOL_lemonade_method="github_release"
-TOOL_lemonade_github_repo="lemonade-command/lemonade"
-TOOL_lemonade_archive_pattern='lemonade_linux_${ARCH}.tar.gz'
-TOOL_lemonade_binary_path='lemonade'
-TOOL_lemonade_arch_map='x86_64:amd64'
 
 # ════════════════════════════════════════
 # APT repo installs (Debian/Ubuntu only)
@@ -394,38 +153,26 @@ TOOL_cursor_check_cmd="cursor-agent"
 TOOL_cursor_method="curl_pipe"
 TOOL_cursor_curl_cmd='curl https://cursor.com/install -fsS | bash'
 
-# Jujutsu VCS (jj)
-TOOL_jj_check_cmd="jj"
-TOOL_jj_method="github_release"
-TOOL_jj_github_repo="jj-vcs/jj"
-TOOL_jj_archive_pattern='jj-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz'
-TOOL_jj_binary_path='jj'
-TOOL_jj_arch_map='x86_64:x86_64 aarch64:aarch64'
-
-# jjui: jj 用 TUI (lazygit ライク)。zip 内バイナリは version+arch 名なので install_cmd で jjui へ rename
-TOOL_jjui_check_cmd="jjui"
-TOOL_jjui_method="github_release"
-TOOL_jjui_github_repo="idursun/jjui"
-TOOL_jjui_archive_pattern='jjui-${VERSION_NOTAG}-linux-${ARCH}.zip'
-TOOL_jjui_arch_map='x86_64:amd64 aarch64:arm64'
-TOOL_jjui_install_cmd='unzip -o "$archive" -d "$_td" >/dev/null; if [[ "$NO_SUDO" == "true" ]]; then mkdir -p "$HOME/.local/bin"; install -m755 "$_td/jjui-${VERSION_NOTAG}-linux-${ARCH}" "$HOME/.local/bin/jjui"; else $SUDO install -m755 "$_td/jjui-${VERSION_NOTAG}-linux-${ARCH}" /usr/local/bin/jjui; fi'
-
 # ════════════════════════════════════════
 # Install order (dependencies must come before dependents)
 # ════════════════════════════════════════
 
 LINUX_TOOL_ORDER=(
   # Infrastructure (no deps)
-  bun starship mise sheldon zoxide atuin dotenvx uv rust lazydocker direnv
-  # GitHub releases (no deps)
-  fzf fzftmux fastfetch delta lazygit ghq smug dops yazi rainfrog typst
-  just watchexec hyperfine gitleaks xh ouch glow viddy doggo topgrade grex sesh lemonade jj jjui
+  bun starship mise sheldon zoxide atuin dotenvx uv rust lazydocker
+  # fzf-tmux keybinding integration (curl-pipe)
+  fzftmux
   # Cursor CLI (headless AI coding agent)
   cursor
   # APT-only (skipped on Alpine)
-  gh neovim eza bat postgresql
+  gh eza bat postgresql
   # Cargo tools (depend on rust)
-  tokei tealdeer procs sd dust bottom rip2 lsd quay gitabsorb cargoupdate keifu gittype tmuxexpose
+  tokei procs quay gitabsorb cargoupdate keifu gittype tmuxexpose
   # Python tools (depend on uv)
   pgcli
 )
+# GitHub-release tools (fzf, fastfetch, delta, lazygit, ghq, smug, dops, yazi,
+# rainfrog, typst, just, watchexec, hyperfine, gitleaks, xh, ouch, glow, viddy,
+# doggo, topgrade, grex, sesh, lemonade, jj, jjui, neovim, direnv, sd, dust,
+# bottom, rip2, lsd, tealdeer) are installed via mise — see config/mise-linux.toml
+# and the mise block in scripts/linux.sh. They no longer use the eval/scrape engine.
