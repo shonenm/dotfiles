@@ -107,7 +107,8 @@ guarantees, prefer adopting it over maintaining the custom one.
 ## Loop Automation
 
 - `@trevonistrevon/pi-loop` provides dynamic goal loops, cron/event re-wake loops, and background monitors.
-- Finite implementation goals must use `/loop <goal>` (dynamic loop) or `/goal <goal>`, not a cron `LoopCreate`. Dynamic loops wait for `LoopUpdate`, so timer ticks cannot exhaust `maxFires` while the agent is still working.
+- Finite implementation goals, especially "continue until everything is done", must use `/goal <goal>`, not a cron `LoopCreate`. Do not translate the user's word "loop" into timer polling when the requested stop condition is work completion.
+- `/loop <goal>` creates a dynamic loop for explicitly bounded iterative work. It waits for `LoopUpdate`, so timer ticks cannot exhaust `maxFires` while the agent is still working, but it still stops after its iteration cap.
 - Use `/loop [interval] [prompt]` and `LoopCreate` only for genuinely periodic observation or polling. `maxFires` counts scheduled trigger firings, including coalesced wakes while the agent is busy; it is not a completed-work counter.
 - Tools: `LoopCreate`, `LoopUpdate`, `LoopList`, `LoopDelete`, `MonitorCreate`, `MonitorList`, `MonitorStop`.
 - Prefer session-scoped loops unless a project explicitly needs shared automation.
