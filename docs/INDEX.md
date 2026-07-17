@@ -56,6 +56,9 @@
 - [troubleshooting/neovim.md](troubleshooting/neovim.md) — Neovim issues
 - [troubleshooting/powerline-unicode.md](troubleshooting/powerline-unicode.md) — Powerline character display
 
+## Specs
+- [specs/language-refactor-strategy.md](specs/language-refactor-strategy.md) — 適材適所な言語リファクタ調査結果と戦略（+ 業界 dotfiles 言語統計）
+
 ## Plans
 - [plans/nix-migration-plan.md](plans/nix-migration-plan.md) — NixOS migration plan
 - [plans/nix-migration-phase0-results.md](plans/nix-migration-phase0-results.md) — Nix phase 0 results
