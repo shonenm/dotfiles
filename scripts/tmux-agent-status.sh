@@ -378,7 +378,8 @@ case "${1:-popup}" in
             --preview "bash '$SELF' preview {1} {2}" \
             --preview-window 'right,58%,border-left,wrap' \
             --prompt 'agent> ' \
-            --header 'j/k:移動  g/G:端  r:再走査  s:stash  /:検索  Enter:ジャンプ  q:閉じる' \
+            --header 'j/k:移動  g/G:端  r:再走査  s:stash  S-Tab:実ペイン表示  Enter:ジャンプ  q:閉じる' \
+            --bind "shift-tab:execute-silent(tmux set-option -g @agent_escalate 1)+abort" \
             --bind 'g:first,G:last' \
             --bind 'j:down+transform:[ {2} = divider ] && echo down' \
             --bind 'k:up+transform:[ {2} = divider ] && echo up' \
