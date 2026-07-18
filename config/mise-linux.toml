@@ -37,7 +37,7 @@
 "aqua:ducaale/xh" = "latest"
 "aqua:charmbracelet/glow" = "latest"
 "aqua:sachaos/viddy" = "latest"
-"aqua:mr-karan/doggo" = "latest"
+"github:mr-karan/doggo" = "latest"  # aqua registry が doggo 1.2.0 の asset 命名に未追随のため github へ
 "aqua:topgrade-rs/topgrade" = "latest"
 "aqua:pemistahl/grex" = "latest"
 "aqua:typst/typst" = "latest"
