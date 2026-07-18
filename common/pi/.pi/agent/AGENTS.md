@@ -1,131 +1,55 @@
 # AGENTS.md (User Scoped)
 
-## Infrastructure Spec
+## Canonical docs
 
-The canonical specification for all agent infrastructure components is at:
-`~/dotfiles/docs/specs/agent-infrastructure.md` (in the dotfiles repo).
+- Project rules: `~/dotfiles/CLAUDE.md`
+- pi usage: `~/dotfiles/docs/ai-agents/pi/`
+- pi implementation: `~/.pi/agent/extensions/`
 
-Implementations:
-- **Pi**: `~/.pi/agent/extensions/` (TypeScript)
-- **Claude Code**: `~/.claude/hooks/` (shell scripts)
+## Shared configuration
 
-## Shared Configuration
+- `~/.config/agent/skills/` — Agent Skills Standard; shared skillの正本
+- `~/.config/agent/knowledge/` — 横断原則の参照資料（自動注入ではない）
+- `~/.config/agent/mcp.json` — pi / Command Code用MCP設定。Claude MCPは別設定
 
-Tool-agnostic config is in `~/.config/agent/`:
-- `mcp.json` — MCP server config (shared across Claude and pi)
-- `skills/` — Agent Skills Standard (github, research, quality, debug)
-- `knowledge/` — Shared principles (communication, security, web-research)
+## Execution rules
 
-## Skills
-
-Invoke via `/skill:<name>`. Shared skills are auto-discovered from `~/.config/agent/skills/`.
-Claude-specific skills under `~/.claude/skills/` are also available.
-
-
-Use `pueue` for background processes: `pueue add -- <command>`
-
-## Extensions
-
-- `permission-gate` — blocks dangerous bash commands
-- `protected-paths` — blocks writes to secrets and generated files
-- `web-tools` — search, fetch, cache, citation (SearXNG + Jina)
-- `mcp-gateway` — MCP tool bridge with permission control and audit
-- `statusline` — footer with token stats, context, git branch, research activity
-
-## Custom vs Community Packages
-
-These extensions are maintained in-house (`~/.pi/agent/extensions/`) rather than
-adopting community packages (`pi-mcp`, `pi-web-access`, `pi-subagents`) because
-they add value the packages don't: pueue-based async delegation with
-difficulty-tiered model selection (`agent-delegation`), secret/SSRF guards +
-cache/citation audit trail (`web-tools`), and unified allow/ask/deny gating with
-audit logging (`mcp-gateway`). When a community package gains equivalent
-guarantees, prefer adopting it over maintaining the custom one.
-
-- `mcp-gateway` transport: **stdio only**. SSE is deprecated upstream; Streamable
-  HTTP support is intentionally deferred until a remote MCP server is actually
-  needed (avoid speculative implementation). stdio is the recommended local transport.
+- 長時間・background commandはpueueを使う。
+- secret、credential、`.env`、private key、production dumpを読まない。
+- 生成物とruntime fileを直接編集しない。
+- root causeを確認し、既存実装・stdlib・native機能を優先する。
 
 ## Memory
 
-- Persistent across sessions via plain Markdown files in `~/.pi/agent/memory/`
-- Tools: `memory_write`, `memory_read`, `memory_search`, `scratchpad`
-- Format: pi-memory compatible (MEMORY.md, SCRATCHPAD.md, daily/)
-- Context auto-injected on session start (pinned note + scratchpad + today/yesterday log + MEMORY.md)
-- Install `qmd` for semantic/vector search upgrade
-- `/pin-goal <text>` — set a pinned session note (injected as context + shown in the statusline). `/pin-goal` shows it, `/pin-goal clear` clears it.
+- `memory_write`, `memory_read`, `memory_search`, `scratchpad` を使う。
+- 長期情報は `MEMORY.md`、作業中メモはdaily、checklistは `SCRATCHPAD.md`。
+- `/pin-goal` は軽量context、完了まで自走する作業は `/goal`。
 
-## Goal Mode
+## Goal / loop / monitor
 
-- `@narumitw/pi-goal` owns `/goal` for autonomous, verifiable task completion.
-- Use `/goal <goal>` when the agent should continue until it calls `goal_complete` or reports a true blocker.
-- Use `/goal pause`, `/goal resume`, and `/goal clear` to control an active goal.
-- Use `/pin-goal` only for lightweight session context that should not auto-continue.
+- 有限の実装完了条件には `/goal` を使う。
+- `/loop` / `LoopCreate` は時間間隔に意味がある観測・pollingだけに使う。
+- 長時間commandは `MonitorCreate`、通常のbackground processはpueueを使う。
 
-## Agent Delegation (pi-subagents + custom)
+## Delegation
 
-- Use `delegate_agent` tool to spawn sub-agents for parallel or specialized work.
-- `check_delegation` to view pueue task status. `wait_delegation` to block until complete.
-- Difficulty auto-selects model:
-  - `high` → kimi-k2.6:high (design, review, debugging)
-  - `medium` → deepseek-v4-pro:high (coding from design)
-  - `low` → deepseek-v4-flash:off (summaries, extraction)
-- Async mode uses pueue for background execution.
-- Sync mode blocks until completion (use for sequential dependencies).
-- When delegating, communicate: background, goal, expected output, constraints.
+- advisory / explorationは `subagent`（pi-subagents）。
+- pueue backgroundとdifficulty tierが必要なら `delegate_agent`。
+- `high`: kimi-k2.6、`medium`: deepseek-v4-pro、`low`: deepseek-v4-flash。
+- 同じworking treeへ複数writerを置かない。reviewer / scoutはread-onlyにする。
 
-- pi-subagents provides: chain/parallel execution, TUI visualization, built-in agents
-- agent-delegation.ts adds: pueue async execution, difficulty-based model auto-selection
-- Async sub-agents are pueue tasks labeled `pi-delegate`; the statusline shows their
-  running/queued count (`agents r:N q:M`) so background work is visible.
+## Workflow
 
-## Workflow Orchestration
+`workflow` は広いaudit、fan-out research、multi-perspective reviewに使う。単一ファイルの小変更には使わない。
 
-- `@quintinshaw/pi-dynamic-workflows` provides Claude Code-style dynamic workflows:
-  - `workflow` tool for JavaScript orchestration with `agent()`, `parallel()`, `pipeline()`, and `phase()`.
-  - `/workflows`, `/workflows run <prompt>`, `/deep-research`, `/adversarial-review`, `/code-review`, `/ultracode`.
-  - Use for broad codebase audits, multi-perspective reviews, deep research, and worktree-isolated fan-out.
-- Legacy `workflow.ts` still provides lightweight tools until it is retired:
-  - `agent_parallel` — fan out independent tasks concurrently, collect structured results + total token/cost.
-  - `agent_pipeline` — push each item through ordered stages ({input} = prev output, {item} = original).
+## pi-specific extensions
 
-## Loop Automation
+- `permission-gate.ts` — dangerous shell commandの確認
+- `protected-paths.ts` — secret / generated path保護
+- `web-tools.ts` — SearXNG + Jina、cache、citation、SSRF guard
+- `mcp-gateway.ts` — stdio MCP bridge。認可はpi-permission-system
+- `memory.ts` — Markdown memory
+- `agent-delegation.ts` — pueue delegation
+- `statusline.ts` — session / background activity表示
 
-- `@trevonistrevon/pi-loop` provides dynamic goal loops, cron/event re-wake loops, and background monitors.
-- Finite implementation goals, especially "continue until everything is done", must use `/goal <goal>`, not a cron `LoopCreate`. Do not translate the user's word "loop" into timer polling when the requested stop condition is work completion.
-- `/loop <goal>` creates a dynamic loop for explicitly bounded iterative work. It waits for `LoopUpdate`, so timer ticks cannot exhaust `maxFires` while the agent is still working, but it still stops after its iteration cap.
-- Use `/loop [interval] [prompt]` and `LoopCreate` only for genuinely periodic observation or polling. `maxFires` counts scheduled trigger firings, including coalesced wakes while the agent is busy; it is not a completed-work counter.
-- Tools: `LoopCreate`, `LoopUpdate`, `LoopList`, `LoopDelete`, `MonitorCreate`, `MonitorList`, `MonitorStop`.
-- Before reporting that a loop remains active or finished, call `LoopList`; never infer scheduler state from the prompt or from work status.
-- Prefer session-scoped loops unless a project explicitly needs shared automation.
-
-## Session Management
-
-- `/session-name <name>` — set session display name (auto-set from git branch)
-- `/sessions` — list recent sessions
-- `/session-export [file]` / `/session-import <file>` — export/import JSONL
-- `/btw <question>` — quick side question without polluting history
-
-## Remote Control
-
-- pi-remote-control package — `/remote-control-pair` for QR pairing, `/remote-control` to toggle
-- Requires iOS app (Pi Relay) + config at `~/.pi/remote-control/config.json`
-
-## Cursor Provider (pi-cursor-agent)
-
-Use Cursor subscription models inside pi's harness via the community `pi-cursor-agent` package
-(`settings.json` → `packages`). Tool calls stay in pi (permission-gate, mcp-gateway, etc.);
-inference and billing go through Cursor's API.
-
-Setup:
-
-1. `cursor-agent` CLI installed (`install.sh`)
-2. In pi: `/login` → **Cursor Agent** → browser OAuth
-3. `/model cursor-agent/composer-2-fast` (or any model from `/models`)
-
-Recommended when Cursor quota is the billing target but pi extensions / delegation / skills
-are required. Sub-agent delegation (`delegate_agent`) still spawns OpenCode Go / Codex pi instances;
-switch the main session model to Cursor when you want Cursor billing on the primary harness.
-
-Caveats: community-maintained (MIT, [sudosubin/pi-frontier](https://github.com/sudosubin/pi-frontier));
-unofficial Cursor API surface; token counts may be unavailable from the provider.
+Community packageが同じ保証を満たす場合はcustom実装を削除して採用する。remote MCPの実需要が出るまでStreamable HTTPは追加しない。

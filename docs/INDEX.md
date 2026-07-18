@@ -1,67 +1,78 @@
-# Dotfiles Documentation
+# ドキュメント一覧
 
-## Installation
-- [install/index.md](install/index.md) — Setup guide (sudo + no-sudo)
-- [install/install-no-sudo.md](install/install-no-sudo.md) — Sudoless installation
-- [install/setup-new-environment.md](install/setup-new-environment.md) — New machine setup checklist
+`README.md` は概要と導入入口、このファイルは詳細文書の目録を担当する。
 
-## Tools
-- [tools/neovim/overview.md](tools/neovim/overview.md) — Neovim configuration
-- [tools/neovim/troubleshooting.md](tools/neovim/troubleshooting.md) — Neovim troubleshooting
-- [tools/neovim/patches/README.md](tools/neovim/patches/README.md) — Neovim patch notes
-- [tools/tmux.md](tools/tmux.md) — Tmux configuration
-- [tools/starship.md](tools/starship.md) — Starship prompt
-- [tools/ghostty.md](tools/ghostty.md) — Ghostty terminal
-- [tools/sesh.md](tools/sesh.md) — sesh session manager
-- [tools/clipboard.md](tools/clipboard.md) — Clipboard sync (lemonade / nc relay)
-- [tools/zsh-non-interactive-guard.md](tools/zsh-non-interactive-guard.md) — Zsh non-interactive guard
-- [tools/zsh-startup-optimization.md](tools/zsh-startup-optimization.md) — Zsh startup optimization
+## インストール
 
-## AI Agents
+- [インストールガイド](install/index.md) — 全環境共通の入口と実行順
+- [No-Sudo Install Mode](install/install-no-sudo.md) — sudoなしLinux固有の構成と制約
+- [新環境セットアップ](install/setup-new-environment.md) — 環境別レシピと新ツールの登録先
+
+## ツール
+
+- [Neovim](tools/neovim/overview.md)
+  - [トラブルシューティング](troubleshooting/neovim.md)
+  - [ローカルパッチ一覧](tools/neovim/patches/README.md)
+- [tmux](tools/tmux.md)
+- [sesh](tools/sesh.md)
+- [Starship](tools/starship.md)
+- [Ghostty](tools/ghostty.md)
+- [Clipboard](tools/clipboard.md)
+- [Zsh non-interactive guard](tools/zsh-non-interactive-guard.md)
+- [Zsh起動最適化](tools/zsh-startup-optimization.md)
+
+## AIエージェント
+
 ### pi
-- [ai-agents/pi/overview.md](ai-agents/pi/overview.md) — pi coding agent
-- [ai-agents/pi/web-research.md](ai-agents/pi/web-research.md) — Web Research Layer
-- [ai-agents/pi/improvement-plan-2026-07.md](ai-agents/pi/improvement-plan-2026-07.md) — pi 改善 PR backlog
 
-### Cursor
-- [ai-agents/cursor/overview.md](ai-agents/cursor/overview.md) — Cursor Agent CLI
+- [概要](ai-agents/pi/overview.md)
+- [Agent delegation](ai-agents/pi/agent-delegation.md)
+- [共有設定レイヤー](ai-agents/pi/agent-layer.md)
+- [MCPレイヤー](ai-agents/pi/mcp-layer.md)
+- [Memoryレイヤー](ai-agents/pi/memory.md)
+- [Web Researchレイヤー](ai-agents/pi/web-research.md)
 
-### Claude
-- [ai-agents/claude/development.md](ai-agents/claude/development.md) — Claude development workflow
-- [ai-agents/claude/fallback.md](ai-agents/claude/fallback.md) — Claude outage fallback
-- [ai-agents/claude/skills.md](ai-agents/claude/skills.md) — Claude Code skills
-- [ai-agents/claude/beacon.md](ai-agents/claude/beacon.md) — Beacon integration
-- [ai-agents/claude/neovim.md](ai-agents/claude/neovim.md) — Claude + Neovim integration
+### Claude Code
 
-### Ralph
-- [ai-agents/ralph/overview.md](ai-agents/ralph/overview.md) — Ralph agent overview
-- [ai-agents/ralph/crew.md](ai-agents/ralph/crew.md) — Ralph crew orchestration
-- [ai-agents/ralph/schedule.md](ai-agents/ralph/schedule.md) — Ralph scheduling
+- [開発ワークフロー](ai-agents/claude/claude-development.md)
+- [APIフォールバック](ai-agents/claude/claude-fallback.md)
+- [スキル](ai-agents/claude/claude-skills.md)
+- [Beacon連携](ai-agents/claude/claude-beacon.md)
+- [Neovim連携](ai-agents/claude/claude-neovim.md)
+- [ccusage](ai-agents/claude/ccusage.md)
 
-## Infrastructure
-- [infrastructure/dev-gateway.md](infrastructure/dev-gateway.md) — Dev gateway setup
-- [infrastructure/dev-tunnel.md](infrastructure/dev-tunnel.md) — SSH tunnel setup
-- [infrastructure/rcon.md](infrastructure/rcon.md) — Remote container setup
-- [infrastructure/rcon-setup.md](infrastructure/rcon-setup.md) — Rcon target setup
-- [infrastructure/database.md](infrastructure/database.md) — Database configuration
-- [infrastructure/dotfiles-sync.md](infrastructure/dotfiles-sync.md) — Dotfiles sync workflow
+### その他
 
-## Configuration
-- [configuration/git-config.md](configuration/git-config.md) — Git configuration
-- [configuration/1password-integration.md](configuration/1password-integration.md) — 1Password CLI integration
-- [configuration/modern-cli-tools.md](configuration/modern-cli-tools.md) — Modern CLI tool guide
-- [configuration/sketchybar-aerospace.md](configuration/sketchybar-aerospace.md) — Sketchybar + Aerospace
+- [Command Code](ai-agents/commandcode/overview.md)
+- [Cursor Agent CLI](ai-agents/cursor/overview.md)
+- [Ralph](ai-agents/ralph/overview.md)
+  - [Crew orchestration](ai-agents/ralph/crew.md)
+  - [Schedule](ai-agents/ralph/schedule.md)
 
-## Troubleshooting
-- [troubleshooting/neovim.md](troubleshooting/neovim.md) — Neovim issues
-- [troubleshooting/powerline-unicode.md](troubleshooting/powerline-unicode.md) — Powerline character display
+## インフラストラクチャ
 
-## Specs
-- [specs/language-refactor-strategy.md](specs/language-refactor-strategy.md) — 適材適所な言語リファクタ調査結果と戦略（+ 業界 dotfiles 言語統計）
-- [specs/ai-usage-rust-pilot.md](specs/ai-usage-rust-pilot.md) — Phase 1: usage widget 群の Rust 統合 (ai-usage) 設計
-- [specs/rust-cli-migration.md](specs/rust-cli-migration.md) — Rust 置換 全体設計 (tools/ workspace: ai-usage / wt / pomodoro)
-- [specs/ralph-crew-go.md](specs/ralph-crew-go.md) — Phase 2: ralph-crew の Go 化 設計
+- [rcon](infrastructure/rcon.md) — リモート接続の動作原理
+- [rconセットアップ](infrastructure/rcon-setup.md) — ターゲット追加手順
+- [tmux server再起動](infrastructure/tmux-server-restart.md)
+- [dotfiles同期](infrastructure/dotfiles-sync.md)
+- [開発gateway](infrastructure/dev-gateway.md)
+- [開発tunnel](infrastructure/dev-tunnel.md)
+- [Database](infrastructure/database.md)
 
-## Plans
-- [plans/nix-migration-plan.md](plans/nix-migration-plan.md) — NixOS migration plan
-- [plans/nix-migration-phase0-results.md](plans/nix-migration-phase0-results.md) — Nix phase 0 results
+## 設定
+
+- [Git](configuration/git-config.md)
+- [1Password](configuration/1password-integration.md)
+- [Modern CLI Tools](configuration/modern-cli-tools.md)
+- [AeroSpace + SketchyBar](configuration/sketchybar-aerospace.md)
+
+## トラブルシューティング
+
+- [Neovim](troubleshooting/neovim.md)
+- [Powerline Unicode](troubleshooting/powerline-unicode.md)
+
+## レビュー記録
+
+レビューは記載時点のスナップショットであり、現行仕様ではない。
+
+- [pi harness review](reviews/pi-harness-review.md)

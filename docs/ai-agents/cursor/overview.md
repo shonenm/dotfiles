@@ -185,6 +185,5 @@ Cursor CLI をそのままバックエンドにする薄いラッパ。導入は
 
 ## 関連
 
-- [Agent Infrastructure Spec](../../specs/agent-infrastructure.md) — ツール横断の設計原則
 - [1Password 連携](../../configuration/1password-integration.md) — Webhook 管理
 - [install.sh](../../install/index.md) — セットアップ手順

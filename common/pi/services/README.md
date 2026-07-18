@@ -1,26 +1,23 @@
-# Pi Local Services
+# pi Local Services
 
-Optional local services for the pi web research layer.
+pi Web Research Layerで任意利用するローカルservice。
 
-## SearXNG (self-hosted search)
-
-Free, private web search. No API key required.
+## SearXNG
 
 ```bash
-# Start
+# 起動
 docker compose -f docker-compose.searxng.yml up -d
 
-# Verify
-curl -s 'http://localhost:8888/search?q=test&format=json' | head -5
+# 確認
+curl -fsS 'http://localhost:8899/search?q=test&format=json' | head -5
 
-# Stop
+# 停止
 docker compose -f docker-compose.searxng.yml down
 ```
 
-Once running, the `web-router` extension will automatically use SearXNG as the primary search backend, falling back to DuckDuckGo and Jina if unavailable.
+- 公開先: `127.0.0.1:8899`
+- SearXNG設定: `searxng/settings.yml`
+- rate limiter: `searxng/limiter.toml`
+- pi側実装: `../.pi/agent/extensions/web-tools.ts`
 
-## Configuration
-
-- Settings: `services/searxng/settings.yml`
-- Rate limiter: `services/searxng/limiter.toml`
-- Access: `http://localhost:8888`
+SearXNGが利用できない場合、`web-tools.ts` はJina Searchへfallbackする。詳細は [`docs/ai-agents/pi/web-research.md`](../../../docs/ai-agents/pi/web-research.md)。

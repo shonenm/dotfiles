@@ -1,74 +1,56 @@
 # pi Web Research Layer
 
-pi 本体に WebFetch / WebSearch ツールは存在しないが、dotfiles の拡張により **search → fetch → cache → cite → answer** のプロトコルで調査を行う。
+`web-tools.ts` が、検索・取得・cache・citationを1つのextensionとして提供する。
 
-## Architecture
+## プロトコル
 
-```
-web_search (discovery)
-  ↓
-web_fetch (source retrieval)
-  ↓
-web_cache_write (persist)
-  ↓
-web_citation_add (track)
-  ↓
-web_citation_list (summarize)
+```text
+web_search
+  → web_cache_lookup
+  → web_fetch
+  → web_cache_write
+  → web_citation_add
+  → web_citation_list
 ```
 
-## Extensions
+検索結果のsnippetだけで回答せず、参照したsourceを取得してcitationへ記録する。
 
-| Extension | 役割 | バックエンド |
-|-----------|------|-------------|
-| `web-router.ts` | 検索ルーティング | SearXNG → DuckDuckGo → Jina |
-| `web-fetch.ts` | URL コンテンツ取得 | Jina Reader → Playwright → Raw |
-| `web-cache.ts` | ローカルキャッシュ | `~/.pi/research/sources/<hash>.md` |
-| `citation-store.ts` | 引用元管理 | `~/.pi/research/citations.jsonl` |
-| `secret-guard.ts` | セキュリティガード | 3段階: allow / ask / deny |
-| `audit-log.ts` | 使用ログ | `~/.pi/research/audit.log.jsonl` |
-| `statusline.ts` | フッター表示 | リサーチstats (q:f:c) |
+## Toolとbackend
 
-## Skills
+| Tool | Backend / 保存先 |
+|---|---|
+| `web_search` | SearXNG `http://localhost:8899` → Jina Search |
+| `web_fetch` | Jina Reader → raw HTTP fetch |
+| `web_cache_lookup` / `web_cache_write` | `~/.pi/research/sources/` |
+| `web_citation_add` / `web_citation_list` | `~/.pi/research/citations.jsonl` |
 
-| Skill | 用途 |
-|-------|------|
-| `deep-research` | マルチソース調査、クロスリファレンス |
-| `docs-research` | ドキュメント調査（バージョン対応） |
-| `github-research` | clone-first ソースコード調査 |
+利用統計は `~/.pi/research/stats.json`、auditは `~/.pi/research/audit.log.jsonl` に保存する。
 
 ## セキュリティ
 
-3-tier web permission:
+- queryと書き込み内容から既知のsecret形式を検出して拒否
+- fetch先のschemeをHTTP(S)に限定
+- DNS解決後のloopback、private、link-local addressを拒否
+- shellを介さずcurlへargument arrayを渡す
 
-- **allow**: 公開パッケージ名、公開エラーメッセージ、公開ドキュメントクエリ
-- **ask**: スタックトレース、ファイルパス、リポジトリ固有の質問
-- **deny**: シークレット、認証情報、プライベートソース全文、顧客データ
+redirect後の最終接続先はcurl側の挙動に依存するため、private情報を含むURLを渡さない。
 
-## キャッシュ
-
-| ソース種別 | TTL |
-|-----------|-----|
-| 公式ドキュメント | 7日 |
-| GitHub | 30日 |
-| ブログ | 7日 |
-| ニュース | 毎回refresh |
-
-## SearXNG (ローカル検索)
-
-API key不要、レート制限なしのself-hosted検索エンジン。
+## SearXNG
 
 ```bash
-cd common/pi/services
+cd ~/dotfiles/common/pi/services
 docker compose -f docker-compose.searxng.yml up -d
+curl -fsS 'http://localhost:8899/search?q=test&format=json' >/dev/null
 ```
 
-起動後、`web-router` が自動的にSearXNGを第1優先の検索バックエンドとして使用する。
+停止:
 
-## ステータスライン表示
-
-```text
-↑12.3k ↓4.5k $0.023 45k/128k (35%)  web q:3 f:5 c:8  main  kimi-k2.6
+```bash
+docker compose -f docker-compose.searxng.yml down
 ```
 
-- `web q:3 f:5 c:8` = 検索3回、取得5回、キャッシュヒット8回
-- コンテキスト使用率は 60%未満=緑、60-80%=黄、80%超=赤
+SearXNGが停止している場合はJinaへfallbackする。Jina API keyは任意で、設定する場合は `JINA_API_KEY` を使う。
+
+## Skills
+
+共有skillの `deep-research`、`docs-research`、`github-research` がこのtoolchainを利用する。正本は `common/agent/.config/agent/skills/`。

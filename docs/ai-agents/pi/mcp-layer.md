@@ -1,38 +1,35 @@
 # pi MCP Layer
 
-MCP (Model Context Protocol) は AI エージェントと外部システムを標準インターフェースで接続するプロトコルです。
-pi は MCP を本体に直結せず、**Gateway/Adapter 層**を介して安全に必要なものだけ露出します。
+piは `mcp-gateway.ts` を介してstdio MCP serverをpi toolとして登録する。MCP toolの実行可否は `pi-permission-system` が一元的に判断する。
 
-## Architecture
+## フロー
 
-```
-Pi
-  ↓
-MCP Gateway (mcp-gateway.ts)
-  ├─ permission gate (allow/ask/deny)
-  ├─ audit log (~/.pi/research/mcp-audit.jsonl)
-  └─ context trimming (8KB default)
-  ↓
-MCP Server (stdio JSON-RPC)
+```text
+LLM
+  → mcp_<server>_<tool>
+  → pi-permission-system
+  → mcp-gateway.ts（result上限・secret redaction・audit）
+  → MCP server（stdio JSON-RPC）
 ```
 
-## Config
+## 設定
 
-pi の MCP 設定は `~/.config/agent/mcp.json` で管理（pi 起動パフォーマンスのため必要最小限に絞る）。
-Claude は `common/claude/.config/claude/mcp.json` を正本とし、install.sh が
-`claude mcp add-json --scope user` で登録する（秘密情報は `${NOTION_TOKEN}` を 1Password から解決）。
-詳細は [agent-layer.md](agent-layer.md) を参照。
+後勝ちでmergeする。
 
-### Format
+1. `~/.config/agent/mcp.json` — pi / Command Code用global設定
+2. `<project>/.mcp.json` — project設定
+3. `<project>/.pi/mcp.json` — pi override
+
+Claude Codeは `common/claude/.config/claude/mcp.json` を別の正本とし、`install.sh` が `claude mcp add-json --scope user` で登録する。
 
 ```json
 {
   "mcpServers": {
     "server-name": {
-      "command": "npx",
-      "args": ["-y", "package-name@version"],
-      "description": "What this server does",
-      "permission": "allow|ask|deny",
+      "type": "stdio",
+      "command": "server-command",
+      "args": [],
+      "description": "purpose",
       "enabled": true,
       "maxResultSize": 8000
     }
@@ -40,32 +37,21 @@ Claude は `common/claude/.config/claude/mcp.json` を正本とし、install.sh 
 }
 ```
 
-### Override order (low→high)
-1. `~/.config/agent/mcp.json` — global shared
-2. `.mcp.json` — project
-3. `.pi/mcp.json` — pi-specific
+pi gatewayのtransportはstdioのみ。remote MCPの実需要がないため、Streamable HTTPは実装しない。
 
-## Extensions
+## Permission
 
-| Extension | 役割 |
-|-----------|------|
-| `mcp-gateway.ts` | MCPサーバー管理、JSON-RPC通信、ツール登録、permission/audit統合 |
+MCP gateway自身は確認dialogを持たない。tool名 `mcp_*` に対する `allow` / `ask` / `deny` は `~/.pi/agent/pi-permissions.jsonc` とpiのsession modeで決まる。YOLO modeの永続設定は `~/.pi/agent/permission-system.json`。
 
-## Skills
+## Auditと制限
 
-| Skill | 用途 |
-|-------|------|
-| `mcp-research` | MCPツールの選択・使用ガイドライン (in `~/.config/agent/skills/research/`) |
+- audit: `~/.pi/research/mcp-audit.jsonl`
+- stats: `~/.pi/research/mcp-stats.json`
+- result上限: server設定の `maxResultSize`、既定8000文字
+- auditへ書く引数は既知のsecret形式をredact
 
-## Permission Policy
+## Skill
 
-| Level | Scope |
-|-------|-------|
-| ALLOW | docs search, public web search, read-only local inspection, git status/diff/log |
-| ASK | GitHub issue/PR comment, browser automation, local file write, DB query |
-| DENY | production DB write, secret read, .env read, shell from MCP |
+MCP serverの選択には共有skill `mcp-research` を使う。正本は `common/agent/.config/agent/skills/mcp-research/SKILL.md`。
 
-## Audit
-
-- ログ: `~/.pi/research/mcp-audit.jsonl`
-- 統計: `~/.pi/research/mcp-stats.json`
+関連: [共有設定レイヤー](agent-layer.md)

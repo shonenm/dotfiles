@@ -1,53 +1,49 @@
-# Agent Shared Configuration Layer
+# Agent共有設定レイヤー
 
-Claude Code と pi で共有する設定（MCP、スキル、知識）を一元管理するレイヤー。
-**ファイル共有ではなく仕様共有**を原則とする。
+標準形式で共有できるskillと、横断原則を `~/.config/agent/` に置く。MCP設定はruntime間で要件が異なるため、Claude Codeとは分離する。
 
-## Architecture
+## 構成
 
-```
-~/.config/agent/           ← 共有設定
-├── mcp.json               ← MCPサーバー設定（統合）
-├── skills/                ← Agent Skills Standard 準拠
-│   ├── github/            ← commit, pr, issue, conflict-resolve
-│   ├── research/          ← deep, docs, github, dependency, mcp
-│   ├── quality/           ← quality-assure, safe-refactor, pr-review
-│   └── debug/             ← incident-debug
-└── knowledge/             ← ツール非依存の知識・原則
-    ├── communication.md
-    ├── security.md
-    └── web-research.md
-
-docs/specs/agent-infrastructure.md  ← 正準仕様書
-  「すべてのエージェントは以下を実装すること」
-   ├─ Permission Gate
-   ├─ Protected Paths
-   ├─ Audit Log
-   ├─ Status Line
-   ├─ Web Research
-   └─ MCP Gateway
+```text
+~/.config/agent/
+├── skills/<name>/SKILL.md   Agent Skills Standard
+├── knowledge/*.md           人が参照する横断原則
+└── mcp.json                 pi / Command Code用MCP設定
 ```
 
-## 共有するもの・しないもの
+リポジトリ上の正本は `common/agent/.config/agent/`。GNU Stowで同じパスへリンクする。
 
-| 共有する | 共有しない（ツール固有） |
-|----------|------------------------|
-| MCP 設定（標準プロトコル） | プロンプトテンプレート（構文が非互換） |
-| スキル（Agent Skills Standard） | パスベースルール（glob 構文が非互換） |
-| 知識・原則（プレーン Markdown） | コマンド定義（標準化されていない） |
-| 仕様書（docs/specs/） | フック/拡張実装（機構が異なる） |
+## 読み込み先
 
-## 新エージェント追加手順
+| 対象 | 読み込み方法 |
+|---|---|
+| pi | `settings.json` の `skills` に `~/.config/agent/skills` を指定 |
+| Command Code | shared skill pathを探索し、MCPはinstall時に `cmd mcp add-json` で登録 |
+| Claude Code | Claude固有skillは `~/.claude/skills`。MCPはClaude専用設定から登録 |
+| Cursor / Codex | 対応する標準skillだけ利用し、runtime固有設定は共有しない |
 
-1. `docs/specs/agent-infrastructure.md` を読む
-2. ツールのネイティブ機構で各コンポーネントを実装
-3. ポリシーは仕様書に従う
-4. 実装完了後、仕様書の Status テーブルを更新
-5. 共有スキルは `~/.config/agent/skills/` を参照パスに追加
+## 責任分離
 
-## 移行履歴
+### Skills
 
-- 2026-05-23: `common/mcp/` + Claude MCP → `common/agent/` に統合
-- pi skills/prompts → agent/skills/ に移行（prompts は pi 固有のため後日差し戻し）
-- rules/ → knowledge/ に改名（制御ルールは除外）
-- `docs/specs/agent-infrastructure.md` 新設
+共有skillの正本は `common/agent/.config/agent/skills/<name>/SKILL.md`。pi固有skillとの重複コピーは置かない。Ponytailはpi package / Claude pluginを正本とする。
+
+### MCP
+
+- pi / Command Code: `common/agent/.config/agent/mcp.json`
+- Claude Code: `common/claude/.config/claude/mcp.json`
+
+server集合とpermission機構が異なるため、「全runtimeで1ファイル」とはしない。詳細は[MCPレイヤー](mcp-layer.md)を参照。
+
+### Knowledge
+
+`knowledge/` はcommunication、security、web researchの横断原則を記録する参照資料であり、自動注入されない。runtimeの挙動を変える場合は、piの `APPEND_SYSTEM.md` やClaudeのrulesなど実際の読み込み先を更新する。
+
+## 新しい共有skill
+
+1. `common/agent/.config/agent/skills/<name>/SKILL.md` を作る
+2. frontmatterに `name` と `description` を記載する
+3. runtime固有tool名を使う場合は、そのruntimeに限定するか利用可能性を明記する
+4. pi再起動または `/reload` 後に発見されることを確認する
+
+プロジェクト全体の開発原則は[`CLAUDE.md`](../../../CLAUDE.md)、pi固有の運用は[pi概要](overview.md)を参照。
