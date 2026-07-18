@@ -25,19 +25,18 @@ when_to_use: "Use after completing code changes when related documentation in do
    - 新しく追加されたキーバインド、コマンド、設定項目
 
 2. **関連ドキュメントの特定** - 変更内容から関連するドキュメントを判断:
-   - `docs/neovim.md` - Neovim設定の変更
-   - `docs/tmux.md` - tmux設定の変更
-   - `docs/git-config.md` - Git設定の変更
-   - `docs/zsh-startup-optimization.md` - Zsh設定の変更
-   - `docs/modern-cli-tools.md` - CLI ツールの追加・変更
-   - `docs/1password-integration.md` - 1Password連携の変更
-   - `docs/starship.md` - Starship設定の変更
-   - `docs/sketchybar-aerospace.md` - SketchyBar/Aerospace設定の変更
-   - `docs/database.md` - データベース関連の変更
-   - `docs/claude-beacon.md` - Claude Code連携の変更
-   - `docs/install.md` - インストール手順の変更
-   - `docs/patches/*.md` - パッチ・ワークアラウンドの説明
-   - `docs/troubleshooting/*.md` - トラブルシューティング情報
+   - `docs/tools/neovim/overview.md` - Neovim設定
+   - `docs/tools/tmux.md` - tmux設定
+   - `docs/tools/zsh-startup-optimization.md` - Zsh設定
+   - `docs/configuration/git-config.md` - Git設定
+   - `docs/configuration/modern-cli-tools.md` - CLIツール
+   - `docs/configuration/1password-integration.md` - 1Password連携
+   - `docs/configuration/sketchybar-aerospace.md` - AeroSpace / SketchyBar
+   - `docs/infrastructure/*.md` - database、rcon、同期、gateway
+   - `docs/ai-agents/claude/*.md` - Claude Code連携
+   - `docs/install/*.md` - インストール手順
+   - `docs/tools/neovim/patches/*.md` - Neovimパッチ
+   - `docs/troubleshooting/*.md` - 問題解決手順
 
 3. **更新判断** - 以下の基準で更新要否を判断:
 
@@ -74,8 +73,11 @@ when_to_use: "Use after completing code changes when related documentation in do
    - 新しいパッチ・ワークアラウンド
 
    既存ドキュメントの構成:
-   - トップレベル: 機能・ツール単位のドキュメント
-   - `patches/`: パッチ・ワークアラウンドの説明
+   - `tools/`: ツール単位の利用・設定文書
+   - `configuration/`: 横断設定
+   - `infrastructure/`: 運用基盤
+   - `ai-agents/`: AI CLI固有文書
+   - `tools/neovim/patches/`: Neovimパッチ
    - `troubleshooting/`: 問題解決手順
 
 6. **ドキュメント更新の実行**:

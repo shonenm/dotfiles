@@ -5,7 +5,7 @@ A system that visualizes Claude Code events (completion, approval pending, input
 ## Overview
 
 - **Slack Notifications**: Notify Claude Code state changes via Slack Webhook
-- **SketchyBar Badges**: Display badges on Aerospace workspaces
+- **SketchyBar Badges**: Display badges on AeroSpace workspaces
 - **tmux Badges**: Display per-window badges on tmux status bar
 - **4 Environment Support**: Works on Local / Local Container / Cloud / Cloud Container
 - **Editor Independent**: Works with VS Code / Terminal / Ghostty+tmux
@@ -16,7 +16,7 @@ This system uses **workspace-based** notification management. Rather than trying
 
 ### Why Manual Registration?
 
-Aerospace workspace numbers are not accessible from CLI applications — there is no reliable API to determine which workspace a terminal window belongs to.
+AeroSpace workspace numbers are not accessible from CLI applications — there is no reliable API to determine which workspace a terminal window belongs to.
 
 ### File Structure
 
@@ -48,12 +48,12 @@ ${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status/workspace_${workspace}_${time
 Use this command in Claude Code to register the current environment to a specific workspace:
 
 ```
-/beacon <workspace_number>
+/d-beacon <workspace_number>
 ```
 
 Example:
 ```
-/beacon 3
+/d-beacon 3
 ```
 
 This saves a mapping in `~/.local/share/claude/workspace_map.json`:
@@ -210,7 +210,7 @@ Environment variable for properly handling notifications inside containers. Auto
 |-------|-------------|
 | `project` | Project name (shown in Slack notification) |
 | `device` | Device name (shown in Slack notification) |
-| `workspace` | Aerospace workspace number (for SketchyBar) |
+| `workspace` | AeroSpace workspace number (for SketchyBar) |
 | `tmux_session` | tmux session name |
 | `tmux_window` | tmux window index |
 
@@ -281,7 +281,7 @@ ai-notify.sh --clear-cache        # Clear cache
 
 ### scripts/claude-status.sh
 
-Project state management. Works with Aerospace/tmux to identify workspaces.
+Project state management. Works with AeroSpace/tmux to identify workspaces.
 
 ```bash
 claude-status.sh set <project> <status> <workspace> [tmux_session] [tmux_window_index]
@@ -294,7 +294,7 @@ claude-status.sh cleanup          # Delete items not updated for 1+ hours
 
 ### scripts/beacon
 
-Manually registers the current git repository to an Aerospace workspace.
+Manually registers the current git repository to an AeroSpace workspace.
 
 ```bash
 beacon <workspace_number>
@@ -360,7 +360,7 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
 - 1Password CLI (`op`)
 - jq
 - SketchyBar
-- Aerospace
+- AeroSpace
 
 ### Common Configuration
 
@@ -399,7 +399,7 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
 
    In Claude Code, run:
    ```
-   /beacon <workspace_number>
+   /d-beacon <workspace_number>
    ```
 
 ---
@@ -578,7 +578,7 @@ claude-status.sh cleanup
 
 In Claude Code:
 ```
-/beacon 3
+/d-beacon 3
 ```
 
 Or run the script directly:
@@ -593,7 +593,7 @@ cat ~/.local/share/claude/workspace_map.json | jq .
 
 ### Service Mode Commands
 
-Enter Service Mode with Aerospace `alt+shift+;`:
+Enter Service Mode with AeroSpace `alt+shift+;`:
 
 | Key | Action |
 |-----|--------|
@@ -621,7 +621,7 @@ Enter Service Mode with Aerospace `alt+shift+;`:
 
 4. Register workspace manually:
    ```
-   /beacon <workspace_number>
+   /d-beacon <workspace_number>
    ```
 
 ### Remote Notifications Not Arriving
@@ -694,6 +694,6 @@ dotfiles/
 
 - [Claude Skills](claude-skills.md) - Skills reference (`/d-beacon`, `/d-commit`, `/d-news`, `/d-update-md`)
 - [Claude Development](claude-development.md) - Development environment, hooks, agents, session management
-- [Ralph Pattern](ralph.md) - Autonomous development loop
+- [Ralph Pattern](../ralph/overview.md) - Autonomous development loop
 - [Claude Neovim](claude-neovim.md) - Neovim integration
 - [Claude Fallback](claude-fallback.md) - API fallback

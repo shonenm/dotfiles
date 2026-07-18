@@ -130,6 +130,6 @@ bind mount を `:ro` から外せば書ける。ただし source of truth が分
 
 ## 関連ドキュメント
 
-- [install.md](./install.md) — Mac 通常 install
-- [install-no-sudo.md](./install-no-sudo.md) — Linux no-sudo install
-- [rcon-setup.md](./rcon-setup.md) — リモート接続コマンド
+- [インストールガイド](../install/index.md) — 通常install
+- [No-Sudo Install Mode](../install/install-no-sudo.md) — Linux no-sudo install
+- [rconセットアップ](./rcon-setup.md) — リモート接続設定

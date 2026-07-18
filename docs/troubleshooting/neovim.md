@@ -99,4 +99,4 @@ nvim  # 自動で再インストールされる
 
 プラグインのソースファイルを直接変更するパッチは避け、`config` 関数内でのランタイムオーバーライド（monkey-patch）を使用する。
 
-参考: `docs/patches/codediff-directory-collapse.md`
+参考: `docs/tools/neovim/patches/codediff-directory-collapse.md`

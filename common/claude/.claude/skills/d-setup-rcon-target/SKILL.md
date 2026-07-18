@@ -4,12 +4,12 @@ description: 新しい rcon ターゲット (host もしくは host:container) �
 user-invocable: true
 arguments: "<host> | <host>:<container> [--apply]"
 argument-hint: "<host>[:<container>] [--apply]"
-when_to_use: "Use when the user wants to register a new rcon target (remote host or remote-host:container pair) and verify everything is wired up for host-tmux + docker-exec operation. Automates the process described in docs/rcon-setup.md. Pass --apply to also execute compose mount edit + force-recreate + container-side dotfiles install automatically."
+when_to_use: "Use when the user wants to register a new rcon target (remote host or remote-host:container pair) and verify everything is wired up for host-tmux + docker-exec operation. Automates the process described in docs/infrastructure/rcon-setup.md. Pass --apply to also execute compose mount edit + force-recreate + container-side dotfiles install automatically."
 ---
 
 # Setup rcon Target
 
-新しい rcon ターゲットをセットアップし、すぐ使える状態にする。詳細原理は `docs/rcon-setup.md` を参照。
+新しい rcon ターゲットをセットアップし、すぐ使える状態にする。詳細原理は `docs/infrastructure/rcon-setup.md` を参照。
 
 ## 引数
 

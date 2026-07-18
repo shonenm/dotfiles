@@ -6,17 +6,17 @@ Claude Code で使用可能なカスタムスキルのリファレンス。
 
 | スキル | 説明 |
 |--------|------|
-| `/d-beacon` | Aerospace ワークスペースに環境を紐付け |
+| `/d-beacon` | AeroSpace ワークスペースに環境を紐付け |
 | `/d-commit` | セッション内の変更を分析してコミット作成 |
 | `/d-news` | プロファイルベースのパーソナライズドニュース収集 |
 | `/d-setup-rcon-target` | rcon ターゲットの登録 + 接続検証 + docker mount スニペット生成 |
 | `/d-update-md` | セッション内の変更に関連するドキュメント更新 |
 
-Ralph 系スキルは [`ralph.md`](ralph.md) を参照。
+Ralph系スキルは[Ralph概要](../ralph/overview.md)を参照。
 
 ## /d-beacon
 
-現在の環境を Aerospace ワークスペースに紐付けます。通知バッジを正しいワークスペースに表示するために使用します。
+現在の環境を AeroSpace ワークスペースに紐付けます。通知バッジを正しいワークスペースに表示するために使用します。
 
 ### 使い方
 
@@ -168,7 +168,7 @@ interests:
 - リモート: dotfiles install済 (`~/dotfiles` に clone + `./install.sh [--no-sudo]`)
 - container: docker daemon と docker CLI 利用可能
 
-詳細は [rcon-setup.md](./rcon-setup.md)。
+詳細は[rconセットアップ](../../infrastructure/rcon-setup.md)。
 
 ## /d-update-md
 
@@ -184,19 +184,13 @@ interests:
 
 ### 対象ドキュメント
 
-- `docs/neovim.md` - Neovim 設定の変更
-- `docs/tmux.md` - tmux 設定の変更
-- `docs/git-config.md` - Git 設定の変更
-- `docs/zsh-startup-optimization.md` - Zsh 設定の変更
-- `docs/modern-cli-tools.md` - CLI ツールの追加・変更
-- `docs/1password-integration.md` - 1Password 連携の変更
-- `docs/starship.md` - Starship 設定の変更
-- `docs/sketchybar-aerospace.md` - SketchyBar/Aerospace 設定の変更
-- `docs/database.md` - データベース関連の変更
-- `docs/claude-*.md` - Claude Code 関連の変更
-- `docs/install.md` - インストール手順の変更
-- `docs/patches/*.md` - パッチ・ワークアラウンドの説明
-- `docs/troubleshooting/*.md` - トラブルシューティング情報
+- `docs/tools/` - Neovim、tmux、Zsh、Starshipなど
+- `docs/configuration/` - Git、1Password、CLI、AeroSpace / SketchyBar
+- `docs/infrastructure/` - database、rcon、同期、gateway
+- `docs/ai-agents/claude/` - Claude Code
+- `docs/install/` - install手順
+- `docs/tools/neovim/patches/` - Neovim patch
+- `docs/troubleshooting/` - 問題解決手順
 
 ### 更新基準
 
@@ -230,6 +224,6 @@ interests:
 
 ## 関連ドキュメント
 
-- [Ralph Pattern](ralph.md) - 自律開発ループ (`/d-ralph`, `/d-ralph-plan`, `/d-ralph-cancel`, `/d-ralph-resume`, `/d-ralph-parallel`)
+- [Ralph Pattern](../ralph/overview.md) - 自律開発ループ (`/d-ralph`, `/d-ralph-plan`, `/d-ralph-cancel`, `/d-ralph-resume`, `/d-ralph-parallel`)
 - [Claude Development](claude-development.md) - 開発環境・ツール全般
 - [Claude Beacon](claude-beacon.md) - 通知システム

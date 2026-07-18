@@ -39,7 +39,7 @@ tmux -L bench kill-server
 ### 再起動で直らないもの
 同一 session 内 pane 切替の体感遅延が主なら、それは server ではなく
 **network(VPN/WiFi + plain SSH の RTT/ジッタ)**。再起動では変わらない。
-mosh / Eternal Terminal 導入か有線化で対処する(rcon.md 将来計画参照)。
+接続品質を確認し、必要なら有線化やSSH transport自体の見直しを行う。
 
 ## 復元の土台: resurrect / continuum
 
