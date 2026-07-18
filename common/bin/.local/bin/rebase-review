@@ -316,9 +316,7 @@ while true; do
     m|M)
       REVIEW_REMAINING=$(collect_review_comments)
       if [[ -n "$REVIEW_REMAINING" ]]; then
-        read -rp "REVIEW: comments remain. Continue with amend? [y/N]: " -n 1 yn || true
-        echo ""
-        [[ "$yn" =~ ^[Yy]$ ]] || continue
+        gum confirm --default=false "REVIEW: comments remain. Continue with amend?" || continue
       fi
       git commit --amend
       break
