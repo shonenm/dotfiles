@@ -1,140 +1,135 @@
-#!/usr/bin/env bash
-# ccusage の終了済み月を、原本 JSONL を含まない不変集計として保存する。
-set -euo pipefail
+#!/usr/bin/env bb
+;; ccusage の終了済み月を、原本 JSONL を含まない不変集計として保存する。
+;; (旧 bash+python3 版の Babashka 移植 — Phase 3)
 
-usage() {
-  cat >&2 <<'EOF'
-Usage: ccusage-snapshot [YYYY-MM]
+(require '[babashka.fs :as fs]
+         '[babashka.process :as p]
+         '[cheshire.core :as json]
+         '[clojure.string :as str])
 
-Save all-agent daily usage and Claude project usage for a completed calendar month.
-Without an argument, saves the previous month.
-EOF
-}
+(import '[java.time YearMonth LocalDate Instant]
+        '[java.time.format DateTimeFormatter]
+        '[java.security MessageDigest])
 
-[[ $# -le 1 ]] || { usage; exit 2; }
-MONTH="${1:-}"
+(defn die [code & msg]
+  (binding [*out* *err*] (apply println msg))
+  (System/exit code))
 
-read -r YEAR MONTH_NUMBER START_DATE END_DATE <<EOF
-$(python3 - "$MONTH" <<'PY'
-import calendar
-import sys
-from datetime import date
+(def usage-text
+  (str "Usage: ccusage-snapshot [YYYY-MM]\n\n"
+       "Save all-agent daily usage and Claude project usage for a completed calendar month.\n"
+       "Without an argument, saves the previous month."))
 
-value = sys.argv[1]
-if value:
-    try:
-        year, month = map(int, value.split("-"))
-        if not 1 <= month <= 12 or f"{year:04d}-{month:02d}" != value:
-            raise ValueError
-    except ValueError:
-        raise SystemExit("month must be YYYY-MM")
-else:
-    today = date.today()
-    year, month = (today.year - 1, 12) if today.month == 1 else (today.year, today.month - 1)
+(defn getenv [k default] (or (System/getenv k) default))
 
-print(year, f"{month:02d}", f"{year:04d}{month:02d}01", f"{year:04d}{month:02d}{calendar.monthrange(year, month)[1]:02d}")
-PY
-)
-EOF
+;; コマンドをベクタで渡して stdout を文字列で取得 (非ゼロ終了は例外)。
+(defn sh-out [cmd-vec]
+  (:out (p/check (p/process (vec cmd-vec) {:out :string}))))
 
-STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ccusage"
-SNAPSHOT_PARENT="$STATE_DIR/snapshots/$YEAR"
-SNAPSHOT_DIR="$SNAPSHOT_PARENT/$MONTH_NUMBER"
-TIMEZONE="${CCUSAGE_TIMEZONE:-Asia/Tokyo}"
-CONFIG_PATH="${CCUSAGE_CONFIG:-$HOME/.claude/ccusage.json}"
+;; --- 月の解決 (bash の python calendar/date ブロック) ---
+(defn resolve-year-month [arg]
+  (if (and arg (seq arg))
+    (let [m (re-matches #"(\d{4})-(\d{2})" arg)]
+      (when-not m (die 1 "month must be YYYY-MM"))
+      (try (YearMonth/of (parse-long (nth m 1)) (parse-long (nth m 2)))
+           (catch Exception _ (die 1 "month must be YYYY-MM"))))
+    ;; 引数なし: 前月 (1月なら前年12月)
+    (.minusMonths (YearMonth/from (LocalDate/now)) 1)))
 
-if [[ -e "$SNAPSHOT_DIR" ]]; then
-  printf 'Snapshot already exists: %s\n' "$SNAPSHOT_DIR"
-  exit 0
-fi
+(defn ym->fields [^YearMonth ym]
+  (let [basic DateTimeFormatter/BASIC_ISO_DATE]
+    {:year          (str (.getYear ym))
+     :month-number  (format "%02d" (.getMonthValue ym))
+     :start-date    (.format (.atDay ym 1) basic)
+     :end-date      (.format (.atEndOfMonth ym) basic)}))
 
-if [[ -n "${CCUSAGE_BIN:-}" ]]; then
-  [[ -x "$CCUSAGE_BIN" ]] || { printf 'CCUSAGE_BIN is not executable: %s\n' "$CCUSAGE_BIN" >&2; exit 1; }
-  CCUSAGE=("$CCUSAGE_BIN")
-elif command -v ccusage >/dev/null 2>&1; then
-  CCUSAGE=(ccusage)
-elif command -v mise >/dev/null 2>&1; then
-  CCUSAGE=(mise exec node -- ccusage)
-else
-  printf 'ccusage is not installed; run install.sh first.\n' >&2
-  exit 1
-fi
+(defn sha256 [path]
+  (let [md (MessageDigest/getInstance "SHA-256")]
+    (->> (.digest md (fs/read-all-bytes (str path)))
+         (map #(format "%02x" %))
+         (apply str))))
 
-VERSION_OUTPUT="$("${CCUSAGE[@]}" --version)"
-if [[ "$VERSION_OUTPUT" =~ ([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-  VERSION="${BASH_REMATCH[0]}"
-  MAJOR="${BASH_REMATCH[1]}"
-else
-  printf 'Could not determine ccusage version: %s\n' "$VERSION_OUTPUT" >&2
-  exit 1
-fi
-if (( MAJOR < 20 )); then
-  printf 'ccusage 20 or newer is required (found: %s).\n' "$VERSION" >&2
-  exit 1
-fi
+;; --- ccusage binary の解決 (CCUSAGE_BIN > ccusage > mise exec node) ---
+(defn resolve-ccusage []
+  (let [bin (System/getenv "CCUSAGE_BIN")]
+    (cond
+      (and bin (seq bin))
+      (do (when-not (fs/executable? bin)
+            (die 1 (str "CCUSAGE_BIN is not executable: " bin)))
+          [bin])
+      (fs/which "ccusage") ["ccusage"]
+      (fs/which "mise")    ["mise" "exec" "node" "--" "ccusage"]
+      :else (die 1 "ccusage is not installed; run install.sh first."))))
 
-mkdir -p "$SNAPSHOT_PARENT"
-TMP_DIR="$(mktemp -d "$SNAPSHOT_PARENT/.${MONTH_NUMBER}.tmp.XXXXXX")"
-cleanup() {
-  if [[ -n "${TMP_DIR:-}" && -d "$TMP_DIR" ]]; then
-    rm -rf "$TMP_DIR"
-  fi
-}
-trap cleanup EXIT HUP INT TERM
+(defn ccusage-version [ccusage]
+  (let [out (str/trim (sh-out (conj (vec ccusage) "--version")))
+        m   (re-find #"(\d+)\.(\d+)\.(\d+)" out)]
+    (when-not m (die 1 (str "Could not determine ccusage version: " out)))
+    (let [version (nth m 0) major (parse-long (nth m 1))]
+      (when (< major 20)
+        (die 1 (str "ccusage 20 or newer is required (found: " version ").")))
+      version)))
 
-run_report() {
-  local output="$1"
-  shift
-  "${CCUSAGE[@]}" "$@" --json --offline --mode auto --timezone "$TIMEZONE" \
-    --since "$START_DATE" --until "$END_DATE" > "$TMP_DIR/$output"
-  python3 -m json.tool "$TMP_DIR/$output" >/dev/null
-}
+(defn -main [& args]
+  (when (> (count args) 1)
+    (binding [*out* *err*] (println usage-text))
+    (System/exit 2))
 
-run_report all-daily.json daily --all
-run_report claude-projects.json claude daily --instances
+  (let [ym       (resolve-year-month (first args))
+        {:keys [year month-number start-date end-date]} (ym->fields ym)
+        state-dir (str (getenv "XDG_STATE_HOME" (str (fs/home) "/.local/state")) "/ccusage")
+        parent    (str state-dir "/snapshots/" year)
+        snap-dir  (str parent "/" month-number)
+        timezone  (getenv "CCUSAGE_TIMEZONE" "Asia/Tokyo")
+        config    (getenv "CCUSAGE_CONFIG" (str (fs/home) "/.claude/ccusage.json"))]
 
-python3 - "$TMP_DIR" "$YEAR-$MONTH_NUMBER" "$START_DATE" "$END_DATE" "$TIMEZONE" "$VERSION" "$CONFIG_PATH" <<'PY'
-import hashlib
-import json
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
+    (when (fs/exists? snap-dir)
+      (println (str "Snapshot already exists: " snap-dir))
+      (System/exit 0))
 
-root, month, start, end, timezone_name, version, config_path = sys.argv[1:]
-root = Path(root)
-config = Path(config_path)
+    (let [ccusage (resolve-ccusage)
+          version (ccusage-version ccusage)]
+      (fs/create-dirs parent)
+      (let [tmp (str (fs/create-temp-dir {:dir parent :prefix (str "." month-number ".tmp.")}))]
+        ;; signal/異常時に tmp を掃除 (bash の trap cleanup)
+        (.addShutdownHook (Runtime/getRuntime)
+                          (Thread. #(when (fs/exists? tmp) (fs/delete-tree tmp))))
+        (try
+          (let [run-report
+                (fn [output & subcmd]
+                  (let [out (sh-out (into (vec ccusage)
+                                          (concat subcmd
+                                                  ["--json" "--offline" "--mode" "auto"
+                                                   "--timezone" timezone
+                                                   "--since" start-date "--until" end-date])))]
+                    (json/parse-string out) ; 妥当性検証 (壊れていれば例外)
+                    (spit (str tmp "/" output) out)))]
+            (run-report "all-daily.json" "daily" "--all")
+            (run-report "claude-projects.json" "claude" "daily" "--instances")
 
-def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+            (let [reports {"allDaily"       {"file" "all-daily.json"        "command" ["daily" "--all"]}
+                           "claudeProjects" {"file" "claude-projects.json"  "command" ["claude" "daily" "--instances"]}}
+                  reports (reduce-kv (fn [m k v]
+                                       (assoc m k (assoc v "sha256" (sha256 (str tmp "/" (v "file"))))))
+                                     (array-map) reports)
+                  manifest (array-map
+                            "schemaVersion" 1
+                            "generatedAt"   (str (Instant/now))
+                            "period"        (array-map "month" (str year "-" month-number)
+                                                       "since" start-date "until" end-date
+                                                       "timezone" timezone)
+                            "ccusage"       (array-map "version" version
+                                                       "offline" true
+                                                       "costMode" "auto"
+                                                       "configSha256" (when (fs/regular-file? config) (sha256 config)))
+                            "reports"       reports)]
+              (spit (str tmp "/manifest.json")
+                    (str (json/generate-string manifest {:pretty true}) "\n")))
 
-reports = {
-    "allDaily": {
-        "file": "all-daily.json",
-        "command": ["daily", "--all"],
-    },
-    "claudeProjects": {
-        "file": "claude-projects.json",
-        "command": ["claude", "daily", "--instances"],
-    },
-}
-for report in reports.values():
-    report["sha256"] = digest(root / report["file"])
+            (fs/move tmp snap-dir)
+            (println (str "Saved snapshot: " snap-dir)))
+          (catch Exception e
+            (when (fs/exists? tmp) (fs/delete-tree tmp))
+            (die 1 (str "snapshot failed: " (.getMessage e)))))))))
 
-manifest = {
-    "schemaVersion": 1,
-    "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-    "period": {"month": month, "since": start, "until": end, "timezone": timezone_name},
-    "ccusage": {
-        "version": version,
-        "offline": True,
-        "costMode": "auto",
-        "configSha256": digest(config) if config.is_file() else None,
-    },
-    "reports": reports,
-}
-(root / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-PY
-
-mv "$TMP_DIR" "$SNAPSHOT_DIR"
-TMP_DIR=""
-printf 'Saved snapshot: %s\n' "$SNAPSHOT_DIR"
+(apply -main *command-line-args*)
