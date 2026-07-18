@@ -18,9 +18,43 @@ func main() {
 		fmt.Fprintln(os.Stderr, "usage: crew <init|dispatch|daemon|status|send|restart|cleanup|teardown>")
 		os.Exit(1)
 	}
-	switch os.Args[1] {
+	sub, rest := os.Args[1], os.Args[2:]
+	switch sub {
+	case "status":
+		os.Exit(runStatus(rest))
 	default:
-		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", sub)
 		os.Exit(1)
 	}
+}
+
+// parseConfigFlag は --config <path> / --json を拾う共通ヘルパ。
+func parseConfigFlag(args []string) (configFile string, jsonMode bool) {
+	configFile = defaultConfig
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--config":
+			if i+1 < len(args) {
+				configFile = args[i+1]
+				i++
+			}
+		case "--json":
+			jsonMode = true
+		}
+	}
+	return
+}
+
+func runStatus(args []string) int {
+	configFile, jsonMode := parseConfigFlag(args)
+	crew, err := LoadCrew(configFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return 1
+	}
+	if err := crew.cmdStatus(jsonMode); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return 1
+	}
+	return 0
 }
