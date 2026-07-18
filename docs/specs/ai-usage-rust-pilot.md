@@ -139,13 +139,18 @@ install_ai_usage() {
 
 ## マイルストーン
 
-| M | 内容 | ゲート |
-|---|------|--------|
-| M1 | skeleton + render + cache + claude（最単純な GET） | mac で bash 版と parity |
-| M2 | gemini + cursor（token ladder / rusqlite） | 同上 |
-| M3 | codex（refresh / lock / atomic write）— 最難関を最後に | mock server で refresh flow が通る + 実環境 parity |
-| M4 | install-common.sh 導線 + sidebar 分岐 + Linux/container E2E | 全環境で sidebar 表示一致 |
-| M5 | 旧 5 スクリプト削除 + doc 更新 | strategy doc の Phase 1 完了マーク |
+完了（2026-07-18）。本 doc は ai-usage 単体の設計だが、実行は wt/pomodoro と統合した
+[rust-cli-migration.md](rust-cli-migration.md) の M0-M7 で行った。ai-usage 該当分の対応:
+
+| M (本 doc) | 実績 | 状態 |
+|-----------|------|------|
+| M1 skeleton + render + cache + claude | rust-cli M1 (commit c31c03a)。単一 jq→`\x1f` cache/render 基盤 + claude | 完了 |
+| M2 gemini + cursor | rust-cli M2 (d46fc78)。cursor sqlite は rusqlite 断念 → sqlite3 CLI shell-out | 完了 |
+| M3 codex (refresh / lock / atomic write) | rust-cli M3 (759b960)。fs4 断念 → std `File::lock`。mock server で refresh flow E2E | 完了 |
+| M4 install 導線 + sidebar 切替 + E2E | rust-cli M5/M6 (db3892f/f0a796f)。sidebar は「分岐」でなく直接 ai-usage 呼び出しに置換 | 完了 |
+| M5 旧スクリプト削除 + doc | rust-cli M6/M7 (f0a796f/df31c53)。usage 4 本 + cursor-auth-token 削除 | 完了 |
+
+設計から変わった点は [rust-cli-migration.md#実装完了](rust-cli-migration.md) に集約（rusqlite→sqlite3 CLI、fs4→std、sidebar 直呼び）。
 
 ## リスク
 
