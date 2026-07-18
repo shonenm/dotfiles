@@ -1,7 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["pomodoro", "ai-usage"]
-# wt はマイルストーン到達時に members へ追加する
+members = ["pomodoro", "ai-usage", "wt"]
 
 [workspace.package]
 edition = "2024"
