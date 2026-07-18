@@ -2,6 +2,8 @@
 // 各 provider は cache 行の serialize/deserialize を bash 互換で実装する。
 
 pub mod claude;
+pub mod cursor;
+pub mod gemini;
 
 use std::path::PathBuf;
 
@@ -57,6 +59,23 @@ pub trait Provider {
     /// cache 1 行 → Usage（バージョン不一致・壊れは None）。
     #[allow(clippy::wrong_self_convention)] // provider dispatch のため &self が必要
     fn from_cache(&self, line: &str) -> Option<Usage>;
+}
+
+/// "{a}|{b}|{r1_iso}|{r2_iso}" 形式の cache 行をパース（claude / gemini 共通）。
+pub fn parse_two_iso_cache(line: &str) -> Option<Usage> {
+    let f: Vec<&str> = line.split('|').collect();
+    let a_pct: i64 = f.first()?.parse().ok()?;
+    let b_pct: i64 = f.get(1)?.parse().ok()?;
+    let iso = |i: usize| match f.get(i) {
+        Some(s) if !s.is_empty() => Reset::Iso((*s).to_string()),
+        _ => Reset::None,
+    };
+    Some(Usage {
+        a_pct,
+        a_reset: iso(2),
+        b_pct,
+        b_reset: iso(3),
+    })
 }
 
 /// {XDG_CACHE_HOME:-~/.cache}/tmux/<name>
