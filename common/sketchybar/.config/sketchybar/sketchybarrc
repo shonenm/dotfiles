@@ -116,7 +116,7 @@ sketchybar --add item pomodoro right \
            background.drawing=on \
            update_freq=5 \
            script="$PLUGIN_DIR/pomodoro.sh" \
-           click_script="$HOME/dotfiles/scripts/pomodoro.sh toggle"
+           click_script="$HOME/.local/bin/pomodoro toggle"
 
 
 

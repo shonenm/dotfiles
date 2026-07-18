@@ -13,7 +13,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(dirname "$0")"
 # shellcheck source=/dev/null
-source "${SCRIPT_DIR}/wt-lib.sh"
 
 STATE_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph-schedule"
 TEMPLATE_DIR="$(cd "${SCRIPT_DIR}/../templates" && pwd)"
@@ -227,10 +226,10 @@ cmd_add() {
   scheduled_at="$(_epoch_to_display "$scheduled_epoch")"
 
   # Verify git repo
-  wt_check_git || return 1
+  wt root >/dev/null || return 1
 
   local project_dir
-  project_dir="$(wt_main_worktree)"
+  project_dir="$(wt root)"
 
   # Generate job ID
   local job_id
@@ -248,12 +247,12 @@ cmd_add() {
   # Determine tmux window name and worktree path
   local tmux_window="" worktree_path=""
   if [[ -n "$branch" ]]; then
-    tmux_window="$(wt_window_name "$branch")"
-    worktree_path="$(wt_path "$branch")"
+    tmux_window="$(wt window-name "$branch")"
+    worktree_path="$(wt path "$branch")"
 
     # Create worktree now (executor will verify at execution time)
     cd "$project_dir"
-    if ! wt_exists "$branch"; then
+    if ! wt exists "$branch"; then
       if git show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null; then
         git worktree add "$worktree_path" "$branch" >&2
       elif git show-ref --verify --quiet "refs/remotes/origin/$branch" 2>/dev/null; then
@@ -265,7 +264,7 @@ cmd_add() {
           git worktree add -b "$branch" "$worktree_path" >&2
         fi
       fi
-      wt_copy_ignored "$project_dir" "$worktree_path"
+      wt sync-ignored "$project_dir" "$worktree_path"
       _success "Created worktree: $worktree_path"
     else
       _info "Worktree already exists: $worktree_path"

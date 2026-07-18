@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # ralph-orchestrate - Ralph worker lifecycle management
 #
-# Uses wt-lib.sh to create worktrees + tmux windows for each worker,
-# launches independent claude processes, and polls for completion.
+# Uses the `wt` binary (tools/wt) to create worktrees + tmux windows for each
+# worker, launches independent claude processes, and polls for completion.
 set -euo pipefail
 
-# shellcheck source=/dev/null
-source "$(dirname "$0")/wt-lib.sh"
+# status log helpers (旧 wt-lib.sh から移設。wt binary は data=stdout / status=stderr)
+wt_success() { printf '\033[0;32mok\033[0m %s\n' "$*" >&2; }
+wt_error()   { printf '\033[0;31merror\033[0m %s\n' "$*" >&2; }
+wt_info()    { printf '\033[0;36minfo\033[0m %s\n' "$*" >&2; }
+
 # shellcheck source=/dev/null
 source "$(dirname "$0")/ralph-lib.sh"
 
@@ -57,7 +60,7 @@ cmd_init() {
       [[ -f "$worker_file" ]] || continue
       local tid
       tid="$(jq -r '.task_id' "$worker_file")"
-      wt_delete "ralph/${tid}" 2>/dev/null || true
+      wt delete "ralph/${tid}" 2>/dev/null || true
     done
   fi
 
@@ -94,16 +97,16 @@ cmd_launch() {
   [[ -z "$prompt_file" ]] && { wt_error "prompt-file is required"; return 1; }
   [[ -f "$prompt_file" ]] || { wt_error "prompt file not found: $prompt_file"; return 1; }
 
-  wt_check_git || return 1
+  wt root >/dev/null || return 1
 
   local branch="ralph/${task_id}"
 
-  # Create worktree + tmux window via wt-lib
+  # Create worktree + tmux window via wt binary
   local worktree_path
-  worktree_path="$(wt_create "$branch")" || return 1
+  worktree_path="$(wt new "$branch")" || return 1
 
   local window_name
-  window_name="$(wt_window_name "$branch")"
+  window_name="$(wt window-name "$branch")"
 
   local prompt_abs
   prompt_abs="$(cd "$(dirname "$prompt_file")" && pwd)/$(basename "$prompt_file")"
@@ -352,7 +355,7 @@ cmd_merge() {
   [[ -f "$patch_file" ]] || { wt_error "No patch file for $task_id: $patch_file"; return 1; }
   [[ -s "$patch_file" ]] || { wt_info "Empty patch for $task_id, skipping"; return 0; }
 
-  wt_check_git || return 1
+  wt root >/dev/null || return 1
 
   if git apply --check "$patch_file" 2>/dev/null; then
     git apply "$patch_file"
@@ -486,8 +489,8 @@ cmd_cleanup() {
   local task_id="${1:-}"
   [[ -z "$task_id" ]] && { wt_error "Usage: ralph-orchestrate cleanup <task-id>"; return 1; }
 
-  wt_check_git || return 1
-  wt_delete "ralph/${task_id}" || true
+  wt root >/dev/null || return 1
+  wt delete "ralph/${task_id}" || true
   rm -f "${WORKERS_DIR}/${task_id}.json"
   _cleanup_orphaned_branches
   wt_info "Cleaned up worker: $task_id"
@@ -504,12 +507,12 @@ cmd_cleanup_all() {
     esac
   done
 
-  wt_check_git || return 1
+  wt root >/dev/null || return 1
 
   if [[ ${#task_ids[@]} -gt 0 ]]; then
     # 指定タスクのみ cleanup
     for tid in "${task_ids[@]}"; do
-      wt_delete "ralph/${tid}" 2>/dev/null || true
+      wt delete "ralph/${tid}" 2>/dev/null || true
       rm -f "${WORKERS_DIR}/${tid}.json"
     done
   else
@@ -518,7 +521,7 @@ cmd_cleanup_all() {
       [[ -f "$worker_file" ]] || continue
       local tid
       tid="$(jq -r '.task_id' "$worker_file")"
-      wt_delete "ralph/${tid}" 2>/dev/null || true
+      wt delete "ralph/${tid}" 2>/dev/null || true
     done
     rm -rf "$WORKERS_DIR"
   fi

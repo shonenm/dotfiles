@@ -134,16 +134,16 @@ usage_section() {
   local TO; TO="$(command -v timeout || command -v gtimeout || true)"
   {
     local sc out col icon label gauge pct rem
-    for sc in tmux-claude-usage tmux-codex-usage tmux-gemini-usage tmux-cursor-usage; do
+    for sc in claude codex gemini cursor; do
       # AI ごとの色分け(ステータスバーと同じ): claude=橙 codex=水色 gemini=青 cursor=紫
       case "$sc" in
-        *claude*) col=$'\033[38;2;255;102;0m' ;;
-        *codex*)  col=$'\033[38;2;125;211;252m' ;;
-        *gemini*) col=$'\033[38;2;66;133;244m' ;;
-        *cursor*) col=$'\033[38;2;153;102;255m' ;;
-        *)        col="" ;;
+        claude) col=$'\033[38;2;255;102;0m' ;;
+        codex)  col=$'\033[38;2;125;211;252m' ;;
+        gemini) col=$'\033[38;2;66;133;244m' ;;
+        cursor) col=$'\033[38;2;153;102;255m' ;;
+        *)      col="" ;;
       esac
-      out=$(${TO:+$TO 6} bash "$SCRIPT_DIR/$sc.sh" 2>/dev/null)
+      out=$(${TO:+$TO 6} ai-usage "$sc" 2>/dev/null)
       [[ -z "$out" ]] && continue
       # 各ウィンドウ1レコード "ICON\x1fLABEL\x1fGAUGE\x1fPCT\x1fREMAINING"。
       # データ無しは "ICON\x1f--"。icon は AI ごとに1つ(最初のウィンドウのみ)、
