@@ -22,10 +22,60 @@ func main() {
 	switch sub {
 	case "status":
 		os.Exit(runStatus(rest))
+	case "daemon":
+		os.Exit(runDaemon(rest))
+	case "dispatch":
+		os.Exit(runDispatch(rest))
 	default:
 		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", sub)
 		os.Exit(1)
 	}
+}
+
+func loadCrewOrExit(configFile string) *Crew {
+	crew, err := LoadCrew(configFile)
+	if err != nil {
+		errorf("%v", err)
+		os.Exit(1)
+	}
+	return crew
+}
+
+func runDaemon(args []string) int {
+	configFile := defaultConfig
+	interval := 60
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--config":
+			if i+1 < len(args) {
+				configFile = args[i+1]
+				i++
+			}
+		case "--interval":
+			if i+1 < len(args) {
+				fmt.Sscanf(args[i+1], "%d", &interval)
+				i++
+			}
+		}
+	}
+	return loadCrewOrExit(configFile).cmdDaemon(interval)
+}
+
+func runDispatch(args []string) int {
+	configFile := defaultConfig
+	once := false
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--config":
+			if i+1 < len(args) {
+				configFile = args[i+1]
+				i++
+			}
+		case "--once":
+			once = true
+		}
+	}
+	return loadCrewOrExit(configFile).cmdDispatch(once)
 }
 
 // parseConfigFlag は --config <path> / --json を拾う共通ヘルパ。
