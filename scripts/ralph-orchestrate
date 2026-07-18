@@ -10,6 +10,9 @@ wt_success() { printf '\033[0;32mok\033[0m %s\n' "$*" >&2; }
 wt_error()   { printf '\033[0;31merror\033[0m %s\n' "$*" >&2; }
 wt_info()    { printf '\033[0;36minfo\033[0m %s\n' "$*" >&2; }
 
+# Rust binaries (ai-usage/wt/pomodoro) は ~/.local/bin。scheduler/tmux など最小 PATH でも解決させる。
+export PATH="$HOME/.local/bin:$PATH"
+
 # shellcheck source=/dev/null
 source "$(dirname "$0")/ralph-lib.sh"
 

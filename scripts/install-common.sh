@@ -20,7 +20,7 @@ install_rust_tools() {
     done
     log_success "rust tools installed to ~/.local/bin"
   else
-    log_warn "rust tools build failed (bash fallbacks remain)"
+    log_warn "rust tools build failed — ai-usage/wt/pomodoro は使用不可 (旧 bash は削除済みで fallback なし)"
   fi
 }
 

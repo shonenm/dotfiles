@@ -1,6 +1,6 @@
 ---
 name: d-ralph-parallel
-description: 状態ファイルのタスクグラフから依存関係を分析し、wt-lib + tmux で可視化された独立 claude プロセスとして並列実行します。
+description: 状態ファイルのタスクグラフから依存関係を分析し、wt binary + tmux で可視化された独立 claude プロセスとして並列実行します。
 user-invocable: true
 disable-model-invocation: true
 arguments: "<prd-file-or-task-list>"
