@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# ccusage の終了済み月を、原本 JSONL を含まない不変集計として保存する。
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: ccusage-snapshot [YYYY-MM]
+
+Save all-agent daily usage and Claude project usage for a completed calendar month.
+Without an argument, saves the previous month.
+EOF
+}
+
+[[ $# -le 1 ]] || { usage; exit 2; }
+MONTH="${1:-}"
+
+read -r YEAR MONTH_NUMBER START_DATE END_DATE <<EOF
+$(python3 - "$MONTH" <<'PY'
+import calendar
+import sys
+from datetime import date
+
+value = sys.argv[1]
+if value:
+    try:
+        year, month = map(int, value.split("-"))
+        if not 1 <= month <= 12 or f"{year:04d}-{month:02d}" != value:
+            raise ValueError
+    except ValueError:
+        raise SystemExit("month must be YYYY-MM")
+else:
+    today = date.today()
+    year, month = (today.year - 1, 12) if today.month == 1 else (today.year, today.month - 1)
+
+print(year, f"{month:02d}", f"{year:04d}{month:02d}01", f"{year:04d}{month:02d}{calendar.monthrange(year, month)[1]:02d}")
+PY
+)
+EOF
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ccusage"
+SNAPSHOT_PARENT="$STATE_DIR/snapshots/$YEAR"
+SNAPSHOT_DIR="$SNAPSHOT_PARENT/$MONTH_NUMBER"
+TIMEZONE="${CCUSAGE_TIMEZONE:-Asia/Tokyo}"
+CONFIG_PATH="${CCUSAGE_CONFIG:-$HOME/.claude/ccusage.json}"
+
+if [[ -e "$SNAPSHOT_DIR" ]]; then
+  printf 'Snapshot already exists: %s\n' "$SNAPSHOT_DIR"
+  exit 0
+fi
+
+if [[ -n "${CCUSAGE_BIN:-}" ]]; then
+  [[ -x "$CCUSAGE_BIN" ]] || { printf 'CCUSAGE_BIN is not executable: %s\n' "$CCUSAGE_BIN" >&2; exit 1; }
+  CCUSAGE=("$CCUSAGE_BIN")
+elif command -v ccusage >/dev/null 2>&1; then
+  CCUSAGE=(ccusage)
+elif command -v mise >/dev/null 2>&1; then
+  CCUSAGE=(mise exec node -- ccusage)
+else
+  printf 'ccusage is not installed; run install.sh first.\n' >&2
+  exit 1
+fi
+
+VERSION_OUTPUT="$("${CCUSAGE[@]}" --version)"
+if [[ "$VERSION_OUTPUT" =~ ([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+  VERSION="${BASH_REMATCH[0]}"
+  MAJOR="${BASH_REMATCH[1]}"
+else
+  printf 'Could not determine ccusage version: %s\n' "$VERSION_OUTPUT" >&2
+  exit 1
+fi
+if (( MAJOR < 20 )); then
+  printf 'ccusage 20 or newer is required (found: %s).\n' "$VERSION" >&2
+  exit 1
+fi
+
+mkdir -p "$SNAPSHOT_PARENT"
+TMP_DIR="$(mktemp -d "$SNAPSHOT_PARENT/.${MONTH_NUMBER}.tmp.XXXXXX")"
+cleanup() {
+  if [[ -n "${TMP_DIR:-}" && -d "$TMP_DIR" ]]; then
+    rm -rf "$TMP_DIR"
+  fi
+}
+trap cleanup EXIT HUP INT TERM
+
+run_report() {
+  local output="$1"
+  shift
+  "${CCUSAGE[@]}" "$@" --json --offline --mode auto --timezone "$TIMEZONE" \
+    --since "$START_DATE" --until "$END_DATE" > "$TMP_DIR/$output"
+  python3 -m json.tool "$TMP_DIR/$output" >/dev/null
+}
+
+run_report all-daily.json daily --all
+run_report claude-projects.json claude daily --instances
+
+python3 - "$TMP_DIR" "$YEAR-$MONTH_NUMBER" "$START_DATE" "$END_DATE" "$TIMEZONE" "$VERSION" "$CONFIG_PATH" <<'PY'
+import hashlib
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+root, month, start, end, timezone_name, version, config_path = sys.argv[1:]
+root = Path(root)
+config = Path(config_path)
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+reports = {
+    "allDaily": {
+        "file": "all-daily.json",
+        "command": ["daily", "--all"],
+    },
+    "claudeProjects": {
+        "file": "claude-projects.json",
+        "command": ["claude", "daily", "--instances"],
+    },
+}
+for report in reports.values():
+    report["sha256"] = digest(root / report["file"])
+
+manifest = {
+    "schemaVersion": 1,
+    "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    "period": {"month": month, "since": start, "until": end, "timezone": timezone_name},
+    "ccusage": {
+        "version": version,
+        "offline": True,
+        "costMode": "auto",
+        "configSha256": digest(config) if config.is_file() else None,
+    },
+    "reports": reports,
+}
+(root / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+PY
+
+mv "$TMP_DIR" "$SNAPSHOT_DIR"
+TMP_DIR=""
+printf 'Saved snapshot: %s\n' "$SNAPSHOT_DIR"
