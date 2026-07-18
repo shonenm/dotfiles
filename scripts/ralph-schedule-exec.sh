@@ -5,6 +5,10 @@
 # Launches Claude TUI in a tmux window and injects /ralph with the prompt file.
 set -euo pipefail
 
+# Rust binaries (ai-usage/wt/pomodoro) は ~/.local/bin。tmux run-shell / launchd /
+# at など最小 PATH の起動元でも解決できるよう先頭で PATH を通す。
+export PATH="$HOME/.local/bin:$PATH"
+
 SCRIPT_DIR="$(dirname "$0")"
 # shellcheck source=/dev/null
 # shellcheck source=/dev/null

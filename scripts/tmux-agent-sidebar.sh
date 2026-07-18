@@ -23,6 +23,10 @@ set -uo pipefail
 
 [[ -z "${TMUX:-}" ]] && exit 0
 
+# Rust binaries (ai-usage/wt/pomodoro) は ~/.local/bin。tmux run-shell / launchd /
+# at など最小 PATH の起動元でも解決できるよう先頭で PATH を通す。
+export PATH="$HOME/.local/bin:$PATH"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/tmux-agent-status.sh"   # ヘルパー(is_shell, trunc_w 由来の helpers, C_*)
