@@ -29,7 +29,7 @@ export NO_SUDO SKIP_1P
 # (interactive shell では dotfiles の zsh 設定が同じことをするが、stow 前は未反映)
 export PATH="$HOME/.local/bin:$PATH"
 
-# --- 0. 1Password CLI Check (Required) ---
+# --- 1. 1Password CLI Check ---
 install_1password_cli() {
   local os
   os=$(detect_os)
@@ -146,7 +146,7 @@ check_1password_cli() {
   log_success "1Password CLI: ready"
 }
 
-# --- 1. Install Homebrew (Mac only) ---
+# --- 0. Install Homebrew (Mac only) ---
 install_homebrew() {
   if [[ "$(detect_os)" != "mac" ]]; then
     return
@@ -160,8 +160,16 @@ install_homebrew() {
   log_info "Installing Homebrew..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-  # Add to PATH for this session
-  eval "$(/opt/homebrew/bin/brew shellenv)"
+  # The installer does not update this non-interactive process's PATH.
+  local brew_bin=""
+  for candidate in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    if [[ -x "$candidate" ]]; then
+      brew_bin="$candidate"
+      break
+    fi
+  done
+  [[ -n "$brew_bin" ]] || { log_error "Homebrew installation completed but brew was not found"; return 1; }
+  eval "$("$brew_bin" shellenv)"
 }
 
 # --- 2. Setup Environment (Delegate to scripts/) ---
@@ -227,11 +235,27 @@ stow_package() {
     done <<< "$conflicts"
   fi
 
-  # stow実行（--adoptで残りの差分を吸収、--no-foldingでディレクトリ全体のシンリンクを防止）
-  if ! stow --no-folding -d "$pkg_dir" -t "$HOME" --adopt "$pkg_name" 2>/dev/null; then
+  # restowで削除・移動済みsourceの古いsymlinkも掃除する。--adoptは残りの差分を吸収する。
+  if ! stow --restow --no-folding -d "$pkg_dir" -t "$HOME" --adopt "$pkg_name" 2>/dev/null; then
     log_warn "  Failed to link $pkg_name"
   fi
   return 0
+}
+
+# Remove links whose source was deleted or moved before restowing the new layout.
+# Restrict cleanup to skill roots; runtime files elsewhere under ~/.pi are untouched.
+cleanup_broken_skill_links() {
+  local root link
+  for root in "$HOME/.config/agent/skills" "$HOME/.pi/agent/skills"; do
+    [[ -d "$root" ]] || continue
+    while IFS= read -r -d '' link; do
+      if [[ ! -e "$link" ]]; then
+        rm -f "$link"
+        log_info "  Removed stale skill link: ${link#"$HOME/"}"
+      fi
+    done < <(find "$root" -type l -print0)
+    find "$root" -depth -mindepth 1 -type d -empty -exec rmdir {} \; 2>/dev/null || true
+  done
 }
 
 # Clean up orphaned (non-symlink) files left behind in stow-managed directories.
@@ -372,6 +396,7 @@ link_dotfiles() {
 
   # Create .config if not exists
   mkdir -p "$HOME/.config"
+  cleanup_broken_skill_links
 
   # Stow common packages
   if [[ -d "$DOTFILES_DIR/common" ]]; then
@@ -505,11 +530,11 @@ setup_git_hooks() {
 generate_ai_cli_configs() {
   log_info "Generating AI CLI configs..."
 
-  # Clear webhook cache to ensure fresh URLs from 1Password
-  local cache_dir="${XDG_DATA_HOME:-$HOME/.local/share}/ai-notify"
-  if [[ -d "$cache_dir" ]]; then
-    rm -rf "$cache_dir"
-    log_info "  Cleared webhook cache"
+  # Preserve existing secret-derived settings during unsigned/--skip-1p runs.
+  local secrets_available=false
+  local notion_placeholder="\${NOTION_TOKEN}"
+  if [[ "$SKIP_1P" != "true" ]] && command -v op &>/dev/null && op whoami &>/dev/null; then
+    secrets_available=true
   fi
 
   local templates_dir="$DOTFILES_DIR/templates"
@@ -556,7 +581,7 @@ PYEOF
   local mcp_config="$DOTFILES_DIR/common/claude/.config/claude/mcp.json"
   if [[ -f "$mcp_config" ]] && command -v claude &>/dev/null; then
     local notion_token=""
-    if command -v op &>/dev/null; then
+    if [[ "$secrets_available" == "true" ]]; then
       notion_token=$(op read "op://Personal/Notion MCP/credential" 2>/dev/null || true)
     fi
     # Read each server from mcp.json and register via claude mcp add-json
@@ -570,7 +595,11 @@ for name, config in servers.items():
       local name config
       name=$(echo "$entry" | python3 -c "import json,sys; print(json.load(sys.stdin)['name'])")
       config=$(echo "$entry" | python3 -c "import json,sys; d=json.load(sys.stdin)['config']; print(json.dumps(d))")
-      # Resolve ${NOTION_TOKEN} placeholder
+      # Never register a literal unresolved secret placeholder.
+      if [[ "$config" == *"$notion_placeholder"* && -z "$notion_token" ]]; then
+        log_warn "  Skipped MCP server $name (Notion token unavailable)"
+        continue
+      fi
       if [[ -n "$notion_token" ]]; then
         config="${config//\$\{NOTION_TOKEN\}/$notion_token}"
       fi
@@ -675,7 +704,7 @@ for name, config in servers.items():
   local agent_mcp="$DOTFILES_DIR/common/agent/.config/agent/mcp.json"
   if [[ -f "$agent_mcp" ]] && command -v cmd &>/dev/null; then
     local notion_token=""
-    if command -v op &>/dev/null; then
+    if [[ "$secrets_available" == "true" ]]; then
       notion_token=$(op read "op://Personal/Notion MCP/credential" 2>/dev/null || true)
     fi
     python3 -c "
@@ -694,6 +723,10 @@ for name, config in servers.items():
       local name config
       name=$(echo "$entry" | python3 -c "import json,sys; print(json.load(sys.stdin)['name'])")
       config=$(echo "$entry" | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin)['config']))")
+      if [[ "$config" == *"$notion_placeholder"* && -z "$notion_token" ]]; then
+        log_warn "  Skipped Command Code MCP server $name (Notion token unavailable)"
+        continue
+      fi
       if [[ -n "$notion_token" ]]; then
         config="${config//\$\{NOTION_TOKEN\}/$notion_token}"
       fi
@@ -706,21 +739,25 @@ for name, config in servers.items():
     done
   fi
 
-  # Cache webhooks and send setup notifications
-  log_info "  Caching webhooks..."
-  for tool in claude codex gemini cursor cmd; do
-    if "$DOTFILES_DIR/scripts/ai-notify.sh" --setup "$tool" 2>/dev/null; then
-      log_success "    ✓ $tool webhook cached and notified"
-    else
-      log_warn "    ✗ $tool webhook not available"
-    fi
-  done
+  # Refresh secret-derived caches only when authenticated; otherwise keep the
+  # last known-good values from the previous signed-in run.
+  if [[ "$secrets_available" == "true" ]]; then
+    log_info "  Caching webhooks..."
+    for tool in claude codex gemini cursor cmd; do
+      if "$DOTFILES_DIR/scripts/ai-notify.sh" --setup "$tool" 2>/dev/null; then
+        log_success "    ✓ $tool webhook cached and notified"
+      else
+        log_warn "    ✗ $tool webhook not available"
+      fi
+    done
 
-  # Claude fallback setup (cache OpenRouter API key)
-  if "$DOTFILES_DIR/scripts/claude-fallback.sh" setup 2>/dev/null; then
-    log_success "  Claude fallback ready (run 'claude-fallback.sh on' during outages)"
+    if "$DOTFILES_DIR/scripts/claude-fallback.sh" setup 2>/dev/null; then
+      log_success "  Claude fallback ready (run 'claude-fallback.sh on' during outages)"
+    else
+      log_warn "  Claude fallback setup skipped (API key not available)"
+    fi
   else
-    log_warn "  Claude fallback setup skipped (API keys not available)"
+    log_warn "  Secret-derived caches and MCP credentials were not refreshed"
   fi
 }
 
@@ -734,11 +771,11 @@ main() {
   fi
   echo
 
-  # 0. Check 1Password CLI first
-  check_1password_cli
-
-  # 1. Install Homebrew (Mac only, required before other packages)
+  # 0. Install Homebrew first on a clean Mac; 1Password CLI uses brew.
   install_homebrew
+
+  # 1. Install/check 1Password CLI. An unsigned session only skips secrets.
+  check_1password_cli
 
   # 2. Run environment setup (install packages)
   if [[ "$SKIP_PROMPT" == "true" ]]; then
