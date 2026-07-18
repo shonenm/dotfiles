@@ -88,19 +88,7 @@ impl Provider for Claude {
     }
 
     fn from_cache(&self, line: &str) -> Option<Usage> {
-        let f: Vec<&str> = line.split('|').collect();
-        let a_pct: i64 = f.first()?.parse().ok()?;
-        let b_pct: i64 = f.get(1)?.parse().ok()?;
-        let iso = |i: usize| match f.get(i) {
-            Some(s) if !s.is_empty() => Reset::Iso((*s).to_string()),
-            _ => Reset::None,
-        };
-        Some(Usage {
-            a_pct,
-            a_reset: iso(2),
-            b_pct,
-            b_reset: iso(3),
-        })
+        super::parse_two_iso_cache(line)
     }
 }
 

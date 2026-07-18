@@ -14,6 +14,8 @@ use std::process::ExitCode;
 fn provider_for(name: &str) -> Option<Box<dyn Provider>> {
     match name {
         "claude" => Some(Box::new(providers::claude::Claude)),
+        "gemini" => Some(Box::new(providers::gemini::Gemini)),
+        "cursor" => Some(Box::new(providers::cursor::Cursor)),
         _ => None,
     }
 }
