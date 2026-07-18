@@ -109,9 +109,9 @@ Phase 0 後、「書き換えないと直らない問題」は事実上ゼロ。
 ## 実行順序（pilot → expand）
 
 - **Phase 0**: bash quick wins（書き換えゼロ、実問題を全消し）— 完了（2026-07-18、7/7 push 済み）
-- **Phase 1 パイロット**: `*-usage.sh` の Rust 統合（最大学習 × 最小 blast radius、`install.sh` への cargo-build 導線をここで実証）
+- **Phase 1**: Rust 置換の完結 — `ai-usage`（usage 統合）+ `wt` + `pomodoro` を `tools/` workspace で実装（設計: [rust-cli-migration.md](rust-cli-migration.md) / [ai-usage-rust-pilot.md](ai-usage-rust-pilot.md)）。wt/pomodoro は当初 Phase 3 日和見だったが、Rust 面を一気に完結させる方針で前倒し
 - **Phase 2 本命**: `ralph-crew` の Go 化（Phase 1 が緑になってから。daemon 専用ドメイン）
-- **Phase 3 日和見**: `wt`(Rust) / `ccusage-snapshot`(Babashka, データ処理層の学習台) / `pomodoro`(学習演習)
+- **Phase 3 日和見**: `ccusage-snapshot`(Babashka, データ処理層の学習台)
 
 ## MoonBit・Nix の位置づけ（5 層に入れない）
 
