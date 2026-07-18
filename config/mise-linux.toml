@@ -38,8 +38,6 @@
 "aqua:topgrade-rs/topgrade" = "latest"
 "aqua:pemistahl/grex" = "latest"
 "aqua:typst/typst" = "latest"
-"aqua:jj-vcs/jj" = "latest"
-"aqua:idursun/jjui" = "latest"
 "aqua:direnv/direnv" = "latest"
 
 # --- ubi (8; not in aqua registry) ---

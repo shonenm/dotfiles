@@ -7,8 +7,8 @@
 - Pi: `@earendil-works/pi-coding-agent 0.80.6`
 - dotfiles 管理: `common/pi/.pi/agent/`
 - 実ランタイム: `~/.pi/agent/`
-- version control: `.jj/` があるため `jj status` / `jj diff` を使う
-- 既存作業がある場合は巻き込まない。各 PR の開始前に `jj status` で差分を確認する。
+- version control: `git status` / `git diff` を使う
+- 既存作業がある場合は巻き込まない。各 PR の開始前に `git status` で差分を確認する。
 
 ## 現状の重要 findings
 
@@ -29,12 +29,12 @@
 各 PR はこの順で進める。
 
 ```bash
-jj status
+git status
 # 対象 PR の Scope だけ実装
-jj diff
+git diff
 # smoke / relevant tests
-jj describe -m "<type>(pi): <summary>"
-# 必要なら PR 化、完了後に jj new
+git commit -m "<type>(pi): <summary>"
+# 必要なら PR 化
 ```
 
 共通 smoke:
@@ -304,7 +304,7 @@ pi --mode json --no-session --model opencode-go/deepseek-v4-flash:off -p 'say ok
 
 ```bash
 rg '8899|permission-gate|localhost:8888|Memory Persistence|Agent Delegation' docs common/pi/.pi/agent/AGENTS.md
-jj diff --stat
+git diff --stat
 ```
 
 **Acceptance**

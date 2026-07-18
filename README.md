@@ -171,7 +171,7 @@ git pull
 | System   | build-essential, zsh, tmux, jq, stow, rsync                     |
 | Editor   | neovim                                                          |
 | CLI      | lsd, ripgrep, fzf, eza, bat, tealdeer, procs, sd, dust, bottom, rip2, quay, cargo-update |
-| Git      | lazygit, ghq, jj                                               |
+| Git      | lazygit, ghq                                                   |
 | Dev      | mise, starship, sheldon, zoxide, atuin, uv, dotenvx             |
 | Font     | UDEV Gothic Nerd Font                                           |
 
