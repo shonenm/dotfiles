@@ -9,9 +9,11 @@ import (
 // Config は crew.json の内容。permissions / mcp_config は Claude 所有の進化する
 // スキーマなので json.RawMessage で保持し、型付けせず往復させる（ralph-lib の教訓）。
 type Config struct {
-	Workers []Worker `json:"workers"`
-	Tasks   []Task   `json:"tasks"`
-	Layout  Layout   `json:"layout"`
+	Workers     []Worker `json:"workers"`
+	Tasks       []Task   `json:"tasks"`
+	Layout      Layout   `json:"layout"`
+	TmuxSession string   `json:"tmux_session"` // 省略時 crew-<project>
+	StateDir    string   `json:"state_dir"`    // 省略時 <runtime>/ralph-crew/<project>
 }
 
 type Worker struct {
