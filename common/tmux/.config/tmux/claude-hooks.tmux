@@ -10,3 +10,7 @@ run-shell -b "~/dotfiles/scripts/tmux-agent-index.sh daemon >/dev/null 2>&1 || t
 
 # ハング検知ウォッチャを起動(単一インスタンス保証。設定再読込でも多重起動しない)
 run-shell -b "~/dotfiles/scripts/tmux-agent-hang-watch.sh >/dev/null 2>&1 || true"
+
+# status メトリクス daemon を起動(cpu/ram/gpu/storage と git branch を @sysstat /
+# @git_branch に書き、status-right の再描画毎 fork を排除。単一インスタンス保証)
+run-shell -b "~/dotfiles/scripts/tmux-metrics-daemon.sh daemon >/dev/null 2>&1 || true"
