@@ -73,7 +73,7 @@ EOF
 ```
 
 これで以下が揃う:
-- `tmux` (pixi 経由で `~/.pixi/bin/tmux`)
+- `tmux`（no-sudoではsource buildの `~/.local/bin/tmux`、sudo環境ではsystem package）
 - `~/.config/tmux/tmux.conf` (stow symlink)
 - `~/dotfiles/scripts/tmux-docker-enter` (wrapper)
 - TPM + tmux plugins
@@ -82,13 +82,13 @@ EOF
 確認:
 ```bash
 ssh chronos
-which tmux                                    # ~/.pixi/bin/tmux
+command -v tmux                              # no-sudoでは ~/.local/bin/tmux
 ls -la ~/dotfiles/scripts/tmux-docker-enter   # 実行可能
 ls ~/.tmux/plugins/tpm                         # TPM 展開済
 which docker                                   # docker CLI 存在
 ```
 
-詳細は [install-no-sudo.md](./install-no-sudo.md)。
+詳細は [No-Sudo Install Mode](../install/install-no-sudo.md)。
 
 ## 3. Docker container: volume mount を追加
 
@@ -208,8 +208,8 @@ zsh が再起動されてない。新 terminal を開く or `source ~/.zshrc`。
 
 ### `tmux: command not found` (リモート)
 
-pixi の PATH (`~/.pixi/bin`) が反映されてない。
-- 新 ssh セッションを開く (`~/.profile` → `exec zsh -l` で `~/.bashrc` 経由 PATH 設定)
+`~/.local/bin` がPATHへ反映されていない。
+- 新しいSSHセッションを開く（`~/.profile` → `exec zsh -l` でZsh設定を読み込む）
 - もしくは `source ~/.bashrc` で現セッションに反映
 
 ### `tmux-docker-enter: No such file`
@@ -261,4 +261,4 @@ tmux 制限のため `rcon` 内で自動的に `-` に sanitize される (`mypr
 ## 関連ドキュメント
 
 - [rcon.md](./rcon.md) — rcon コマンド本体の動作原理
-- [install-no-sudo.md](./install-no-sudo.md) — sudoless 環境向け install
+- [No-Sudo Install Mode](../install/install-no-sudo.md) — sudoless環境向けinstall

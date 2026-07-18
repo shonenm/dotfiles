@@ -17,46 +17,23 @@ dotfilesのセットアップと日常利用で1Passwordをシークレット管
 | Codex Webhook | `op://Personal/Codex Webhook/password` |
 | Gemini Webhook | `op://Personal/Gemini Webhook/password` |
 | Cursor Webhook | `op://Personal/Cursor Webhook/password` |
-| GitHub Token | `op://Personal/GitHub/token` |
+| Command Code Webhook | `op://Personal/Command Code Webhook/password` |
+| Notion MCP | `op://Personal/Notion MCP/credential` |
 | Git Name | `op://Personal/Git Config/name` |
 | Git Email | `op://Personal/Git Config/email` |
 | OpenRouter API Key | `op://Personal/OpenRouter API/credential` |
 
 ## セットアップ
 
-### 1. 1Password CLIのインストール
-
-インストールスクリプトが自動でインストール:
-
-```bash
-# Mac
-brew install 1password-cli
-
-# Linux (apt)
-curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
-  sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
-  sudo tee /etc/apt/sources.list.d/1password.list
-sudo apt update && sudo apt install -y 1password-cli
-```
-
-### 2. サインイン
-
-```bash
-eval $(op signin)
-```
-
-### 3. dotfilesインストール
+`install.sh` がHomebrew（macOS）、1Password CLI、通常設定の順に準備する。未サインインでもsecret依存処理だけをスキップして完了する。
 
 ```bash
 ./install.sh
+op signin       # 完了時に案内された場合
+./install.sh    # 同じoptionで再実行
 ```
 
-インストール時に以下が実行される:
-1. 1Password CLIの存在確認（なければインストール）
-2. サインイン状態の確認
-3. Webhookキャッシュの作成
-4. セットアップ通知の送信
+no-sudo Linuxでは `~/.local/bin/op signin` を使い、両方のinstallに `--no-sudo` を付ける。2回目の実行でWebhook、Notion MCP token、OpenRouter keyなどをcache・登録する。詳細は[インストールガイド](../install/index.md)。
 
 ## SSH Agent連携
 
@@ -91,23 +68,6 @@ git push origin main
 ```
 
 Touch ID / 生体認証で承認。
-
-## GitHub CLI連携
-
-シェル起動時に自動でGitHub CLIトークンを設定:
-
-```bash
-# .zshrc.common で自動実行
-export GH_TOKEN="$(op read 'op://Personal/GitHub/token' 2>/dev/null)"
-```
-
-### 使い方
-
-```bash
-# 認証不要で使用可能
-gh repo list
-gh pr create
-```
 
 ## Git設定
 
@@ -203,23 +163,16 @@ Fields:
   - email = your@email.com
 ```
 
-### GitHub
-```
-Vault: Personal
-Item: GitHub
-Field: token = ghp_xxxxxxxxxxxx
-```
-
 ## トラブルシューティング
 
 ### op: command not found
 
-```bash
-# Mac
-brew install 1password-cli
+リポジトリrootで `install.sh` を再実行する。no-sudo Linuxでは `--no-sudo` を付ける。
 
-# Linux
-# 上記のaptコマンドを実行
+```bash
+./install.sh
+# または
+./install.sh --no-sudo
 ```
 
 ### You are not currently signed in
