@@ -599,7 +599,7 @@ run_step install_auto_mode
 run_step configure_claude_remote_control_autostart
 run_step link_ai_scripts
 run_step install_gh_extensions
-run_step install_rust_tools
+run_step install_compiled_tools
 run_step install_ghostty_terminfo
 run_step install_fancy_cat
 run_step install_1password_cli
