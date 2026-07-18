@@ -53,3 +53,6 @@ __pycache__/
 .direnv/
 result
 result-*
+
+# Rust workspace build artifacts
+tools/target/
