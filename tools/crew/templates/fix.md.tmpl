@@ -1,0 +1,67 @@
+# Task: {{.TaskID}}
+
+{{.Prompt}}
+
+## Action: fix (new branch {{.Branch}})
+Create a new branch and a new Draft PR for this run. This is an independent
+small PR; do NOT reuse any earlier branch or PR.
+
+```bash
+git fetch origin
+# The worktree may still be on an earlier branch from a previous dispatch.
+# Detach, create the timestamped branch from origin/{{.DefaultBranch}}, wipe
+# any leftover uncommitted state, then proceed.
+git checkout --detach origin/{{.DefaultBranch}}
+git checkout -b {{.Branch}} origin/{{.DefaultBranch}}
+git reset --hard origin/{{.DefaultBranch}}
+git clean -fd
+# ... find and fix issues ...
+git add <files> && git commit -m "<type>(<scope>): <description>"
+# MANDATORY CI gate before push (see below)
+bash scripts/ci-local.sh
+git push -u origin {{.Branch}}
+gh pr create --draft --title "<type>(<scope>): <description>" --body "<analysis>"
+```
+If auto-fix fails or issues are too complex, create a GitHub issue instead.
+If no issues found, report: all checks passed.
+
+## Prior art check (MANDATORY before picking a candidate)
+
+Before enumerating candidates, read your worker's recent PRs to avoid
+duplicating or colliding with already-addressed scope:
+
+```bash
+gh pr list --search "head:crew/{{.WorkerID}}-" --state all --limit 20 \
+  --json number,title,state,body
+```
+
+Build an exclusion set from:
+- Files touched by recently merged same-worker PRs (skip re-touching).
+- Scopes listed as "picked" in any recent PR's "## Candidates considered".
+- Scopes listed as "rejected" there — do not re-adopt without a new reason.
+
+Then pick from the remaining space. If you cannot find 5 non-overlapping
+High-impact candidates, exit with the usual top-3 rejection summary; signal
+that this module's low-hanging impact is exhausted for now.
+
+## CI Gate (MANDATORY, non-negotiable)
+Exit code 0 from `bash scripts/ci-local.sh` is the ONLY condition under which
+`git push` is permitted. No other interpretation is valid.
+
+Forbidden rationalizations (do NOT push under any of these):
+- "The failing step is unrelated to my changes."
+- "The failure is from worktree / environment cross-contamination."
+- "Other workers' paths appear in the output, so it's not mine."
+- "The individual tool (ruff, pytest, tsc, etc.) passes when I run it directly,
+  so ci-local.sh must be wrong."
+- "This lint rule is a warning / style issue, not a real problem."
+- "The failure exists on develop already."
+
+If ci-local.sh exits non-zero, the only acceptable next actions are:
+1. Fix every reported failure in your own files and re-run until exit 0.
+2. If you genuinely cannot fix it in this session, stop and report BLOCKED
+   with the exact failing step name and its output. DO NOT push.
+
+Never use `--no-verify`, `--force` past this gate, or any flag that bypasses
+verification. Never mark the task complete while ci-local.sh is red.
+Never reason your way past a red gate — the gate is the verdict, not a suggestion.

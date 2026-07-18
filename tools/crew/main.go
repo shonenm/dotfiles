@@ -26,6 +26,8 @@ func main() {
 		os.Exit(runDaemon(rest))
 	case "dispatch":
 		os.Exit(runDispatch(rest))
+	case "init":
+		os.Exit(runInitCmd(rest))
 	default:
 		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", sub)
 		os.Exit(1)
@@ -59,6 +61,11 @@ func runDaemon(args []string) int {
 		}
 	}
 	return loadCrewOrExit(configFile).cmdDaemon(interval)
+}
+
+func runInitCmd(args []string) int {
+	configFile, _ := parseConfigFlag(args)
+	return loadCrewOrExit(configFile).runInit()
 }
 
 func runDispatch(args []string) int {

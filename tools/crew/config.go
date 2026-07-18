@@ -12,15 +12,17 @@ type Config struct {
 	Workers     []Worker `json:"workers"`
 	Tasks       []Task   `json:"tasks"`
 	Layout      Layout   `json:"layout"`
-	TmuxSession string   `json:"tmux_session"` // 省略時 crew-<project>
-	StateDir    string   `json:"state_dir"`    // 省略時 <runtime>/ralph-crew/<project>
+	TmuxSession  string `json:"tmux_session"`  // 省略時 crew-<project>
+	StateDir     string `json:"state_dir"`     // 省略時 <runtime>/ralph-crew/<project>
+	WorktreePath string `json:"worktree_path"` // worker 個別指定が無い場合の fallback
 }
 
 type Worker struct {
 	ID           string          `json:"id"`
 	Model        string          `json:"model"`
 	SystemPrompt string          `json:"system_prompt"`
-	MCPConfig    json.RawMessage `json:"mcp_config,omitempty"`
+	MCPConfig    string          `json:"mcp_config,omitempty"`
+	WorktreePath string          `json:"worktree_path,omitempty"`
 	Permissions  json.RawMessage `json:"permissions,omitempty"`
 }
 
