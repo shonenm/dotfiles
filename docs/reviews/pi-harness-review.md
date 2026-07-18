@@ -1,6 +1,9 @@
 # pi エージェントハーネス レビュー (2026-05-29)
 
-対象: `common/pi/.pi/agent/`（settings.json, AGENTS.md, APPEND_SYSTEM.md, extensions/*.ts, skills/, prompts/）+ `docs/specs/agent-infrastructure.md`
+> Status: Historical review
+> この文書は2026-05-29時点の監査記録であり、現行backlogや仕様ではない。現在の構成は[pi概要](../ai-agents/pi/overview.md)を参照する。
+
+対象: 2026-05-29時点の `common/pi/.pi/agent/`（settings.json, AGENTS.md, APPEND_SYSTEM.md, extensions/*.ts, skills/, prompts/）
 
 Web BP 調査の根拠は本文末尾の References 参照。
 
@@ -188,8 +191,6 @@ MEMORY.md は append-only、キュレーション/上限なし。肥大化で se
 
 - 監査ログが MCP 引数 (argsSummary) を記録 → 秘密が引数に乗ると漏れる。secret パターンで redact 推奨。
 - web_search の `num` パラメータは jina backend で無視（searxng のみ 10 件 slice）。
-- spec の Implementation Status 表が全 ✅（ask 未完を過大表示）。
-- AGENTS.md 冒頭の spec 参照が相対パス `docs/specs/...`（ユーザスコープ ~ から解決しない可能性）。
 
 ---
 

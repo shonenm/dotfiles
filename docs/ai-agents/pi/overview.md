@@ -83,16 +83,15 @@ pi
 
 **注意:** コミュニティ製・非公式 API。Cursor の仕様変更で動かなくなる可能性あり。
 
-### 3. pueue デーモンを起動
+### 3. pueueを確認
 
-並列 delegation や長時間プロセスを pi 経由で扱う場合 pueue デーモンが必要。
+`agent-delegation.ts` はpi起動時にpueue daemonの起動を試みる。通常は手動の常駐設定を追加しない。
 
 ```bash
-pueued -d        # daemonize
 pueue status
+# daemonが停止している場合だけ:
+pueued -d
 ```
-
-systemd / launchd 自動起動を組む場合は別途設定 (TODO)。
 
 ## 使い方
 
@@ -130,11 +129,11 @@ dotfiles の拡張により Web Research Layer が利用可能。SearXNG + Jina 
 
 ### モデル選択を変更する
 
-`common/pi/.pi/agent/AGENTS.md` の "Model selection" セクションを編集。プロバイダ / モデル名 / effort を変えれば次回起動から反映される (シンボリックリンクなので即時反映)。
+`common/pi/.pi/agent/extensions/agent-delegation.ts` の `MODEL_TIERS` を編集し、piを再起動する。runtimeの利用方針だけを `AGENTS.md` に記載する。
 
 ### TUI テーマ
 
-`tokyonight-high-contrast` を標準テーマとして `common/pi/.pi/agent/themes/` で管理する。通常は `settings.json` の `theme` がこれを選ぶ。Pi を再起動すると反映され、調整中のテーマファイルは Pi 上で自動再読込される。
+`tokyonight-high-contrast` を標準テーマとして `common/pi/.pi/agent/themes/` で管理する。通常は `settings.json` の `theme` がこれを選ぶ。pi を再起動すると反映され、調整中のテーマファイルは pi 上で自動再読込される。
 
 ### 表示を簡潔にする
 
