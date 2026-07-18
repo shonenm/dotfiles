@@ -5,6 +5,24 @@ ai-usage の詳細は [ai-usage-rust-pilot.md](ai-usage-rust-pilot.md)。本 doc
 
 設計日: 2026-07-18
 
+## 実装完了 (2026-07-18)
+
+全 7 マイルストーン完了。M0 pomodoro → M1-M3 ai-usage (claude/gemini/cursor/codex) →
+M4 wt → M5 install 導線 → M6 consumer 切替 + 旧 bash 8 ファイル削除 → M7 doc。
+各段階で bash 版との byte-parity を確認済み。設計からの差分:
+
+- **rusqlite → sqlite3 CLI**: libsqlite3-sys 0.38 が unstable feature (`cfg_select`) 依存で
+  rustc 1.92 build 不可。cursor の IDE sqlite fallback は sqlite3 CLI へ shell-out に変更
+  (keychain/secret-tool と同じ方針、重い build 依存も回避)
+- **fs4 → std File::lock**: codex の排他ロックは std の `File::lock` (1.89 安定化) で足り、
+  fs4 依存は削除
+- **cursor は独立ファイルでなく symlink**: (Phase 0-4 で判明済み) sidebar のみが consumer
+- **.wt-config は TOML 化**: 未配置時は組込みデフォルト維持で挙動不変
+- **ureq は json feature 無効**: 送信は serde_json + `.send()` で body 構築
+
+依存: ureq(rustls) / serde / serde_json / jiff / base64 / toml。標準ライブラリ優先で
+fs4・rusqlite は不採用。
+
 ## スコープ確定
 
 | binary | 置換対象 (bash) | 行数 | effort |

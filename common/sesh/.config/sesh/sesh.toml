@@ -45,7 +45,7 @@ pattern = "~/ghq/github.com/*/*"
 [[wildcard]]
 pattern = "~/workspace/*"
 
-# git worktree (scripts/wt で作成した `<main>--wt--<slug>` ディレクトリ)
+# git worktree (wt で作成した `<main>--wt--<slug>` ディレクトリ)
 # ~/ 直下と ~/ghq/github.com/<owner>/ 直下の両方をカバー。
 # session 名は basename (`dotfiles--wt--feat-login` 等) となるため、
 # Claude Code 並列実行時に worker を session 単位で識別できる。

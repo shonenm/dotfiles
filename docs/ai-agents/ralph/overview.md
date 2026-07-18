@@ -213,7 +213,7 @@ Phase 1: /d-ralph-parallel (implementation)
   +-- ralph-orchestrate init --force
   +-- ralph-orchestrate gen-prompt-batch task-spec.json
   +-- ralph-orchestrate launch T-1 ... --model sonnet
-  |     +-- wt_create ralph/T-1      # git worktree + tmux window via wt-lib.sh
+  |     +-- wt new ralph/T-1         # git worktree + tmux window via wt binary
   |     +-- split-window -h          # Left: nvim (review), Right: claude TUI
   |     +-- tmux send-keys "/d-ralph 'Read prompt.md ...' --skip-plan"
   +-- ralph-orchestrate status --json --wait 20  (loop until all_done)
@@ -273,7 +273,7 @@ dotfiles/
 |       +-- ralph-worker/ralph-worker.md
 |   +-- com.user.ralph-schedule.plist  # launchd plist for scheduled execution
 +-- scripts/
-|   +-- wt-lib.sh                      # Worktree + tmux window management library
+|   +-- (worktree 操作は wt binary: tools/wt の plumbing subcommand)
 |   +-- ralph-lib.sh                   # Shared utilities (permissions setup)
 |   +-- ralph-orchestrate           # Parallel worker lifecycle management
 |   +-- ralph-crew                  # Persistent worker management with periodic dispatch
@@ -312,7 +312,7 @@ dotfiles/
 - `/d-ralph-plan` defense: `allowed-tools` (hide Edit/MultiEdit, Write は Phase 3 状態ファイル生成のみ許可) + prompt reinforcement. PreToolUse hook は skill frontmatter hooks がグローバルに読み込まれる制約により不採用
 - Backpressure auto-fix: eslint/prettier/ruff fix before reporting remaining errors
 - Parallel execution max 4 workers: resource constraint. Workers launched via `/d-ralph` skill in tmux panes for observability. No `--dangerously-skip-permissions` (avoids "Are you sure?" confirmation; Stop hook provides autonomous loop instead)
-- `wt-lib.sh` extracted from `wt` CLI: shared library for worktree+tmux management, used by both `wt` command and `ralph-orchestrate`
+- `wt` (tools/wt, Rust binary): worktree+tmux management. user-facing subcommands + plumbing (`path`/`exists`/`root`/`window-name`/`sync-ignored`) used by `ralph-orchestrate` via shell-out (旧 wt-lib.sh を置換)
 - Parallel results via `${XDG_RUNTIME_DIR:-$HOME/.cache}/ralph/results/`: prevents orchestrator context bloat. Orchestrator reads 1-line summaries, not full worker output
 - Model mixing: orchestrator uses session model (Opus), workers and reviewer use sonnet
 - 3-skill phased parallel model: `/d-ralph-parallel` (implementation) → human review → `/d-ralph-collect` (save/send) → `/d-ralph-cleanup`. Human review is mandatory between implementation and merge

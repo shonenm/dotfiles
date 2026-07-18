@@ -27,7 +27,7 @@ ccusage blocks
 - `--instances`: Claude Code のプロジェクト別集計。プロジェクト名を含むため共有しない
 - `blocks`: Claude Code の5時間 block の利用傾向。tmux の現在クォータ表示とは別の履歴分析
 
-既存の `tmux-claude-usage.sh` は OAuth API の現在の5時間/週クォータを表示する。ccusage は履歴統計なので置換しない。
+既存の `ai-usage claude` は OAuth API の現在の5時間/週クォータを表示する。ccusage は履歴統計なので置換しない。
 
 ## 月次証跡
 

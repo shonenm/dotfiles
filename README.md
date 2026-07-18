@@ -38,7 +38,6 @@ dotfiles/
 │   ├── linux.sh     # Linuxパッケージインストール
 │   ├── claude-status.sh  # Claude Code通知連携
 │   ├── ai-notify.sh      # AI通知ヘルパー
-│   ├── pomodoro.sh       # ポモドーロタイマー
 │   ├── git-find-big.sh   # Git大容量ファイル検索
 │   ├── git-rm-from-history.sh  # Git履歴からファイル削除
 │   ├── git-rm-submodule.sh     # Gitサブモジュール削除

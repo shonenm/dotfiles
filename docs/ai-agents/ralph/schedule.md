@@ -128,7 +128,7 @@ dotfiles/
 |   +-- ralph-schedule              # メイン CLI (add/list/cancel)
 |   +-- ralph-schedule-exec.sh      # launchd/at から呼ばれる executor
 |   +-- ralph-lib.sh                # 共有ユーティリティ (permissions setup)
-|   +-- wt-lib.sh                   # worktree + tmux ウィンドウ管理ライブラリ
+|   +-- (worktree 操作は wt binary: tools/wt の plumbing subcommand)
 |   +-- claude-gc                   # クリーンアップ (_gc_ralph_schedule 追加)
 +-- templates/
 |   +-- com.user.ralph-schedule.plist  # launchd plist テンプレート

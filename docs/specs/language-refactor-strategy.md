@@ -109,7 +109,7 @@ Phase 0 後、「書き換えないと直らない問題」は事実上ゼロ。
 ## 実行順序（pilot → expand）
 
 - **Phase 0**: bash quick wins（書き換えゼロ、実問題を全消し）— 完了（2026-07-18、7/7 push 済み）
-- **Phase 1**: Rust 置換の完結 — `ai-usage`（usage 統合）+ `wt` + `pomodoro` を `tools/` workspace で実装（設計: [rust-cli-migration.md](rust-cli-migration.md) / [ai-usage-rust-pilot.md](ai-usage-rust-pilot.md)）。wt/pomodoro は当初 Phase 3 日和見だったが、Rust 面を一気に完結させる方針で前倒し
+- **Phase 1**: Rust 置換の完結 — 完了（2026-07-18）。`ai-usage`（usage 4 本 + cursor-auth-token 統合）+ `wt`（+ wt-lib.sh）+ `pomodoro` を `tools/` cargo workspace で実装し、旧 bash 8 ファイルを削除（設計: [rust-cli-migration.md](rust-cli-migration.md) / [ai-usage-rust-pilot.md](ai-usage-rust-pilot.md)）。全プロバイダ/コマンドで bash 版との byte-parity を確認。wt/pomodoro は当初 Phase 3 日和見だったが Rust 面を一気に完結させる方針で前倒し
 - **Phase 2 本命**: `ralph-crew` の Go 化（Phase 1 が緑になってから。daemon 専用ドメイン）
 - **Phase 3 日和見**: `ccusage-snapshot`(Babashka, データ処理層の学習台)
 
