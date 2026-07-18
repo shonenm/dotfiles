@@ -260,11 +260,11 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     4 = 'exec-and-forget ~/dotfiles/scripts/sleep-timer.sh set 30'
     5 = 'exec-and-forget ~/dotfiles/scripts/sleep-timer.sh set 60'
     # Pomodoro (w: work, b: break, l: long break)
-    w = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 25'
-    b = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 5'
-    l = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh set 60'
-    s = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh toggle'
-    r = 'exec-and-forget ~/dotfiles/scripts/pomodoro.sh reset'
+    w = 'exec-and-forget ~/.local/bin/pomodoro set 25'
+    b = 'exec-and-forget ~/.local/bin/pomodoro set 5'
+    l = 'exec-and-forget ~/.local/bin/pomodoro set 60'
+    s = 'exec-and-forget ~/.local/bin/pomodoro toggle'
+    r = 'exec-and-forget ~/.local/bin/pomodoro reset'
     alt-shift-slash = 'exec-and-forget ~/.config/sketchybar/plugins/show_layout.sh'
 
 [[on-window-detected]]

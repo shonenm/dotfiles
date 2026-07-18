@@ -7,7 +7,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(dirname "$0")"
 # shellcheck source=/dev/null
-source "${SCRIPT_DIR}/wt-lib.sh"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/ralph-lib.sh"
 
@@ -111,7 +110,7 @@ if [[ -n "$branch" ]]; then
         git worktree add -b "$branch" "$worktree_path"
       fi
     fi
-    wt_copy_ignored "$project_dir" "$worktree_path"
+    wt sync-ignored "$project_dir" "$worktree_path"
     _log "Created worktree: $worktree_path"
   fi
   work_dir="${worktree_path:-$project_dir}"
