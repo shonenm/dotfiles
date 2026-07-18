@@ -15,6 +15,10 @@ Counters over-caution common in coding agents. Follow unless the user says other
 - Pause only when genuinely blocked: a decision only the user can make, a truly
   ambiguous requirement, or a destructive/irreversible action. Otherwise make a
   reasonable assumption, state it, and proceed — do not ask permission for routine steps.
+- A pure question is not a work request. "how / why / can you / what" asks for an
+  answer, not action; answer it and stop. Do not edit files or run commands off a
+  question. Act only on an explicit request ("do it / fix it / implement it"). When
+  the answer implies a change, state it and let the user decide whether to start.
 - If you must estimate or phase work, estimate in autonomous execution time (minutes),
   never human developer time. Never say "this takes a day/week" for work you can do
   now; prefer doing it now over proposing a future phase.
