@@ -16,14 +16,23 @@ jobs:
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: .
-          # Exclude: zsh config files, p10k, config definitions, .git, node_modules.
-          # Phase 6: common/zsh moved into nix/home/programs/zsh; the .p10k.zsh
-          # there is zsh-specific syntax that shellcheck (bash-focused) can't
-          # parse. linux/zsh + mac/zsh still hold .zshrc.local.
-          ignore_paths: common/zsh linux/zsh mac/zsh nix/home/programs/zsh config .git node_modules
+          # Exclude zsh-only files, config declarations, generated/runtime trees.
+          ignore_paths: common/zsh linux/zsh mac/zsh config .git node_modules
         env:
           # SC1090/SC1091: External sources (info-level, safe to ignore)
           SHELLCHECK_OPTS: -e SC1090 -e SC1091
+
+  repository-checks:
+    name: Repository Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate package parity
+        run: scripts/check-package-duplication.sh
+      - name: Test Markdown link checker
+        run: python3 scripts/test_check_markdown_links.py
+      - name: Validate Markdown links
+        run: scripts/check-markdown-links.py
 
   stow-dry-run:
     name: Stow Dry Run
@@ -37,5 +46,5 @@ jobs:
           for dir in common/*/; do
             pkg=$(basename "$dir")
             echo "==> stow --no (dry-run): $pkg"
-            stow --dir=common --target="$HOME" --no "$pkg" 2>&1 || true
+            stow --dir=common --target="$HOME" --no-folding --no "$pkg"
           done
