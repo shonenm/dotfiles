@@ -11,8 +11,11 @@
 # installs these via Brewfile) never sees it — no cross-platform duplication.
 #
 # aqua backend: binary name is resolved from the aqua registry (e.g. bottom -> btm).
-# ubi backend:  binary name defaults to the repo name; [exe=NAME] overrides where the
-#               binary differs (rip2 -> rip, better-docker-ps -> dops, tealdeer -> tldr).
+# github backend: aqua 未収録のツール。binary name は repo 名。archive リリースは
+#                 [exe=NAME] で抽出名を上書き (rip2 -> rip, better-docker-ps -> dops)。
+#                 (mise は ubi backend を deprecated とし github backend を推奨。2027.1 で ubi 削除)
+# cargo backend:  raw-binary リリースで exe= が効かない tealdeer は Rust crate としてビルド
+#                 (crate の bin 名 = tldr。install.sh では rust の post_install で cargo が PATH に乗る)。
 
 [tools]
 # --- aqua registry (25) ---
@@ -40,12 +43,14 @@
 "aqua:typst/typst" = "latest"
 "aqua:direnv/direnv" = "latest"
 
-# --- ubi (8; not in aqua registry) ---
-"ubi:ivaaaan/smug" = "latest"
-"ubi:MilesCranmer/rip2[exe=rip]" = "latest"
-"ubi:ouch-org/ouch" = "latest"
-"ubi:joshmedeski/sesh" = "latest"
-"ubi:achristmascarl/rainfrog" = "latest"
-"ubi:lemonade-command/lemonade" = "latest"
-"ubi:Mikescher/better-docker-ps[exe=dops]" = "latest"
-"ubi:tealdeer-rs/tealdeer[exe=tldr]" = "latest"
+# --- github backend (aqua 未収録の 7 tools) ---
+"github:ivaaaan/smug" = "latest"
+"github:MilesCranmer/rip2[exe=rip]" = "latest"
+"github:ouch-org/ouch" = "latest"
+"github:joshmedeski/sesh" = "latest"
+"github:achristmascarl/rainfrog" = "latest"
+"github:lemonade-command/lemonade" = "latest"
+"github:Mikescher/better-docker-ps[exe=dops]" = "latest"
+
+# --- cargo (tealdeer は raw-binary リリースで exe= が効かず tldr 名にできないため crate build) ---
+"cargo:tealdeer" = "latest"

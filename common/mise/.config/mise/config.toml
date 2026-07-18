@@ -6,7 +6,7 @@ deno = "latest"
 "npm:cspell" = "latest"
 go = "latest"
 cloudflared = "latest"
-"ubi:babashka/babashka" = { version = "latest", exe = "bb" }
+"github:babashka/babashka" = { version = "latest", exe = "bb" }
 
 [tasks.update]
 description = "Update all package managers and tools"
