@@ -191,7 +191,7 @@ run_step install_tmux_expose
 run_step install_cargo_update
 run_step install_lemonade
 run_step install_gh_extensions
-run_step install_rust_tools
+run_step install_compiled_tools
 run_step link_ai_scripts
 run_step set_default_shell
 

@@ -4,23 +4,45 @@
 # utils.sh を source した後に読み込むこと。定義のみで、呼び出しは各 installer の main が行う。
 # shellcheck shell=bash
 
-# Rust ツール (tools/ workspace: ai-usage / wt / pomodoro) をビルドして ~/.local/bin へ。
+# compiled ツールをビルドして ~/.local/bin へ:
+#   Rust (tools/ cargo workspace): ai-usage / wt / pomodoro
+#   Go (tools/crew): crew (ralph-crew の Go 版。bash ralph-crew と並走、cutover は実サイクル実証後)
 # build 失敗時は当該 binary が欠けるだけの degrade (run_step が失敗を収集し installer は継続)。
-install_rust_tools() {
-  if ! command_exists cargo; then
-    log_warn "cargo not found, skipping rust tools (ai-usage / wt / pomodoro)"
-    return
-  fi
-  log_info "Building rust tools (ai-usage / wt / pomodoro)..."
-  if cargo build --release --manifest-path "$DOTFILES_DIR/tools/Cargo.toml"; then
-    mkdir -p "$HOME/.local/bin"
-    local b
-    for b in ai-usage wt pomodoro; do
-      install "$DOTFILES_DIR/tools/target/release/$b" "$HOME/.local/bin/"
-    done
-    log_success "rust tools installed to ~/.local/bin"
+install_compiled_tools() {
+  mkdir -p "$HOME/.local/bin"
+
+  # --- Rust ---
+  if command_exists cargo; then
+    log_info "Building rust tools (ai-usage / wt / pomodoro)..."
+    if cargo build --release --manifest-path "$DOTFILES_DIR/tools/Cargo.toml"; then
+      local b
+      for b in ai-usage wt pomodoro; do
+        install "$DOTFILES_DIR/tools/target/release/$b" "$HOME/.local/bin/"
+      done
+      log_success "rust tools installed to ~/.local/bin"
+    else
+      log_warn "rust tools build failed — ai-usage/wt/pomodoro は使用不可 (旧 bash は削除済みで fallback なし)"
+    fi
   else
-    log_warn "rust tools build failed — ai-usage/wt/pomodoro は使用不可 (旧 bash は削除済みで fallback なし)"
+    log_warn "cargo not found, skipping rust tools (ai-usage / wt / pomodoro)"
+  fi
+
+  # --- Go (crew) ---
+  local go_bin=""
+  if command_exists go; then
+    go_bin="go"
+  elif command_exists mise; then
+    go_bin="$(mise which go 2>/dev/null || true)"
+  fi
+  if [[ -n "$go_bin" ]]; then
+    log_info "Building go crew (ralph-crew Go 版, bash と並走)..."
+    if (cd "$DOTFILES_DIR/tools/crew" && "$go_bin" build -o "$HOME/.local/bin/crew" .); then
+      log_success "crew installed to ~/.local/bin (bash ralph-crew は据え置き)"
+    else
+      log_warn "crew build failed — bash ralph-crew を継続使用"
+    fi
+  else
+    log_warn "go not found, skipping crew (bash ralph-crew を継続使用)"
   fi
 }
 

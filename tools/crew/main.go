@@ -28,6 +28,14 @@ func main() {
 		os.Exit(runDispatch(rest))
 	case "init":
 		os.Exit(runInitCmd(rest))
+	case "send":
+		os.Exit(runSend(rest))
+	case "restart":
+		os.Exit(runRestart(rest))
+	case "cleanup":
+		os.Exit(runCleanup(rest))
+	case "teardown":
+		os.Exit(runTeardown(rest))
 	default:
 		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", sub)
 		os.Exit(1)
@@ -66,6 +74,53 @@ func runDaemon(args []string) int {
 func runInitCmd(args []string) int {
 	configFile, _ := parseConfigFlag(args)
 	return loadCrewOrExit(configFile).runInit()
+}
+
+// positionalArgs は --config <path> を除いた位置引数を返す。
+func positionalArgs(args []string) (positional []string, configFile string) {
+	configFile = defaultConfig
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--config" {
+			if i+1 < len(args) {
+				configFile = args[i+1]
+				i++
+			}
+			continue
+		}
+		positional = append(positional, args[i])
+	}
+	return
+}
+
+func runSend(args []string) int {
+	pos, cfg := positionalArgs(args)
+	wid, msg := "", ""
+	if len(pos) > 0 {
+		wid = pos[0]
+	}
+	if len(pos) > 1 {
+		msg = pos[1]
+	}
+	return loadCrewOrExit(cfg).cmdSend(wid, msg)
+}
+
+func runRestart(args []string) int {
+	pos, cfg := positionalArgs(args)
+	wid := ""
+	if len(pos) > 0 {
+		wid = pos[0]
+	}
+	return loadCrewOrExit(cfg).cmdRestart(wid)
+}
+
+func runCleanup(args []string) int {
+	cfg, _ := parseConfigFlag(args)
+	return loadCrewOrExit(cfg).cmdCleanup()
+}
+
+func runTeardown(args []string) int {
+	cfg, _ := parseConfigFlag(args)
+	return loadCrewOrExit(cfg).cmdTeardown()
 }
 
 func runDispatch(args []string) int {
