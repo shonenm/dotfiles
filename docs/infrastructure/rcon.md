@@ -83,70 +83,8 @@ docker run -v /home/user/proj:/home/user/proj ...
 | container が停止している | wrapper がホスト shell にフォールバック、`exit` 後に default-command 再実行 = コンテナ起動後に戻れる |
 | session 名に `:` や `.` が含まれる | tmux 制限のため自動で `-` に sanitize される |
 
-## 将来の拡張計画
+## 関連文書
 
-### 別リポジトリ化の検討（2025-02調査済み）
-
-シェル関数から Go 製 CLI への移行を検討。
-
-#### 動機
-
-- ET/Mosh/SSH のトランスポート切り替え
-- TOML 設定ファイルによる高度な設定
-- 接続履歴・統計機能
-
-#### 想定される構成
-
-```
-rcon/
-├── cmd/rcon/main.go
-├── config/           # TOML設定読み込み
-├── transport/        # ssh, mosh, et の抽象化
-├── history/          # 接続履歴（SQLite or JSON）
-└── README.md
-```
-
-#### 設定ファイルイメージ（TOML）
-
-```toml
-[defaults]
-transport = "ssh"  # ssh | mosh | et
-tmux_session = "main"
-
-[[targets]]
-name = "ailab-dev"
-host = "ailab"
-container = "myproject-dev"
-transport = "et"  # オーバーライド可能
-
-[[targets]]
-name = "pi-500"
-host = "pi-500"
-# container なし = ホスト直接
-```
-
-#### 類似ツール調査結果
-
-| ツール | 特徴 | rcon との違い |
-|--------|------|--------------|
-| [intmux](https://github.com/dsummersl/intmux) | Python製、SSH+Docker+tmux | マルチホスト同時接続向け |
-| [sshmx](https://github.com/mrbooshehri/sshmx) | Bash製、SSH管理特化 | Docker 非対応 |
-| [DevPod](https://github.com/loft-sh/devpod) | devcontainer.json ベース | IDE統合前提で重い |
-| [Eternal Terminal](https://eternalterminal.dev/) | 永続接続 | Docker exec 統合なし |
-| [Mosh](https://mosh.org/) | UDP永続接続 | Docker exec 統合なし |
-
-完全に代替できるツールがないため、自前実装の価値あり。
-
-#### 実装言語の選定理由（Go）
-
-- シングルバイナリでクロスプラットフォーム対応
-- [Go SSH SDK](https://pkg.go.dev/golang.org/x/crypto/ssh) が充実
-- TOML パース、SQLite 操作が標準的
-- dotfiles のポータビリティ方針に合致
-
-#### 移行ステップ
-
-1. 別リポジトリ `rcon` を作成
-2. 最小限の Go 実装（現在のシェル関数と同等機能）
-3. 段階的に設定ファイル・履歴機能を追加
-4. dotfiles からはバイナリを PATH に置くか `go install` で導入
+- [rconセットアップ](rcon-setup.md)
+- [tmux server再起動](tmux-server-restart.md)
+- [No-Sudo Install Mode](../install/install-no-sudo.md)

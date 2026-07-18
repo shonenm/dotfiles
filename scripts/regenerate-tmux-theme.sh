@@ -2,7 +2,7 @@
 # tmux テーマファイルを再生成（powerline文字を正しいバイトで埋め込む）
 # Linux環境でgit clone後に角丸が表示されない場合に使用
 #
-# Usage: regenerate-tmux-theme.sh <tokyonight|myproject> [target_file]
+# Usage: regenerate-tmux-theme.sh <tokyonight|myproject|catppuccin|gruvbox|rosepine> [target_file]
 #
 # 重要: *.tmux を直接編集せず、このスクリプトを編集して再生成すること
 # powerline文字がgit操作で破損する可能性があるため
@@ -11,7 +11,7 @@ set -euo pipefail
 
 THEME="${1:-}"
 if [ -z "$THEME" ]; then
-  echo "Usage: $0 <tokyonight|myproject> [target_file]" >&2
+  echo "Usage: $0 <tokyonight|myproject|catppuccin|gruvbox|rosepine> [target_file]" >&2
   exit 1
 fi
 
@@ -164,7 +164,7 @@ EC='#,'
 # --- Status Right Components ---
 
 # ヘルプ表示（prefix押下時）- カンマなしなのでエスケープ不要
-HELP="#[fg=${COLOR_WARNING} bg=default]${LEFT}#[fg=${BG_DARK} bg=${COLOR_WARNING} bold] ${KEY_ICON} #[fg=${COLOR_WARNING} bg=default]${RIGHT} -| split  g git  G gh  k keifu  j scratch  f sess  F proj  v copy  r reload  ? keys  Space menu"
+HELP="#[fg=${COLOR_WARNING} bg=default]${LEFT}#[fg=${BG_DARK} bg=${COLOR_WARNING} bold] ${KEY_ICON} #[fg=${COLOR_WARNING} bg=default]${RIGHT} -| split  g git  G gh  k keifu  l scratch  f sess  F proj  v copy  r reload  ? keys  Space menu"
 
 # 通常表示の各パーツ
 # スタイル指定 #[...] 内のカンマを #, でエスケープ（ネストされた #{?...} のカンマはそのまま）
@@ -222,7 +222,7 @@ set -g window-active-style 'fg=colour255,bg=default'
 
 # --- Status Bar (transparent) ---
 set -g status "on"
-set -g status-interval 10
+set -g status-interval 30
 set -g status-justify "left"
 set -g status-style "fg=${ACCENT_PRIMARY},bg=default"
 

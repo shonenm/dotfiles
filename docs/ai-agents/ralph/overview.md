@@ -263,15 +263,8 @@ dotfiles/
 |       +-- ralph-worker/ralph-worker.md    # Worktree-isolated worker (Task subagent)
 |       +-- ralph-reviewer/ralph-reviewer.md # Read-only code reviewer (sonnet)
 +-- templates/
-|   +-- claude-skills/
-|   |   +-- d-ralph/SKILL.md
-|   |   +-- d-ralph-plan/SKILL.md
-|   |   +-- d-ralph-cancel/SKILL.md
-|   |   +-- d-ralph-resume/SKILL.md
-|   |   +-- d-ralph-parallel/SKILL.md
-|   +-- claude-agents/
-|       +-- ralph-worker/ralph-worker.md
 |   +-- com.user.ralph-schedule.plist  # launchd plist for scheduled execution
+|   +-- crew.example.json              # ralph-crew configuration example
 +-- scripts/
 |   +-- (worktree 操作は wt binary: tools/wt の plumbing subcommand)
 |   +-- ralph-lib.sh                   # Shared utilities (permissions setup)
@@ -280,10 +273,10 @@ dotfiles/
 |   +-- ralph-schedule              # One-shot scheduled Claude TUI execution
 |   +-- ralph-schedule-exec.sh      # Executor called by launchd/at
 |   +-- claude-gc                   # Cleanup all Claude artifacts (state, worktrees, branches, tmux)
-+-- docs/
-    +-- ralph.md                       # This documentation
-    +-- ralph-crew.md                  # Crew system documentation
-    +-- ralph-schedule.md              # Schedule system documentation
++-- docs/ai-agents/ralph/
+    +-- overview.md                    # This documentation
+    +-- crew.md                        # Crew system documentation
+    +-- schedule.md                    # Schedule system documentation
 ```
 
 `~/.claude/settings.json` contains the SessionStart hook registration.

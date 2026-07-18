@@ -204,9 +204,9 @@ dotfiles/
 |   +-- crew.example.json       # Config template
 +-- common/claude/.claude/
 |   +-- skills/
-|       +-- ralph-crew/SKILL.md # /ralph-crew skill
-+-- docs/
-    +-- ralph-crew.md           # This documentation
+|       +-- d-ralph-crew/SKILL.md # /d-ralph-crew skill
++-- docs/ai-agents/ralph/
+    +-- crew.md                   # This documentation
 ```
 
 ## Design Decisions
@@ -220,7 +220,3 @@ dotfiles/
 - `max_budget_usd` 非対応: persistent TUI では累積消費で予算到達時にフリーズするため
 - fix モードで worktree 分離: チェックは project_dir (read-only)、修正は一時 worktree で実施。ワーカー間の競合を防止
 - ralph-orchestrate と独立: ライフサイクルモデルが異なる (一時的 vs 常駐)
-
-## TODO
-
-- プロンプトテンプレート変数 + フォーカスローテーション: 静的プロンプトだと毎回同じ箇所しかチェックしない問題への対策。crew.json に `focus_rotation` 配列を持たせ、dispatch のたびに次の観点を選んでプロンプトに展開する。`{{focus}}`, `{{recent_changes}}`, `{{last_result}}` などのテンプレート変数をサポート。実装コスト自体は低い (シェルスクリプトで配列インデックスを回すだけ) が、実際に品質向上に寄与するかは運用してから判断する

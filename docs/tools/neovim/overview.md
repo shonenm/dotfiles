@@ -497,7 +497,7 @@ DBUI 内での操作:
 - `o` / `Enter`: 展開・選択
 - `R`: リフレッシュ
 
-詳細: [docs/database.md](database.md)
+詳細: [Database](../../infrastructure/database.md)
 
 ### Typst / PDF
 
