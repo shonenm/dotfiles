@@ -45,7 +45,7 @@ Phase 0 後、「書き換えないと直らない問題」は事実上ゼロ。
 | 1 | `tmux-{claude,codex,gemini,cursor}-usage.sh` + `cursor-auth-token.sh` を 1 binary へ | Bash → Rust | 学習（HTTP / OAuth refresh / file-lock / Keychain）+ 重複排除。non-load-bearing で最小 blast radius。`install.sh` への cargo-build 導線を試せる唯一の場所。codex の atomic tmp+chmod+rename は保持 | M | 完了 (Phase 1) `tools/ai-usage` |
 | 2 | `scripts/ralph-crew`（1182 行 daemon / worker / dispatch） | Bash → Go | 巨大 state machine の保守性 + 学習。daemon 専用ドメイン: goroutine が worker 並行に素直、`CGO_ENABLED=0` の container static が自明。TUI screen-scrape の脆さは Go でも残る | XL | Go 実装完了・並走検証中 (Phase 2) `tools/crew` |
 | 3 | `scripts/wt` + `wt-lib.sh` | Bash → Rust | 学習（分岐の多い分類ロジックを enum/型で表現）+ testable classifier。Phase 0-6 の bash fix 済みが前提。CLI ドメインなので Rust | L | 完了 (Phase 1) `tools/wt` |
-| 4 | `scripts/ccusage-snapshot` | Bash+python3 hybrid → Babashka | データ処理層の学習台。JSON 集計 + date 処理を `bb` 一本に。Python の席を Babashka に明け渡す最初の実例。月 1 の cold job で低リスク | S | 未着手 (Phase 3) |
+| 4 | `scripts/ccusage-snapshot` | Bash+python3 hybrid → Babashka | データ処理層の学習台。JSON 集計 + date 処理を `bb` 一本に。Python の席を Babashka に明け渡す最初の実例。月 1 の cold job で低リスク | S | 完了 (Phase 3、2026-07-18) `scripts/ccusage-snapshot` (bb) |
 
 `scripts/pomodoro.sh` → `tools/pomodoro`（Rust）: Phase 1 で完了。当初は日和見の学習演習扱いだったが、Rust 面を一括完結する方針で前倒しした。
 
@@ -111,7 +111,7 @@ Phase 0 後、「書き換えないと直らない問題」は事実上ゼロ。
 - **Phase 0**: bash quick wins（書き換えゼロ、実問題を全消し）— 完了（2026-07-18、7/7 push 済み）
 - **Phase 1**: Rust 置換の完結 — 完了（2026-07-18）。`ai-usage`（usage 4 本 + cursor-auth-token 統合）+ `wt`（+ wt-lib.sh）+ `pomodoro` を `tools/` cargo workspace で実装し、旧 bash 8 ファイルを削除（設計: [rust-cli-migration.md](rust-cli-migration.md) / [ai-usage-rust-pilot.md](ai-usage-rust-pilot.md)）。全プロバイダ/コマンドで bash 版との byte-parity を確認。wt/pomodoro は当初 Phase 3 日和見だったが Rust 面を一気に完結させる方針で前倒し
 - **Phase 2 本命**: `ralph-crew` の Go 化（daemon 専用ドメイン）— Go 実装完了・並走検証中（2026-07-18、`tools/crew`。設計: [ralph-crew-go.md](ralph-crew-go.md)）。bash ralph-crew と並走し、実 claude の自律サイクル実証後に cutover
-- **Phase 3 日和見**: `ccusage-snapshot`(Babashka, データ処理層の学習台)
+- **Phase 3 日和見**: `ccusage-snapshot`(Babashka, データ処理層の学習台) — 完了（2026-07-18）。bb を mise (`ubi:babashka/babashka[exe=bb]`) で導入し、bash+python3 hybrid を単一 bb に統合。reports は旧 bash 版と byte-identical。言語戦略の 5 層目 Babashka が正式稼働
 
 ## MoonBit・Nix の位置づけ（5 層に入れない）
 
