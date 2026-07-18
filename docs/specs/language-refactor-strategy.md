@@ -70,7 +70,7 @@ Phase 0 後、「書き換えないと直らない問題」は事実上ゼロ。
 | `wt-traefik-up` | 機械生成 compose を awk parse。YAML 脆弱性は理論上。壊れたら awk→`yq` 一行、158 行 rewrite は不要 |
 | nvim lua 全 51 file | embedded lua runtime。bash-shaped な部分が存在しない |
 | `icon_map.sh`（1263 行） | 上流生成データ（sketchybar-app-font）。手で refactor せず version pin + install 時 pull |
-| `clipboard-copy` / `starship-jj.sh` / `git-find-big` / `gf` 等 | one-shot glue。compiled rewrite は制約された remote/popup 環境に bootstrap dep を追加する regression |
+| `clipboard-copy` / `git-find-big` / `gf` 等 | one-shot glue。compiled rewrite は制約された remote/popup 環境に bootstrap dep を追加する regression |
 | pi extensions の `lib/` 抽出 | 「重複 exec wrapper」は inline stdlib execSync の誤認、「path builder」は file ごと別 subpath の 1 行 join。13 working file に未実証の cross-import 失敗モードを持ち込むだけ。endorse はするが抽出はしない |
 
 ## 言語戦略 — 5 層に固定、これ以上増やさない

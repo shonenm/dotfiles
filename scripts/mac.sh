@@ -24,28 +24,6 @@ install_brew_bundle() {
   log_success "Brewfile packages installed"
 }
 
-install_jj_cli() {
-  if command_exists jj; then
-    log_success "jj already installed"
-    return
-  fi
-
-  log_info "Installing jj..."
-  brew install jj
-  log_success "jj installed"
-}
-
-install_jjui() {
-  if command_exists jjui; then
-    log_success "jjui already installed"
-    return
-  fi
-
-  log_info "Installing jjui..."
-  brew install jjui
-  log_success "jjui installed"
-}
-
 install_dops() {
   if command_exists dops; then
     log_success "dops already installed"
@@ -198,8 +176,6 @@ install_cursor_cli() {
 
 # --- Main Execution ---
 run_step install_brew_bundle
-run_step install_jj_cli
-run_step install_jjui
 run_step install_mise_tools
 run_step install_npm_packages
 run_step install_claude_mem
