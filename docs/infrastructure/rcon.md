@@ -2,6 +2,9 @@
 
 SSH + ホスト側 tmux + Docker をワンコマンドで接続するツール。
 
+> tmux server が重くなった時の再起動・復元手順は
+> [tmux-server-restart.md](./tmux-server-restart.md) を参照(再起動は必ず rcon 経由で)。
+
 ## 現在の実装
 
 `common/zsh/.zshrc.common` 内のシェル関数として実装。
