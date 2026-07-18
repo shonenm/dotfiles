@@ -80,12 +80,51 @@ tools/crew/
 | M | 内容 | ゲート | 状態 |
 |---|------|--------|------|
 | M0 | orchestrate/schedule の dead-or-alive 判定 | alive 確定 → 別システムとして据え置き | 完了 |
-| M1 | Go module + crew.json パース（struct + RawMessage） | 実 crew.json 往復 + unit test | - |
-| M2 | `status`（read-only、最も安全） | bash 版と表示一致 | - |
-| M3 | daemon skeleton（singleton + tick + signal graceful stop） | 起動/停止/多重起動防止 | - |
-| M4 | worker spawn + dispatch（ralph-lib dual-mode 化含む） | テスト project で worker 起動・dispatch | - |
-| M5 | cleanup/send/restart/teardown + install 導線（go build） | 全 subcommand の smoke test | - |
-| M6 | cutover 準備（並走配置、d-crew-setup skill 更新） | 実サイクル実証まで bash crew を残す並走。証明後に削除 | - |
+| M1 | Go module + crew.json パース（struct + RawMessage） | 実 crew.json 往復 + unit test | 完了 |
+| M2 | `status`（read-only、最も安全） | bash 版と table/--json 一致 | 完了 |
+| M3 | daemon skeleton（singleton + tick + signal graceful stop） | 起動/停止/多重起動防止 E2E | 完了 |
+| M4 | worker spawn + dispatch（ralph-lib dual-mode 化含む） | prompt/worker.json byte-parity + 隔離 tmux で init→dispatch E2E | 完了 |
+| M5 | cleanup/send/restart/teardown + install 導線（go build） | 全 subcommand smoke + crew を ~/.local/bin へ並走配置 | 完了 |
+| M6 | cutover 準備（並走配置、検証手順） | bash ralph-crew は据え置き、実サイクル実証後に cutover | 完了 |
+
+## 実装完了 (2026-07-18) — 並走フェーズ
+
+Go crew (`tools/crew`) を実装し、`install_compiled_tools` が `~/.local/bin/crew` に配置。
+bash `scripts/ralph-crew` は据え置きで並走（binary 名が別 = crew vs ralph-crew）。
+
+検証済み（session 内で可能な範囲）:
+- config パース / status（table・--json）: bash と byte-parity
+- prompt テンプレート（none/issue-only）・worker.json: bash heredoc / jq -n と byte-identical
+- daemon: pidfile singleton・多重起動拒否・SIGTERM graceful stop を実バイナリ E2E
+- init→worker spawn→dispatch→send/restart/cleanup/teardown: 隔離 tmux socket + fake claude で full path E2E
+- ralph-lib.sh dual-mode: sourced（orchestrate 互換）+ CLI（Go shell-out）両対応、権限調整 jq 一致
+
+未検証（並走フェーズで実証する）:
+- 実 claude を worker として多時間の自律サイクルを回せるか（screen-scrape の idle 判定、
+  respawn による fresh context、rate limit 自動確認が実 TUI で機能するか）
+
+### 並走検証の手順
+
+実プロジェクトで bash と Go を切り替えて比較:
+
+```bash
+# bash 版 (現行)
+ralph-crew daemon --config .claude/crew.json
+# Go 版 (検証)
+crew daemon --config .claude/crew.json
+```
+
+`crew status` / `crew status --json` は副作用が最小なので、bash daemon 稼働中に
+Go の status を並べて出力一致を確認するのが最も安全な第一歩。
+
+### cutover 基準（満たしたら bash を削除）
+
+1. 実プロジェクトで `crew daemon` が worker を spawn し、1 サイクル以上 task を dispatch → PR まで自律で回る
+2. idle 判定 / restart / rate limit 自動確認が実 TUI で bash と同等に機能
+3. mac + Linux(ailab) 両方で確認
+
+満たした時点で: bash `scripts/ralph-crew` 削除、d-crew-setup / d-ralph-crew skill と
+docs の `ralph-crew` 参照を `crew` に更新。それまでは並走。
 
 ## リスク・cutover 方針
 
