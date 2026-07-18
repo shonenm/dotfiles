@@ -13,21 +13,28 @@
 - perf を書き換え根拠にした主張は全て虚偽だった（60s tick の jq、human-paced hook、background subshell 投函、5 分キャッシュ）。速度は判断材料から除外する
 - 最もレバレッジが高いのは書き換えですらなく、**bash のまま重複排除と既存バグ修正**（Phase 0）
 
-## Phase 0 — bash のまま今すぐやる（最高費用対効果・検証済み）
+## Phase 0 — bash のまま今すぐやる（完了 2026-07-18）
 
-書き換えゼロ。実バグ修正 + 重複排除。以下は実地検証済み。
+書き換えゼロ。実バグ修正 + 重複排除。全7項目 完了・push 済み（全ファイル shellcheck -S error クリーン）。
 
-| # | 対象 | やること | effort |
-|---|------|---------|--------|
-| 0-1 | `scripts/mac.sh` / `scripts/linux.sh` の 8 関数 | バイト一致の重複（`install_serena` / `install_npm_packages` / `install_gh_extensions` ほか、検証で一致確認）を `scripts/install-common.sh` に抽出して source。parity 規約が保証する drift を根絶 | S |
-| 0-2 | `scripts/ai-notify.sh:206` | 書き込みキー `timestamp` → `updated` に改名。`claude-status.sh:39,153` は `.updated` を読むため、中継ファイルが `updated=0` に化ける実バグを 1 語で修正 | XS |
-| 0-3 | `scripts/ai-notify.sh` / `scripts/claude-status.sh` | 文字列連結 JSON（`ai-notify.sh:206` で `$project` / `$workspace` を直接埋め込み）を `jq -n --arg` 化。JSON injection を根絶 | S |
-| 0-4 | `common/claude/.claude/statusline-command.sh` | 10 個の jq を `jq -r '[...]|@tsv'` 1 read に集約 + 共通本体を 1 ファイルに source（cursor 版との near-dup 解消）。fork 9→1 | S |
-| 0-5 | `scripts/linux.sh` github-release engine | `eval`-on-manifest + `grep -Po '"tag_name"'`（unauthenticated scrape）の 33 行のみ mise `github:owner/repo` へ移行。curl_pipe / apt_repo / cargo は残す | M |
-| 0-6 | `scripts/wt` / `scripts/wt-lib.sh` | `wt_clean` / `cmd_list` を既存の `--porcelain` parser（L28 にある）へ、`wt_exists` を構造マッチ、hardcode dir を `.wt-config` へ。書き換え価値の 80% を bash で回収 | S |
-| 0-7 | 移植性バグ（in-place） | `ralph-session-context.sh:75` の `grep -oP`（PCRE, BSD grep で死ぬ）、`ralph-schedule` の `date -j`/`-d` 分岐、`dev-tunnel:74` の pgrep アンカー | XS |
+| # | 対象 | やること | effort | 状態 |
+|---|------|---------|--------|------|
+| 0-1 | `scripts/mac.sh` / `scripts/linux.sh` の 8 関数 | バイト一致の重複を `scripts/install-common.sh` に抽出して source。parity drift を根絶。mac.sh/linux.sh 各 -161 行 | S | 完了 |
+| 0-2 | `scripts/ai-notify.sh` relay JSON | 書き込みキー `timestamp` → `updated` に改名。`claude-status.sh` は `.updated` を読むため中継が `updated=0` に化ける実バグを修正 | XS | 完了 |
+| 0-3 | `scripts/ai-notify.sh` / `scripts/claude-status.sh` | 文字列連結 JSON を `jq -n --arg` 化。project/workspace 名経由の JSON injection を根絶 | S | 完了 |
+| 0-4 | statusline | 10 個の jq を単一 jq（`\x1f` 区切り join + read）に集約（fork 10→1）、実装を `scripts/statusline-render.sh` に共有化。claude 実ファイルは fail-open wrapper 化 | S | 完了 |
+| 0-5 | `scripts/linux.sh` github-release engine | 33 tools を mise（aqua 25 / ubi 8）へ移行しエンジン撤去。eval-on-data + unauthenticated scrape を根絶 | M | 完了 |
+| 0-6 | `scripts/wt` / `scripts/wt-lib.sh` | `wt_clean` / `cmd_list` / `wt_exists` を `--porcelain` 構造 parse に統一、hardcode dir を `.wt-config` override に | S | 完了 |
+| 0-7 | 移植性バグ（in-place） | `ralph-session-context.sh:75` の `grep -oP`→POSIX、`dev-tunnel:74` の pgrep anchor 強化 | XS | 完了 |
 
 Phase 0 後、「書き換えないと直らない問題」は事実上ゼロ。以降の書き換えは純粋に学習投資。
+
+### 実装時に判明した当初計画との差分
+
+- **0-4**: cursor 版 statusline は独立ファイルではなく claude への symlink だった（重複ではなく共有済み）。共通本体を `scripts/statusline-render.sh` に集約し、claude 実ファイルを wrapper 化するだけで cursor も自動的に新実装を共有。jq 集約は `@tsv` ではなく `\x1f`（unit separator）区切りにした（tab は whitespace-IFS で空フィールドが潰れるため）
+- **0-5**: 当初 mac 汚染（グローバル mise config 共有）で困難と判断したが、`~/.config/mise/conf.d/*.toml` が mise に自動ロードされることを実機検証し解決。linux.sh が Linux 時のみ `config/mise-linux.toml` を conf.d に配置（stow 対象外＝mac に存在しない）。全33 tool を `mise ls-remote` で解決確認。binary 名が repo 名と異なる 3 tool（rip2→rip / better-docker-ps→dops / tealdeer→tldr）は ubi の `exe=` で対応。実バイナリ install の最終確認のみ Linux での install.sh 実行時に持ち越し（aqua/ubi は platform-aware、`mise install -y || true` で fail-tolerant）
+- **0-6**: `git worktree list --porcelain` の構造 parse に統一（旧 awk/sed は空白入りパス・detached HEAD で破綻）。`.wt-config` は override 方式（未配置時は従来デフォルト維持で挙動不変）
+- **0-7**: `ralph-schedule` の `date -j`/`-d` は既に全て Darwin 分岐済みで移植性バグなし → 変更不要だった
 
 ## 書き換え候補（学習投資として）
 
@@ -101,7 +108,7 @@ Phase 0 後、「書き換えないと直らない問題」は事実上ゼロ。
 
 ## 実行順序（pilot → expand）
 
-- **Phase 0**: bash quick wins（書き換えゼロ、実問題を全消し）
+- **Phase 0**: bash quick wins（書き換えゼロ、実問題を全消し）— 完了（2026-07-18、7/7 push 済み）
 - **Phase 1 パイロット**: `*-usage.sh` の Rust 統合（最大学習 × 最小 blast radius、`install.sh` への cargo-build 導線をここで実証）
 - **Phase 2 本命**: `ralph-crew` の Go 化（Phase 1 が緑になってから。daemon 専用ドメイン）
 - **Phase 3 日和見**: `wt`(Rust) / `ccusage-snapshot`(Babashka, データ処理層の学習台) / `pomodoro`(学習演習)
