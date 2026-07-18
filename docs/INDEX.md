@@ -58,6 +58,8 @@
 
 ## Specs
 - [specs/language-refactor-strategy.md](specs/language-refactor-strategy.md) — 適材適所な言語リファクタ調査結果と戦略（+ 業界 dotfiles 言語統計）
+- [specs/ai-usage-rust-pilot.md](specs/ai-usage-rust-pilot.md) — Phase 1: usage widget 群の Rust 統合 (ai-usage) 設計
+- [specs/rust-cli-migration.md](specs/rust-cli-migration.md) — Rust 置換 全体設計 (tools/ workspace: ai-usage / wt / pomodoro)
 
 ## Plans
 - [plans/nix-migration-plan.md](plans/nix-migration-plan.md) — NixOS migration plan
