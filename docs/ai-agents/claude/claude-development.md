@@ -44,8 +44,6 @@ dotfiles/
 │   └── news-profile.example.yaml   # /news profile template
 ├── scripts/
 │   ├── cs                          # Session manager (browse, resume, delete)
-│   ├── wt                          # Worktree + tmux window manager
-│   ├── wt-lib.sh                   # Worktree library (shared by wt and ralph)
 │   ├── ralph-lib.sh                # Ralph utilities (permissions setup)
 │   ├── ralph-orchestrate           # Parallel worker lifecycle management
 │   ├── ralph-crew                  # Persistent worker management

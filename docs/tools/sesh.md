@@ -146,7 +146,7 @@ bindkey '\es' sesh-sessions  # Alt-s
 
 ## git worktree + Claude Code 並列実行
 
-dotfiles には [`scripts/wt`](../scripts/wt) (git worktree + tmux window 統合 CLI) が同梱されている。`wt new feat/login` で `<main>--wt--<slug>` 形式のサイドカーディレクトリを作り、現在 session の **新規 window** を開いてそこに cd する仕組み。
+dotfiles には `wt` (tools/wt の Rust binary) (git worktree + tmux window 統合 CLI) が同梱されている。`wt new feat/login` で `<main>--wt--<slug>` 形式のサイドカーディレクトリを作り、現在 session の **新規 window** を開いてそこに cd する仕組み。
 
 sesh 側には下記のワイルドカードを入れており、既存の `wt` で作られた worktree ディレクトリはそのまま sesh picker に現れる:
 
