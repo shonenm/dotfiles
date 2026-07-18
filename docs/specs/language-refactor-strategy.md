@@ -40,14 +40,14 @@ Phase 0 後、「書き換えないと直らない問題」は事実上ゼロ。
 
 ランク = (impact × learning) / effort × (1/blast-radius)
 
-| Rank | 対象 | 現 → 新 | 根拠 | Effort |
-|------|------|---------|------|--------|
-| 1 | `tmux-{claude,codex,gemini,cursor}-usage.sh` + `cursor-auth-token.sh` を 1 binary へ | Bash → Rust | 学習（HTTP / OAuth refresh / file-lock / Keychain）+ 重複排除。non-load-bearing で最小 blast radius。`install.sh` への cargo-build 導線を試せる唯一の場所。container は `x86_64-unknown-linux-musl` / `cargo-zigbuild` で static 化。codex の atomic tmp+chmod+rename は保持 | M |
-| 2 | `scripts/ralph-crew`（1182 行 daemon / worker / dispatch） | Bash → Go | 巨大 state machine の保守性 + 学習。daemon 専用ドメイン: goroutine が worker 並行に素直、`CGO_ENABLED=0` の container static が自明。XL・elective。Rank1 で compiled 導線が緑になってから着手。TUI screen-scrape の脆さは Go でも残る | XL |
-| 3 | `scripts/wt` + `wt-lib.sh` | Bash → Rust | 学習（分岐の多い分類ロジックを enum/型で表現）+ testable classifier。Phase 0-6 の bash fix 済みが前提。CLI ドメインなので Rust | L |
-| 4 | `scripts/ccusage-snapshot` | Bash+python3 hybrid → Babashka | データ処理層の学習台。JSON 集計 + date 処理を `bb` 一本に。Python の席を Babashka に明け渡す最初の実例。月 1 の cold job で低リスク | S |
+| Rank | 対象 | 現 → 新 | 根拠 | Effort | 状態 |
+|------|------|---------|------|--------|------|
+| 1 | `tmux-{claude,codex,gemini,cursor}-usage.sh` + `cursor-auth-token.sh` を 1 binary へ | Bash → Rust | 学習（HTTP / OAuth refresh / file-lock / Keychain）+ 重複排除。non-load-bearing で最小 blast radius。`install.sh` への cargo-build 導線を試せる唯一の場所。codex の atomic tmp+chmod+rename は保持 | M | 完了 (Phase 1) `tools/ai-usage` |
+| 2 | `scripts/ralph-crew`（1182 行 daemon / worker / dispatch） | Bash → Go | 巨大 state machine の保守性 + 学習。daemon 専用ドメイン: goroutine が worker 並行に素直、`CGO_ENABLED=0` の container static が自明。XL・elective。Rank1 で compiled 導線が緑になってから着手。TUI screen-scrape の脆さは Go でも残る | XL | 未着手 (Phase 2) |
+| 3 | `scripts/wt` + `wt-lib.sh` | Bash → Rust | 学習（分岐の多い分類ロジックを enum/型で表現）+ testable classifier。Phase 0-6 の bash fix 済みが前提。CLI ドメインなので Rust | L | 完了 (Phase 1) `tools/wt` |
+| 4 | `scripts/ccusage-snapshot` | Bash+python3 hybrid → Babashka | データ処理層の学習台。JSON 集計 + date 処理を `bb` 一本に。Python の席を Babashka に明け渡す最初の実例。月 1 の cold job で低リスク | S | 未着手 (Phase 3) |
 
-`scripts/pomodoro.sh` は正直な学習候補だが event-driven で sketchybar に shell-out するだけ。意図した学習演習としてのみ着手、それまで bash 据え置き。
+`scripts/pomodoro.sh` → `tools/pomodoro`（Rust）: Phase 1 で完了。当初は日和見の学習演習扱いだったが、Rust 面を一括完結する方針で前倒しした。
 
 ## LEAVE AS BASH（ponytail 規律 — ここが本体）
 
