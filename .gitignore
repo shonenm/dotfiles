@@ -56,3 +56,6 @@ result-*
 
 # Rust workspace build artifacts
 tools/target/
+
+# Go crew binary
+tools/crew/crew
