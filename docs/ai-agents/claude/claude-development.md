@@ -33,32 +33,7 @@ docs/ai-agents/ralph/       # Ralph利用文書
 
 ## Settings Configuration
 
-`~/.claude/settings.json`（`templates/claude-settings.json` を `install.sh` が既存設定へmerge）:
-
-```json
-{
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": ["bash -c '$HOME/.claude/hooks/ralph-session-context.sh'"]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": ["~/dotfiles/scripts/ai-notify.sh claude stop"]
-      }
-    ],
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": ["~/dotfiles/scripts/ai-notify.sh claude $CLAUDE_NOTIFICATION_TYPE"]
-      }
-    ]
-  }
-}
-```
+`~/.claude/settings.json`は`templates/claude-settings.json`を`install.sh`が既存設定へmergeする。共通hookは`UserPromptSubmit`、tool実行、permission、Stop/StopFailure、SessionEndをtmux状態へ正規化する。現在の対応表は[AI agent状態管理](../../specs/agent-stop-notification.md)を参照。
 
 **Note**: skill frontmatter で定義された hooks (PreToolUse, PostToolUse, Stop) はグローバルにロードされます。
 

@@ -52,6 +52,16 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle claude"
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
@@ -61,7 +71,7 @@
           },
           {
             "type": "command",
-            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh start"
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh start claude event"
           }
         ]
       }
@@ -71,7 +81,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat"
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat claude event"
           }
         ]
       }
@@ -81,7 +91,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat"
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat claude event"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat claude event"
           }
         ]
       }
@@ -96,22 +116,43 @@
         ]
       }
     ],
-    "Notification": [
+    "StopFailure": [
       {
-        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/ai-notify.sh claude error"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
         "hooks": [
           {
             "type": "command",
             "command": "__HOME__/dotfiles/scripts/ai-notify.sh claude permission"
           }
         ]
-      },
+      }
+    ],
+    "Notification": [
       {
         "matcher": "idle_prompt",
         "hooks": [
           {
             "type": "command",
             "command": "__HOME__/dotfiles/scripts/ai-notify.sh claude idle"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh clear"
           }
         ]
       }

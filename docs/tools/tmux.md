@@ -460,9 +460,12 @@ tmux-which-key 設定:
 - TokyoNight テーマに合わせたスタイリング
 
 AI エージェント状態監視（自前スクリプト）:
-- `scripts/tmux-agent-status.sh` が `~/.claude/projects/**/*.jsonl` を監視し、各セッションの Claude Code / Codex / Amp の running / done / error 状態を判定
-- `scripts/tmux-agent-sidebar.sh` がセッショングループ別のセッション一覧と全エージェント状態を常時表示する pane を管理（現在のグループ/セッションをハイライト）
+- provider hook / pi extensionがpane optionへ状態を書き、`scripts/tmux-agent-index.sh`がtmux server単位でcacheする
+- `scripts/tmux-agent-status.sh`は全agentのread-only previewとpane jumpを提供する。実paneのswapは行わない
+- `scripts/tmux-agent-sidebar.sh`は同じindexからセッショングループ別の状態を常時表示する
+- event heartbeat対応providerではTUI spinnerを無視し、120秒進捗がなければhang表示する
 - サイドバー下部に Claude / Codex / Gemini / Cursor の使用量を表示。Codex は `~/.codex/auth.json` の OAuth token を自動 refresh するが、refresh token invalidated の場合は `codex login` が必要
+- 詳細は[AI agent状態管理](../specs/agent-stop-notification.md)を参照
 
 | キー | 動作 |
 |------|------|

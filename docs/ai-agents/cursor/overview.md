@@ -10,7 +10,7 @@
 | rules | グローバル振る舞いルール | `common/cursor/.cursor/rules/` → `~/.cursor/rules/` |
 | cli-config.json | CLI 権限・承認モード | `templates/cursor-cli-config.json` → `~/.cursor/cli-config.json` |
 | statusline | CLI フッター (ctx/model/git) | `common/cursor/.cursor/statusline-command.sh` (Claude と共有) |
-| hooks.json | 完了通知 | `templates/cursor-hooks.json` → `~/.cursor/hooks.json` |
+| hooks.json | tmux状態・完了通知 | `templates/cursor-hooks.json` → `~/.cursor/hooks.json` |
 | tmux 使用量 | プラン制限の可視化 | `ai-usage cursor` (tools/ai-usage) |
 | d-* skills | dotfiles ワークフロー | `common/claude/.claude/skills/` → `~/.claude/skills/` (Cursor 互換読み込み) |
 | 共有 MCP / skills | ツール横断設定 | `common/agent/.config/agent/` → `~/.config/agent/` |
@@ -178,7 +178,7 @@ Cursor CLI をそのままバックエンドにする薄いラッパ。導入は
 | インストール | npm global | curl (`cursor.com/install`) |
 | グローバル設定 | `~/.claude/settings.json` (生成) | `~/.cursor/cli-config.json` (生成) |
 | ルール形式 | `.claude/rules/*.md` | `.cursor/rules/*.mdc` |
-| 通知イベント | stop / permission / idle | stop (完了) |
+| 通知イベント | lifecycle / permission / idle | prompt / shell / read / edit / thought / stop |
 | Statusline | hooks statusLine | cli-config statusLine |
 | tmux 使用量 | ai-usage claude | ai-usage cursor |
 | SketchyBar 連携 | あり | なし (Slack のみ) |

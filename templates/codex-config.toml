@@ -1,4 +1,11 @@
-# codex は notify(単一プログラム)のみで turn 完了時に呼ばれる。引数末尾に JSON が
-# 付くが tmux-claude-pane.sh set は $2 のみ参照するため無害。turn 完了=入力待ち→ idle。
-# 注: codex は実行中の heartbeat イベントが無いため running/ハング検知は対象外。
-notify = ["__HOME__/dotfiles/scripts/tmux-claude-pane.sh", "set", "idle"]
+# Legacy completion callback remains as a fallback for older Codex builds.
+notify = ["__HOME__/dotfiles/scripts/tmux-claude-pane.sh", "set", "idle", "codex"]
+
+# Codex 0.135+ stable lifecycle hooks.
+[hooks]
+SessionStart = [{ hooks = [{ type = "command", command = "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle codex" }] }]
+UserPromptSubmit = [{ hooks = [{ type = "command", command = "__HOME__/dotfiles/scripts/tmux-claude-pane.sh start codex event" }] }]
+PreToolUse = [{ hooks = [{ type = "command", command = "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat codex event" }] }]
+PostToolUse = [{ hooks = [{ type = "command", command = "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat codex event" }] }]
+PermissionRequest = [{ hooks = [{ type = "command", command = "__HOME__/dotfiles/scripts/ai-notify.sh codex permission" }] }]
+Stop = [{ hooks = [{ type = "command", command = "__HOME__/dotfiles/scripts/ai-notify.sh codex complete" }] }]

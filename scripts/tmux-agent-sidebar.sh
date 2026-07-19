@@ -86,7 +86,7 @@ collect_agents() {
     # stash 済みはアイコン(グリフ)を変えず色だけ灰色(240)にして、サイドバーでも stash と分かるように
     [[ -n "$stashed" ]] && rg=$(printf '%s' "$rg" | sed 's/38;5;[0-9]*m/38;5;240m/')
     printf '%s\t%s\n' "$sess" "$rg"
-  done < <(agent_index_panes | while IFS="$US" read -r _pid sess _win status _hb _path cmd _title stashed _sidebar; do
+  done < <(agent_index_panes | while IFS="$US" read -r _pid sess _win status _hb _state_since _path cmd _title stashed _sidebar _provider; do
     printf '%s\x1f%s\x1f%s\x1f%s\n' "$sess" "$status" "$cmd" "$stashed"
   done)
 
@@ -95,23 +95,27 @@ collect_agents() {
   # 真のリモート/コンテナ(tmux_session 空 or 非ローカル)のみ採用する。
   [[ -d "$STATUS_DIR" ]] || return 0
   command -v jq >/dev/null 2>&1 || return 0
-  local local_sessions ws_seen="" status ws tsess project _u
+  local local_sessions ws_seen="" status ws tsess project provider identity _u
   local_sessions="|$(agent_index_sessions | awk -F "$US" '{print $1}' | tr '\n' '|')"
   # 全ファイルを1回の jq で処理(ファイル数分 jq を spawn しない)
   local files=("$STATUS_DIR"/*.json)
   [[ -e "${files[0]}" ]] || return 0
-  while IFS=$'\x1f' read -r _u status ws tsess project; do
+  while IFS=$'\x1f' read -r _u status ws tsess project provider; do
     [[ -z "$status" ]] && continue
+    # provider/workspaceごとの最新recordを先に確定し、none tombstoneで古い状態を復活させない。
+    if [[ -n "$ws" ]]; then
+      identity="${provider:-legacy}:${ws}"
+      case "$ws_seen" in *"|${identity}|"*) continue;; *) ws_seen="${ws_seen}|${identity}|";; esac
+    fi
     case "$status" in idle|permission|complete|hang|error) ;; *) continue;; esac
     if [[ -n "$tsess" ]]; then case "$local_sessions" in *"|${tsess}|"*) continue;; esac; fi
-    if [[ -n "$ws" ]]; then case "$ws_seen" in *"|${ws}|"*) continue;; *) ws_seen="${ws_seen}|${ws}|";; esac; fi
     local key="$tsess"
     [[ -z "$key" ]] && key="${project%%:*}"
     [[ -z "$key" ]] && key="remote"
     printf '%s\t%s\n' "$key" "$(sb_rank_glyph "$status")"
   done < <(jq -rs --arg us $'\x1f' '
       sort_by(-(.updated // .timestamp // 0))[]
-      | [((.updated // .timestamp // 0)|tostring),(.status // ""),(.workspace // ""),(.tmux_session // ""),(.project // "")]|join($us)
+      | [((.updated // .timestamp // 0)|tostring),(.status // ""),(.workspace // ""),(.tmux_session // ""),(.project // ""),(.tool // "")]|join($us)
     ' "${files[@]}" 2>/dev/null)
 }
 

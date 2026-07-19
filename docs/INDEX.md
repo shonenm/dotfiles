@@ -23,6 +23,8 @@
 
 ## AIエージェント
 
+- [tmux agent状態管理仕様](specs/agent-stop-notification.md)
+
 ### pi
 
 - [概要](ai-agents/pi/overview.md)

@@ -42,7 +42,7 @@ Ghostty
 以前は `SSH → docker exec → container内でtmux` という構成で、コンテナ毎に別 tmux サーバーが立っていた。新構成の利点:
 
 - **1 つのホスト tmux サーバーで全 container を集約**: session 一覧に container 単位で並ぶ
-- **Claude Code/Codex/Amp の状態監視が一元化**: ホストの `~/.claude/projects/` 等が container 内 agent のJSONLを見る (要 volume mount: `-v ~/.claude:/root/.claude`)
+- **AI agent状態監視が一元化**: provider hookが共有`~/.cache/claude/status/`へatomic publishし、ホストtmuxのsidebarが読む
 - **Docker再起動耐性**: コンテナ recreate しても tmux session/レイアウトは残る
 - **tmux をDockerイメージに仕込む必要がない**
 

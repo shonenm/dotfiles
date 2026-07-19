@@ -1,21 +1,5 @@
-// AI Agent 通知連携 (pi)
-//
-// pi のライフサイクルを tmux pane option (@agent_status) に反映し、
-// 横断ビュー(prefix+a) / サイドバー(prefix+b) / ペーン枠アイコン / ウィンドウバッジに
-// pi セッションを表示させる。Claude Code の hooks 配線と同等のことを pi extension で行う。
-//
-// 状態源スクリプト: ~/dotfiles/scripts/tmux-claude-pane.sh
-// 仕様: ~/dotfiles/docs/specs/agent-stop-notification.md §4.1
-//
-// マッピング:
-//   session_start    -> start      (running 化 + heartbeat)
-//   turn_start       -> start      (ターン開始=実行中。tool_call を待たず即 running 化)
-//   tool_call        -> heartbeat   (実行中の生存信号。hang からの復帰も担う)
-//   turn_end         -> set idle    (ターン終了=入力待ちで停止)
-//   session_shutdown -> clear       (終了時に通知をクリア)
-//
-// 注: pi は turn_start まで running シグナルが無く、最初の tool_call まで idle のままだった
-//     (テキスト生成のみのターンは tool_call が無く idle 表示のまま)。turn_start で解消。
+// pi lifecycle → tmux agent state.
+// agent_start/agent_settled represent the whole run; message/tool updates are throttled heartbeats.
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFile } from "node:child_process";
@@ -24,19 +8,52 @@ import { join } from "node:path";
 
 const PANE = process.env.TMUX_PANE;
 const SCRIPT = join(homedir(), "dotfiles", "scripts", "tmux-claude-pane.sh");
-
-// tmux pane option を更新する。tmux 外では何もしない。fire-and-forget(非ブロッキング)。
-function agent(...args: string[]): void {
-  if (!PANE) return;
-  execFile("bash", [SCRIPT, ...args], { env: process.env, timeout: 2000 }, () => {
-    /* 失敗は致命的でないため無視 */
-  });
-}
+const HEARTBEAT_INTERVAL_MS = 5_000;
 
 export default function (pi: ExtensionAPI) {
-  pi.on("session_start", async () => agent("start"));
-  pi.on("turn_start", async () => agent("start"));
-  pi.on("tool_call", async () => agent("heartbeat"));
-  pi.on("turn_end", async () => agent("set", "idle"));
-  pi.on("session_shutdown", async () => agent("clear"));
+  let queue = Promise.resolve();
+  let lastHeartbeat = 0;
+  let lastRunErrored = false;
+
+  function update(...args: string[]): Promise<void> {
+    if (!PANE) return queue;
+    queue = queue.then(
+      () =>
+        new Promise<void>((resolve) => {
+          execFile("bash", [SCRIPT, ...args], { env: process.env, timeout: 2_000 }, () => resolve());
+        }),
+    );
+    return queue;
+  }
+
+  function heartbeat(force = false): Promise<void> {
+    const now = Date.now();
+    if (!force && now - lastHeartbeat < HEARTBEAT_INTERVAL_MS) return queue;
+    lastHeartbeat = now;
+    return update("heartbeat", "pi", "event");
+  }
+
+  pi.events.on("agent-notify:permission", (data: unknown) => {
+    if (typeof data !== "boolean") return;
+    void (data ? update("set", "permission", "pi") : heartbeat(true));
+  });
+
+  pi.on("session_start", () => update("set", "idle", "pi"));
+  pi.on("agent_start", () => {
+    lastRunErrored = false;
+    lastHeartbeat = Date.now();
+    return update("start", "pi", "event");
+  });
+  pi.on("message_update", () => heartbeat());
+  pi.on("tool_execution_start", () => heartbeat());
+  pi.on("tool_execution_update", () => heartbeat());
+  pi.on("tool_execution_end", () => heartbeat());
+  pi.on("agent_end", (event) => {
+    const lastAssistant = [...event.messages]
+      .reverse()
+      .find((message) => message.role === "assistant") as { stopReason?: string } | undefined;
+    lastRunErrored = lastAssistant?.stopReason === "error";
+  });
+  pi.on("agent_settled", () => update("set", lastRunErrored ? "error" : "idle", "pi"));
+  pi.on("session_shutdown", () => update("clear"));
 }

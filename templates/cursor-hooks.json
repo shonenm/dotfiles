@@ -3,22 +3,37 @@
   "hooks": {
     "beforeSubmitPrompt": [
       {
-        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh start"
+        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh start cursor event"
       }
     ],
     "beforeShellExecution": [
       {
-        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat"
+        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat cursor event"
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat cursor event"
+      }
+    ],
+    "beforeReadFile": [
+      {
+        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat cursor event"
       }
     ],
     "afterFileEdit": [
       {
-        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat"
+        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat cursor event"
+      }
+    ],
+    "afterAgentThought": [
+      {
+        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat cursor event"
       }
     ],
     "stop": [
       {
-        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle"
+        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle cursor"
       }
     ]
   }

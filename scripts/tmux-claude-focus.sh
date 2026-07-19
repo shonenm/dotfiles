@@ -4,12 +4,14 @@
 # 5秒タイマーロジック（SketchyBarと同じ）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUNTIME_BASE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/tmux-agent-lib.sh"
 SHARED_BASE="${DOTFILES_SHARED_DIR:-$HOME/.cache}"
 STATUS_DIR="$SHARED_BASE/claude/status"
-FOCUS_STATE_FILE="$RUNTIME_BASE/claude/focus"
+RUNTIME_DIR="$(agent_runtime_dir)"
+FOCUS_STATE_FILE="$RUNTIME_DIR/focus"
 
-mkdir -p "$RUNTIME_BASE/claude"
+mkdir -p "$RUNTIME_DIR"
 
 # 現在のセッション・ウィンドウ情報を取得
 SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
