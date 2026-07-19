@@ -44,7 +44,7 @@
     // デストラクティブなコマンドは確認
     "rm *": "ask",
     "rmdir *": "ask",
-    "rm -rf *": "ask",
+    // rm -rf は permission-gate.ts が git 判定付きで一元管理（git 配下は免除、非 git は confirm）
     "rm -r *": "ask",
     "mv *": "ask",
     "cp *": "ask",
@@ -63,7 +63,7 @@
     "pnpm add *": "ask",
     "pip install *": "ask",
     "pip uninstall *": "ask",
-    "git push *": "ask",
+    // git push は permission-gate.ts が force push を git 判定付きで管理（plain push は allow に委譲）
     "git commit *": "allow",
     "git add *": "allow",
     "git checkout *": "ask",
