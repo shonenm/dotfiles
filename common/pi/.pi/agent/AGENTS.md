@@ -18,6 +18,7 @@
 - secret、credential、`.env`、private key、production dumpを読まない。
 - 生成物とruntime fileを直接編集しない。
 - root causeを確認し、既存実装・stdlib・native機能を優先する。
+- agentは既存pooled worktreeだけを再利用し、`git worktree add`や`pnpm wt provision`でworktree capacityを追加しない。追加が必要なら利用者がterminalから実行する。
 
 ## Memory
 
