@@ -370,24 +370,7 @@ set-hook -g client-session-changed 'run-shell -b "~/dotfiles/scripts/tmux-claude
 
 2. **Configure Claude Code hooks** (`~/.claude/settings.json`)
 
-   ```json
-   {
-     "hooks": {
-       "Stop": [
-         {
-           "matcher": "",
-           "hooks": ["~/dotfiles/scripts/ai-notify.sh claude stop"]
-         }
-       ],
-       "Notification": [
-         {
-           "matcher": "",
-           "hooks": ["~/dotfiles/scripts/ai-notify.sh claude $CLAUDE_NOTIFICATION_TYPE"]
-         }
-       ]
-     }
-   }
-   ```
+   `install.sh`が`templates/claude-settings.json`をmergeする。tmux状態用hookとSlack通知の対応は[AI agent状態管理](../../specs/agent-stop-notification.md)を参照。
 
 3. **Initial Setup (Webhook Cache)**
 

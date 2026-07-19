@@ -107,11 +107,17 @@ export async function isTrustedGitProjectCommand(command: string, cwd: string): 
   return isGitWorktree(cwd);
 }
 
+function getShellCommand(input: unknown): string {
+  if (!input || typeof input !== "object") return "";
+  const fields = input as Record<string, unknown>;
+  return String(fields.command ?? fields.cmd ?? "");
+}
+
 export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
     if (!SHELL_TOOLS.has(event.toolName)) return;
 
-    const command = String(event.input?.command ?? event.input?.cmd ?? "");
+    const command = getShellCommand(event.input);
     if (!command) return;
 
     const hardDenyReason = getHardDenyReason(command);
@@ -124,10 +130,16 @@ export default function (pi: ExtensionAPI) {
 
     if (await isTrustedGitProjectCommand(command, ctx.cwd)) return;
 
-    const ok = await ctx.ui.confirm(
-      "🛡️ Dangerous command detected",
-      `Allow this command?\n\n${command}\n\nPattern matched: ${matched.source}`
-    );
+    pi.events.emit("agent-notify:permission", true);
+    let ok = false;
+    try {
+      ok = await ctx.ui.confirm(
+        "🛡️ Dangerous command detected",
+        `Allow this command?\n\n${command}\n\nPattern matched: ${matched.source}`
+      );
+    } finally {
+      pi.events.emit("agent-notify:permission", false);
+    }
 
     if (!ok) {
       return { block: true, reason: "Blocked by permission-gate extension" };

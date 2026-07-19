@@ -7,7 +7,7 @@
 | 要素 | 役割 | 配置 |
 | --- | --- | --- |
 | command-code CLI | 対話セッション | `config/packages.npm.txt` → グローバル npm |
-| settings.json | Stop 時 Slack 通知 | `templates/commandcode-settings.json` → `~/.commandcode/settings.json` |
+| settings.json | tmux状態・Stop時Slack通知 | `templates/commandcode-settings.json` → `~/.commandcode/settings.json` |
 | カスタムコマンド | 再利用プロンプト | `common/commandcode/.commandcode/commands/` → `~/.commandcode/commands/` |
 | d-* skills | dotfiles ワークフロー | `common/claude/.claude/skills/` → `~/.commandcode/skills/`（install.sh で symlink） |
 | MCP | ツール横断設定 | `common/agent/.config/agent/mcp.json` → `cmd mcp add-json --scope user` |
@@ -27,9 +27,10 @@ cd ~/dotfiles
 1. `command-code` をグローバル npm インストール（未インストール時）
 2. `stow` で `common/commandcode/` をリンク
 3. `~/.commandcode/settings.json` をテンプレートから生成
-4. `d-*` スキルを `~/.commandcode/skills/` に symlink
-5. 有効な MCP サーバーを `cmd mcp add-json` で登録（`cmd` が PATH にある場合）
-6. 1Password に Webhook がある場合は `ai-notify.sh --setup cmd`
+4. `PreToolUse` / `PostToolUse` / `Stop` hookでtmux状態を連携
+5. `d-*` スキルを `~/.commandcode/skills/` に symlink
+6. 有効な MCP サーバーを `cmd mcp add-json` で登録（`cmd` が PATH にある場合）
+7. 1Password に Webhook がある場合は `ai-notify.sh --setup cmd`
 
 確認:
 
