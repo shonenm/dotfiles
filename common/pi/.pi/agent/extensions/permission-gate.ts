@@ -12,6 +12,21 @@ const execFileAsync = promisify(execFile);
 // (e.g. `rm -r -f`, base64-encoded commands, obscure flag spellings); it is not
 // a security boundary. Its job is to catch the obvious-footgun cases and force
 // a human decision, not to stop a determined adversary.
+// Capacity creation must originate outside the agent, so these commands do not
+// offer the confirmation escape hatch used by the general denylist.
+const HARD_DENY_PATTERNS = [
+  {
+    pattern:
+      /(?:^|[;&|]\s*)(?:sudo\s+)?(?:\S*\/)?git\b(?:(?:\s+-C\s+(?:"[^"]*"|'[^']*'|[^\s;&|]+))*)\s+worktree\s+add\b/i,
+    reason: "Agents may only reuse existing pooled worktrees; run git worktree add manually if required",
+  },
+  {
+    pattern:
+      /(?:^|[;&|]\s*)(?:sudo\s+)?(?:corepack\s+)?(?:\S*\/)?pnpm\b(?:\s+(?:(?:-C|--dir|--filter)\s+(?:"[^"]*"|'[^']*'|[^\s;&|]+)|(?:--dir|--filter)=(?:"[^"]*"|'[^']*'|[^\s;&|]+)|-w|--workspace-root|--silent))*\s+(?:run\s+)?wt\s+(?:--\s+)?provision\b/i,
+    reason: "Agents may not add pooled worktree capacity; run pnpm wt provision manually if required",
+  },
+];
+
 const DANGEROUS_PATTERNS = [
   /\brm\b(?=[^|;&\n]*\s-[a-z]*r)(?=[^|;&\n]*\s-[a-z]*f)/i, // rm with both -r and -f (rf/fr/-r -f)
   /\bsudo\b/,
@@ -83,6 +98,10 @@ async function isGitWorktree(cwd: string): Promise<boolean> {
   }
 }
 
+export function getHardDenyReason(command: string): string | undefined {
+  return HARD_DENY_PATTERNS.find(({ pattern }) => pattern.test(command))?.reason;
+}
+
 export async function isTrustedGitProjectCommand(command: string, cwd: string): Promise<boolean> {
   if (!isRepoLocalRm(command) && !isRepoLocalForceWithLease(command)) return false;
   return isGitWorktree(cwd);
@@ -94,6 +113,11 @@ export default function (pi: ExtensionAPI) {
 
     const command = String(event.input?.command ?? event.input?.cmd ?? "");
     if (!command) return;
+
+    const hardDenyReason = getHardDenyReason(command);
+    if (hardDenyReason) {
+      return { block: true, reason: hardDenyReason };
+    }
 
     const matched = DANGEROUS_PATTERNS.find((p) => p.test(command));
     if (!matched) return;
