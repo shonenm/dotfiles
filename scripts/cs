@@ -173,10 +173,7 @@ clean_old_sessions() {
     fi
 
     echo ""
-    read -p "Delete these $count sessions? [y/N] " -n 1 -r
-    echo
-
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if gum confirm --default=false "Delete these $count sessions?"; then
         while IFS= read -r session_file; do
             local age_days
             age_days=$(( ($(date +%s) - $(stat -f "%m" "$session_file" 2>/dev/null || stat -c "%Y" "$session_file")) / 86400 ))
