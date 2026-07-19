@@ -119,6 +119,10 @@ pueue wait <task-id>
 pueue log <task-id>
 ```
 
+## tmux状態連携
+
+`agent-notify.ts`は`agent_start`から`agent_settled`までを1つのrunning区間として扱い、stream/tool進捗を5秒間隔のheartbeatへ変換する。更新は直列化され、`turn_end`途中でidleへ戻る競合を起こさない。詳細は[AI agent状態管理](../../specs/agent-stop-notification.md)を参照。
+
 ## Web Research
 
 詳細は [web-research.md](web-research.md) を参照。
