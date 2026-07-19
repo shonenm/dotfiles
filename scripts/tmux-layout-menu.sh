@@ -52,13 +52,9 @@ while true; do
     if [ "$picked_name" = "$SAVE_TAG" ]; then
       continue
     fi
-    printf 'delete preset %q? [y/N]: ' "$picked_name"
-    read -r answer
-    case "${answer:-}" in
-      y|Y|yes|YES)
-        "$TMUX_LAYOUT" delete "$picked_name" || true
-        ;;
-    esac
+    if gum confirm --default=false "delete preset $picked_name?"; then
+      "$TMUX_LAYOUT" delete "$picked_name" || true
+    fi
     continue
   fi
 

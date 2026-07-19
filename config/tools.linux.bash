@@ -172,7 +172,7 @@ LINUX_TOOL_ORDER=(
   pgcli
 )
 # GitHub-release tools (fzf, fastfetch, delta, lazygit, ghq, smug, dops, yazi,
-# rainfrog, typst, just, watchexec, hyperfine, gitleaks, xh, ouch, glow, viddy,
+# rainfrog, typst, just, watchexec, hyperfine, gitleaks, xh, ouch, glow, gum, viddy,
 # doggo, topgrade, grex, sesh, lemonade, neovim, direnv, sd, dust,
 # bottom, rip2, lsd, tealdeer) are installed via mise — see config/mise-linux.toml
 # and the mise block in scripts/linux.sh. They no longer use the eval/scrape engine.

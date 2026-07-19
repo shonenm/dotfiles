@@ -121,9 +121,7 @@ case "$action" in
       echo "Warning: REVIEW: comments remain:"
       echo "$REVIEW_REMAINING"
       echo ""
-      read -rp "Continue anyway? [y/N]: " -n 1 yn || true
-      echo ""
-      [[ "$yn" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
+      gum confirm --default=false "Continue anyway?" || { echo "Cancelled."; exit 0; }
     fi
     case "$OP_TYPE" in
       rebase)      git rebase --continue ;;
@@ -140,9 +138,7 @@ case "$action" in
       cherry-pick) abort_cmd="git cherry-pick --abort" ;;
       *)           abort_cmd="git merge --abort" ;;
     esac
-    read -rp "Run '${abort_cmd}'? [y/N]: " -n 1 confirm || true
-    echo ""
-    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    if gum confirm --default=false "Run '${abort_cmd}'?"; then
       $abort_cmd
       echo "Aborted."
     else
