@@ -18,7 +18,7 @@ const HARD_DENY_PATTERNS = [
   {
     pattern:
       /(?:^|[;&|]\s*)(?:sudo\s+)?(?:\S*\/)?git\b(?:(?:\s+-C\s+(?:"[^"]*"|'[^']*'|[^\s;&|]+))*)\s+worktree\s+add\b/i,
-    reason: "Agents may only reuse existing pooled worktrees; run git worktree add manually if required",
+    reason: "Agents may not create worktrees; use the session working tree or an explicitly selected existing worktree",
   },
   {
     pattern:
