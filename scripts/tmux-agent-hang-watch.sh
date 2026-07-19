@@ -10,16 +10,19 @@ set -euo pipefail
 [[ -z "${TMUX:-}" ]] && exit 0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/tmux-agent-lib.sh"
 INTERVAL="${AGENT_HANG_INTERVAL:-15}"
 
-RUNTIME_BASE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}"
-LOCK_DIR="$RUNTIME_BASE/claude"
+LOCK_DIR="$(agent_runtime_dir)"
 LOCK_FILE="${LOCK_DIR}/hang-watch.pid"
 mkdir -p "$LOCK_DIR"
 
-# 既に生存インスタンスがあれば終了
-if [[ -f "$LOCK_FILE" ]] && kill -0 "$(cat "$LOCK_FILE" 2>/dev/null)" 2>/dev/null; then
-  exit 0
+# 既に同じwatcherが生存していれば終了。PID再利用された無関係processはlock所有者とみなさない。
+if [[ -f "$LOCK_FILE" ]]; then
+  existing=$(cat "$LOCK_FILE" 2>/dev/null || true)
+  command=$(ps -p "$existing" -o command= 2>/dev/null || true)
+  [[ -n "$existing" && "$command" == *tmux-agent-hang-watch.sh* ]] && exit 0
 fi
 echo $$ > "$LOCK_FILE"
 # INT/TERM は cleanup 後に必ず exit する。exit しないと TERM を握り潰してループ継続し、

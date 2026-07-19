@@ -8,6 +8,7 @@
 # event: stop | complete | permission | idle | error
 
 set -euo pipefail
+umask 077
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -16,6 +17,14 @@ SHARED_BASE="${DOTFILES_SHARED_DIR:-$HOME/.cache}"
 
 # キャッシュディレクトリ (XDG_DATA_HOME準拠で永続化)
 CACHE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/ai-notify"
+
+write_private_file() {
+  local path="$1" content="$2" tmp
+  tmp="${path}.$$"
+  printf '%s\n' "$content" > "$tmp"
+  chmod 600 "$tmp"
+  mv "$tmp" "$path"
+}
 
 # 1Password パス取得
 get_op_path() {
@@ -52,7 +61,7 @@ send_setup_notification() {
   local tool_upper
   tool_upper=$(echo "$tool" | tr '[:lower:]' '[:upper:]')
 
-  curl -s -X POST "$webhook" \
+  curl -s --connect-timeout 2 --max-time 5 -X POST "$webhook" \
     -H "Content-Type: application/json" \
     -d "{
       \"text\": \"🚀 $tool_upper セットアップ完了 - $device\",
@@ -103,8 +112,7 @@ setup_tool() {
   }
 
   mkdir -p "$CACHE_DIR"
-  echo "$webhook" > "${CACHE_DIR}/${tool}_webhook"
-  chmod 600 "${CACHE_DIR}/${tool}_webhook"
+  write_private_file "${CACHE_DIR}/${tool}_webhook" "$webhook"
   echo "Cached webhook for $tool"
 
   send_setup_notification "$tool" "$webhook"
@@ -125,14 +133,13 @@ refresh_cache() {
 
   mkdir -p "$CACHE_DIR"
 
-  for tool in claude codex gemini cursor; do
+  for tool in claude codex gemini cursor cmd; do
     local op_path
     op_path=$(get_op_path "$tool") || continue
 
     local webhook
     if webhook=$(op read "$op_path" 2>/dev/null); then
-      echo "$webhook" > "${CACHE_DIR}/${tool}_webhook"
-      chmod 600 "${CACHE_DIR}/${tool}_webhook"
+      write_private_file "${CACHE_DIR}/${tool}_webhook" "$webhook"
       echo "Refreshed cache for $tool"
     else
       echo "Skipped $tool (not available in 1Password)"
@@ -166,10 +173,20 @@ mkdir -p "$CACHE_DIR"
 # 全ツール共通の入口とし、単一フックの codex/cursor もこの経路でペーン状態を得る。
 # 仕様: docs/specs/agent-stop-notification.md
 case "$EVENT" in
-  complete|permission|idle|error)
-    "$SCRIPT_DIR/tmux-claude-pane.sh" set "$EVENT" 2>/dev/null || true
+  complete|stop)
+    "$SCRIPT_DIR/tmux-claude-pane.sh" set idle "$TOOL" 2>/dev/null || true
+    ;;
+  permission|idle|error)
+    "$SCRIPT_DIR/tmux-claude-pane.sh" set "$EVENT" "$TOOL" 2>/dev/null || true
     ;;
 esac
+
+# hook stdin はbackground化する前に読み切る。background subshellでは/dev/nullになるため。
+if [ -t 0 ]; then
+  INPUT="{}"
+else
+  INPUT=$(cat 2>/dev/null || echo "{}")
+fi
 
 # 1. 依存チェック (jq がない場合は何もしない)
 if ! command -v jq &> /dev/null; then
@@ -203,15 +220,17 @@ update_sketchybar_status() {
       local safe_project="${project//\//_}"
       status_file="$status_dir/${safe_project}.json"
     fi
+    local tmp="${status_file}.$$"
     jq -n \
       --arg project "$project" \
+      --arg tool "$TOOL" \
       --arg status "$status" \
       --arg workspace "$workspace" \
       --arg tmux_session "$tmux_session" \
       --arg tmux_window_index "$tmux_window_index" \
       --argjson updated "$(date +%s)" \
-      '{project:$project, status:$status, workspace:$workspace, tmux_session:$tmux_session, tmux_window_index:$tmux_window_index, updated:$updated}' \
-      > "$status_file"
+      '{project:$project, tool:$tool, status:$status, workspace:$workspace, tmux_session:$tmux_session, tmux_window_index:$tmux_window_index, updated:$updated}' \
+      > "$tmp" && mv "$tmp" "$status_file"
   fi
 }
 
@@ -237,19 +256,12 @@ get_webhook() {
 
   local webhook
   webhook=$(op read "$op_path" 2>/dev/null) || return
-  [[ -n "$webhook" ]] && echo "$webhook" > "$cache_file" && chmod 600 "$cache_file"
+  [[ -n "$webhook" ]] && write_private_file "$cache_file" "$webhook"
   echo "$webhook"
 }
 
 # 2. 非同期実行のためにサブシェル化
 (
-  # stdin から JSON 読み取り (タイムアウト付きでブロック回避)
-  if [ -t 0 ]; then
-    INPUT="{}"
-  else
-    INPUT=$(timeout 1 cat 2>/dev/null || echo "{}")
-  fi
-
   # session_id: 将来の拡張用に取得可能だが現在未使用
   # SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
 
@@ -286,19 +298,19 @@ get_webhook() {
     fi
   fi
 
-  # SketchyBar 用の状態を決定（Claude 専用）
-  if [[ "$TOOL" == "claude" ]]; then
-    case "$EVENT" in
-      idle)       SKETCHYBAR_STATUS="idle" ;;
-      permission) SKETCHYBAR_STATUS="permission" ;;
-      complete)   SKETCHYBAR_STATUS="complete" ;;
-      stop|error) SKETCHYBAR_STATUS="none" ;;
-      *)          SKETCHYBAR_STATUS="" ;;
-    esac
+  case "$EVENT" in
+    idle)       SHARED_STATUS="idle" ;;
+    permission) SHARED_STATUS="permission" ;;
+    complete)   SHARED_STATUS="complete" ;;
+    error)      SHARED_STATUS="error" ;;
+    stop)       SHARED_STATUS="none" ;;
+    *)          SHARED_STATUS="" ;;
+  esac
 
-    # SketchyBar 状態更新
-    if [[ -n "$SKETCHYBAR_STATUS" && -n "$WORKSPACE" ]]; then
-      update_sketchybar_status "$PROJECT" "$SKETCHYBAR_STATUS" "$WORKSPACE" "$TMUX_SESSION" "$TMUX_WINDOW_INDEX"
+  # Local SketchyBarはClaudeのみ。remote/containerの共有storeは全providerを対象にする。
+  if [[ -n "$SHARED_STATUS" && -n "$WORKSPACE" ]]; then
+    if [[ "$TOOL" == claude || "$(uname)" != Darwin || -n "${SSH_CONNECTION:-}" ]]; then
+      update_sketchybar_status "$PROJECT" "$SHARED_STATUS" "$WORKSPACE" "$TMUX_SESSION" "$TMUX_WINDOW_INDEX"
     fi
   fi
 
@@ -345,7 +357,7 @@ get_webhook() {
         ]
       }]
     }')
-  curl -s -X POST "$WEBHOOK" \
+  curl -s --connect-timeout 2 --max-time 5 -X POST "$WEBHOOK" \
     -H "Content-Type: application/json" \
     -d "$PAYLOAD" >/dev/null
 ) &>/dev/null & # バックグラウンドで実行

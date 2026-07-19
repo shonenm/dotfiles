@@ -5,11 +5,51 @@
     }
   },
   "hooks": {
-    "PostAgentLoop": [
+    "SessionStart": [
       {
         "hooks": [{
           "type": "command",
-          "command": "__HOME__/dotfiles/scripts/ai-notify.sh gemini complete"
+          "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle gemini >/dev/null 2>&1; printf '{}\\n'"
+        }]
+      }
+    ],
+    "BeforeAgent": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh start gemini event >/dev/null 2>&1; printf '{}\\n'"
+        }]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat gemini event >/dev/null 2>&1; printf '{}\\n'"
+        }]
+      }
+    ],
+    "AfterTool": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat gemini event >/dev/null 2>&1; printf '{}\\n'"
+        }]
+      }
+    ],
+    "AfterAgent": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "__HOME__/dotfiles/scripts/ai-notify.sh gemini complete >/dev/null 2>&1; printf '{}\\n'"
+        }]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh clear >/dev/null 2>&1; printf '{}\\n'"
         }]
       }
     ]
