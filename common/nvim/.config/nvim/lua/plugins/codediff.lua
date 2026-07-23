@@ -4,7 +4,7 @@ return {
   {
   "esmuellert/codediff.nvim",
   dependencies = { "MunifTanjim/nui.nvim" },
-  cmd = { "CodeDiff" },
+  cmd = { "CodeDiff", "CodeReview", "CodeReviewBranch" },
   keys = {
     { "<leader>gd", desc = "CodeDiff Open" },  -- lazy-load trigger; actual mapping set in config()
     { "<leader>gf", "<cmd>CodeDiff history %<cr>", desc = "File History" },
@@ -197,6 +197,82 @@ return {
       end)
     end
 
+    -- Review mode (two-commit diff): reviewed-file marks.
+    -- In-memory only; keyed by git_root + base + target + path so different
+    -- commit ranges keep independent marks. Cleared when nvim exits. ponytail:
+    -- in-memory, add disk persistence under $XDG_STATE_HOME if it needs to survive restarts.
+    local reviewed_marks = {}
+    local function review_key(git_root, base_rev, target_rev, path)
+      return table.concat({ git_root or "", base_rev, target_rev, path }, "\0")
+    end
+    -- Returns git_root, base_rev, target_rev when the current tab is a two-commit
+    -- review diff (both sides real commits), else nil. Reads the explorer object
+    -- (authoritative for base/target; the session's revisions can lag before a file
+    -- loads). This is the sole discriminator for review-mode UI; the normal
+    -- status/single-revision/WORKING paths return nil.
+    local function codereview_ctx()
+      local ok, lc = pcall(require, "codediff.ui.lifecycle")
+      if not ok or not lc.get_explorer then return nil end
+      local expl = lc.get_explorer(vim.api.nvim_get_current_tabpage())
+      if not expl then return nil end
+      local b, t = expl.base_revision, expl.target_revision
+      if b and t and t ~= "WORKING" and not tostring(t):match("^:[0-3]$") then
+        return expl.git_root, b, t
+      end
+      return nil
+    end
+
+    -- Ordered visible file nodes (same order/group as next_file navigation)
+    local function review_all_files(explorer)
+      return require("codediff.ui.explorer.refresh").get_all_files(explorer.tree)
+    end
+
+    -- Reviewed / total counts for the review explorer
+    local function review_counts(explorer, git_root, base_rev, target_rev)
+      local files = review_all_files(explorer)
+      local checked = 0
+      for _, f in ipairs(files) do
+        if f.data and f.data.path and reviewed_marks[review_key(git_root, base_rev, target_rev, f.data.path)] then
+          checked = checked + 1
+        end
+      end
+      return checked, #files
+    end
+
+    -- Jump selection to the next (dir=1) / prev (dir=-1) not-yet-reviewed file
+    local function review_jump_unchecked(explorer, dir)
+      local gr, o, m = codereview_ctx()
+      if not gr then return end
+      local files = review_all_files(explorer)
+      if #files == 0 then return end
+      local ci = 0
+      for i, f in ipairs(files) do
+        if f.data.path == explorer.current_file_path and f.data.group == explorer.current_file_group then
+          ci = i
+          break
+        end
+      end
+      if ci == 0 then ci = 1 end
+      for step = 1, #files do
+        local f = files[((ci - 1 + dir * step) % #files) + 1]
+        if not reviewed_marks[review_key(gr, o, m, f.data.path)] then
+          if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
+            local lc = vim.api.nvim_buf_line_count(explorer.bufnr)
+            for l = 1, lc do
+              local node = explorer.tree:get_node(l)
+              if node and node.data and node.data.path == f.data.path and node.data.group == f.data.group then
+                pcall(vim.api.nvim_win_set_cursor, explorer.winid, { l, 0 })
+                break
+              end
+            end
+          end
+          explorer.on_file_select(f.data)
+          return
+        end
+      end
+      vim.notify("All files reviewed", vim.log.levels.INFO)
+    end
+
     -- Monkey-patch nodes.prepare_node to show hunk counts
     local nodes_mod = require("codediff.ui.explorer.nodes")
     nodes_mod.prepare_node = function(node, max_width, selected_path, selected_group)
@@ -312,6 +388,17 @@ return {
         end
         local hunk_str = (hunk_count > 0) and tostring(hunk_count) or ""
 
+        -- Review mode: replace the (unused) hunk slot with a reviewed checkbox
+        local review_mark_hl = nil
+        local rgr, ro, rm = codereview_ctx()
+        if rgr then
+          if reviewed_marks[review_key(rgr, ro, rm, full_path)] then
+            hunk_str, review_mark_hl = "✓", "String"
+          else
+            hunk_str, review_mark_hl = "○", "Comment"
+          end
+        end
+
         local used_width = vim.fn.strdisplaywidth(indent) + vim.fn.strdisplaywidth(icon_part)
         -- Reserve space for: hunk_count + space + status_symbol + trailing space
         local hunk_reserve = (hunk_str ~= "") and (vim.fn.strdisplaywidth(hunk_str) + 1) or 0
@@ -379,7 +466,7 @@ return {
 
         -- Append hunk count before status symbol
         if hunk_str ~= "" then
-          line:append(hunk_str, get_hl("Comment"))
+          line:append(hunk_str, get_hl(review_mark_hl or "Comment"))
           line:append(" ", get_hl("Normal"))
         end
 
@@ -774,6 +861,14 @@ return {
     local diff_staged_help_lines = {
       { { "[", "Special" }, { "]c", "Normal" }, { "/", "Special" }, { "[c", "Normal" }, { "]", "Special" }, { " hunk  ", "Normal" }, { "[gu]", "Special" }, { " unstage  ", "Normal" }, { "[gr]", "Special" }, { " reset", "Normal" } },
       { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+    }
+    local review_explorer_help_lines = {
+      { { "[c]", "Special" }, { " reviewed  ", "Normal" }, { "[,]", "Special" }, { "/", "Normal" }, { "[.]", "Special" }, { " file  ", "Normal" }, { "{ }", "Special" }, { " next unchecked", "Normal" } },
+      { { "[Tab]", "Special" }, { " diff  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+    }
+    local review_diff_help_lines = {
+      { { "[,]", "Special" }, { "/", "Normal" }, { "[.]", "Special" }, { " file  ", "Normal" }, { "[ / ]", "Special" }, { " hunk  ", "Normal" }, { "{ }", "Special" }, { " unchecked", "Normal" } },
+      { { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
     local conflict_help_lines = {
       { { "[co]", "Special" }, { " ours  ", "Normal" }, { "[ct]", "Special" }, { " theirs  ", "Normal" }, { "[cb]", "Special" }, { " both  ", "Normal" }, { "[c0]", "Special" }, { " none", "Normal" } },
@@ -1251,12 +1346,21 @@ return {
             in_conflict = true
           end
         end
+        local session_check = require("codediff.ui.lifecycle.session").get_active_diffs()[tabpage]
+        local rexpl = session_check and session_check.explorer
+        local is_review = rexpl and rexpl.base_revision and rexpl.target_revision
+          and rexpl.target_revision ~= "WORKING"
+          and not tostring(rexpl.target_revision):match("^:[0-3]$")
+
         local help_lines
-        if in_conflict then
+        if is_review then
+          help_lines = vim.deepcopy(in_diff and review_diff_help_lines or review_explorer_help_lines)
+          local checked, total = review_counts(rexpl, rexpl.git_root, rexpl.base_revision, rexpl.target_revision)
+          table.insert(help_lines, 1, { { "reviewed ", "Normal" }, { checked .. "/" .. total, "Title" } })
+        elseif in_conflict then
           help_lines = conflict_help_lines
         elseif in_diff then
           local in_staged = false
-          local session_check = require("codediff.ui.lifecycle.session").get_active_diffs()[tabpage]
           if session_check and session_check.modified_revision == ":0" then
             in_staged = true
           end
@@ -1417,6 +1521,33 @@ return {
           end
         end
       end, vim.tbl_extend("force", map_opts, { desc = "Toggle directory or select file" }))
+
+      -- Review mode (two-commit diff): reviewed marks (c) + ,/. file navigation.
+      -- Gated so the normal status/single-revision paths are untouched.
+      if explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
+        vim.keymap.set("n", "c", function()
+          local node = tree:get_node()
+          if not node or not node.data or not node.data.path then return end
+          if node.data.type == "group" or node.data.type == "directory" then return end
+          local gr, o, m = codereview_ctx()
+          if not gr then return end
+          local k = review_key(gr, o, m, node.data.path)
+          reviewed_marks[k] = not reviewed_marks[k] or nil
+          tree:render()
+        end, vim.tbl_extend("force", map_opts, { desc = "Toggle reviewed mark" }))
+        vim.keymap.set("n", ".", function()
+          require("codediff").next_file()
+        end, vim.tbl_extend("force", map_opts, { desc = "Next file" }))
+        vim.keymap.set("n", ",", function()
+          require("codediff").prev_file()
+        end, vim.tbl_extend("force", map_opts, { desc = "Prev file" }))
+        vim.keymap.set("n", "}", function()
+          review_jump_unchecked(explorer, 1)
+        end, vim.tbl_extend("force", map_opts, { desc = "Next unreviewed file" }))
+        vim.keymap.set("n", "{", function()
+          review_jump_unchecked(explorer, -1)
+        end, vim.tbl_extend("force", map_opts, { desc = "Prev unreviewed file" }))
+      end
     end
 
     -- staged viewでカーソル位置のhunkをunstageする関数
@@ -1574,6 +1705,32 @@ return {
         vim.keymap.set("n", "[r", function()
           if goto_prev_repo_tab then goto_prev_repo_tab() end
         end, vim.tbl_extend("force", map_opts, { desc = "Prev repo tab" }))
+
+        -- Review mode (two-commit diff): ,/. move by file (same as the sidebar),
+        -- [/] move by hunk within the focused file.
+        local rexpl = session.explorer
+        if rexpl and rexpl.base_revision and rexpl.target_revision
+            and rexpl.target_revision ~= "WORKING"
+            and not tostring(rexpl.target_revision):match("^:[0-3]$") then
+          vim.keymap.set("n", ".", function()
+            require("codediff").next_file()
+          end, vim.tbl_extend("force", map_opts, { desc = "Next file" }))
+          vim.keymap.set("n", ",", function()
+            require("codediff").prev_file()
+          end, vim.tbl_extend("force", map_opts, { desc = "Prev file" }))
+          vim.keymap.set("n", "]", function()
+            require("codediff").next_hunk()
+          end, vim.tbl_extend("force", map_opts, { desc = "Next hunk" }))
+          vim.keymap.set("n", "[", function()
+            require("codediff").prev_hunk()
+          end, vim.tbl_extend("force", map_opts, { desc = "Prev hunk" }))
+          vim.keymap.set("n", "}", function()
+            review_jump_unchecked(rexpl, 1)
+          end, vim.tbl_extend("force", map_opts, { desc = "Next unreviewed file" }))
+          vim.keymap.set("n", "{", function()
+            review_jump_unchecked(rexpl, -1)
+          end, vim.tbl_extend("force", map_opts, { desc = "Prev unreviewed file" }))
+        end
 
         diffview_initialized[ev.buf] = true
       end,
@@ -1885,6 +2042,38 @@ return {
     end
 
     vim.keymap.set("n", "<leader>gd", open_all_repos_with_changes, { desc = "CodeDiff Open" })
+
+    -- :CodeReview [base] [target] - two-commit review diff (default HEAD~1 HEAD)
+    vim.api.nvim_create_user_command("CodeReview", function(o)
+      local base = o.fargs[1] or "HEAD~1"
+      local target = o.fargs[2] or "HEAD"
+      vim.cmd(string.format("CodeDiff %s %s", base, target))
+    end, { nargs = "*", desc = "Two-commit review diff (default HEAD~1 HEAD)" })
+
+    -- :CodeReviewBranch [base] - review current branch vs default branch (3-dot)
+    vim.api.nvim_create_user_command("CodeReviewBranch", function(o)
+      local base = o.fargs[1]
+      if not base then
+        -- origin/HEAD -> e.g. "origin/main" (remote-tracking ref); else local main/master
+        local out = vim.fn.systemlist({ "git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD" })
+        if vim.v.shell_error == 0 and out[1] and out[1] ~= "" then
+          base = out[1]
+        else
+          for _, cand in ipairs({ "main", "master" }) do
+            vim.fn.system({ "git", "show-ref", "--verify", "--quiet", "refs/heads/" .. cand })
+            if vim.v.shell_error == 0 then
+              base = cand
+              break
+            end
+          end
+        end
+      end
+      if not base then
+        vim.notify("CodeReviewBranch: cannot detect default branch; pass one explicitly", vim.log.levels.ERROR)
+        return
+      end
+      vim.cmd(string.format("CodeDiff %s...HEAD", base))
+    end, { nargs = "?", desc = "Review current branch vs default branch (3-dot)" })
   end,
   },
 }

@@ -375,6 +375,20 @@ dexec() {
   docker exec -it -e TERM="$TERM" -e COLORTERM="$COLORTERM" -e CLAUDE_CONTEXT="$context" "$container" "${@:-bash}"
 }
 
+# 2コミット間レビュー diff を nvim で開く (:CodeReview のラッパー)
+# Usage: codereview [base-ref] [target-ref]   (省略時 HEAD~1 HEAD)
+codereview() {
+  nvim -c "CodeReview $*"
+}
+
+# 現在ブランチをデフォルトブランチと3点diffでレビュー (:CodeReviewBranch のラッパー)
+# Usage: codereview-branch [base-ref]   (省略時デフォルトブランチ自動検出)
+codereview-branch() {
+  nvim -c "CodeReviewBranch $*"
+}
+alias cr='codereview'
+alias crb='codereview-branch'
+
 # リモートSSH接続 (CLAUDE_CONTEXT 自動設定)
 # Usage: rssh [ssh-options] <host> [command]
 # Example: rssh remote-server
