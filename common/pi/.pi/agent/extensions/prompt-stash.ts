@@ -1,12 +1,12 @@
 // Prompt Stash Extension for pi
 //
 // Claude Code-like prompt stash: Ctrl+S saves the current editor draft,
-// handles an interruption, then auto-restores when the agent finishes.
+// handles an interruption, then auto-restores when the agent settles.
 //
 // Flow:
 //   1. Ctrl+S  → stash current draft + clear editor
 //   2. Send a different prompt (handle interruption)
-//   3. Agent finishes → draft auto-restores into editor
+//   3. Agent settles → draft auto-restores into editor
 //   4. Continue where you left off
 //
 // Single-slot stash. Ctrl+S on empty editor toggles restore.
@@ -29,7 +29,7 @@ export default function (pi: ExtensionAPI) {
         // Stash the current draft (replace any previous stash)
         stashed = current;
         ctx.ui.setEditorText("");
-        ctx.ui.setStatus("stash", "📝 stashed");
+        ctx.ui.setStatus("stash", ctx.ui.theme.fg("warning", "📝 stashed"));
         ctx.ui.notify("📝 Prompt stashed (send interruption, draft auto-restores)", "info");
       } else if (stashed) {
         // Toggle: restore the stash
@@ -42,14 +42,10 @@ export default function (pi: ExtensionAPI) {
   });
 
   // -----------------------------------------------------------------------
-  // Auto-restore when agent finishes and editor is empty
+  // Auto-restore when agent settles and editor is empty
   // -----------------------------------------------------------------------
-  pi.on("agent_end", async (_event, ctx) => {
+  pi.on("agent_settled", async (_event, ctx) => {
     if (!stashed) return;
-
-    // Give the TUI a moment to settle — editor may not be immediately empty
-    // when agent_end fires if there are queued follow-up messages.
-    await new Promise((r) => setTimeout(r, 50));
 
     const current = ctx.ui.getEditorText();
     if (!current || current.trim().length === 0) {
@@ -94,7 +90,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   // -----------------------------------------------------------------------
-  // Persist stash state across extension reloads
+  // Clear transient stash on session shutdown
   // -----------------------------------------------------------------------
   pi.on("session_shutdown", (_event) => {
     // Stash is cleared on shutdown — it's a transient UI state,

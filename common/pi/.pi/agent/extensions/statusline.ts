@@ -1,18 +1,16 @@
 // Statusline Extension for pi
 //
-// Multi-line footer with:
-//   Line 1: token stats + context gauge + cost + branch + model
-//   Line 2: web stats + MCP stats
+// Balanced telemetry footer with:
+//   Focus rail: goal + extension status
+//   Core rail: branch + model | context gauge
+//   Telemetry rail: tokens | cost | agents | web | MCP
 //   3 modes: detailed / compact / off (toggle via /statusline)
-//
-// The gauge is a plain-character progress bar: ████░░░░░░  29%
-// No ANSI codes inside compound strings to avoid truncation issues.
 
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -130,14 +128,43 @@ function refreshAgents(): void {
   agentStatus = { running, queued };
 }
 
-/**
- * Plain-character progress gauge. Safe to use inside theme.fg() because the
- * characters have no ANSI codes. Returns something like "████░░░░  29%".
- */
-function gauge(pct: number, barChars: number): string {
-  const clamped = Math.max(0, Math.min(100, pct));
-  const filled = Math.max(0, Math.min(barChars, Math.round((clamped / 100) * barChars)));
-  return "█".repeat(filled) + "░".repeat(barChars - filled) + ` ${pct.toFixed(0)}%`;
+function balanceLine(left: string, right: string, width: number): string {
+  if (!left) return truncateToWidth(right, width);
+  if (!right) return truncateToWidth(left, width);
+
+  const gap = 3;
+  const rightWidth = visibleWidth(right);
+  if (rightWidth >= width - gap) return truncateToWidth(right, width);
+
+  const fittedLeft = truncateToWidth(left, width - rightWidth - gap);
+  const padding = " ".repeat(Math.max(gap, width - visibleWidth(fittedLeft) - rightWidth));
+  return truncateToWidth(fittedLeft + padding + right, width);
+}
+
+function wrapGroups(groups: string[], width: number, separator = " │ "): string[] {
+  const lines: string[] = [];
+  let line = "";
+
+  for (const group of groups.filter(Boolean)) {
+    const candidate = line ? line + separator + group : group;
+    if (line && visibleWidth(candidate) > width) {
+      lines.push(truncateToWidth(line, width));
+      line = group;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(truncateToWidth(line, width));
+  return lines;
+}
+
+function packCompact(groups: string[], width: number, separator = " · "): string {
+  let line = "";
+  for (const group of groups.filter(Boolean)) {
+    const candidate = line ? line + separator + group : group;
+    if (visibleWidth(candidate) <= width) line = candidate;
+  }
+  return truncateToWidth(line || groups.find(Boolean) || "", width);
 }
 
 // ---------------------------------------------------------------------------
@@ -151,11 +178,12 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("statusline", {
     description: "Toggle statusline mode: detailed, compact, or off",
     getArgumentCompletions: () => [
-      { value: "detailed", label: "Two-line layout with gauge and all stats" },
+      { value: "detailed", label: "Balanced rich telemetry rails" },
       { value: "compact", label: "Single line, minimal" },
       { value: "off", label: "Disable custom statusline" },
     ],
     handler: async (args, ctx) => {
+      const previousMode = mode;
       if (args === "detailed" || args === "compact" || args === "off") {
         mode = args;
       } else {
@@ -166,6 +194,9 @@ export default function (pi: ExtensionAPI) {
       if (mode === "off") {
         ctx.ui.setFooter(undefined);
         ctx.ui.notify("Statusline: off", "info");
+      } else if (previousMode === "off") {
+        await ctx.reload();
+        return;
       } else {
         ctx.ui.notify(`Statusline: ${mode}`, "info");
       }
@@ -195,6 +226,10 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     recomputeTokens(ctx.sessionManager.getBranch());
     refreshAgents();
+    if (mode === "off") {
+      ctx.ui.setFooter(undefined);
+      return;
+    }
     ctx.ui.setFooter((tui, theme, footerData) => {
       const unsub = footerData.onBranchChange(() => tui.requestRender());
       return {
@@ -208,66 +243,84 @@ export default function (pi: ExtensionAPI) {
 
           // ---- Context ----
           const usage = ctx.getContextUsage();
-          const capacity = ctx.model?.contextWindow ?? 0;
-          const used = usage?.tokens ?? 0;
-          const pct = capacity > 0 ? (used / capacity) * 100 : 0;
+          const rawUsedPct = usage?.percent;
+          const usedPct = rawUsedPct === null || rawUsedPct === undefined
+            ? null
+            : Math.max(0, Math.min(100, rawUsedPct));
+          const gaugeChars = width >= 100 ? 10 : width >= 70 ? 8 : 6;
+          const ctxColor = usedPct === null
+            ? "muted"
+            : usedPct >= 85
+              ? "error"
+              : usedPct >= 70
+                ? "warning"
+                : "success";
+          const filled = usedPct === null ? 0 : Math.round((usedPct / 100) * gaugeChars);
+          const pctText = usedPct === null ? "?" : `${usedPct.toFixed(0)}%`;
+          const gaugeStr = [
+            theme.fg("muted", "CTX"),
+            theme.fg(ctxColor, "█".repeat(filled)) + theme.fg("dim", "░".repeat(gaugeChars - filled)),
+            theme.fg(ctxColor, pctText),
+          ].join(" ");
 
           // ---- Stats ----
           const stats = readStats();
 
-          // ---- Git / Model ----
+          // ---- Visual grammar ----
+          const minor = theme.fg("dim", " · ");
+          const major = theme.fg("dim", " │ ");
+          const label = (text: string) => theme.fg("muted", text);
+
+          // ---- Focus rail ----
+          const goal = readGoal();
+          const goalStr = goal
+            ? `${theme.fg("accent", "▌")} ${label("Goal:")} ${theme.fg("text", goal)}`
+            : "";
+          const extensionStatuses = [...footerData.getExtensionStatuses().values()];
+          const statusStr = extensionStatuses.join(minor);
+
+          // ---- Core rail ----
           const branch = footerData.getGitBranch();
           const branchStr = branch
-            ? `${theme.fg(dirtyState ? "warning" : "accent", branch)}${dirtyState ? theme.fg("warning", "*") : ""}`
+            ? theme.fg(dirtyState ? "warning" : "border", `${branch}${dirtyState ? "*" : ""}`)
             : "";
-          const modelStr = theme.fg("muted", ctx.model?.id || "no-model");
+          const modelStr = theme.fg("customMessageLabel", ctx.model?.id || "no-model");
+          const projectStr = [branchStr, modelStr].filter(Boolean).join(minor);
 
-          // ---- Tokens (left side) ----
+          // ---- Telemetry rail ----
           const tokIn = theme.fg("text", `↑${formatTokens(input)}`);
           const tokOut = theme.fg("accent", `↓${formatTokens(output)}`);
-          const costColor = cost > 1 ? "warning" : cost > 0.1 ? "text" : "dim";
-          const tokCost = theme.fg(costColor, `$${cost.toFixed(3)}`);
-
-          // ---- Gauge ----
-          const ctxColor = pct > 80 ? "error" : pct > 60 ? "warning" : "success";
-          const gaugeStr = capacity > 0
-            ? theme.fg(ctxColor, gauge(pct, 10))
+          const tokenStr = `${label("TOK")} ${tokIn}${minor}${tokOut}`;
+          const costStr = `${label("COST")} ${theme.fg("syntaxNumber", `$${cost.toFixed(3)}`)}`;
+          const agentStr = agentStatus.running > 0 || agentStatus.queued > 0
+            ? `${label("AGT")} ${theme.fg("customMessageLabel", `R${agentStatus.running}`)}${minor}${theme.fg("customMessageLabel", `Q${agentStatus.queued}`)}`
+            : "";
+          const webStr = stats.webSearch > 0 || stats.webFetch > 0
+            ? `${label("WEB")} ${theme.fg("syntaxType", `S${stats.webSearch}`)}${minor}${theme.fg("syntaxType", `F${stats.webFetch}`)}${minor}${theme.fg("syntaxType", `C${stats.webCache}`)}`
+            : "";
+          const mcpError = stats.mcpErrors > 0
+            ? minor + theme.fg("error", `E${stats.mcpErrors}`)
+            : "";
+          const mcpStr = stats.mcpCalls > 0 || stats.mcpErrors > 0
+            ? `${label("MCP")} ${theme.fg("border", `Q${stats.mcpCalls}`)}${mcpError}`
             : "";
 
-          // ---- Layout: 3-line, all left-aligned ----
-          // Line 1: tokens + gauge
-          // Line 2: branch + model
-          // Line 3: cost + web stats + mcp stats
-
           if (mode === "compact") {
-            return [truncateToWidth(`${tokIn} ${tokOut} ${tokCost}  ${modelStr}`, width)];
+            const compactFocus = truncateToWidth(
+              [statusStr, goalStr].filter(Boolean).join(minor),
+              width >= 100 ? 36 : width >= 70 ? 24 : 14,
+            );
+            return [packCompact(
+              [compactFocus, gaugeStr, branchStr, modelStr, tokenStr, costStr],
+              width,
+              minor,
+            )];
           }
 
           const lines: string[] = [];
-
-          // Pinned session note (top, most visible)
-          const goal = readGoal();
-          if (goal) lines.push(truncateToWidth(theme.fg("warning", `🎯 ${goal}`), width));
-
-          const l1 = [tokIn, tokOut, gaugeStr].filter(Boolean).join(" │ ");
-          lines.push(truncateToWidth(l1, width));
-
-          const l2 = [branchStr, modelStr].filter(Boolean).join(" · ");
-          if (l2) lines.push(truncateToWidth(l2, width));
-
-          const l3: string[] = [];
-          l3.push(tokCost);
-          if (agentStatus.running > 0 || agentStatus.queued > 0) {
-            l3.push(theme.fg("accent", `agents r:${agentStatus.running} q:${agentStatus.queued}`));
-          }
-          if (stats.webSearch > 0 || stats.webFetch > 0) {
-            l3.push(theme.fg("dim", `web s:${stats.webSearch} f:${stats.webFetch} c:${stats.webCache}`));
-          }
-          if (stats.mcpCalls > 0) {
-            l3.push(theme.fg("accent", `mcp q:${stats.mcpCalls}${stats.mcpErrors > 0 ? ` e:${stats.mcpErrors}` : ""}`));
-          }
-          lines.push(truncateToWidth(l3.join(" · "), width));
-
+          if (goalStr || statusStr) lines.push(balanceLine(goalStr, statusStr, width));
+          lines.push(balanceLine(projectStr, gaugeStr, width));
+          lines.push(...wrapGroups([tokenStr, costStr, agentStr, webStr, mcpStr], width, major));
           return lines;
         },
       };

@@ -45,6 +45,7 @@ linux/zsh/.zshrc.local
 # Pi extension runtime state
 .pi-subagents/
 .pi-loop/
+.pi/loops/
 
 # Python
 __pycache__/
