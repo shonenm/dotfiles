@@ -46,7 +46,7 @@ Provider hookはpane state更新を同期完了してから戻る。pi extension
 `tmux-agent-index.sh`はtmux socketごとのruntime directoryへpane/session snapshotを保存する。refreshとinvalidateは同じlockで直列化し、状態遷移後の次のconsumer読込で即refreshする。cacheが利用不能ならconsumerは直接`tmux list-*`へfallbackする。
 
 - `prefix+a`: read-only `capture-pane` previewとpane jump。実paneの`swap-pane`は行わない。
-- `prefix+b`: 同じindexを3秒周期で描画するsidebar。
+- `prefix+A`: 同じindexを3秒周期で描画するsidebar。
 - `prefix+R`: 現tmux serverのwatcher再起動、hang scan、index refresh。
 
 runtime namespaceは`${TMUX%%,*}`のchecksumを用いるため、複数tmux server間でcache/PIDを共有しない。

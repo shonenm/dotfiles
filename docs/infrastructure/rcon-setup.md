@@ -171,7 +171,7 @@ exit        # ssh 抜ける
 attach 中の host tmux で:
 
 ```
-prefix+b   # AI agent サイドバー toggle
+prefix+A   # AI agent サイドバー toggle
 prefix+a   # agent status popup → ペインへジャンプ
 ```
 
@@ -189,7 +189,7 @@ prefix+a   # agent status popup → ペインへジャンプ
 
 別 container に切替:
   Mac: rcon chronos:another-container
-  または既存接続中なら prefix+o → s → 別 session 選択
+  または既存接続中なら prefix+s → 別 session 選択
 
 夜:
   prefix+d で detach
