@@ -19,6 +19,8 @@ trap 'rm -f "$FLAG"' EXIT
 # スコープ検索: cwd(=ROOT) を相対出力。repo は .gitignore が効く。$HOME 用に主要ノイズ除外。
 scoped='fd --type f --hidden --exclude .git --exclude node_modules --exclude Library --exclude .cache .'
 
+# fzf の transform/bind 内の $FZF_QUERY / $FLAG は fzf 側の sh が展開するため単一引用符が正しい
+# shellcheck disable=SC2016
 file=$(
   eval "$scoped" |
     fzf --reverse --border-label ' find file ' --prompt '🔎  ' \
