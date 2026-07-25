@@ -167,6 +167,8 @@ case "${1:-popup}" in
   popup)
     rows=$(build_rows)
     if [[ -z "$rows" ]]; then tmux display-message "エージェントなし"; exit 0; fi
+    # fzf の --bind 内の $FZF_PROMPT は fzf 側が展開するため単一引用符が正しい
+    # shellcheck disable=SC2016
     sel=$(printf '%s\n' "$rows" | to_fzf_records \
       | fzf --read0 --ansi --delimiter=$'\t' --with-nth=3 --no-sort --reverse --height=100% --gap --cycle \
             --preview "bash '$SELF' preview {1} {2}" --preview-window 'right,58%,border-left,wrap' \
