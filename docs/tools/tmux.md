@@ -410,6 +410,8 @@ scripts/
 ├── tmux-popup-ghq.sh         # ghq プロジェクト切り替え（popup 用）
 ├── tmux-sync-toggle.sh       # SYNC モード切替（which-key から呼び出し）
 ├── tmux-zoom-toggle.sh       # ZOOM モード切替（which-key から呼び出し）
+├── tmux-zoom-lib.sh          # 擬似 zoom（サイドバーを残して最大化）の共通関数
+├── tmux-zoom-restore.sh      # after-select-pane hook: 擬似 zoom 解除 / sticky 再 zoom
 ├── tmux-layout              # pane レイアウトプリセット管理（save/apply/menu）
 ├── tmux-layout-menu.sh       # レイアウトプリセット fzf popup（prefix + l）
 ├── tmux-smug-menu.sh         # smug session テンプレート起動 popup（prefix + N）
@@ -447,6 +449,8 @@ AI エージェント状態監視（自前スクリプト）:
 - `scripts/tmux-agent-sidebar.sh`は同じindexからセッショングループ別の状態を常時表示する
 - event heartbeat対応providerではTUI spinnerを無視し、120秒進捗がなければhang表示する
 - サイドバー下部に Claude / Codex / Gemini / Cursor の使用量を表示。Codex は `~/.codex/auth.json` の OAuth token を自動 refresh するが、refresh token invalidated の場合は `codex login` が必要
+- サイドバーがある window では `prefix z` / `prefix Z` が native zoom ではなく擬似 zoom（layout 保存 + resize）になり、サイドバーを表示したまま残り領域で最大化する。tmux は pane を隠せないため、他の pane は 1 行のスリットとして残る。`prefix C-z` は常に native zoom（サイドバーごと全画面）
+- 擬似 zoom 中は `window_zoomed_flag` が立たないため、status-right のモード表示と `pane-active-border-style` は `@pzoom_pane` も見て ZOOM を表示する（`regenerate-tmux-theme.sh` が正本）
 - 詳細は[AI agent状態管理](../specs/agent-stop-notification.md)を参照
 
 | キー | 動作 |
