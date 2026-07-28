@@ -142,6 +142,27 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | markdown-preview.nvim | ブラウザプレビュー               |
 | render-markdown.nvim  | バッファ内 Markdown レンダリング |
 
+`render-markdown.nvim` は LazyVim の控えめなプリセットを `lua/plugins/render-markdown.lua` で上書きしている。
+
+| 要素            | 設定                                                                  |
+| --------------- | --------------------------------------------------------------------- |
+| 見出し          | レベル別アイコン + sign、H1/H2 は全幅バー、上下に境界帯                |
+| コードブロック   | block 幅、言語アイコン + 名前、` ``` ` 行は非表示                       |
+| リスト・タスク   | 階層別ブレット、checkbox は todo/important/question/star/cancelled を追加 |
+| 引用・callout    | GitHub / Obsidian 記法のアイコン化、折り返し時もマーカー継続            |
+| テーブル        | 角丸ボーダー + 寄せインジケーター                                      |
+| リンク          | ドメイン別アイコン (github / notion / claude 等)                       |
+| インデント      | 見出しレベルに応じた本文インデント (hlchunk は markdown で無効化)       |
+| HTML            | コメントを畳み、`<details>` `<summary>` `<kbd>` をアイコン化            |
+
+描画モードは insert を含む全モード。カーソル行だけ anti_conceal で生テキストに戻る。
+折り返し関連の window option (`linebreak` / `breakindent` / `showbreak` / `signcolumn=yes:2`) は
+`lua/config/autocmds.lua` の FileType autocmd で設定する。
+
+LaTeX 描画は変換コマンド (`utftex` / `latex2text`) 未導入のため無効化している。
+HTML の描画には tree-sitter の `html` パーサーが必要で、その build には `tree-sitter-cli` が要る
+(macOS は `config/Brewfile`、Linux は `config/mise-linux.toml` で導入)。
+
 ### メディア
 
 | プラグイン         | 役割                                                    |
@@ -308,6 +329,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── pdf.lua                # PDF ビューア (fancy-cat, tmux detach trick)
 ├── python-tools.lua       # Python ツール (Ruff + Mypy + basedpyright extraPaths)
 ├── rainbow-delimiters.lua # ブラケットペアカラー化
+├── render-markdown.lua    # Markdown レンダリング強化 (LazyVim プリセットを上書き)
 ├── remote.lua             # リモート/コンテナ開発 (remote-nvim)
 ├── scrollbar.lua          # スクロールバー設定
 ├── session.lua            # セッション管理設定

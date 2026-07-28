@@ -440,3 +440,20 @@ vim.api.nvim_create_user_command("CleanupCache", function()
   )
 end, { desc = "Clean up Neovim cache, logs, and old files" })
 
+
+-- Markdown の折り返し・gutter 設定
+-- lazyvim_wrap_spell augroup は spell 誤検知のため削除済み (先頭参照)。
+-- render-markdown の描画に必要な折り返し関連だけをここで補う。
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "markdown", "markdown.mdx" },
+  callback = function()
+    -- 単語途中で折り返さない / 折り返し行をインデントに揃える
+    vim.opt_local.linebreak = true
+    vim.opt_local.breakindent = true
+    -- リスト項目は本文位置に揃えて折り返す
+    vim.opt_local.breakindentopt = "list:-1"
+    vim.opt_local.showbreak = "↪ "
+    -- gitsigns と render-markdown の見出し sign を同時に表示する
+    vim.opt_local.signcolumn = "yes:2"
+  end,
+})
