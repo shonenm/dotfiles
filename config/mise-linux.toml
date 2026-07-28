@@ -18,13 +18,14 @@
 #                 (crate の bin 名 = tldr。install.sh では rust の post_install で cargo が PATH に乗る)。
 
 [tools]
-# --- aqua registry (25) ---
+# --- aqua registry (26) ---
 "aqua:junegunn/fzf" = "latest"
 "aqua:fastfetch-cli/fastfetch" = "latest"
 "aqua:dandavison/delta" = "latest"
 "aqua:jesseduffield/lazygit" = "latest"
 "aqua:x-motemen/ghq" = "latest"
 "aqua:neovim/neovim" = "latest"
+"aqua:tree-sitter/tree-sitter" = "latest"  # nvim-treesitter (main) のパーサー generate/build に必須
 "aqua:chmln/sd" = "latest"
 "aqua:bootandy/dust" = "latest"
 "aqua:ClementTsang/bottom" = "latest"
