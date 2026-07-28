@@ -228,6 +228,11 @@ HISTFILE="$HOME/.zsh_history"
 HISTSIZE=50000
 SAVEHIST=50000
 setopt SHARE_HISTORY
+# Record a start timestamp and elapsed seconds per command. Without this the
+# history answers "what did I run" but never "what did I wait for", so the cost
+# of a slow command can only be guessed at. Costs one extra header line per
+# entry in the same file.
+setopt EXTENDED_HISTORY
 
 # --- Zsh Options ---
 setopt CORRECT          # Spell check for commands
