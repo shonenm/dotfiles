@@ -14,7 +14,7 @@ US=$'\x1f'
 
 agent_index_panes() {
   "$SCRIPT_DIR/tmux-agent-index.sh" panes 2>/dev/null || tmux list-panes -a -F \
-    "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{@agent_state_since}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}${US}#{@agent_stashed}${US}#{@agent_sidebar_pane}${US}#{@agent_provider}"
+    "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{@agent_state_since}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}${US}#{@agent_stashed}${US}#{@agent_sidebar_pane}${US}#{@agent_provider}${US}#{pane_tty}${US}#{pane_width}${US}#{pane_height}"
 }
 
 agent_index_sessions() {
@@ -39,7 +39,7 @@ trunc() { local s="$1" n="$2"; s="${s//$'\t'/ }"; if (( ${#s} > n )); then print
 
 build_local_rows() {
   local now cur; now=$(date +%s); cur="$(tmux show-options -gv @agent_cur_pane 2>/dev/null || echo "")"
-  while IFS="$US" read -r pid sess win status hb state_since path cmd title stashed _sidebar provider; do
+  while IFS="$US" read -r pid sess win status hb state_since path cmd title stashed _sidebar provider _tty _pw _ph; do
     is_agent "$status" || continue
     is_shell "$cmd" && continue
     local rank icon col task branch elapsed loc tool line1 line2 g1 g2 mk

@@ -30,6 +30,7 @@ dispatch() {
   case "$event" in
     session-window-changed)
       run_script tmux-claude-focus.sh
+      run_script tmux-agent-sidebar.sh poke
       ;;
     client-session-changed)
       local session="${1:-}"
@@ -37,6 +38,7 @@ dispatch() {
       run_script tmux-session-color.sh refresh "$session"
       run_script tmux-session-group.sh remember "$session"
       run_script tmux-agent-sidebar.sh resize-all
+      run_script tmux-agent-sidebar.sh poke
       ;;
     session-created)
       local session="${1:-}"

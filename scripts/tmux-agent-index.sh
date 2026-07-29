@@ -59,7 +59,7 @@ refresh_unlocked() {
   sessions_tmp="$SESSIONS_FILE.$$"
   updated_tmp="$UPDATED_FILE.$$"
 
-  tmux list-panes -a -F "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{@agent_state_since}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}${US}#{@agent_stashed}${US}#{@agent_sidebar_pane}${US}#{@agent_provider}" >"$panes_tmp" || {
+  tmux list-panes -a -F "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{@agent_state_since}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}${US}#{@agent_stashed}${US}#{@agent_sidebar_pane}${US}#{@agent_provider}${US}#{pane_tty}${US}#{pane_width}${US}#{pane_height}" >"$panes_tmp" || {
     rm -f "$panes_tmp" "$sessions_tmp" "$updated_tmp"
     return 1
   }
