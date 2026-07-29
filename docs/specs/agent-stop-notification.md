@@ -46,7 +46,8 @@ Provider hookはpane state更新を同期完了してから戻る。pi extension
 `tmux-agent-index.sh`はtmux socketごとのruntime directoryへpane/session snapshotを保存する。refreshとinvalidateは同じlockで直列化し、状態遷移後の次のconsumer読込で即refreshする。cacheが利用不能ならconsumerは直接`tmux list-*`へfallbackする。
 
 - `prefix+a`: read-only `capture-pane` previewとpane jump。実paneの`swap-pane`は行わない。
-- `prefix+A`: 同じindexを3秒周期で描画するsidebar。
+- `prefix+A`: sidebarのtoggle。描画はtmux serverごとに1本のdaemon (`tmux-agent-sidebar.sh daemon`) が担い、同じindexから3秒周期でframeを組み立て、各sidebar paneの`pane_tty`へ直接書き込む。pane側のprocessはpaneを保持するだけで状態を持たない。frameのうちpaneごとに異なるのは現在session/groupのmarkerとpane寸法だけなので、収集は1 tickに1回で済む。sidebarが1枚も無くなるとdaemonは終了し、次のtoggleで再起動する。
+- session/window切替時は`tmux-agent-sidebar.sh poke`がindexをinvalidateしてdaemonへ`SIGUSR1`を送り、polling周期を待たずに再描画する。
 - `prefix+R`: 現tmux serverのwatcher再起動、hang scan、index refresh。
 
 runtime namespaceは`${TMUX%%,*}`のchecksumを用いるため、複数tmux server間でcache/PIDを共有しない。
