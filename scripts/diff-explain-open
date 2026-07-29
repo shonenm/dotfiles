@@ -36,6 +36,7 @@ runner="echo ${payload} | base64 -d | sh"
 out_dir=$(mktemp -d)
 out="$out_dir/diff-explain.html"
 
+# shellcheck disable=SC2029  # payload をローカルで展開して送るのが意図
 if [[ -n $container ]]; then
   ssh "$host" "docker exec ${container} sh -c '${runner}'" >"$out"
 else
