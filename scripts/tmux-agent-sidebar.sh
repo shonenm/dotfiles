@@ -86,7 +86,7 @@ collect_agents() {
     # stash 済みはアイコン(グリフ)を変えず色だけ灰色(240)にして、サイドバーでも stash と分かるように
     [[ -n "$stashed" ]] && rg=$(printf '%s' "$rg" | sed 's/38;5;[0-9]*m/38;5;240m/')
     printf '%s\t%s\n' "$sess" "$rg"
-  done < <(agent_index_panes | while IFS="$US" read -r _pid sess _win status _hb _state_since _path cmd _title stashed _sidebar _provider; do
+  done < <(agent_index_panes | while IFS="$US" read -r _pid sess _win status _hb _state_since _path cmd _title stashed _sidebar _provider _tty _pw _ph; do
     printf '%s\x1f%s\x1f%s\x1f%s\n' "$sess" "$status" "$cmd" "$stashed"
   done)
 
@@ -174,20 +174,24 @@ usage_section() {
   } | tee "$USAGE_CACHE"
 }
 
-render() {
-  local rows total sessions session_count cur_session cur_group
-  rows=$(collect_agents | sort -t$'\t' -k1,1 -k2,2n)
-  total=$(printf '%s' "$rows" | grep -c . 2>/dev/null)
-  sessions=$(agent_index_sessions | awk -F "$US" -v tab="$TAB" '{print $1 tab $2}' | sort)
-  session_count=$(printf '%s' "$sessions" | grep -c . 2>/dev/null)
-  cur_session=$(tmux display-message -p -t "${TMUX_PANE}" '#{session_name}' 2>/dev/null || true)
-  cur_group=$(tmux show-options -t "$cur_session" -qv @group 2>/dev/null || true)
+# 全サイドバー共通の素材。pane ごとに違うのは現在 session / group と pane 寸法だけなので、
+# 収集(index 読み・jq・usage)は 1 tick に 1 回で済む。
+SB_ROWS=""; SB_TOTAL=0; SB_SESSIONS=""; SB_SESSION_COUNT=0; SB_USAGE=""
+collect_frame_inputs() {
+  SB_ROWS=$(collect_agents | sort -t$'\t' -k1,1 -k2,2n)
+  SB_TOTAL=$(printf '%s' "$SB_ROWS" | grep -c . 2>/dev/null)
+  SB_SESSIONS=$(agent_index_sessions | awk -F "$US" -v tab="$TAB" '{print $1 tab $2}' | sort)
+  SB_SESSION_COUNT=$(printf '%s' "$SB_SESSIONS" | grep -c . 2>/dev/null)
+  SB_USAGE=$(usage_section)
+}
 
-  # --- pane の幅/高さを取得(divider 長・最下部揃えに使用) ---
-  local H W
-  H=$(tmux display-message -p -t "${TMUX_PANE}" '#{pane_height}' 2>/dev/null)
-  W=$(tmux display-message -p -t "${TMUX_PANE}" '#{pane_width}' 2>/dev/null)
-  [[ -z "$H" ]] && H=40
+# build_frame <cur_session> <width> <height> — 1 pane 分のフレームを stdout へ
+build_frame() {
+  local rows="$SB_ROWS" total="$SB_TOTAL" sessions="$SB_SESSIONS" session_count="$SB_SESSION_COUNT"
+  local cur_session="$1" W="$2" H="$3" cur_group
+  # @group はセッション一覧(index cache)に入っているので show-options を撃たない
+  cur_group=$(printf '%s\n' "$sessions" | awk -F "$TAB" -v s="$cur_session" '$1 == s { print $2; exit }')
+  [[ -z "$H" || "$H" -lt 1 ]] && H=40
   [[ -z "$W" || "$W" -lt 1 ]] && W="$WIDTH"
   # 以降の幅計算(trunc_w / per / divider)は静的 WIDTH ではなく実 pane 幅に揃える。
   # _sb_flush は動的スコープで WIDTH を参照するため、ここで上書きすれば波及する。
@@ -233,7 +237,7 @@ render() {
   local bot=()
   bot+=("$(printf '%s USAGE%s' "$C_BOLD" "$C_RST")")
   bot+=("$(printf '%s%s%s' "$C_DIM" "$div" "$C_RST")")
-  while IFS= read -r ln; do bot+=("$ln"); done < <(usage_section)
+  while IFS= read -r ln; do bot+=("$ln"); done <<< "$SB_USAGE"
 
   # --- USAGE を最下部に揃える ---
   local n_top=${#top[@]} n_bot=${#bot[@]}
@@ -263,34 +267,76 @@ render() {
   printf '\033[?2026h\033[H%s\033[J\033[?2026l' "$frame"
 }
 
+DAEMON_PID_FILE="$(agent_runtime_dir)/sidebar-daemon.pid"
+
+# index cache からサイドバー pane を列挙する。
+# @agent_sidebar_pane は window option なので pane 文脈でも継承されて見える。
+# よって「自分の pane_id == @agent_sidebar_pane」の行がサイドバー本体。
+# 出力: pane_id TAB session TAB tty TAB width TAB height
+sidebar_targets() {
+  agent_index_panes | awk -F "$US" -v OFS="$TAB" '$1 != "" && $1 == $11 { print $1, $2, $13, $14, $15 }'
+}
+
+# 1 tick: 素材を1回だけ集め、各サイドバー pane の tty へフレームを書き込む。
+# サイドバーが1つも無くなったら 1 を返す(daemon はそこで畳む)。
+sidebar_tick() {
+  local targets attached busy=0 collected=0
+  targets=$(sidebar_targets)
+  [[ -z "$targets" ]] && return 1
+  # detached session のサイドバーは誰も見ないので描画しない
+  attached=$(agent_index_sessions | awk -F "$US" '$3 != "" && $3 != 0 { printf "|%s|", $1 }')
+  sidebar_user_busy && busy=1
+  local pane sess tty w h
+  while IFS=$'\t' read -r pane sess tty w h; do
+    [[ -z "$tty" ]] && continue
+    case "$attached" in *"|${sess}|"*) ;; *) continue ;; esac
+    if (( collected == 0 )); then collect_frame_inputs; collected=1; fi
+    # window-size latest の比例リサイズ丸め誤差で session 切替毎に幅がドリフトする。
+    # 差分がある時だけ補正する(resize 自体が window-layout-changed を再発火するため)。
+    # zoom / choose-tree / copy-mode 中はスキップ (resize が zoom を潰すため)。
+    if (( busy == 0 )) && [[ "$w" != "$WIDTH" ]]; then
+      tmux resize-pane -t "$pane" -x "$WIDTH" 2>/dev/null && w="$WIDTH"
+    fi
+    build_frame "$sess" "$w" "$h" >"$tty" 2>/dev/null || true
+  done <<< "$targets"
+  return 0
+}
+
 case "${1:-toggle}" in
-  run)
-    trap 'printf "\033[?25h"; exit 0' INT TERM
-    printf '\033[?25l'   # カーソル非表示(ちらつき低減)
+  daemon)
+    # tmux server ごとに 1 本だけ常駐し、全サイドバー pane を描画する。
+    # 以前は pane ごとにループを持たせていたが、同じ状態を pane 数だけポーリングし
+    # (毎 tick に list-panes -a + bash fork)、window を増やすほど線形に重くなっていた。
+    mkdir -p "$(dirname "$DAEMON_PID_FILE")" 2>/dev/null || exit 0
+    if [[ -f "$DAEMON_PID_FILE" ]]; then
+      existing=$(cat "$DAEMON_PID_FILE" 2>/dev/null || true)
+      if [[ -n "$existing" ]]; then
+        command=$(ps -p "$existing" -o command= 2>/dev/null || true)
+        [[ "$command" == *tmux-agent-sidebar.sh* ]] && exit 0
+      fi
+    fi
+    echo $$ >"$DAEMON_PID_FILE"
+    cleanup() { [[ "$(cat "$DAEMON_PID_FILE" 2>/dev/null)" == "$$" ]] && rm -f "$DAEMON_PID_FILE"; }
+    trap cleanup EXIT
+    trap 'cleanup; exit 0' INT TERM
+    # USR1 = 即時再描画。ハンドラは no-op でよい: sleep の wait が中断されて
+    # ループ先頭に戻る = REFRESH 待ちを飛ばして描画する。
+    trap 'true' USR1
     while true; do
-      tmux info &>/dev/null || { printf '\033[?25h'; exit 0; }
-      # 自分の pane が消えたらループを畳む。kill-pane / window・session 破棄で pane だけ
-      # 消えてもサーバは生存するため、tmux info チェックだけでは孤児ループがリークする。
-      # display-message -t deadpane は default pane にフォールバックして成功するため使えない。
-      tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qxF "${TMUX_PANE}" || { printf '\033[?25h'; exit 0; }
-      # detached session のサイドバーは描画しても誰も見ないので、tmux 全体走査を止める。
-      attached=$(tmux display-message -p -t "${TMUX_PANE}" '#{session_attached}' 2>/dev/null || echo 0)
-      if [[ -z "$attached" || "$attached" == 0 ]]; then
-        sleep "$REFRESH" & wait $! || true
-        continue
-      fi
-      # window-size latest の比例リサイズ丸め誤差で session 切替毎に幅がドリフトする。
-      # resize 自体が window-layout-changed hook を発火するため、差分がある時だけ補正する。
-      # zoom / choose-tree / copy-mode 中はスキップ (resize が zoom を潰すため)。
-      if ! sidebar_user_busy; then
-        cw=$(tmux display-message -p -t "${TMUX_PANE}" '#{pane_width}' 2>/dev/null || echo "")
-        [[ "$cw" == "$WIDTH" ]] || tmux resize-pane -t "${TMUX_PANE}" -x "$WIDTH" 2>/dev/null || true
-      fi
-      # 描画は毎回サブプロセスで実行し、スクリプト更新を自動反映する
-      # (常駐ループに関数を抱えると、起動後の更新が反映されず古い表示になるため)
-      bash "$SELF" once
+      tmux info >/dev/null 2>&1 || exit 0
+      owner="$(cat "$DAEMON_PID_FILE" 2>/dev/null || true)"
+      [[ -n "$owner" && "$owner" != "$$" ]] && exit 0
+      sidebar_tick || exit 0
       sleep "$REFRESH" & wait $! || true
     done
+    ;;
+  run)
+    # サイドバー pane 側は描画しない。フレームは daemon が pane_tty へ直接書く。
+    # ここは pane を生かしておくだけ: 入力エコーを止め、カーソルを隠して寝る。
+    stty -echo -icanon </dev/tty 2>/dev/null || true
+    trap 'printf "\033[?25h"; exit 0' INT TERM
+    printf '\033[?25l'   # カーソル非表示(ちらつき低減)
+    while true; do sleep 3600 & wait $! || true; done
     ;;
   toggle)
     # サイドバーは window 内の pane。追跡は window 単位にし、別 window/session の
@@ -319,6 +365,10 @@ case "${1:-toggle}" in
       # 評価のみで shell を fork しないため、同期・無 fork のまま zoom を素通しできる。
       tmux set-hook -w -t "$win" window-layout-changed "if-shell -F '#{?window_zoomed_flag,0,1}' 'resize-pane -t $pane -x $WIDTH'" 2>/dev/null || true
       tmux select-pane -t "$src" 2>/dev/null || true   # 作業 pane にフォーカスを残す
+      # daemon は「サイドバーが1つも無い」と自分で畳むので、開くたびに起動を保証する。
+      # 新 pane を index に載せてから起動する(古い cache のまま起動すると即 exit する)。
+      "$SCRIPT_DIR/tmux-agent-index.sh" refresh >/dev/null 2>&1 || true
+      tmux run-shell -b "exec bash '$SELF' daemon >/dev/null 2>&1" 2>/dev/null || true
     fi
     ;;
   resize-all)
@@ -351,9 +401,27 @@ case "${1:-toggle}" in
       tmux list-panes -t "$win" -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane" || continue
       tmux set-hook -w -t "$win" window-layout-changed "if-shell -F '#{?window_zoomed_flag,0,1}' 'resize-pane -t $pane -x $WIDTH'" 2>/dev/null || true
     done < <(tmux list-windows -a -F "#{window_id}$(printf '\t')#{@agent_sidebar_pane}" 2>/dev/null)
+    # daemon が落ちている場合の復帰口も兼ねる(既に居れば pid ファイル判定で即 exit する)
+    tmux run-shell -b "exec bash '$SELF' daemon >/dev/null 2>&1" 2>/dev/null || true
+    ;;
+  poke)
+    # daemon へ即時再描画を要求 (session/window 切替 hook から呼ぶ)。
+    # 切替先の pane は最大 REFRESH 秒古いフレームを表示したままになるため、
+    # ポーリングを待たずに叩き起こす。index cache も古いと同じ理由で
+    # 古い session 一覧を描くので、先に invalidate して次 tick で引き直させる。
+    "$SCRIPT_DIR/tmux-agent-index.sh" invalidate >/dev/null 2>&1 || true
+    pid=$(cat "$DAEMON_PID_FILE" 2>/dev/null || true)
+    [[ -n "$pid" ]] && kill -USR1 "$pid" 2>/dev/null
+    exit 0
     ;;
   once)
-    render ;;
+    # デバッグ用: 現在の pane 向けフレームを stdout に1回出す
+    collect_frame_inputs
+    build_frame \
+      "$(tmux display-message -p -t "${TMUX_PANE}" '#{session_name}' 2>/dev/null)" \
+      "$(tmux display-message -p -t "${TMUX_PANE}" '#{pane_width}' 2>/dev/null)" \
+      "$(tmux display-message -p -t "${TMUX_PANE}" '#{pane_height}' 2>/dev/null)"
+    ;;
   *)
-    echo "Usage: $0 {run|toggle|once|resize-all|rehook}" >&2; exit 1 ;;
+    echo "Usage: $0 {daemon|run|toggle|once|resize-all|rehook|poke}" >&2; exit 1 ;;
 esac
