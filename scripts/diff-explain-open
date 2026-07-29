@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# diff-explain-open — remote で生成した diff-explain の HTML をローカルに取得して開く。
+#
+#   diff-explain-open <host>[:<container>] [<remote path>]
+#
+# path 省略時は remote の $XDG_CACHE_HOME/diff-explain/ にある最新の HTML を取る。
+# ターゲット指定は rcon の targets と同じ `host` / `host:container` 形式。
+
+set -euo pipefail
+
+target=${1:-}
+remote_path=${2:-}
+
+if [[ -z $target || $target == -h || $target == --help ]]; then
+  sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'
+  [[ -z $target ]] && exit 1
+  exit 0
+fi
+
+host=${target%%:*}
+container=""
+[[ $target == *:* ]] && container=${target#*:}
+
+# remote 側で実行するスクリプト。base64 で包んで ssh / docker exec の引用を通す
+remote_script="
+dir=\"\${XDG_CACHE_HOME:-\$HOME/.cache}/diff-explain\"
+file='${remote_path}'
+[ -n \"\$file\" ] || file=\$(ls -t \"\$dir\"/*.html 2>/dev/null | head -1)
+[ -n \"\$file\" ] || { echo 'diff-explain の HTML が見つからない: '\"\$dir\" >&2; exit 1; }
+cat \"\$file\"
+"
+# base64 -d は GNU / busybox / macOS のいずれでも通る
+payload=$(printf '%s' "$remote_script" | base64 | tr -d '\n')
+runner="echo ${payload} | base64 -d | sh"
+
+out_dir=$(mktemp -d)
+out="$out_dir/diff-explain.html"
+
+if [[ -n $container ]]; then
+  ssh "$host" "docker exec ${container} sh -c '${runner}'" >"$out"
+else
+  ssh "$host" "${runner}" >"$out"
+fi
+
+[[ -s $out ]] || { echo "取得できなかった: ${target}" >&2; exit 1; }
+
+echo "$out"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  open "$out"
+else
+  xdg-open "$out" >/dev/null 2>&1 &
+fi

@@ -8,6 +8,7 @@ Claude Code で使用可能なカスタムスキルのリファレンス。
 |--------|------|
 | `/d-beacon` | AeroSpace ワークスペースに環境を紐付け |
 | `/d-commit` | セッション内の変更を分析してコミット作成 |
+| `/d-diff-explain` | hunk 単位の解説つき差分ビュー HTML を生成 |
 | `/d-news` | プロファイルベースのパーソナライズドニュース収集 |
 | `/d-setup-rcon-target` | rcon ターゲットの登録 + 接続検証 + docker mount スニペット生成 |
 | `/d-update-md` | セッション内の変更に関連するドキュメント更新 |
@@ -91,6 +92,61 @@ Ralph系スキルは[Ralph概要](../ralph/overview.md)を参照。
 
 - `.env`, `credentials.json` 等のシークレットファイルは自動で除外
 - `git push` は実行しない（手動で push が必要）
+
+## /d-diff-explain
+
+git diff の hunk ごとに Claude が解説を書き、解説つきの差分ビュー HTML を生成してブラウザで開きます。実装理解、レビュー準備、引き継ぎ資料に使います。
+
+### 使い方
+
+```bash
+/d-diff-explain                          # main...HEAD
+/d-diff-explain HEAD~3                   # 直近 3 コミット
+/d-diff-explain main...feature -- src/   # 範囲とパスを指定
+```
+
+### 動作
+
+1. `diff-explain hunks <引数>` で hunk ID (`<path>#<連番>`) 付きの diff を取得
+2. 必要に応じて周辺コードを読み、hunk ごとの解説 JSON を `$TMPDIR` に書く
+3. `diff-explain render -e <json> --open <引数>` で HTML を生成してブラウザで開く
+
+### diff-explain コマンド
+
+スキルを介さず単体でも使えます（解説なしの差分ビューとして）。
+
+```bash
+diff-explain hunks [--split N] [<git diff の引数>...]
+diff-explain render -e explain.json [-o out.html] [--open] [--split N] [<git diff の引数>...]
+```
+
+`--split`（既定 40 行）は長い hunk をトップレベル定義の直前で擬似 hunk に分割し、新規ファイルでも解説を細かく付けられるようにします。`hunks` と `render` は同じ値で分割する必要があります（hunk ID がずれるため）。`0` で無効。
+
+`explain.json` の形式:
+
+```json
+{
+  "title": "見出し",
+  "overview": "全体の解説",
+  "files": {"path/to/file.ts": "ファイル単位の解説"},
+  "hunks": {"path/to/file.ts#1": "hunk の解説"}
+}
+```
+
+### remote での利用
+
+remote（rcon 接続先のホストやコンテナ）でも dotfiles を stow していればそのまま動きますが、ブラウザが無いため `--open` は無効化され、代わりにローカルでの取得方法が案内されます。ローカル側から取りに行きます。
+
+```bash
+diff-explain-open <host>[:<container>]              # 最新の HTML を取得して開く
+diff-explain-open ailab:myproject-dev ~/.cache/diff-explain/x.html   # パス明示
+```
+
+`ssh`（コンテナ指定時は `docker exec` 経由）で HTML を吸い出し、ローカルの一時ディレクトリに置いて `open` / `xdg-open` します。ターゲット指定は rcon の `~/.config/rcon/targets` と同じ `host` / `host:container` 形式。単一 HTML なので転送はこれだけで完結します（`diff-explain render -o -` で stdout に出せるため、別の転送手段に差し替えることもできます）。
+
+差分は左右 2 カラム（左が変更前、右が変更後）で表示します。連続する削除行と追加行を順に突き合わせるだけの対応付けなので、片側しかない行は反対側が空欄になります。
+
+出力先の既定は `$XDG_CACHE_HOME/diff-explain/<repo>-<timestamp>.html`。シンタックスハイライトは highlight.js を CDN から読むため、オフラインでは色が付かないだけで表示自体は保たれます（行単位で解析するため、複数行文字列やブロックコメントの色は正確ではありません）。
 
 ## /d-news
 

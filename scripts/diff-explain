@@ -1,0 +1,416 @@
+#!/usr/bin/env python3
+"""git diff を LLM 解説つきの HTML 差分ビューに変換する。
+
+  diff-explain hunks  [<git diff の引数>...]            # hunk ID 付き diff を出力
+  diff-explain render -e explain.json [-o out.html] [--open] [<git diff の引数>...]
+
+長い hunk (新規ファイルなど) は --split 行数で擬似 hunk に分割され、解説を細かく
+付けられる。hunks と render は同じ既定値で分割するため hunk ID は一致する。
+
+hunk ID は `<path>#<1始まりの連番>`。explain.json の形式:
+
+  {
+    "title":    "見出し",
+    "overview": "全体の解説",
+    "files":    {"path/to/file.ts": "ファイル単位の解説"},
+    "hunks":    {"path/to/file.ts#1": "この hunk の解説"}
+  }
+"""
+
+import argparse
+import html
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+import webbrowser
+from pathlib import Path
+
+HUNK_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)$")
+
+
+def git_diff(args):
+    result = subprocess.run(
+        # prefix はユーザー設定 (diff.mnemonicPrefix 等) に左右されるため固定する
+        ["git", "diff", "--no-color", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/", *args],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        sys.exit(result.stderr.strip() or "git diff failed")
+    return result.stdout
+
+
+def strip_prefix(path):
+    """"a/foo" -> "foo"、"/dev/null" -> None。"""
+    if path == "/dev/null":
+        return None
+    return path[2:] if path[:2] in ("a/", "b/") else path
+
+
+def parse_diff(text):
+    """unified diff を [{path, binary, hunks:[{header, old, new, lines}]}] に変換する。"""
+    files = []
+    current = None
+    hunk = None
+    old_no = new_no = 0
+
+    for line in text.splitlines():
+        if line.startswith("diff --git "):
+            current = {"path": line.split(" b/", 1)[-1], "binary": False, "hunks": []}
+            hunk = None
+            files.append(current)
+        elif current is None:
+            continue
+        elif line.startswith("--- ") or line.startswith("+++ "):
+            path = strip_prefix(line[4:])
+            if path:  # /dev/null 側は無視し、追加・削除どちらでも実体のパスを採る
+                current["path"] = path
+        elif line.startswith("Binary files "):
+            current["binary"] = True
+        elif line.startswith("@@"):
+            match = HUNK_RE.match(line)
+            if not match:
+                continue
+            old_no, new_no = int(match.group(1)), int(match.group(2))
+            hunk = {"header": line, "context": match.group(3).strip(), "lines": []}
+            current["hunks"].append(hunk)
+        elif hunk is not None and line[:1] in (" ", "+", "-", "\\"):
+            kind = {" ": "ctx", "+": "add", "-": "del", "\\": "meta"}[line[0]]
+            body = line[1:]
+            old = new = None
+            if kind in ("ctx", "del"):
+                old = old_no
+                old_no += 1
+            if kind in ("ctx", "add"):
+                new = new_no
+                new_no += 1
+            hunk["lines"].append((kind, old, new, body))
+
+    return files
+
+
+def hunk_header(lines, context=""):
+    """分割後の行から `@@ -x,y +a,b @@` を再構成する。"""
+    olds = [old for _, old, _, _ in lines if old]
+    news = [new for _, _, new, _ in lines if new]
+    old_part = f"-{olds[0]},{len(olds)}" if olds else "-0,0"
+    new_part = f"+{news[0]},{len(news)}" if news else "+0,0"
+    return f"@@ {old_part} {new_part} @@{context}"
+
+
+def split_hunk(hunk, limit):
+    """長い hunk をトップレベル定義の直前で分割する。新規ファイルの巨大 hunk 対策。"""
+    lines = hunk["lines"]
+    if limit <= 0 or len(lines) <= limit:
+        return [hunk]
+
+    chunks, current = [], []
+    for index, line in enumerate(lines):
+        current.append(line)
+        if len(current) < limit:
+            continue
+        # 次行がインデントなしで始まる = 関数/クラス/見出しの切れ目。無ければ 2 倍で強制分割
+        following = lines[index + 1][3] if index + 1 < len(lines) else ""
+        if following[:1].strip() or len(current) >= limit * 2:
+            chunks.append(current)
+            current = []
+    if current:
+        if chunks and len(current) < limit // 4:
+            chunks[-1].extend(current)  # 半端な末尾は直前にまとめる
+        else:
+            chunks.append(current)
+
+    return [
+        {
+            "header": hunk_header(chunk, hunk["context"] and f" {hunk['context']}" if i == 0 else ""),
+            "context": hunk["context"] if i == 0 else "",
+            "lines": chunk,
+        }
+        for i, chunk in enumerate(chunks)
+    ]
+
+
+EXT_LANG = {
+    "py": "python", "js": "javascript", "mjs": "javascript", "cjs": "javascript",
+    "jsx": "javascript", "ts": "typescript", "tsx": "typescript", "rb": "ruby",
+    "go": "go", "rs": "rust", "c": "c", "h": "c", "cpp": "cpp", "hpp": "cpp",
+    "java": "java", "kt": "kotlin", "swift": "swift", "php": "php", "lua": "lua",
+    "sh": "bash", "bash": "bash", "zsh": "bash", "fish": "bash", "vim": "vim",
+    "json": "json", "yml": "yaml", "yaml": "yaml", "toml": "ini", "ini": "ini",
+    "css": "css", "scss": "scss", "html": "xml", "xml": "xml", "sql": "sql",
+    "md": "markdown", "tf": "hcl", "hcl": "hcl", "dockerfile": "dockerfile",
+    "makefile": "makefile", "conf": "ini", "tmux": "bash", "gitignore": "bash",
+}
+
+
+def guess_lang(path, hunks):
+    """拡張子、ファイル名、shebang の順に言語を推定する。"""
+    name = path.rsplit("/", 1)[-1].lower()
+    if "." in name and EXT_LANG.get(name.rsplit(".", 1)[1]):
+        return EXT_LANG[name.rsplit(".", 1)[1]]
+    if EXT_LANG.get(name):
+        return EXT_LANG[name]
+    for hunk in hunks:
+        for _kind, _old, _new, body in hunk["lines"][:1]:
+            if body.startswith("#!"):
+                if "python" in body:
+                    return "python"
+                if re.search(r"\b(bash|zsh|sh)\b", body):
+                    return "bash"
+    return ""
+
+
+def load_files(git_args, split):
+    files = parse_diff(git_diff(git_args))
+    for entry in files:
+        entry["hunks"] = [part for h in entry["hunks"] for part in split_hunk(h, split)]
+        entry["lang"] = guess_lang(entry["path"], entry["hunks"])
+    return files
+
+
+def cmd_hunks(files):
+    for entry in files:
+        if entry["binary"]:
+            print(f"{entry['path']}  (binary)")
+            continue
+        for index, hunk in enumerate(entry["hunks"], 1):
+            print(f"[{entry['path']}#{index}] {hunk['header']}")
+            for kind, _old, _new, body in hunk["lines"]:
+                prefix = {"ctx": " ", "add": "+", "del": "-", "meta": "\\"}[kind]
+                print(f"{prefix}{body}")
+            print()
+
+
+def side_by_side(lines):
+    """hunk の行を (左, 右) の組に畳む。左右どちらかが無い行は None。
+
+    連続する削除と追加を同じ位置で突き合わせるだけの素朴な対応付け。
+    """
+    rows, dels, adds = [], [], []
+
+    def flush():
+        for i in range(max(len(dels), len(adds))):
+            rows.append((dels[i] if i < len(dels) else None, adds[i] if i < len(adds) else None))
+        dels.clear()
+        adds.clear()
+
+    for kind, old, new, body in lines:
+        if kind == "del":
+            dels.append(("del", old, body))
+        elif kind == "add":
+            adds.append(("add", new, body))
+        else:
+            flush()
+            if kind == "ctx":
+                rows.append((("ctx", old, body), ("ctx", new, body)))
+            else:
+                rows.append((("meta", None, body), None))  # "\ No newline at end of file"
+    flush()
+    return rows
+
+
+def rich_text(text):
+    """解説テキストを最小限だけ HTML 化する（`code` と改行のみ）。"""
+    # ponytail: full markdown は使わない。必要になったら markdown-it 等に差し替える
+    escaped = html.escape(text or "")
+    return re.sub(r"`([^`]+)`", r"<code>\1</code>", escaped)
+
+
+CSS = """
+:root { color-scheme: dark; --bg:#0d1117; --panel:#161b22; --line:#30363d;
+        --fg:#e6edf3; --dim:#8b949e; --add:#12281b; --del:#2d181c; --hl:#58a6ff; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:-apple-system,"Hiragino Sans",sans-serif; }
+.layout { display:flex; align-items:flex-start; }
+nav { position:sticky; top:0; width:270px; flex:none; max-height:100vh; overflow:auto;
+      padding:24px 16px; border-right:1px solid var(--line); font-size:13px; }
+nav a { display:block; color:var(--dim); text-decoration:none; padding:4px 6px;
+        border-radius:6px; word-break:break-all; }
+nav a:hover { background:var(--panel); color:var(--fg); }
+main { flex:1; min-width:0; padding:24px 32px 96px; max-width:1200px; }
+h1 { font-size:22px; margin:0 0 8px; }
+.meta { color:var(--dim); font-size:13px; margin-bottom:24px; }
+.note { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--hl);
+        border-radius:8px; padding:12px 16px; margin:12px 0; line-height:1.7; white-space:pre-wrap; }
+.file { border:1px solid var(--line); border-radius:10px; margin:28px 0; overflow:hidden; }
+.file > h2 { position:sticky; top:0; z-index:1; margin:0; padding:10px 16px; font-size:14px;
+             background:var(--panel); border-bottom:1px solid var(--line); font-family:ui-monospace,monospace; }
+.file .note { margin:12px 16px; }
+.hunk { border-top:1px solid var(--line); }
+.hunk-header { padding:6px 16px; color:var(--dim); font-size:12px; font-family:ui-monospace,monospace;
+               background:#11161d; }
+table { width:100%; table-layout:fixed; border-collapse:collapse;
+        font-family:ui-monospace,SFMono-Regular,monospace; font-size:12.5px; }
+col.c-ln { width:3.4em; } col.c-sign { width:1.4em; } col.c-code { width:calc(50% - 4.8em); }
+td { padding:0 4px; vertical-align:top; }
+td.ln { text-align:right; color:var(--dim); user-select:none; }
+td.sign { padding:0; text-align:center; user-select:none; color:var(--dim); }
+td.code { white-space:pre-wrap; word-break:break-all; tab-size:4; padding-right:8px; }
+td.right { border-left:1px solid var(--line); }
+td.add { background:var(--add); } td.add.sign { color:#3fb950; }
+td.del { background:var(--del); } td.del.sign { color:#f85149; }
+td.nil { background:#0b0e13; }
+td.meta { color:var(--dim); text-align:center; }
+.hljs-comment,.hljs-quote { color:#8b949e; font-style:italic; }
+.hljs-keyword,.hljs-selector-tag,.hljs-literal,.hljs-section,.hljs-doctag,.hljs-type,.hljs-name,.hljs-strong { color:#ff7b72; }
+.hljs-string,.hljs-regexp,.hljs-addition,.hljs-attribute,.hljs-meta .hljs-string { color:#a5d6ff; }
+.hljs-number,.hljs-symbol,.hljs-bullet,.hljs-variable,.hljs-template-variable,.hljs-attr { color:#79c0ff; }
+.hljs-title,.hljs-title.function_,.hljs-built_in { color:#d2a8ff; }
+.hljs-meta,.hljs-params { color:#ffa657; }
+"""
+
+# ponytail: ハイライトは CDN 頼み。オフラインでは色が付かないだけで表示は壊れない
+HLJS = "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"
+HIGHLIGHT_JS = """
+document.querySelectorAll('table[data-lang]').forEach(function (table) {
+  var lang = table.dataset.lang;
+  if (!window.hljs || !hljs.getLanguage(lang)) return;
+  table.querySelectorAll('td.code').forEach(function (cell) {
+    // ponytail: 行単位でハイライトするため複数行文字列/コメントは正確でない
+    cell.innerHTML = hljs.highlight(cell.textContent, {language: lang, ignoreIllegals: true}).value;
+  });
+});
+"""
+
+
+def half(cell, side):
+    """左右いずれかの 3 セル (行番号 / 記号 / コード) を組み立てる。"""
+    if cell is None:
+        return f'<td class="ln nil{side}"></td><td class="sign nil"></td><td class="code nil"></td>'
+    kind, number, body = cell
+    mark = {"add": "+", "del": "-"}.get(kind, "")
+    style = "" if kind == "ctx" else f" {kind}"
+    return (
+        f'<td class="ln{style}{side}">{number or ""}</td>'
+        f'<td class="sign{style}">{mark}</td>'
+        f'<td class="code{style}">{html.escape(body)}</td>'
+    )
+
+
+def render_html(files, explain, title, subtitle):
+    hunk_notes = explain.get("hunks", {})
+    file_notes = explain.get("files", {})
+    out = [
+        f"<h1>{html.escape(title)}</h1>",
+        f'<div class="meta">{html.escape(subtitle)}</div>',
+    ]
+    if explain.get("overview"):
+        out.append(f'<div class="note">{rich_text(explain["overview"])}</div>')
+
+    nav = []
+    for position, entry in enumerate(files):
+        path = entry["path"]
+        anchor = f"f{position}"
+        changes = sum(
+            1 for h in entry["hunks"] for kind, *_ in h["lines"] if kind in ("add", "del")
+        )
+        nav.append(
+            f'<a href="#{anchor}">{html.escape(path)}'
+            f'<span style="color:var(--hl)"> {changes}</span></a>'
+        )
+        out.append(f'<section class="file" id="{anchor}"><h2>{html.escape(path)}</h2>')
+        if file_notes.get(path):
+            out.append(f'<div class="note">{rich_text(file_notes[path])}</div>')
+        if entry["binary"]:
+            out.append('<div class="hunk-header">binary file</div>')
+        for index, hunk in enumerate(entry["hunks"], 1):
+            out.append('<div class="hunk">')
+            out.append(
+                f'<div class="hunk-header">{html.escape(hunk["header"])}'
+                f"  ({path}#{index})</div>"
+            )
+            note = hunk_notes.get(f"{path}#{index}")
+            if note:
+                out.append(f'<div class="note">{rich_text(note)}</div>')
+            out.append(
+                f'<table data-lang="{entry.get("lang", "")}"><colgroup>'
+                '<col class="c-ln"><col class="c-sign"><col class="c-code">'
+                '<col class="c-ln"><col class="c-sign"><col class="c-code"></colgroup>'
+            )
+            for left, right in side_by_side(hunk["lines"]):
+                if left and left[0] == "meta":
+                    out.append(f'<tr><td class="meta" colspan="6">{html.escape(left[2])}</td></tr>')
+                    continue
+                out.append("<tr>" + half(left, "") + half(right, " right") + "</tr>")
+            out.append("</table></div>")
+        out.append("</section>")
+
+    return (
+        "<!DOCTYPE html><html lang='ja'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+        f"<title>{html.escape(title)}</title><style>{CSS}</style></head>"
+        f"<body><div class='layout'><nav>{''.join(nav)}</nav>"
+        f"<main>{''.join(out)}</main></div>"
+        f'<script src="{HLJS}"></script><script>{HIGHLIGHT_JS}</script>'
+        "</body></html>"
+    )
+
+
+def default_output():
+    cache = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "diff-explain"
+    cache.mkdir(parents=True, exist_ok=True)
+    repo = Path.cwd().name
+    return cache / f"{repo}-{time.strftime('%Y%m%d-%H%M%S')}.html"
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("command", choices=["hunks", "render"])
+    parser.add_argument("-e", "--explain", help="解説 JSON のパス (render)")
+    parser.add_argument("-o", "--output", help="出力 HTML のパス (render, `-` で stdout)")
+    parser.add_argument("--title", help="HTML の見出し")
+    parser.add_argument("--open", action="store_true", help="生成後にブラウザで開く")
+    parser.add_argument(
+        "--split",
+        type=int,
+        default=40,
+        help="この行数を超える hunk を擬似 hunk に分割する (0 で無効, 既定 40)",
+    )
+    parser.add_argument("git_args", nargs="*", help="git diff にそのまま渡す引数")
+    args = parser.parse_args()
+
+    files = load_files(args.git_args, args.split)
+    if not files:
+        sys.exit("差分がありません")
+
+    if args.command == "hunks":
+        cmd_hunks(files)
+        return
+
+    explain = json.loads(Path(args.explain).read_text()) if args.explain else {}
+    known = {
+        f"{entry['path']}#{i}" for entry in files for i in range(1, len(entry["hunks"]) + 1)
+    }
+    for key in explain.get("hunks", {}):
+        if key not in known:
+            print(f"warning: 存在しない hunk ID: {key}", file=sys.stderr)
+
+    subtitle = " ".join(args.git_args) or "working tree"
+    page = render_html(
+        files, explain, args.title or explain.get("title") or "Diff Explained", subtitle
+    )
+    if args.output == "-":
+        sys.stdout.write(page)
+        return
+
+    output = Path(args.output) if args.output else default_output()
+    output.write_text(page)
+    print(output)
+    if not args.open:
+        return
+    if os.environ.get("SSH_CONNECTION") or os.environ.get("SSH_TTY"):
+        # remote にはブラウザが無い。ローカル側から取りに行ってもらう
+        print(
+            "remote 環境のためブラウザは開かない。"
+            "ローカルで: diff-explain-open <host>[:<container>]",
+            file=sys.stderr,
+        )
+        return
+    webbrowser.open(output.as_uri())
+
+
+if __name__ == "__main__":
+    main()
