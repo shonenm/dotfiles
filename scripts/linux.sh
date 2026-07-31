@@ -378,7 +378,12 @@ install_bun() {
 
   log_info "Installing bun (tmux-palette runtime)..."
   # Installs into ~/.bun; PATH is exported in zshrc.common (~/.bun/bin).
-  curl -fsSL https://bun.sh/install | bash
+  # bun の installer は `basename "$SHELL"` で分岐して rc に PATH を追記するが、
+  # ~/.zshrc は stow symlink なので dotfiles repo 本体が書き換わり、次回 install の
+  # link_dotfiles が "Uncommitted changes ... stow --adopt" で停止する (再実行の
+  # たびに重複追記もされる)。PATH は zshrc.common が担当済みなので、追記分岐に
+  # 入らない SHELL 名 (sh → case の `*` fallback) を渡して抑制する。
+  curl -fsSL https://bun.sh/install | SHELL=/bin/sh bash
   log_success "bun installed"
 }
 
