@@ -2,3 +2,10 @@
 # 付くが tmux-claude-pane.sh set は $2 のみ参照するため無害。turn 完了=入力待ち→ idle。
 # 注: codex は実行中の heartbeat イベントが無いため running/ハング検知は対象外。
 notify = ["/home/matsushima/dotfiles/scripts/tmux-claude-pane.sh", "set", "idle"]
+model = "gpt-5.6-luna"
+model_reasoning_effort = "high"
+approval_policy = "never"
+sandbox = "workspace-write"
+
+[projects."/home/matsushima/syntopic-platform"]
+trust_level = "trusted"
