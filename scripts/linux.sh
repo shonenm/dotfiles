@@ -352,13 +352,17 @@ install_modern_tools() {
   # Mise tools (special: depends on mise, activates it)
   if command_exists mise || [[ -f "$HOME/.local/bin/mise" ]]; then
     export PATH="$HOME/.local/bin:$PATH"
-    eval "$("$HOME/.local/bin/mise" activate bash 2>/dev/null || true)"
     # Linux-only tool set (github releases migrated off the eval/scrape engine).
     # conf.d is auto-loaded by mise and NOT stowed, so macOS never sees it.
     mkdir -p "$HOME/.config/mise/conf.d"
     cp "$CONFIG_DIR/mise-linux.toml" "$HOME/.config/mise/conf.d/dotfiles-linux.toml"
     log_info "Installing mise-managed tools..."
     "$HOME/.local/bin/mise" install -y 2>/dev/null || true
+    # `mise activate bash` は interactive shell 用 (PROMPT_COMMAND hook) で、
+    # installer のような非対話 script では PATH が一切書き換わらない。後続 step
+    # (install_npm_packages / install_compiled_tools の go) から mise 管理ツールを
+    # 見せるため、install 後に shims を直接 PATH へ載せる。
+    eval "$("$HOME/.local/bin/mise" activate bash --shims 2>/dev/null || true)"
   fi
 
   # Summary

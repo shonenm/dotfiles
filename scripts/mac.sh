@@ -138,8 +138,11 @@ install_mise_tools() {
   fi
 
   log_info "Installing tools via mise..."
-  eval "$(mise activate bash)"
   mise install -y 2>/dev/null || true
+  # `mise activate bash` は interactive shell 用 (PROMPT_COMMAND hook) で、
+  # installer のような非対話 script では PATH が一切書き換わらない。後続 step
+  # から mise 管理ツールを見せるため、install 後に shims を直接 PATH へ載せる。
+  eval "$(mise activate bash --shims 2>/dev/null || true)"
 }
 
 set_default_shell() {
