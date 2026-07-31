@@ -100,24 +100,22 @@ check_1password() {
     return 0
   fi
 
+  # op 未導入 / 未 signin でも abort しない (install.sh の check_1password_cli と同じ方針)。
+  # ここは run_step から直接呼ばれるので exit すると linux.sh 全体が落ち、後続の
+  # set_default_shell まで飛ばされる。secret 依存ステップは op read が no-op fallback
+  # するので継続して問題なく、signin 後に再実行すれば secret が反映される。
+  # 未 signin の最終案内は install.sh の summary が出す。
   if ! command_exists op; then
-    log_error "1Password CLI not installed."
-    log_error "Install: https://developer.1password.com/docs/cli/get-started/"
-    exit 1
+    log_warn "1Password CLI not installed. Secret-dependent steps will no-op."
+    log_warn "Install: https://developer.1password.com/docs/cli/get-started/"
+    return 0
   fi
 
   if op whoami &>/dev/null; then
     log_success "1Password CLI: signed in"
   else
-    log_error "1Password CLI: not signed in"
-    echo "  ----------------------------------------"
-    echo "  Run the following command to sign in:"
-    echo ""
-    echo "    eval \$(op signin)"
-    echo ""
-    echo "  Then re-run this script."
-    echo "  ----------------------------------------"
-    exit 1
+    log_warn "1Password CLI: not signed in. Secret-dependent steps will no-op this run."
+    log_warn "Sign in with 'eval \$(op signin)' and re-run to populate secrets."
   fi
 }
 # --- 2. Install Functions ---
@@ -352,13 +350,17 @@ install_modern_tools() {
   # Mise tools (special: depends on mise, activates it)
   if command_exists mise || [[ -f "$HOME/.local/bin/mise" ]]; then
     export PATH="$HOME/.local/bin:$PATH"
-    eval "$("$HOME/.local/bin/mise" activate bash 2>/dev/null || true)"
     # Linux-only tool set (github releases migrated off the eval/scrape engine).
     # conf.d is auto-loaded by mise and NOT stowed, so macOS never sees it.
     mkdir -p "$HOME/.config/mise/conf.d"
     cp "$CONFIG_DIR/mise-linux.toml" "$HOME/.config/mise/conf.d/dotfiles-linux.toml"
     log_info "Installing mise-managed tools..."
     "$HOME/.local/bin/mise" install -y 2>/dev/null || true
+    # `mise activate bash` は interactive shell 用 (PROMPT_COMMAND hook) で、
+    # installer のような非対話 script では PATH が一切書き換わらない。後続 step
+    # (install_npm_packages / install_compiled_tools の go) から mise 管理ツールを
+    # 見せるため、install 後に shims を直接 PATH へ載せる。
+    eval "$("$HOME/.local/bin/mise" activate bash --shims 2>/dev/null || true)"
   fi
 
   # Summary
@@ -376,7 +378,12 @@ install_bun() {
 
   log_info "Installing bun (tmux-palette runtime)..."
   # Installs into ~/.bun; PATH is exported in zshrc.common (~/.bun/bin).
-  curl -fsSL https://bun.sh/install | bash
+  # bun の installer は `basename "$SHELL"` で分岐して rc に PATH を追記するが、
+  # ~/.zshrc は stow symlink なので dotfiles repo 本体が書き換わり、次回 install の
+  # link_dotfiles が "Uncommitted changes ... stow --adopt" で停止する (再実行の
+  # たびに重複追記もされる)。PATH は zshrc.common が担当済みなので、追記分岐に
+  # 入らない SHELL 名 (sh → case の `*` fallback) を渡して抑制する。
+  curl -fsSL https://bun.sh/install | SHELL=/bin/sh bash
   log_success "bun installed"
 }
 
