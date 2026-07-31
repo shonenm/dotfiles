@@ -27,7 +27,10 @@ NERD_FONT_URL="https://github.com/yuru7/udev-gothic/releases/download/${NERD_FON
 
 TOOL_bun_check_cmd="bun"
 TOOL_bun_method="curl_pipe"
-TOOL_bun_curl_cmd='curl -fsSL https://bun.sh/install | bash'
+# SHELL=/bin/sh: installer の rc 追記分岐 (case $(basename "$SHELL")) を `*` fallback へ
+# 逃がし、~/.zshrc = stow symlink 経由での dotfiles repo 書き換えを防ぐ。
+# PATH は zshrc.common が ~/.bun/bin を担当済み。scripts/linux.sh の install_bun も同様。
+TOOL_bun_curl_cmd='curl -fsSL https://bun.sh/install | SHELL=/bin/sh bash'
 
 TOOL_starship_check_cmd="starship"
 TOOL_starship_method="curl_pipe"
