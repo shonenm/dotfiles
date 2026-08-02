@@ -1058,9 +1058,15 @@ print_install_summary() {
   local npm_file="$CONFIG_DIR/packages.npm.txt"
   if [[ -f "$npm_file" ]]; then
     local npm_ok=0 npm_total=0 npm_missing=()
+    local installed_npm=""
+    if command_exists npm; then
+      installed_npm=$(npm_global_packages)
+    fi
     while IFS= read -r pkg; do
       ((++npm_total))
-      if command_exists npm && npm list -g "$pkg" &>/dev/null; then
+      local npm_name
+      npm_name=$(npm_package_name "$pkg")
+      if list_contains_line "$installed_npm" "$npm_name"; then
         ((++npm_ok))
       else
         npm_missing+=("$pkg")

@@ -16,6 +16,53 @@ command_exists() {
   command -v "$1" &>/dev/null
 }
 
+npm_package_name() {
+  local spec="$1"
+  if [[ "$spec" == @*/*@* ]]; then
+    echo "${spec%@*}"
+  elif [[ "$spec" == @*/* ]]; then
+    echo "$spec"
+  else
+    echo "${spec%%@*}"
+  fi
+}
+
+# Fetch the global npm inventory once instead of starting npm for every package.
+npm_global_packages() {
+  npm list -g --depth=0 --json 2>/dev/null | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except (ValueError, OSError):
+    raise SystemExit(0)
+for name in data.get("dependencies", {}):
+    print(name)
+'
+}
+
+list_contains_line() {
+  local list="$1" value="$2"
+  grep -Fxq -- "$value" <<< "$list"
+}
+
+# True when TARGET is missing or any file below one of INPUTS is newer.
+target_needs_rebuild() {
+  local target="$1"
+  shift
+  [[ -x "$target" ]] || return 0
+
+  local input
+  for input in "$@"; do
+    [[ -e "$input" ]] || continue
+    if [[ -d "$input" ]]; then
+      [[ -n "$(find "$input" -type f -newer "$target" -print -quit 2>/dev/null)" ]] && return 0
+    elif [[ "$input" -nt "$target" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # --- Install step failure tracking ---
 # run_step records failures instead of aborting, so one broken step doesn't
 # stop the rest of the setup but the script can still exit non-zero.

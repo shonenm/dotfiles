@@ -13,15 +13,27 @@ install_compiled_tools() {
 
   # --- Rust ---
   if command_exists cargo; then
-    log_info "Building rust tools (ai-usage / wt / pomodoro)..."
-    if cargo build --release --manifest-path "$DOTFILES_DIR/tools/Cargo.toml"; then
-      local b
-      for b in ai-usage wt pomodoro; do
-        install "$DOTFILES_DIR/tools/target/release/$b" "$HOME/.local/bin/"
-      done
-      log_success "rust tools installed to ~/.local/bin"
+    local rust_rebuild=false b
+    for b in ai-usage wt pomodoro; do
+      if target_needs_rebuild "$HOME/.local/bin/$b" \
+          "$DOTFILES_DIR/tools/Cargo.toml" "$DOTFILES_DIR/tools/Cargo.lock" \
+          "$DOTFILES_DIR/tools/crates"; then
+        rust_rebuild=true
+        break
+      fi
+    done
+    if [[ "$rust_rebuild" == "false" ]]; then
+      log_success "rust tools already up to date"
     else
-      log_warn "rust tools build failed — ai-usage/wt/pomodoro は使用不可 (旧 bash は削除済みで fallback なし)"
+      log_info "Building rust tools (ai-usage / wt / pomodoro)..."
+      if cargo build --release --manifest-path "$DOTFILES_DIR/tools/Cargo.toml"; then
+        for b in ai-usage wt pomodoro; do
+          install "$DOTFILES_DIR/tools/target/release/$b" "$HOME/.local/bin/"
+        done
+        log_success "rust tools installed to ~/.local/bin"
+      else
+        log_warn "rust tools build failed — ai-usage/wt/pomodoro は使用不可 (旧 bash は削除済みで fallback なし)"
+      fi
     fi
   else
     log_warn "cargo not found, skipping rust tools (ai-usage / wt / pomodoro)"
@@ -35,16 +47,21 @@ install_compiled_tools() {
     go_bin="$(mise which go 2>/dev/null || true)"
   fi
   if [[ -n "$go_bin" ]]; then
-    log_info "Building go crew (ralph-crew Go 版, bash と並走)..."
-    if (cd "$DOTFILES_DIR/tools/crew" && "$go_bin" build -o "$HOME/.local/bin/crew" .); then
-      log_success "crew installed to ~/.local/bin (bash ralph-crew は据え置き)"
+    if target_needs_rebuild "$HOME/.local/bin/crew" "$DOTFILES_DIR/tools/crew"; then
+      log_info "Building go crew (ralph-crew Go 版, bash と並走)..."
+      if (cd "$DOTFILES_DIR/tools/crew" && "$go_bin" build -o "$HOME/.local/bin/crew" .); then
+        log_success "crew installed to ~/.local/bin (bash ralph-crew は据え置き)"
+      else
+        log_warn "crew build failed — bash ralph-crew を継続使用"
+      fi
     else
-      log_warn "crew build failed — bash ralph-crew を継続使用"
+      log_success "crew already up to date"
     fi
   else
     log_warn "go not found, skipping crew (bash ralph-crew を継続使用)"
   fi
 }
+
 
 install_npm_packages() {
   if ! command_exists npm; then
@@ -59,10 +76,15 @@ install_npm_packages() {
   fi
 
   log_info "Installing npm packages..."
+  local installed
+  installed=$(npm_global_packages)
   while IFS= read -r pkg; do
-    if ! npm list -g "$pkg" &>/dev/null; then
+    local name
+    name=$(npm_package_name "$pkg")
+    if ! list_contains_line "$installed" "$name"; then
       log_info "Installing $pkg..."
       npm install -g "$pkg"
+      installed="${installed}${installed:+$'\n'}${name}"
     else
       log_success "$pkg already installed"
     fi
@@ -208,4 +230,3 @@ install_gh_extensions() {
     fi
   fi
 }
-
