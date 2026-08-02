@@ -10,19 +10,23 @@ source "$DOTFILES_DIR/scripts/utils.sh"
 # --- Argument Parsing ---
 # NO_SUDO defaults to false (use sudo/system path).
 # Pass --no-sudo to opt into pixi-based user-scope install on sudoless hosts.
+# Pass --update to refresh remote dependencies even when their inputs are unchanged.
 SKIP_PROMPT=false
 NO_SUDO=false
 SKIP_1P=false
+UPDATE_INSTALL=false
 SETUP_FAILED=false
 NOT_SIGNED_IN=false
+OP_SIGNED_IN=false
 for arg in "$@"; do
   case "$arg" in
     -y|--skip-prompt) SKIP_PROMPT=true ;;
     --no-sudo)        NO_SUDO=true ;;
     --skip-1p)        SKIP_1P=true ;;
+    --update)         UPDATE_INSTALL=true ;;
   esac
 done
-export NO_SUDO SKIP_1P
+export NO_SUDO SKIP_1P UPDATE_INSTALL
 
 # ~/.local/bin を PATH 先頭に追加。no-sudo install したツール (op など) を
 # install.sh プロセス全体で参照可能にし、再実行時の不要な再インストールを防ぐ。
@@ -144,6 +148,7 @@ check_1password_cli() {
   fi
 
   log_success "1Password CLI: ready"
+  OP_SIGNED_IN=true
 }
 
 # --- 0. Install Homebrew (Mac only) ---
@@ -533,7 +538,7 @@ generate_ai_cli_configs() {
   # Preserve existing secret-derived settings during unsigned/--skip-1p runs.
   local secrets_available=false
   local notion_placeholder="\${NOTION_TOKEN}"
-  if [[ "$SKIP_1P" != "true" ]] && command -v op &>/dev/null && op whoami &>/dev/null; then
+  if [[ "$SKIP_1P" != "true" && "$OP_SIGNED_IN" == "true" ]]; then
     secrets_available=true
   fi
 
@@ -584,8 +589,13 @@ PYEOF
     if [[ "$secrets_available" == "true" ]]; then
       notion_token=$(op read "op://Personal/Notion MCP/credential" 2>/dev/null || true)
     fi
-    # Read each server from mcp.json and register via claude mcp add-json
-    python3 -c "
+    local claude_mcp_fp
+    claude_mcp_fp=$(install_fingerprint "file:$mcp_config" "notion:$notion_token" "home:$HOME")
+    if install_state_is_current claude-mcp "$claude_mcp_fp"; then
+      log_success "  Claude MCP servers already current"
+    else
+      # Read each server from mcp.json and register via claude mcp add-json
+      python3 -c "
 import json, sys
 with open('$mcp_config') as f:
     servers = json.load(f)['mcpServers']
@@ -610,7 +620,9 @@ for name, config in servers.items():
       else
         log_warn "  Failed to register MCP server: $name"
       fi
-    done
+      done
+      record_install_state claude-mcp "$claude_mcp_fp"
+    fi
   fi
 
   # Claude Code skills (from common/claude, skip if Stow symlinks exist)
@@ -650,40 +662,46 @@ for name, config in servers.items():
 
   # Codex CLI
   if [[ -f "$templates_dir/codex-config.toml" ]]; then
-    mkdir -p "$HOME/.codex"
-    sed "s|__HOME__|$HOME|g" "$templates_dir/codex-config.toml" > "$HOME/.codex/config.toml"
-    log_success "  Generated ~/.codex/config.toml"
+    if render_home_template "$templates_dir/codex-config.toml" "$HOME/.codex/config.toml"; then
+      log_success "  Generated ~/.codex/config.toml"
+    else
+      log_success "  ~/.codex/config.toml already current"
+    fi
   fi
 
   # Gemini CLI
   if [[ -f "$templates_dir/gemini-settings.json" ]]; then
-    mkdir -p "$HOME/.gemini"
-    rm -f "$HOME/.gemini/settings.json" 2>/dev/null || true
-    sed "s|__HOME__|$HOME|g" "$templates_dir/gemini-settings.json" > "$HOME/.gemini/settings.json"
-    log_success "  Generated ~/.gemini/settings.json"
+    if render_home_template "$templates_dir/gemini-settings.json" "$HOME/.gemini/settings.json"; then
+      log_success "  Generated ~/.gemini/settings.json"
+    else
+      log_success "  ~/.gemini/settings.json already current"
+    fi
   fi
 
   # Cursor CLI
   if [[ -f "$templates_dir/cursor-cli-config.json" ]]; then
-    mkdir -p "$HOME/.cursor"
-    rm -f "$HOME/.cursor/cli-config.json" 2>/dev/null || true
-    sed "s|__HOME__|$HOME|g" "$templates_dir/cursor-cli-config.json" > "$HOME/.cursor/cli-config.json"
-    log_success "  Generated ~/.cursor/cli-config.json"
+    if render_home_template "$templates_dir/cursor-cli-config.json" "$HOME/.cursor/cli-config.json"; then
+      log_success "  Generated ~/.cursor/cli-config.json"
+    else
+      log_success "  ~/.cursor/cli-config.json already current"
+    fi
   fi
 
   if [[ -f "$templates_dir/cursor-hooks.json" ]]; then
-    mkdir -p "$HOME/.cursor"
-    rm -f "$HOME/.cursor/hooks.json" 2>/dev/null || true
-    sed "s|__HOME__|$HOME|g" "$templates_dir/cursor-hooks.json" > "$HOME/.cursor/hooks.json"
-    log_success "  Generated ~/.cursor/hooks.json"
+    if render_home_template "$templates_dir/cursor-hooks.json" "$HOME/.cursor/hooks.json"; then
+      log_success "  Generated ~/.cursor/hooks.json"
+    else
+      log_success "  ~/.cursor/hooks.json already current"
+    fi
   fi
 
   # Command Code CLI
   if [[ -f "$templates_dir/commandcode-settings.json" ]]; then
-    mkdir -p "$HOME/.commandcode"
-    rm -f "$HOME/.commandcode/settings.json" 2>/dev/null || true
-    sed "s|__HOME__|$HOME|g" "$templates_dir/commandcode-settings.json" > "$HOME/.commandcode/settings.json"
-    log_success "  Generated ~/.commandcode/settings.json"
+    if render_home_template "$templates_dir/commandcode-settings.json" "$HOME/.commandcode/settings.json"; then
+      log_success "  Generated ~/.commandcode/settings.json"
+    else
+      log_success "  ~/.commandcode/settings.json already current"
+    fi
   fi
 
   # Command Code skills (symlink d-* from common/claude)
@@ -707,7 +725,12 @@ for name, config in servers.items():
     if [[ "$secrets_available" == "true" ]]; then
       notion_token=$(op read "op://Personal/Notion MCP/credential" 2>/dev/null || true)
     fi
-    python3 -c "
+    local command_mcp_fp
+    command_mcp_fp=$(install_fingerprint "file:$agent_mcp" "notion:$notion_token" "home:$HOME")
+    if install_state_is_current command-mcp "$command_mcp_fp"; then
+      log_success "  Command Code MCP servers already current"
+    else
+      python3 -c "
 import json, sys
 with open('$agent_mcp') as f:
     servers = json.load(f)['mcpServers']
@@ -736,25 +759,35 @@ for name, config in servers.items():
       else
         log_warn "  Failed to register Command Code MCP server: $name"
       fi
-    done
+      done
+      record_install_state command-mcp "$command_mcp_fp"
+    fi
   fi
 
   # Refresh secret-derived caches only when authenticated; otherwise keep the
   # last known-good values from the previous signed-in run.
   if [[ "$secrets_available" == "true" ]]; then
-    log_info "  Caching webhooks..."
-    for tool in claude codex gemini cursor cmd; do
-      if "$DOTFILES_DIR/scripts/ai-notify.sh" --setup "$tool" 2>/dev/null; then
-        log_success "    ✓ $tool webhook cached and notified"
-      else
-        log_warn "    ✗ $tool webhook not available"
-      fi
-    done
-
-    if "$DOTFILES_DIR/scripts/claude-fallback.sh" setup 2>/dev/null; then
-      log_success "  Claude fallback ready (run 'claude-fallback.sh on' during outages)"
+    local secret_cache_fp
+    secret_cache_fp=$(install_fingerprint "file:$DOTFILES_DIR/scripts/ai-notify.sh" \
+      "file:$DOTFILES_DIR/scripts/claude-fallback.sh")
+    if install_state_is_current secret-caches "$secret_cache_fp"; then
+      log_success "  Secret-derived caches already current"
     else
-      log_warn "  Claude fallback setup skipped (API key not available)"
+      log_info "  Caching webhooks..."
+      for tool in claude codex gemini cursor cmd; do
+        if "$DOTFILES_DIR/scripts/ai-notify.sh" --setup "$tool" 2>/dev/null; then
+          log_success "    ✓ $tool webhook cached and notified"
+        else
+          log_warn "    ✗ $tool webhook not available"
+        fi
+      done
+
+      if "$DOTFILES_DIR/scripts/claude-fallback.sh" setup 2>/dev/null; then
+        log_success "  Claude fallback ready (run 'claude-fallback.sh on' during outages)"
+      else
+        log_warn "  Claude fallback setup skipped (API key not available)"
+      fi
+      record_install_state secret-caches "$secret_cache_fp"
     fi
   else
     log_warn "  Secret-derived caches and MCP credentials were not refreshed"
@@ -800,9 +833,20 @@ main() {
 
   # 3.5. Install sheldon plugins
   if command_exists sheldon; then
-    log_info "Installing sheldon plugins..."
-    sheldon lock --update
-    log_success "Sheldon plugins installed"
+    local sheldon_config="$HOME/.config/sheldon/plugins.toml" sheldon_fp
+    sheldon_fp=$(install_fingerprint "file:$sheldon_config")
+    if install_state_is_current sheldon "$sheldon_fp"; then
+      log_success "Sheldon plugins already match plugins.toml"
+    else
+      log_info "Installing sheldon plugins..."
+      if [[ "$UPDATE_INSTALL" == "true" ]]; then
+        sheldon lock --update
+      else
+        sheldon lock
+      fi
+      record_install_state sheldon "$sheldon_fp"
+      log_success "Sheldon plugins installed"
+    fi
   fi
 
   # 3.6. Regenerate tmux theme on Linux (fixes powerline char encoding)
@@ -887,6 +931,13 @@ with open('$settings_file') as f:
     return 0
   fi
 
+  local packages_fp
+  packages_fp=$(install_fingerprint "$packages")
+  if install_state_is_current pi-packages "$packages_fp"; then
+    log_success "Pi packages already match settings.json"
+    return 0
+  fi
+
   log_info "Installing pi packages..."
   while IFS= read -r pkg; do
     [[ -z "$pkg" ]] && continue
@@ -896,6 +947,7 @@ with open('$settings_file') as f:
       log_warn "  pi package failed: $pkg"
     fi
   done <<< "$packages"
+  record_install_state pi-packages "$packages_fp"
 }
 
 # --- 4.5. Configure rtk Claude Code hook ---

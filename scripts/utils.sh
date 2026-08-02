@@ -63,6 +63,49 @@ target_needs_rebuild() {
   return 1
 }
 
+install_fingerprint() {
+  local value path
+  for value in "$@"; do
+    if [[ "$value" == file:* ]]; then
+      path="${value#file:}"
+      if [[ -f "$path" ]]; then
+        git hash-object "$path"
+      else
+        echo missing
+      fi
+    else
+      printf '%s\n' "$value"
+    fi
+  done | git hash-object --stdin
+}
+
+install_state_is_current() {
+  local key="$1" fingerprint="$2"
+  [[ "${UPDATE_INSTALL:-false}" != "true" ]] || return 1
+  local state_file="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-install/$key"
+  [[ -f "$state_file" ]] && [[ "$(<"$state_file")" == "$fingerprint" ]]
+}
+
+record_install_state() {
+  local key="$1" fingerprint="$2"
+  local state_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-install"
+  mkdir -p "$state_dir"
+  printf '%s\n' "$fingerprint" > "$state_dir/$key"
+}
+
+# Render SRC after replacing __HOME__, but avoid rewriting an unchanged target.
+render_home_template() {
+  local src="$1" dst="$2" tmp
+  mkdir -p "$(dirname "$dst")"
+  tmp=$(mktemp)
+  sed "s|__HOME__|$HOME|g" "$src" > "$tmp"
+  if [[ -f "$dst" ]] && cmp -s "$tmp" "$dst"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mv "$tmp" "$dst"
+}
+
 # --- Install step failure tracking ---
 # run_step records failures instead of aborting, so one broken step doesn't
 # stop the rest of the setup but the script can still exit non-zero.
