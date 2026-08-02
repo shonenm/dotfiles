@@ -14,12 +14,12 @@ US=$'\x1f'
 
 agent_index_panes() {
   "$SCRIPT_DIR/tmux-agent-index.sh" panes 2>/dev/null || tmux list-panes -a -F \
-    "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{@agent_state_since}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}${US}#{@agent_stashed}${US}#{@agent_sidebar_pane}${US}#{@agent_provider}${US}#{pane_tty}${US}#{pane_width}${US}#{pane_height}"
+    "#{pane_id}${US}#{session_name}${US}#{window_index}${US}#{@agent_status}${US}#{@agent_heartbeat}${US}#{@agent_state_since}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{pane_title}${US}#{@agent_stashed}${US}#{@agent_sidebar_pane}${US}#{@agent_provider}${US}#{pane_tty}${US}#{pane_width}${US}#{pane_height}" | agent_unvis
 }
 
 agent_index_sessions() {
   "$SCRIPT_DIR/tmux-agent-index.sh" sessions 2>/dev/null || tmux list-sessions -F \
-    "#{session_name}${US}#{@group}${US}#{session_attached}"
+    "#{session_name}${US}#{@group}${US}#{session_attached}" | agent_unvis
 }
 
 C_RED=$'\e[38;5;203m'; C_AMBER=$'\e[38;5;214m'; C_DIM=$'\e[2m'; C_BOLD=$'\e[1m'; C_RST=$'\e[0m'

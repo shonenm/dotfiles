@@ -4,6 +4,10 @@ pkg-config
 libssl-dev
 zsh
 tmux
+# tmux 3.6a の source build 用 (install_tmux_source)
+libevent-dev
+libncurses-dev
+bison
 jq
 stow
 unzip
