@@ -59,4 +59,11 @@ if render_home_template "$tmpdir/templates/input" "$HOME/output"; then
   exit 1
 fi
 
+FAILED_STEPS=""
+STEP_TIMINGS=""
+run_step true
+run_step false || true
+list_contains_line "${FAILED_STEPS# }" "false"
+[[ "$STEP_TIMINGS" == *"true:"* && "$STEP_TIMINGS" == *"false:"* ]]
+
 echo "install fast-path tests: OK"
