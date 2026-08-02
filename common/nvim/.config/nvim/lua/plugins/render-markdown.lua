@@ -14,6 +14,7 @@ local ft = {
   "Avante",
   "AvanteInput",
   "copilot-chat",
+  "octo",
 }
 
 return {

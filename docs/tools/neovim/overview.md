@@ -322,6 +322,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── lualine.lua            # ステータスライン強化 (リポジトリ全体diff, Copilot, LSP名)
 ├── multicursor.lua        # マルチカーソル (vim-visual-multi)
 ├── noice.lua              # メッセージ表示最適化 (種類別ルーティング)
+├── octo.lua               # GitHub PR レビュー (use_local_fs で LSP 有効化)
 ├── scroll.lua             # スクロール設定（snacks.scroll 無効化）
 ├── neotest.lua            # テストランナー設定 (4アダプター, monorepo対応)
 ├── overseer.lua           # タスクランナー設定 (タスク出力表示強化)
@@ -429,6 +430,10 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | `<leader>gF` | コミット履歴                     |
 | `<leader>gH` | GH Dash（GitHub Dashboard）      |
 | `<leader>gR` | リポジトリ/サブモジュール切替    |
+| `<leader>gp` | PR 一覧（Octo）                  |
+| `<leader>gi` | Issue 一覧（Octo）               |
+| `<leader>gc` | PR の CI checks（Octo）          |
+| `<leader>gw` | workflow run 一覧（Octo）        |
 
 ### CodeDiff 内操作
 
