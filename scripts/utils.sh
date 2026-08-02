@@ -116,15 +116,21 @@ render_home_template() {
 # (string accumulation instead of an array: empty arrays break under
 #  `set -u` on macOS bash 3.2)
 FAILED_STEPS=""
+STEP_TIMINGS=""
 run_step() {
-  if ! "$1"; then
+  local step="$1" started=$SECONDS status=0
+  if ! "$step"; then
+    status=1
     FAILED_STEPS="${FAILED_STEPS} $1"
     log_error "Step failed: $1"
   fi
+  STEP_TIMINGS="${STEP_TIMINGS}${step}:$((SECONDS - started))s "
+  return "$status"
 }
 
 finish_steps() {
   local success_msg="$1"
+  [[ -n "$STEP_TIMINGS" ]] && log_info "Step timings: $STEP_TIMINGS"
   if [[ -n "$FAILED_STEPS" ]]; then
     log_error "Setup finished with failed steps:${FAILED_STEPS}"
     return 1

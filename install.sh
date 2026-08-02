@@ -247,6 +247,47 @@ stow_package() {
   return 0
 }
 
+# Stow all packages from one source directory in a single pair of processes.
+# Fall back to the per-package path when an unusual bind mount prevents the
+# aggregate operation, preserving the existing best-effort behavior.
+stow_package_group() {
+  local pkg_dir="$1"
+  shift
+  local packages=("$@") dry_run conflicts file target
+  [[ ${#packages[@]} -gt 0 ]] || return 0
+
+  dry_run=$(stow -n --no-folding -d "$pkg_dir" -t "$HOME" "${packages[@]}" 2>&1 || true)
+  conflicts=$(printf '%s\n' "$dry_run" | sed -n \
+    -e 's/.*over existing target //p' \
+    -e 's/^[[:space:]]*\*[[:space:]]*existing target is not owned by stow: //p' | \
+    sed 's/ since.*//' | sort -u)
+
+  while IFS= read -r file; do
+    [[ -n "$file" ]] || continue
+    target="$HOME/$file"
+    if [[ -e "$target" && ! -L "$target" ]]; then
+      if mv "$target" "$target.dotfiles-bak" 2>/dev/null; then
+        log_info "    Backed up: $file → $file.dotfiles-bak"
+      else
+        log_warn "    Cannot move $file (bind mount?); using package fallback"
+        local pkg
+        for pkg in "${packages[@]}"; do
+          stow_package "$pkg_dir" "$pkg"
+        done
+        return 0
+      fi
+    fi
+  done <<< "$conflicts"
+
+  if ! stow --restow --no-folding -d "$pkg_dir" -t "$HOME" --adopt "${packages[@]}" 2>/dev/null; then
+    log_warn "  Grouped stow failed; retrying packages individually"
+    local pkg
+    for pkg in "${packages[@]}"; do
+      stow_package "$pkg_dir" "$pkg"
+    done
+  fi
+}
+
 # Remove links whose source was deleted or moved before restowing the new layout.
 # Restrict cleanup to skill roots; runtime files elsewhere under ~/.pi are untouched.
 cleanup_broken_skill_links() {
@@ -406,21 +447,21 @@ link_dotfiles() {
   # Stow common packages
   if [[ -d "$DOTFILES_DIR/common" ]]; then
     log_info "Linking common dotfiles..."
+    local common_packages=()
     for pkg in "$DOTFILES_DIR/common"/*/; do
-      pkg_name="$(basename "$pkg")"
-      log_info "  Linking $pkg_name..."
-      stow_package "$DOTFILES_DIR/common" "$pkg_name"
+      common_packages+=("$(basename "$pkg")")
     done
+    stow_package_group "$DOTFILES_DIR/common" "${common_packages[@]}"
   fi
 
   # Stow OS-specific packages
   if [[ -d "$DOTFILES_DIR/$os" ]]; then
     log_info "Linking $os-specific dotfiles..."
+    local os_packages=()
     for pkg in "$DOTFILES_DIR/$os"/*/; do
-      pkg_name="$(basename "$pkg")"
-      log_info "  Linking $pkg_name..."
-      stow_package "$DOTFILES_DIR/$os" "$pkg_name"
+      os_packages+=("$(basename "$pkg")")
     done
+    stow_package_group "$DOTFILES_DIR/$os" "${os_packages[@]}"
   fi
 
   # Fixup bind-mounted config files (Docker/devcontainer)
