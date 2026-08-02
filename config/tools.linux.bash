@@ -50,7 +50,14 @@ TOOL_zoxide_curl_cmd='curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/z
 
 TOOL_atuin_check_cmd="atuin"
 TOOL_atuin_method="curl_pipe"
-TOOL_atuin_curl_cmd='curl --proto =https --tlsv1.2 -LsSf https://setup.atuin.sh | sh -s -- --yes'
+# ATUIN_NO_MODIFY_PATH / ZDOTDIR: installer による ~/.zshrc への追記を抑止する。
+# ~/.zshrc は stow symlink なので追記されると dotfiles repo 本体が汚れる。
+# PATH は zshrc.common、init は linux/zsh/.zshrc.local が担当済み。
+# 詳細は scripts/linux.sh の _atuin_rc_guard_dir を参照。
+# --non-interactive: setup script は `--yes` を解釈しない。未指定だと TTY 判定へ進み、
+# TTY の無い installer 実行では `exec 3</dev/tty` の失敗が (POSIX sh の特殊組込み
+# エラーとして) shell を即終了させる。stderr は握り潰されるため無言で入らない。
+TOOL_atuin_curl_cmd='curl --proto =https --tlsv1.2 -LsSf https://setup.atuin.sh | ATUIN_NO_MODIFY_PATH=1 ZDOTDIR="$(_atuin_rc_guard_dir)" sh -s -- --non-interactive'
 
 TOOL_dotenvx_check_cmd="dotenvx"
 TOOL_dotenvx_method="curl_pipe"
