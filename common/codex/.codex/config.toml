@@ -2,10 +2,33 @@
 # 付くが tmux-claude-pane.sh set は $2 のみ参照するため無害。turn 完了=入力待ち→ idle。
 # 注: codex は実行中の heartbeat イベントが無いため running/ハング検知は対象外。
 notify = ["/home/matsushima/dotfiles/scripts/tmux-claude-pane.sh", "set", "idle"]
-model = "gpt-5.6-luna"
-model_reasoning_effort = "high"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "low"
 approval_policy = "never"
-sandbox = "workspace-write"
+default_permissions = "repo-autonomous"
+
+# 確認なしで現在の workspace 内を自走する一方、Mac 全体への書き込みは許可しない。
+# permission profiles と旧 sandbox/sandbox_workspace_write は併用不可。
+[permissions.repo-autonomous]
+description = "Autonomous work limited to the active repository and GitHub"
+
+[permissions.repo-autonomous.filesystem]
+":minimal" = "read"
+
+[permissions.repo-autonomous.filesystem.":workspace_roots"]
+"." = "write"
+"**/*.env" = "deny"
+
+[permissions.repo-autonomous.network]
+enabled = true
+
+[permissions.repo-autonomous.network.domains]
+"github.com" = "allow"
+"*.github.com" = "allow"
+"**.githubusercontent.com" = "allow"
 
 [projects."/home/matsushima/syntopic-platform"]
+trust_level = "trusted"
+
+[projects."/Users/matsushimakouta/dotfiles"]
 trust_level = "trusted"
