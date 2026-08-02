@@ -256,6 +256,19 @@ install_postgresql_apt() {
   $SUDO apt install -y postgresql-client
 }
 
+# atuin の setup script は `grep -q "atuin init zsh" "${ZDOTDIR:-$HOME}/.zshrc"` が
+# 空振りすると ~/.zshrc へ init 行を追記する。~/.zshrc は stow symlink なので
+# dotfiles repo 本体 (common/zsh/.zshrc) が汚れ、次回 install の link_dotfiles が
+# stow --adopt 前チェックで停止する。init は linux/zsh/.zshrc.local が担当済みなので、
+# 「追記済み」に見えるダミー .zshrc を持つ ZDOTDIR を渡して guard を成立させ、
+# 追記そのものを起こさせない。PATH 側の追記は ATUIN_NO_MODIFY_PATH=1 が抑止する。
+_atuin_rc_guard_dir() {
+  local d="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/atuin-rc-guard"
+  mkdir -p "$d"
+  printf 'eval "$(atuin init zsh)"\n' > "$d/.zshrc"
+  printf '%s' "$d"
+}
+
 # --- Main Tool Dispatcher ---
 
 install_modern_tools() {
