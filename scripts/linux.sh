@@ -42,6 +42,17 @@ fi
 # shellcheck source=/dev/null
 source "$CONFIG_DIR/tools.linux.bash"
 
+# Avoid downloading the apt index repeatedly in one installer run. Repository
+# setup functions may force a refresh after adding a new source.
+APT_INDEX_UPDATED=false
+apt_update_once() {
+  local force="${1:-false}"
+  if [[ "$force" == "true" || "$APT_INDEX_UPDATED" != "true" ]]; then
+    $SUDO apt update
+    APT_INDEX_UPDATED=true
+  fi
+}
+
 # --- 1. Pre-flight Check ---
 check_requirements() {
   local missing_requirements=()
@@ -138,7 +149,7 @@ install_system_packages() {
 
   elif command_exists apt; then
     log_info "Debian/Ubuntu detected. Using apt..."
-    $SUDO apt update
+    apt_update_once
     readarray -t APT_PACKAGES < <(read_package_list "$CONFIG_DIR/packages.linux.apt.txt")
     $SUDO apt install -y "${APT_PACKAGES[@]}"
 
@@ -185,11 +196,11 @@ install_git_latest() {
   fi
 
   if ! command_exists add-apt-repository; then
-    $SUDO apt update
+    apt_update_once
     $SUDO apt install -y software-properties-common
   fi
   $SUDO add-apt-repository -y ppa:git-core/ppa
-  $SUDO apt update
+  apt_update_once true
   $SUDO apt install -y git
   log_success "git upgraded to $(git --version | awk '{print $3}')"
 }
@@ -232,7 +243,7 @@ install_gh_apt() {
   curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | $SUDO dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
   $SUDO chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | $SUDO tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-  $SUDO apt update
+  apt_update_once true
   $SUDO apt install -y gh
 }
 
@@ -241,7 +252,7 @@ install_eza_apt() {
   wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | $SUDO gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
   echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | $SUDO tee /etc/apt/sources.list.d/gierens.list
   $SUDO chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list
-  $SUDO apt update
+  apt_update_once true
   $SUDO apt install -y eza
 }
 
@@ -413,7 +424,7 @@ install_1password_cli() {
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
     $SUDO tee /etc/apt/sources.list.d/1password.list
 
-  $SUDO apt update
+  apt_update_once true
   $SUDO apt install -y 1password-cli
 
   log_success "1Password CLI installed"

@@ -63,6 +63,49 @@ target_needs_rebuild() {
   return 1
 }
 
+install_fingerprint() {
+  local value path
+  for value in "$@"; do
+    if [[ "$value" == file:* ]]; then
+      path="${value#file:}"
+      if [[ -f "$path" ]]; then
+        git hash-object "$path"
+      else
+        echo missing
+      fi
+    else
+      printf '%s\n' "$value"
+    fi
+  done | git hash-object --stdin
+}
+
+install_state_is_current() {
+  local key="$1" fingerprint="$2"
+  [[ "${UPDATE_INSTALL:-false}" != "true" ]] || return 1
+  local state_file="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-install/$key"
+  [[ -f "$state_file" ]] && [[ "$(<"$state_file")" == "$fingerprint" ]]
+}
+
+record_install_state() {
+  local key="$1" fingerprint="$2"
+  local state_dir="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-install"
+  mkdir -p "$state_dir"
+  printf '%s\n' "$fingerprint" > "$state_dir/$key"
+}
+
+# Render SRC after replacing __HOME__, but avoid rewriting an unchanged target.
+render_home_template() {
+  local src="$1" dst="$2" tmp
+  mkdir -p "$(dirname "$dst")"
+  tmp=$(mktemp)
+  sed "s|__HOME__|$HOME|g" "$src" > "$tmp"
+  if [[ -f "$dst" ]] && cmp -s "$tmp" "$dst"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mv "$tmp" "$dst"
+}
+
 # --- Install step failure tracking ---
 # run_step records failures instead of aborting, so one broken step doesn't
 # stop the rest of the setup but the script can still exit non-zero.
@@ -73,15 +116,21 @@ target_needs_rebuild() {
 # (string accumulation instead of an array: empty arrays break under
 #  `set -u` on macOS bash 3.2)
 FAILED_STEPS=""
+STEP_TIMINGS=""
 run_step() {
-  if ! "$1"; then
+  local step="$1" started=$SECONDS status=0
+  if ! "$step"; then
+    status=1
     FAILED_STEPS="${FAILED_STEPS} $1"
     log_error "Step failed: $1"
   fi
+  STEP_TIMINGS="${STEP_TIMINGS}${step}:$((SECONDS - started))s "
+  return "$status"
 }
 
 finish_steps() {
   local success_msg="$1"
+  [[ -n "$STEP_TIMINGS" ]] && log_info "Step timings: $STEP_TIMINGS"
   if [[ -n "$FAILED_STEPS" ]]; then
     log_error "Setup finished with failed steps:${FAILED_STEPS}"
     return 1
