@@ -17,6 +17,7 @@
 #   tmux-claude-pane.sh set <running|idle|permission|complete|hang|error> [provider]
 #   tmux-claude-pane.sh start [provider] [event|screen]
 #   tmux-claude-pane.sh heartbeat [provider] [event|screen]
+#   tmux-claude-pane.sh track [provider]  # hook stdin から transcript_path を記録
 #   tmux-claude-pane.sh clear       # 通知クリア(全 pane option を解除)
 #   tmux-claude-pane.sh hang-scan   # 全ペーン走査: running かつ無応答を hang 化 (watcher が定期実行)
 
@@ -81,7 +82,7 @@ apply_status() {
 clear_pane() {
   local pane="$1"
   local option
-  for option in status icon heartbeat state_since outhash heartbeat_source provider stashed; do
+  for option in status icon heartbeat state_since outhash heartbeat_source provider stashed transcript_path; do
     tmux set-option -p -t "$pane" -u "@agent_$option" 2>/dev/null || true
   done
 }
@@ -93,6 +94,21 @@ resolve_pane() {
   local p="${TMUX_PANE:-$(tmux display-message -p '#{pane_id}' 2>/dev/null)}"
   [[ -z "$p" ]] && exit 0
   echo "$p"
+}
+
+# Existing installations already invoke set/start/heartbeat from Claude hooks,
+# and every hook payload carries transcript_path. Capture it opportunistically
+# so pane/session association works before the newly added dedicated `track`
+# SessionStart hook has been deployed to ~/.claude/settings.json.
+track_from_hook_stdin() {
+  local pane="$1" provider="$2" hook_input transcript_path
+  [[ "$provider" == "claude" ]] || return 0
+  [[ ! -t 0 ]] || return 0
+  hook_input=$(cat)
+  [[ -n "$hook_input" ]] || return 0
+  transcript_path=$(printf '%s' "$hook_input" | jq -r '.transcript_path // empty' 2>/dev/null || true)
+  [[ -n "$transcript_path" ]] || return 0
+  tmux set-option -p -t "$pane" @agent_transcript_path "$transcript_path"
 }
 
 scan_pane() {
@@ -135,10 +151,23 @@ scan_pane() {
 }
 
 case "${1:-}" in
+  track)
+    # Claude Code hook input contains the authoritative transcript path. Keep it
+    # on the originating pane so a popup never guesses the wrong JSONL when
+    # multiple Claude sessions run in the same working directory.
+    PANE_ID=$(resolve_pane)
+    PROVIDER="${2:-claude}"
+    hook_input=$(cat)
+    transcript_path=$(printf '%s' "$hook_input" | jq -r '.transcript_path // empty' 2>/dev/null || true)
+    [[ -n "$transcript_path" ]] || exit 0
+    tmux set-option -p -t "$PANE_ID" @agent_transcript_path "$transcript_path"
+    tmux set-option -p -t "$PANE_ID" @agent_provider "$PROVIDER"
+    ;;
   set)
     PANE_ID=$(resolve_pane)
     STATUS="${2:-idle}"
     PROVIDER="${3:-}"
+    track_from_hook_stdin "$PANE_ID" "$PROVIDER"
     lock_pane "$PANE_ID"
     apply_status "$PANE_ID" "$STATUS" "$PROVIDER" || { echo "Unknown status: $STATUS" >&2; exit 1; }
     unlock_pane
@@ -151,6 +180,7 @@ case "${1:-}" in
     PANE_ID=$(resolve_pane)
     PROVIDER="${2:-}"
     SOURCE="${3:-screen}"
+    track_from_hook_stdin "$PANE_ID" "$PROVIDER"
     [[ "$SOURCE" == event || "$SOURCE" == screen ]] || { echo "Unknown heartbeat source: $SOURCE" >&2; exit 1; }
     lock_pane "$PANE_ID"
     now=$(date +%s)
@@ -172,6 +202,7 @@ case "${1:-}" in
     PANE_ID=$(resolve_pane)
     PROVIDER="${2:-}"
     SOURCE="${3:-}"
+    track_from_hook_stdin "$PANE_ID" "$PROVIDER"
     lock_pane "$PANE_ID"
     now=$(date +%s)
     current=$(tmux show-options -pv -t "$PANE_ID" @agent_status 2>/dev/null || echo "")
@@ -221,7 +252,7 @@ case "${1:-}" in
     ;;
 
   *)
-    echo "Usage: $0 {set <status> [provider]|start [provider] [event|screen]|heartbeat [provider] [event|screen]|clear|hang-scan}" >&2
+    echo "Usage: $0 {track [provider]|set <status> [provider]|start [provider] [event|screen]|heartbeat [provider] [event|screen]|clear|hang-scan}" >&2
     exit 1
     ;;
 esac

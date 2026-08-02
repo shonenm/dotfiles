@@ -109,6 +109,20 @@ prefix 不要のグループ移動キー（root table）:
 | `u` / `d` | 半ページスクロール（倍速移動） |
 | マウスドラッグ | 自動コピー → OSC52（Copy Mode 終了） |
 
+### Claude Code transcript
+
+| キー | 動作 |
+|------|------|
+| `prefix + o` | 現在のClaude Code会話をtool出力抜きのMarkdownとしてNeovim popupで開く |
+
+Claude Code fullscreenは会話をtmux scrollbackに残さず、`Ctrl+o` → `[` は全tool出力を
+展開する。`prefix + o` はSessionStart hookでpaneに記録した正確なJSONLを
+`jq`でuser/assistant本文だけを直接Markdown化するため、同じcwdで複数sessionを動かしても
+取り違えない。popup内では通常のNeovim操作 (`/`, `v`/`V`, `y`) でページをまたいで
+検索・選択・system clipboardへのコピーができる。hook導入前から動いているpaneでは
+cwdに対応する最新sessionへフォールバックし、次回の起動・resume以降は記録済みpathを使う。
+USER PROMPTブロックは背景色付きで表示され、長いClaude回答の中でも発言境界を判別できる。
+
 ## ステータスバー
 
 位置: 上部（`status-position top`）、透過背景。
@@ -172,6 +186,7 @@ Prefix (`Ctrl+Space`) 押下時、ステータスバー右側全体がキーバ�
 | `l` | pane レイアウトプリセット menu（保存/適用） |
 | `N` | smug session テンプレート起動 |
 | `A` | AI agent sidebar |
+| `o` | Claude transcript（tool出力抜き、Neovim popup） |
 | `v` | Copy Mode |
 | `r` | 設定リロード |
 | `?` | キーバインド一覧 |
