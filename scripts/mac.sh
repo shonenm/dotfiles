@@ -20,7 +20,11 @@ install_brew_bundle() {
     return 1
   fi
   log_info "Installing Homebrew packages from Brewfile..."
-  brew bundle --file="$brewfile"
+  if brew bundle check --file="$brewfile" >/dev/null 2>&1; then
+    log_success "Brewfile packages already installed"
+    return 0
+  fi
+  HOMEBREW_NO_AUTO_UPDATE=1 brew bundle --file="$brewfile"
   log_success "Brewfile packages installed"
 }
 
