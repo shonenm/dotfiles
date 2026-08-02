@@ -551,26 +551,25 @@ install_fancy_cat() {
   log_success "fancy-cat installed to ~/.local/bin"
 }
 
-# Build tmux from source in --no-sudo mode.
-# Rationale: on sudoless hosts we lose access to apt's tmux 3.2+, and pixi's
+# Build tmux 3.6a from source when the available tmux is older.
+# Rationale (no-sudo): sudoless hosts lose apt's tmux 3.2+, and pixi's
 # conda-forge tmux 3.6 crashes on attach in this environment (xterm-ghostty +
 # real PTY combination). The system tmux 3.2a is too old to forward bracketed
-# paste properly to TUIs (allow-passthrough is missing). Source build of
-# upstream tmux 3.6a against system libevent/ncurses works reliably.
+# paste properly to TUIs (allow-passthrough is missing).
+# Rationale (sudo あり): distro が 3.4〜3.5a を配る間 (Debian trixie = 3.5a)、
+# tmux はコマンド出力を vis エスケープし `-F` の 0x1f 区切りが `\037` に化ける。
+# agent index 側は agent_unvis で復号しているが、根本解消は 3.6 以降を使うこと。
+# どちらの経路でも upstream 3.6a を system libevent/ncurses に対してビルドする。
 install_tmux_source() {
-  [[ "$NO_SUDO" == "true" ]] || return 0
-
   local target_version="3.6a"
   local current_bin="$HOME/.local/bin/tmux"
 
-  # Skip if already at target version (idempotent)
-  if [[ -x "$current_bin" ]]; then
-    local have
-    have=$("$current_bin" -V 2>/dev/null | awk '{print $2}')
-    if [[ "$have" == "$target_version" ]]; then
-      log_success "tmux $target_version already installed (~/.local/bin/tmux)"
-      return 0
-    fi
+  # PATH 上の tmux が target 以上なら何もしない (idempotent)
+  local have
+  have=$(tmux -V 2>/dev/null | awk '{print $2}')
+  if [[ -n "$have" && "$(printf '%s\n%s\n' "$target_version" "$have" | sort -V | head -1)" == "$target_version" ]]; then
+    log_success "tmux $have already satisfies >= $target_version"
+    return 0
   fi
 
   # Check build dependencies

@@ -53,6 +53,10 @@ declare -a APT_SUDO_ONLY=(
   libssl-dev
   luarocks
   tmux  # tmux comes from install_tmux_source in no-sudo mode, not pixi
+  # tmux 3.6a の source build 用 toolchain。no-sudo 環境では host 側に依存する。
+  libevent-dev
+  libncurses-dev
+  bison
 )
 
 missing=()
