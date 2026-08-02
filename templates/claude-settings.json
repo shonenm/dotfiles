@@ -57,6 +57,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh track claude"
+          },
+          {
+            "type": "command",
             "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle claude"
           }
         ]
