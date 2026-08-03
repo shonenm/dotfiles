@@ -1,6 +1,7 @@
 return {
   {
     "iamcco/markdown-preview.nvim",
+    cmd = { "MarkdownPreview", "MarkdownPreviewStop", "MarkdownPreviewToggle" },
     init = function()
       -- Fixed port for SSH port forwarding (ssh -L 8686:localhost:8686)
       vim.g.mkdp_port = "8686"

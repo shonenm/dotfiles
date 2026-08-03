@@ -1,7 +1,16 @@
 return {
   "lewis6991/gitsigns.nvim",
+  keys = {
+    {
+      "<leader>uB",
+      function()
+        require("gitsigns").toggle_current_line_blame()
+      end,
+      desc = "Toggle Git Blame Line",
+    },
+  },
   opts = {
-    current_line_blame = true,
+    current_line_blame = false,
     current_line_blame_opts = {
       virt_text = true,
       virt_text_pos = "eol",

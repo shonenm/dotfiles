@@ -1,0 +1,2063 @@
+local M = {}
+
+function M.setup(opts)
+    require("codediff").setup(opts)
+
+    -- Phase 3: Performance patches (generation-based caching)
+    -- See: docs/patches/codediff-performance.md
+    local mutable_generation = 0
+    local mutable_cache = {} -- { [cache_key] = { generation = N, lines = {...} } }
+    local hunk_generation = -1 -- for Patch 4 (hunk_counts skip)
+
+    local function invalidate_mutable_cache()
+      mutable_generation = mutable_generation + 1
+    end
+
+    -- Optimistic guard: suppress redundant tree rebuild from auto-refresh
+    -- after an optimistic update has already rebuilt the tree.
+    local optimistic_guard_until = 0
+
+    local function set_optimistic_guard()
+      optimistic_guard_until = vim.uv.hrtime() / 1e6 + 800
+    end
+
+    -- Patch 1: mutable revision (:0 etc.) の generation-based キャッシュ
+    local git_mod = require("codediff.core.git")
+    local orig_get_file_content = git_mod.get_file_content
+    git_mod.get_file_content = function(revision, git_root, rel_path, callback)
+      local is_mutable = revision:match("^:[0-3]$")
+      if not is_mutable then
+        return orig_get_file_content(revision, git_root, rel_path, callback)
+      end
+      local cache_key = git_root .. ":::" .. revision .. ":::" .. rel_path
+      local entry = mutable_cache[cache_key]
+      if entry and entry.generation == mutable_generation then
+        callback(nil, entry.lines)
+        return
+      end
+      orig_get_file_content(revision, git_root, rel_path, function(err, lines)
+        if not err and lines then
+          mutable_cache[cache_key] = { generation = mutable_generation, lines = lines }
+        end
+        callback(err, lines)
+      end)
+    end
+
+    -- Patch 2: resolve_revision の結果キャッシュ
+    local resolve_cache = {} -- { [git_root::revision] = commit_hash }
+
+    local function invalidate_resolve_cache()
+      resolve_cache = {}
+    end
+
+    local orig_resolve_revision = git_mod.resolve_revision
+    git_mod.resolve_revision = function(revision, git_root, callback)
+      local cache_key = git_root .. "::" .. revision
+      local cached = resolve_cache[cache_key]
+      if cached then
+        callback(nil, cached)
+        return
+      end
+      orig_resolve_revision(revision, git_root, function(err, commit_hash)
+        if not err and commit_hash then
+          resolve_cache[cache_key] = commit_hash
+        end
+        callback(err, commit_hash)
+      end)
+    end
+
+    -- Optimistic stage/unstage wrappers (defined after helper functions below)
+    local actions_mod_wrap = require("codediff.ui.explorer.actions")
+
+    -- Runtime monkey-patch: Fix collapsed state key to use dir_path for unique identification
+    -- This avoids modifying source files which would block Lazy.nvim updates
+    -- See: docs/patches/codediff-directory-collapse.md
+    local refresh_mod = require("codediff.ui.explorer.refresh")
+    local config_mod = require("codediff.config")
+
+    -- Monkey-patch: Fix conflict file auto-load causing unexpected horizontal split
+    -- When the first file in the status list is a conflict, codediff tries to load
+    -- a 3-way merge view which creates an unwanted horizontal split. Instead,
+    -- redirect the initial auto-load to the first non-conflict file.
+    local render_mod = require("codediff.ui.explorer.render")
+    local orig_render_create = render_mod.create
+    render_mod.create = function(status_result, git_root, tabpage, width, base_revision, target_revision, opts)
+      local explorer = orig_render_create(status_result, git_root, tabpage, width, base_revision, target_revision, opts)
+      if not explorer then return explorer end
+
+      -- Determine the best non-conflict file to auto-load
+      local autoload_file, autoload_group
+      if status_result then
+        if status_result.unstaged and #status_result.unstaged > 0 then
+          autoload_file, autoload_group = status_result.unstaged[1], "unstaged"
+        elseif status_result.staged and #status_result.staged > 0 then
+          autoload_file, autoload_group = status_result.staged[1], "staged"
+        end
+      end
+
+      -- Wrap on_file_select to intercept conflict files
+      -- Display conflict files as inline diff (working tree with conflict markers)
+      -- so that git-conflict.nvim can detect markers and set up keymaps (co/ct/cb/c0)
+      local orig_on_file_select = explorer.on_file_select
+      local initial_done = false
+      explorer.on_file_select = function(file_data)
+        -- Track conflict state for help display
+        explorer._in_conflict = file_data and file_data.group == "conflicts" or false
+
+        if not initial_done then
+          initial_done = true
+          if file_data and file_data.group == "conflicts" and autoload_file then
+            explorer._in_conflict = false
+            orig_on_file_select({
+              path = autoload_file.path,
+              old_path = autoload_file.old_path,
+              status = autoload_file.status,
+              git_root = git_root,
+              group = autoload_group,
+            })
+            return
+          end
+        end
+        if file_data and file_data.group == "conflicts" then
+          orig_on_file_select(vim.tbl_extend("force", file_data, { group = "unstaged" }))
+          return
+        end
+        orig_on_file_select(file_data)
+      end
+
+      return explorer
+    end
+
+    -- Hunk count cache and functions
+    local hunk_cache = {
+      unstaged = {}, -- { [path] = count }
+      staged = {}, -- { [path] = count }
+    }
+
+    -- Highlight cache for selected items (avoid repeated nvim_get_hl/nvim_set_hl calls)
+    local hl_cache = {}
+
+    local function parse_hunk_counts(output)
+      local counts = {}
+      local current_file = nil
+      for line in output:gmatch("[^\n]+") do
+        -- Match "diff --git <prefix>/<path> <prefix>/<path>" with any single-char prefix (a/b or i/w)
+        local file = line:match("^diff %-%-git %a/.+ %a/(.+)$")
+        if file then
+          current_file = file
+          counts[current_file] = 0
+        elseif current_file and line:match("^@@") then
+          counts[current_file] = counts[current_file] + 1
+        end
+      end
+      return counts
+    end
+
+    local function fetch_hunk_counts(git_root, callback)
+      local pending = 2
+      local results = { unstaged = {}, staged = {} }
+
+      local function on_complete()
+        pending = pending - 1
+        if pending == 0 then
+          callback(results)
+        end
+      end
+
+      -- unstaged
+      vim.system({ "git", "diff", "-U0", "--no-color" }, { cwd = git_root, text = true }, function(obj)
+        if obj.code == 0 and obj.stdout then
+          results.unstaged = parse_hunk_counts(obj.stdout)
+        end
+        on_complete()
+      end)
+
+      -- staged
+      vim.system({ "git", "diff", "-U0", "--no-color", "--cached" }, { cwd = git_root, text = true }, function(obj)
+        if obj.code == 0 and obj.stdout then
+          results.staged = parse_hunk_counts(obj.stdout)
+        end
+        on_complete()
+      end)
+    end
+
+    -- Review mode (two-commit diff): reviewed-file marks.
+    -- In-memory only; keyed by git_root + base + target + path so different
+    -- commit ranges keep independent marks. Cleared when nvim exits. ponytail:
+    -- in-memory, add disk persistence under $XDG_STATE_HOME if it needs to survive restarts.
+    local reviewed_marks = {}
+    local function review_key(git_root, base_rev, target_rev, path)
+      return table.concat({ git_root or "", base_rev, target_rev, path }, "\0")
+    end
+    -- Returns git_root, base_rev, target_rev when the current tab is a two-commit
+    -- review diff (both sides real commits), else nil. Reads the explorer object
+    -- (authoritative for base/target; the session's revisions can lag before a file
+    -- loads). This is the sole discriminator for review-mode UI; the normal
+    -- status/single-revision/WORKING paths return nil.
+    local function codereview_ctx()
+      local ok, lc = pcall(require, "codediff.ui.lifecycle")
+      if not ok or not lc.get_explorer then return nil end
+      local expl = lc.get_explorer(vim.api.nvim_get_current_tabpage())
+      if not expl then return nil end
+      local b, t = expl.base_revision, expl.target_revision
+      if b and t and t ~= "WORKING" and not tostring(t):match("^:[0-3]$") then
+        return expl.git_root, b, t
+      end
+      return nil
+    end
+
+    -- Ordered visible file nodes (same order/group as next_file navigation)
+    local function review_all_files(explorer)
+      return require("codediff.ui.explorer.refresh").get_all_files(explorer.tree)
+    end
+
+    -- Reviewed / total counts for the review explorer
+    local function review_counts(explorer, git_root, base_rev, target_rev)
+      local files = review_all_files(explorer)
+      local checked = 0
+      for _, f in ipairs(files) do
+        if f.data and f.data.path and reviewed_marks[review_key(git_root, base_rev, target_rev, f.data.path)] then
+          checked = checked + 1
+        end
+      end
+      return checked, #files
+    end
+
+    -- Jump selection to the next (dir=1) / prev (dir=-1) not-yet-reviewed file
+    local function review_jump_unchecked(explorer, dir)
+      local gr, o, m = codereview_ctx()
+      if not gr then return end
+      local files = review_all_files(explorer)
+      if #files == 0 then return end
+      local ci = 0
+      for i, f in ipairs(files) do
+        if f.data.path == explorer.current_file_path and f.data.group == explorer.current_file_group then
+          ci = i
+          break
+        end
+      end
+      if ci == 0 then ci = 1 end
+      for step = 1, #files do
+        local f = files[((ci - 1 + dir * step) % #files) + 1]
+        if not reviewed_marks[review_key(gr, o, m, f.data.path)] then
+          if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
+            local lc = vim.api.nvim_buf_line_count(explorer.bufnr)
+            for l = 1, lc do
+              local node = explorer.tree:get_node(l)
+              if node and node.data and node.data.path == f.data.path and node.data.group == f.data.group then
+                pcall(vim.api.nvim_win_set_cursor, explorer.winid, { l, 0 })
+                break
+              end
+            end
+          end
+          explorer.on_file_select(f.data)
+          return
+        end
+      end
+      vim.notify("All files reviewed", vim.log.levels.INFO)
+    end
+
+    -- Monkey-patch nodes.prepare_node to show hunk counts
+    local nodes_mod = require("codediff.ui.explorer.nodes")
+    nodes_mod.prepare_node = function(node, max_width, selected_path, selected_group)
+      local Line = require("codediff.ui.lib.line")
+      local line = Line()
+      local data = node.data or {}
+      local explorer_config = config_mod.options.explorer or {}
+      local use_indent_markers = explorer_config.indent_markers ~= false
+
+      local INDENT_MARKERS = {
+        edge = "│",
+        item = "├",
+        last = "└",
+        none = " ",
+      }
+
+      local function build_indent_markers(indent_state)
+        if not indent_state or #indent_state == 0 then
+          return ""
+        end
+        if not use_indent_markers then
+          return string.rep("  ", #indent_state)
+        end
+        local indent_parts = {}
+        for i = 1, #indent_state - 1 do
+          if indent_state[i] then
+            indent_parts[#indent_parts + 1] = INDENT_MARKERS.none .. " "
+          else
+            indent_parts[#indent_parts + 1] = INDENT_MARKERS.edge .. " "
+          end
+        end
+        if indent_state[#indent_state] then
+          indent_parts[#indent_parts + 1] = INDENT_MARKERS.last .. " "
+        else
+          indent_parts[#indent_parts + 1] = INDENT_MARKERS.item .. " "
+        end
+        return table.concat(indent_parts)
+      end
+
+      if data.type == "group" then
+        line:append(" ", "Directory")
+        line:append(node.text, "Directory")
+      elseif data.type == "directory" then
+        local indent = build_indent_markers(data.indent_state)
+        local folder_icon, folder_color = nodes_mod.get_folder_icon(node:is_expanded())
+        if #indent > 0 then
+          line:append(indent, use_indent_markers and "NeoTreeIndentMarker" or "Normal")
+        end
+        line:append(folder_icon .. " ", folder_color or "Directory")
+        line:append(data.name, "Directory")
+      else
+        local is_selected = data.path and data.path == selected_path and data.group == selected_group
+
+        local selected_bg = nil
+        if is_selected then
+          local sel_hl = vim.api.nvim_get_hl(0, { name = "CodeDiffExplorerSelected", link = false })
+          selected_bg = sel_hl.bg
+        end
+
+        local function get_hl(default)
+          if not is_selected then
+            return default or "Normal"
+          end
+          local base_hl_name = default or "Normal"
+          local combined_name = "CodeDiffExplorerSel_" .. base_hl_name:gsub("[^%w]", "_")
+
+          -- Use cached highlight if available
+          if hl_cache[combined_name] then
+            return combined_name
+          end
+
+          local base_hl = vim.api.nvim_get_hl(0, { name = base_hl_name, link = false })
+          local fg = base_hl.fg
+          vim.api.nvim_set_hl(0, combined_name, { fg = fg, bg = selected_bg })
+          hl_cache[combined_name] = true
+          return combined_name
+        end
+
+        local view_mode = explorer_config.view_mode or "list"
+
+        local indent
+        if view_mode == "tree" and data.indent_state then
+          indent = build_indent_markers(data.indent_state)
+          if #indent > 0 then
+            line:append(indent, get_hl(use_indent_markers and "NeoTreeIndentMarker" or "Normal"))
+          end
+        else
+          indent = string.rep("  ", node:get_depth() - 1)
+          line:append(indent, get_hl("Normal"))
+        end
+
+        local icon_part = ""
+        if data.icon then
+          icon_part = data.icon .. " "
+          line:append(icon_part, get_hl(data.icon_color))
+        end
+
+        local status_symbol = data.status_symbol or ""
+
+        local full_path = data.path or node.text
+        local filename = full_path:match("([^/]+)$") or full_path
+        local directory = (view_mode == "tree") and "" or full_path:sub(1, -(#filename + 1))
+
+        -- Get hunk count for this file
+        local hunk_count = 0
+        local group = data.group or "unstaged"
+        local cache_key = (group == "staged") and "staged" or "unstaged"
+        local alt_key = (cache_key == "staged") and "unstaged" or "staged"
+        if hunk_cache[cache_key] and hunk_cache[cache_key][full_path] then
+          hunk_count = hunk_cache[cache_key][full_path]
+        elseif hunk_cache[alt_key] and hunk_cache[alt_key][full_path] then
+          hunk_count = hunk_cache[alt_key][full_path]
+        end
+        local hunk_str = (hunk_count > 0) and tostring(hunk_count) or ""
+
+        -- Review mode: replace the (unused) hunk slot with a reviewed checkbox
+        local review_mark_hl = nil
+        local rgr, ro, rm = codereview_ctx()
+        if rgr then
+          if reviewed_marks[review_key(rgr, ro, rm, full_path)] then
+            hunk_str, review_mark_hl = "✓", "String"
+          else
+            hunk_str, review_mark_hl = "○", "Comment"
+          end
+        end
+
+        local used_width = vim.fn.strdisplaywidth(indent) + vim.fn.strdisplaywidth(icon_part)
+        -- Reserve space for: hunk_count + space + status_symbol + trailing space
+        local hunk_reserve = (hunk_str ~= "") and (vim.fn.strdisplaywidth(hunk_str) + 1) or 0
+        local status_reserve = vim.fn.strdisplaywidth(status_symbol) + 1 + hunk_reserve
+        local available_for_content = max_width - used_width - status_reserve
+
+        local filename_len = vim.fn.strdisplaywidth(filename)
+        local directory_len = vim.fn.strdisplaywidth(directory)
+        local space_len = (directory_len > 0) and 1 or 0
+
+        if filename_len + space_len + directory_len > available_for_content then
+          local available_for_dir = available_for_content - filename_len - space_len
+          if available_for_dir > 3 then
+            local ellipsis = "..."
+            local chars_to_keep = available_for_dir - vim.fn.strdisplaywidth(ellipsis)
+            local byte_pos = 0
+            local accumulated_width = 0
+            for char in vim.gsplit(directory, "") do
+              local char_width = vim.fn.strdisplaywidth(char)
+              if accumulated_width + char_width > chars_to_keep then
+                break
+              end
+              accumulated_width = accumulated_width + char_width
+              byte_pos = byte_pos + #char
+            end
+            directory = directory:sub(1, byte_pos) .. ellipsis
+          else
+            directory = ""
+            space_len = 0
+            -- Truncate filename if it still exceeds available space
+            if filename_len > available_for_content then
+              local ellipsis = "..."
+              local ellipsis_width = vim.fn.strdisplaywidth(ellipsis)
+              local chars_to_keep = available_for_content - ellipsis_width
+              if chars_to_keep > 0 then
+                local byte_pos = 0
+                local accumulated_width = 0
+                for char in vim.gsplit(filename, "") do
+                  local char_width = vim.fn.strdisplaywidth(char)
+                  if accumulated_width + char_width > chars_to_keep then
+                    break
+                  end
+                  accumulated_width = accumulated_width + char_width
+                  byte_pos = byte_pos + #char
+                end
+                filename = filename:sub(1, byte_pos) .. ellipsis
+              else
+                filename = ellipsis
+              end
+            end
+          end
+        end
+
+        line:append(filename, get_hl("Normal"))
+        if #directory > 0 then
+          line:append(" ", get_hl("Normal"))
+          line:append(directory, get_hl("ExplorerDirectorySmall"))
+        end
+
+        local content_len = vim.fn.strdisplaywidth(filename) + space_len + vim.fn.strdisplaywidth(directory)
+        local padding_needed = available_for_content - content_len
+        if padding_needed > 0 then
+          line:append(string.rep(" ", padding_needed), get_hl("Normal"))
+        end
+
+        -- Append hunk count before status symbol
+        if hunk_str ~= "" then
+          line:append(hunk_str, get_hl(review_mark_hl or "Comment"))
+          line:append(" ", get_hl("Normal"))
+        end
+
+        line:append(status_symbol, get_hl(data.status_color))
+        line:append(" ", get_hl("Normal"))
+      end
+
+      return line
+    end
+
+    -- Fixed collect_collapsed_state (uses dir_path for unique key)
+    local function collect_collapsed_state(tree)
+      local collapsed = {}
+      local function collect_from_node(node)
+        if not node.data then return end
+        local node_type = node.data.type
+        if node_type == "group" or node_type == "directory" then
+          local key = node.data.dir_path or node.data.path or node.data.name
+          if key and not node:is_expanded() then
+            collapsed[key] = true
+          end
+          if node:has_children() then
+            for _, child_id in ipairs(node:get_child_ids()) do
+              local child = tree:get_node(child_id)
+              if child then collect_from_node(child) end
+            end
+          end
+        end
+      end
+      for _, node in ipairs(tree:get_nodes()) do
+        collect_from_node(node)
+      end
+      return collapsed
+    end
+
+    -- Fixed restore_collapsed_state (uses dir_path for unique key)
+    local function restore_collapsed_state(tree, collapsed, root_nodes)
+      local function restore_node(node)
+        if not node.data then return end
+        local node_type = node.data.type
+        if node_type == "group" or node_type == "directory" then
+          local key = node.data.dir_path or node.data.path or node.data.name
+          if key and collapsed[key] then
+            node:collapse()
+          end
+          if node:has_children() then
+            for _, child_id in ipairs(node:get_child_ids()) do
+              local child = tree:get_node(child_id)
+              if child then restore_node(child) end
+            end
+          end
+        end
+      end
+      for _, node in ipairs(root_nodes) do
+        restore_node(node)
+      end
+    end
+
+    -- Optimistic stage/unstage: UI updates immediately, git command runs in background.
+    -- Auto-refresh (fs_event + debounce) reconciles with real git status afterward.
+    local function optimistic_move_file(status_result, path, from_group, to_group)
+      local source = status_result[from_group]
+      local target = status_result[to_group]
+      if not source or not target then return end
+      for i, file in ipairs(source) do
+        if file.path == path then
+          table.remove(source, i)
+          table.insert(target, file)
+          return
+        end
+      end
+    end
+
+    local function optimistic_move_directory(status_result, dir_path, from_group, to_group)
+      local source = status_result[from_group]
+      local target = status_result[to_group]
+      if not source or not target then return end
+      local prefix = dir_path .. "/"
+      local i = 1
+      while i <= #source do
+        if source[i].path == dir_path or source[i].path:sub(1, #prefix) == prefix then
+          table.insert(target, table.remove(source, i))
+        else
+          i = i + 1
+        end
+      end
+    end
+
+    local function optimistic_stage_all(status_result)
+      if status_result.unstaged then
+        for _, file in ipairs(status_result.unstaged) do
+          table.insert(status_result.staged, file)
+        end
+        status_result.unstaged = {}
+      end
+      if status_result.conflicts then
+        for _, file in ipairs(status_result.conflicts) do
+          table.insert(status_result.staged, file)
+        end
+        status_result.conflicts = {}
+      end
+    end
+
+    local function optimistic_unstage_all(status_result)
+      if status_result.staged then
+        for _, file in ipairs(status_result.staged) do
+          table.insert(status_result.unstaged, file)
+        end
+        status_result.staged = {}
+      end
+    end
+
+    local function rebuild_tree_from_status(explorer)
+      if not explorer.status_result then return end
+      if explorer.is_hidden then return end
+      if not vim.api.nvim_win_is_valid(explorer.winid) then return end
+
+      local cursor = vim.api.nvim_win_get_cursor(explorer.winid)
+      local tree_module = require("codediff.ui.explorer.tree")
+      local root_nodes = tree_module.create_tree_data(
+        explorer.status_result, explorer.git_root, explorer.base_revision, not explorer.git_root
+      )
+
+      for _, node in ipairs(root_nodes) do
+        node:expand()
+      end
+
+      local collapsed_state = collect_collapsed_state(explorer.tree)
+      explorer.tree:set_nodes(root_nodes)
+
+      local explorer_config = config_mod.options.explorer or {}
+      if explorer_config.view_mode == "tree" then
+        local function expand_all_dirs(parent_node)
+          if not parent_node:has_children() then return end
+          for _, child_id in ipairs(parent_node:get_child_ids()) do
+            local child = explorer.tree:get_node(child_id)
+            if child and child.data and child.data.type == "directory" then
+              child:expand()
+              expand_all_dirs(child)
+            end
+          end
+        end
+        for _, node in ipairs(root_nodes) do
+          expand_all_dirs(node)
+        end
+      end
+
+      restore_collapsed_state(explorer.tree, collapsed_state, root_nodes)
+      explorer.tree:render()
+
+      local line_count = vim.api.nvim_buf_line_count(explorer.bufnr)
+      if line_count > 0 then
+        local new_line = math.min(cursor[1], line_count)
+        pcall(vim.api.nvim_win_set_cursor, explorer.winid, { math.max(1, new_line), cursor[2] })
+      end
+    end
+
+    actions_mod_wrap.toggle_stage_entry = function(expl, tree)
+      if not expl or not expl.git_root then return end
+
+      local node = tree:get_node()
+      if not node or not node.data or node.data.type == "group" then return end
+
+      local entry_type = node.data.type
+      local group = node.data.group
+      if group ~= "staged" and group ~= "unstaged" and group ~= "conflicts" then return end
+
+      local target_group = (group == "staged") and "unstaged" or "staged"
+      invalidate_mutable_cache()
+
+      if entry_type == "directory" then
+        local dir_path = node.data.dir_path
+        if not dir_path then return end
+        if group == "staged" then
+          git_mod.unstage_file(expl.git_root, dir_path, function(err)
+            if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+          end)
+        else
+          git_mod.stage_file(expl.git_root, dir_path, function(err)
+            if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+          end)
+        end
+        if expl.status_result then
+          optimistic_move_directory(expl.status_result, dir_path, group, target_group)
+          set_optimistic_guard()
+          rebuild_tree_from_status(expl)
+        end
+      else
+        local path = node.data.path
+        if not path then return end
+        if group == "staged" then
+          git_mod.unstage_file(expl.git_root, path, function(err)
+            if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+          end)
+        else
+          git_mod.stage_file(expl.git_root, path, function(err)
+            if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+          end)
+        end
+        if expl.status_result then
+          optimistic_move_file(expl.status_result, path, group, target_group)
+          set_optimistic_guard()
+          rebuild_tree_from_status(expl)
+        end
+      end
+    end
+
+    actions_mod_wrap.stage_all = function(expl)
+      if not expl or not expl.git_root then return end
+      invalidate_mutable_cache()
+      git_mod.stage_all(expl.git_root, function(err)
+        if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+      end)
+      if expl.status_result then
+        optimistic_stage_all(expl.status_result)
+        set_optimistic_guard()
+        rebuild_tree_from_status(expl)
+      end
+    end
+
+    actions_mod_wrap.unstage_all = function(expl)
+      if not expl or not expl.git_root then return end
+      invalidate_mutable_cache()
+      git_mod.unstage_all(expl.git_root, function(err)
+        if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+      end)
+      if expl.status_result then
+        optimistic_unstage_all(expl.status_result)
+        set_optimistic_guard()
+        rebuild_tree_from_status(expl)
+      end
+    end
+
+    actions_mod_wrap.toggle_stage_file = function(git_root, file_path, group)
+      if not git_root or not file_path or not group then return false end
+      if group ~= "staged" and group ~= "unstaged" and group ~= "conflicts" then return false end
+
+      invalidate_mutable_cache()
+
+      local target_group = (group == "staged") and "unstaged" or "staged"
+
+      -- Async git command
+      if group == "staged" then
+        git_mod.unstage_file(git_root, file_path, function(err)
+          if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+        end)
+      else
+        git_mod.stage_file(git_root, file_path, function(err)
+          if err then vim.schedule(function() vim.notify(err, vim.log.levels.ERROR) end) end
+        end)
+      end
+
+      -- Optimistic explorer update
+      local session_mod = require("codediff.ui.lifecycle.session")
+      local tabpage = vim.api.nvim_get_current_tabpage()
+      local session = session_mod.get_active_diffs()[tabpage]
+      if session and session.explorer then
+        local explorer = session.explorer
+        if explorer.status_result then
+          optimistic_move_file(explorer.status_result, file_path, group, target_group)
+          explorer.current_file_group = target_group
+          set_optimistic_guard()
+          rebuild_tree_from_status(explorer)
+        end
+      end
+
+      -- Refresh diff view
+      refresh_diff_view(group ~= "staged")
+
+      return true
+    end
+
+    -- Sync patched functions to explorer init module (which copies at load time)
+    local explorer_init = require("codediff.ui.explorer")
+    explorer_init.toggle_stage_entry = actions_mod_wrap.toggle_stage_entry
+    explorer_init.stage_all = actions_mod_wrap.stage_all
+    explorer_init.unstage_all = actions_mod_wrap.unstage_all
+    explorer_init.toggle_stage_file = actions_mod_wrap.toggle_stage_file
+
+    -- Replace M.refresh with fixed version (captures fixed local functions)
+    refresh_mod.refresh = function(explorer)
+      local git = require("codediff.core.git")
+
+      if explorer.is_hidden then return end
+      if not vim.api.nvim_win_is_valid(explorer.winid) then return end
+
+      local current_node = explorer.tree:get_node()
+      local current_path = current_node and current_node.data and current_node.data.path
+
+      local function process_result(err, status_result)
+        vim.schedule(function()
+          if err then
+            vim.notify("Failed to refresh: " .. err, vim.log.levels.ERROR)
+            return
+          end
+
+          -- During optimistic guard period, only update status_result
+          -- and skip tree rebuild/render to avoid double-rendering flicker.
+          if vim.uv.hrtime() / 1e6 < optimistic_guard_until then
+            explorer.status_result = status_result
+            return
+          end
+
+          local tree_module = require("codediff.ui.explorer.tree")
+          local root_nodes = tree_module.create_tree_data(status_result, explorer.git_root, explorer.base_revision, not explorer.git_root)
+
+          for _, node in ipairs(root_nodes) do
+            node:expand()
+          end
+
+          -- Collect collapsed state from current tree right before replacing nodes.
+          -- Must be inside vim.schedule to capture user's latest expand/collapse changes
+          -- that occurred during the async git status fetch.
+          local collapsed_state = collect_collapsed_state(explorer.tree)
+
+          explorer.tree:set_nodes(root_nodes)
+
+          local explorer_config = config_mod.options.explorer or {}
+          if explorer_config.view_mode == "tree" then
+            local function expand_all_dirs(parent_node)
+              if not parent_node:has_children() then return end
+              for _, child_id in ipairs(parent_node:get_child_ids()) do
+                local child = explorer.tree:get_node(child_id)
+                if child and child.data and child.data.type == "directory" then
+                  child:expand()
+                  expand_all_dirs(child)
+                end
+              end
+            end
+            for _, node in ipairs(root_nodes) do
+              expand_all_dirs(node)
+            end
+          end
+
+          restore_collapsed_state(explorer.tree, collapsed_state, root_nodes)
+          explorer.tree:render()
+          explorer.status_result = status_result
+
+          if current_path then
+            local nodes = explorer.tree:get_nodes()
+            for _, node in ipairs(nodes) do
+              if node.data and node.data.path == current_path then
+                explorer.tree:set_node(node:get_id())
+                break
+              end
+            end
+          end
+        end)
+      end
+
+      -- Fetch hunk counts in parallel with status
+      local function fetch_and_render()
+        if explorer.git_root and not explorer.base_revision then
+          fetch_hunk_counts(explorer.git_root, function(counts)
+            vim.schedule(function()
+              hunk_cache.unstaged = counts.unstaged
+              hunk_cache.staged = counts.staged
+              -- Re-render to show hunk counts
+              if vim.api.nvim_win_is_valid(explorer.winid) then
+                explorer.tree:render()
+              end
+            end)
+          end)
+        end
+      end
+
+      if not explorer.git_root then
+        local dir_mod = require("codediff.core.dir")
+        local diff = dir_mod.diff_directories(explorer.dir1, explorer.dir2)
+        process_result(nil, diff.status_result)
+      elseif explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
+        git.get_diff_revisions(explorer.base_revision, explorer.target_revision, explorer.git_root, process_result)
+      elseif explorer.base_revision then
+        git.get_diff_revision(explorer.base_revision, explorer.git_root, process_result)
+      else
+        git.get_status(explorer.git_root, process_result)
+        fetch_and_render()
+      end
+    end
+
+    -- ヘルプライン用の namespace と定義
+    local help_ns = vim.api.nvim_create_namespace("codediff_help")
+    local explorer_help_lines = {
+      { { "[-]", "Special" }, { " stage  ", "Normal" }, { "[S]", "Special" }, { " all  ", "Normal" }, { "[U]", "Special" }, { " unstage", "Normal" } },
+      { { "[X]", "Special" }, { " restore  ", "Normal" }, { "[i]", "Special" }, { " tree/list", "Normal" } },
+      { { "[R]", "Special" }, { " refresh  ", "Normal" }, { "[cc]", "Special" }, { " commit  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+    }
+    local diff_help_lines = {
+      { { "[", "Special" }, { "]c", "Normal" }, { "/", "Special" }, { "[c", "Normal" }, { "]", "Special" }, { " hunk  ", "Normal" }, { "[gs]", "Special" }, { " stage  ", "Normal" }, { "[gr]", "Special" }, { " reset", "Normal" } },
+      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+    }
+    local diff_staged_help_lines = {
+      { { "[", "Special" }, { "]c", "Normal" }, { "/", "Special" }, { "[c", "Normal" }, { "]", "Special" }, { " hunk  ", "Normal" }, { "[gu]", "Special" }, { " unstage  ", "Normal" }, { "[gr]", "Special" }, { " reset", "Normal" } },
+      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+    }
+    local review_explorer_help_lines = {
+      { { "[c]", "Special" }, { " reviewed  ", "Normal" }, { "[,]", "Special" }, { "/", "Normal" }, { "[.]", "Special" }, { " file  ", "Normal" }, { "{ }", "Special" }, { " next unchecked", "Normal" } },
+      { { "[Tab]", "Special" }, { " diff  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+    }
+    local review_diff_help_lines = {
+      { { "[,]", "Special" }, { "/", "Normal" }, { "[.]", "Special" }, { " file  ", "Normal" }, { "[ / ]", "Special" }, { " hunk  ", "Normal" }, { "{ }", "Special" }, { " unchecked", "Normal" } },
+      { { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+    }
+    local conflict_help_lines = {
+      { { "[co]", "Special" }, { " ours  ", "Normal" }, { "[ct]", "Special" }, { " theirs  ", "Normal" }, { "[cb]", "Special" }, { " both  ", "Normal" }, { "[c0]", "Special" }, { " none", "Normal" } },
+      { { "[", "Special" }, { "]x", "Normal" }, { "/", "Special" }, { "[x", "Normal" }, { "]", "Special" }, { " conflict  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+    }
+
+    -- view.updateをラップしてeventignoreを設定
+    -- オリジナルのview.updateを使いつつ、BufEnter/WinEnterのみを一時的に抑制
+    local view_mod = require("codediff.ui.view")
+    local orig_view_update = view_mod.update
+    view_mod.update = function(tabpage, session_config, auto_scroll)
+      local eventignore_save = vim.o.eventignore
+      vim.o.eventignore = "BufEnter,WinEnter"
+
+      local ok, result = pcall(orig_view_update, tabpage, session_config, auto_scroll)
+
+      vim.o.eventignore = eventignore_save
+
+      if not ok then error(result) end
+      return result
+    end
+
+    -- CodeDiffタブでsnacks explorerの自動起動を抑制する。
+    -- render.luaがgit statusのディレクトリエントリ(例: "dir/" with status "??")に対して
+    -- bufadd/bufloadを実行すると、snacks.explorerのBufEnter autocmd(replace_netrw)が
+    -- isdirectory()==1で発火し、新しいexplorer pickerを作成してレイアウトが複製される。
+    -- vim.schedule内の非同期実行のためeventignoreでは防御不可。snacks側にAPIが存在しない
+    -- ため、autocmdコールバックをラップしてCodeDiffタブをスキップする。
+    local codediff_tabs = {}
+    local snacks_explorer_patched = false
+
+    local function patch_snacks_explorer_autocmd()
+      if snacks_explorer_patched then return end
+      local aucmds = vim.api.nvim_get_autocmds({ group = "snacks.explorer", event = "BufEnter" })
+      for _, au in ipairs(aucmds) do
+        if au.callback then
+          local orig_cb = au.callback
+          vim.api.nvim_del_autocmd(au.id)
+          vim.api.nvim_create_autocmd("BufEnter", {
+            group = au.group,
+            callback = function(ev)
+              if codediff_tabs[vim.api.nvim_get_current_tabpage()] then
+                return
+              end
+              return orig_cb(ev)
+            end,
+          })
+        end
+      end
+      snacks_explorer_patched = true
+    end
+
+    local orig_view_create = view_mod.create
+    view_mod.create = function(session_config, filetype, on_ready)
+      patch_snacks_explorer_autocmd()
+      local ok, result = pcall(orig_view_create, session_config, filetype, on_ready)
+      codediff_tabs[vim.api.nvim_get_current_tabpage()] = true
+      if not ok then error(result) end
+      return result
+    end
+
+    -- CodeDiffタブが閉じられたらトラッキングから除去
+    vim.api.nvim_create_autocmd("TabClosed", {
+      callback = function(ev)
+        local tab = tonumber(ev.match)
+        if tab then
+          codediff_tabs[tab] = nil
+        end
+      end,
+    })
+
+    -- Virtual buffer treesitter highlight diagnostic
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "CodeDiffVirtualFileLoaded",
+      callback = function(ev)
+        local buf = ev.data and ev.data.buf
+        if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
+        local bufname = vim.api.nvim_buf_get_name(buf)
+        if not bufname:match("^codediff://") then return end
+        vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(buf) then return end
+          local ts_hl = vim.treesitter.highlighter
+          local ts_active = ts_hl and ts_hl.active and ts_hl.active[buf] ~= nil
+          local ts_highlight_var = vim.b[buf].ts_highlight
+          vim.notify(string.format(
+            "codediff VF[%d]: ts_active=%s ts_var=%s ft=%q syn=%q",
+            buf, tostring(ts_active), tostring(ts_highlight_var),
+            vim.bo[buf].filetype, vim.bo[buf].syntax
+          ), vim.log.levels.INFO)
+        end)
+      end,
+    })
+
+    -- Virtual buffer treesitter highlight fix
+    -- treesitterが起動しても描画されないケースを検出し修復する
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "CodeDiffVirtualFileLoaded",
+      callback = function(ev)
+        local buf = ev.data and ev.data.buf
+        if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
+        local bufname = vim.api.nvim_buf_get_name(buf)
+        if not bufname:match("^codediff://") then return end
+
+        local ts_hl = vim.treesitter.highlighter
+        if ts_hl and ts_hl.active and ts_hl.active[buf] then
+          -- treesitter active: 強制再描画でwindow-local stateを初期化
+          vim.schedule(function()
+            if not vim.api.nvim_buf_is_valid(buf) then return end
+            local line_count = vim.api.nvim_buf_line_count(buf)
+            if line_count > 0 then
+              pcall(vim.api.nvim__redraw, { buf = buf, range = { 0, line_count } })
+            end
+          end)
+          return
+        end
+
+        -- treesitter inactive: filepathからlangを取得してリトライ
+        local vf = require("codediff.core.virtual_file")
+        local _, _, filepath = vf.parse_url(bufname)
+        if not filepath then return end
+
+        local ft = vim.filetype.match({ filename = filepath, buf = buf })
+        if not ft then return end
+
+        local lang = vim.treesitter.language.get_lang(ft) or ft
+        if pcall(vim.treesitter.start, buf, lang) then
+          vim.bo[buf].syntax = ""
+          vim.schedule(function()
+            if not vim.api.nvim_buf_is_valid(buf) then return end
+            local line_count = vim.api.nvim_buf_line_count(buf)
+            if line_count > 0 then
+              pcall(vim.api.nvim__redraw, { buf = buf, range = { 0, line_count } })
+            end
+          end)
+        else
+          -- treesitterリトライも失敗: noautocmdでfiletype設定しsyntaxフォールバック
+          vim.cmd("noautocmd setlocal filetype=" .. ft)
+          vim.bo[buf].syntax = ft
+        end
+      end,
+    })
+
+    -- Phase 2: auto_refresh throttle adjustment (200ms → 400ms)
+    -- Wrap enable() to use custom throttle timer
+    local auto_refresh_mod = require("codediff.ui.auto_refresh")
+    local CUSTOM_THROTTLE_MS = 400 -- Increased from 200ms
+    local custom_timers = {} -- Track our custom timers
+
+    local orig_enable = auto_refresh_mod.enable
+    auto_refresh_mod.enable = function(bufnr)
+      -- Call original to set up autocmds
+      orig_enable(bufnr)
+
+      -- Override the autocmds with our custom throttle
+      local buf_augroup = "codediff_auto_refresh_" .. bufnr
+      pcall(vim.api.nvim_del_augroup_by_name, buf_augroup)
+
+      local group = vim.api.nvim_create_augroup(buf_augroup, { clear = true })
+
+      local function trigger_with_custom_throttle()
+        if custom_timers[bufnr] then
+          vim.fn.timer_stop(custom_timers[bufnr])
+        end
+        custom_timers[bufnr] = vim.fn.timer_start(CUSTOM_THROTTLE_MS, function()
+          custom_timers[bufnr] = nil
+          auto_refresh_mod.trigger(bufnr)
+        end)
+      end
+
+      vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "TextChangedP" }, {
+        group = group,
+        buffer = bufnr,
+        callback = trigger_with_custom_throttle,
+      })
+
+      vim.api.nvim_create_autocmd({ "FileChangedShellPost", "FocusGained" }, {
+        group = group,
+        buffer = bufnr,
+        callback = trigger_with_custom_throttle,
+      })
+
+      vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+        group = group,
+        buffer = bufnr,
+        callback = function()
+          if custom_timers[bufnr] then
+            vim.fn.timer_stop(custom_timers[bufnr])
+            custom_timers[bufnr] = nil
+          end
+          auto_refresh_mod.disable(bufnr)
+        end,
+      })
+    end
+
+    -- Phase 2: Diff result cache (skip recomputation for unchanged files)
+    local diff_cache = {}
+    local MAX_CACHE_SIZE = 20
+    local cache_keys = {} -- Track insertion order for LRU eviction
+
+    local function make_cache_key(original_path, modified_path, original_rev, modified_rev)
+      return string.format("%s:%s:%s:%s",
+        original_path or "",
+        modified_path or "",
+        original_rev or "WORKING",
+        modified_rev or "WORKING")
+    end
+
+    local function get_cached_diff(key, original_tick, modified_tick)
+      local entry = diff_cache[key]
+      if entry and entry.original_tick == original_tick and entry.modified_tick == modified_tick then
+        return entry.diff_result
+      end
+      return nil
+    end
+
+    local function set_cached_diff(key, diff_result, original_tick, modified_tick)
+      -- LRU eviction
+      if #cache_keys >= MAX_CACHE_SIZE then
+        local oldest_key = table.remove(cache_keys, 1)
+        diff_cache[oldest_key] = nil
+      end
+      -- Remove existing key if present (for reordering)
+      for i, k in ipairs(cache_keys) do
+        if k == key then
+          table.remove(cache_keys, i)
+          break
+        end
+      end
+      table.insert(cache_keys, key)
+      diff_cache[key] = {
+        diff_result = diff_result,
+        original_tick = original_tick,
+        modified_tick = modified_tick,
+      }
+    end
+
+    -- Wrap render.compute_and_render to use cached diff when available
+    local render_mod = require("codediff.ui.view.render")
+    local core_mod = require("codediff.ui.core")
+    local semantic_mod = require("codediff.ui.semantic_tokens")
+    local orig_compute_and_render = render_mod.compute_and_render
+
+    render_mod.compute_and_render = function(original_buf, modified_buf, original_lines, modified_lines, original_is_virtual, modified_is_virtual, original_win, modified_win, auto_scroll_to_first_hunk)
+      -- Try to find cache key from buffer names
+      local original_name = vim.api.nvim_buf_get_name(original_buf)
+      local modified_name = vim.api.nvim_buf_get_name(modified_buf)
+
+      -- Extract path and revision from virtual file names (format: codediff://<git_root>//<rev>//<path>)
+      local function parse_virtual_name(name)
+        local rev, path = name:match("codediff://[^/]+//([^/]+)//(.+)$")
+        if rev and path then
+          return path, rev
+        end
+        -- For real files, use the path as-is
+        return name, "WORKING"
+      end
+
+      local original_path, original_rev = parse_virtual_name(original_name)
+      local modified_path, modified_rev = parse_virtual_name(modified_name)
+      local key = make_cache_key(original_path, modified_path, original_rev, modified_rev)
+
+      local original_tick = vim.api.nvim_buf_get_changedtick(original_buf)
+      local modified_tick = vim.api.nvim_buf_get_changedtick(modified_buf)
+
+      -- Check cache
+      local cached_diff = get_cached_diff(key, original_tick, modified_tick)
+      if cached_diff then
+        -- Cache hit: skip diff computation, just re-render with cached result
+        core_mod.render_diff(original_buf, modified_buf, original_lines, modified_lines, cached_diff)
+
+        -- Apply semantic tokens for virtual buffers
+        if original_is_virtual then
+          semantic_mod.apply_semantic_tokens(original_buf, modified_buf)
+        end
+        if modified_is_virtual then
+          semantic_mod.apply_semantic_tokens(modified_buf, original_buf)
+        end
+
+        -- Setup scrollbind (copied from original)
+        if original_win and modified_win and vim.api.nvim_win_is_valid(original_win) and vim.api.nvim_win_is_valid(modified_win) then
+          local saved_cursor = nil
+          if not auto_scroll_to_first_hunk then
+            saved_cursor = vim.api.nvim_win_get_cursor(modified_win)
+          end
+
+          vim.wo[original_win].scrollbind = false
+          vim.wo[modified_win].scrollbind = false
+          vim.api.nvim_win_set_cursor(original_win, { 1, 0 })
+          vim.api.nvim_win_set_cursor(modified_win, { 1, 0 })
+          vim.wo[original_win].scrollbind = true
+          vim.wo[modified_win].scrollbind = true
+          vim.wo[original_win].wrap = false
+          vim.wo[modified_win].wrap = false
+
+          if auto_scroll_to_first_hunk and #cached_diff.changes > 0 then
+            local first_change = cached_diff.changes[1]
+            local target_line = first_change.original.start_line
+            pcall(vim.api.nvim_win_set_cursor, original_win, { target_line, 0 })
+            pcall(vim.api.nvim_win_set_cursor, modified_win, { target_line, 0 })
+            if vim.api.nvim_win_is_valid(modified_win) then
+              vim.api.nvim_set_current_win(modified_win)
+              vim.cmd("normal! zz")
+            end
+          elseif saved_cursor then
+            pcall(vim.api.nvim_win_set_cursor, modified_win, saved_cursor)
+            pcall(vim.api.nvim_win_set_cursor, original_win, { saved_cursor[1], 0 })
+          end
+        end
+
+        return cached_diff
+      end
+
+      -- Cache miss: compute diff normally
+      local lines_diff = orig_compute_and_render(original_buf, modified_buf, original_lines, modified_lines, original_is_virtual, modified_is_virtual, original_win, modified_win, auto_scroll_to_first_hunk)
+
+      -- Store in cache
+      if lines_diff then
+        set_cached_diff(key, lines_diff, original_tick, modified_tick)
+      end
+
+      return lines_diff
+    end
+
+    -- Stage/Reset後にdiffビューを自動更新する関数
+    -- is_stage: true=gs(stage), false=gr(reset)
+    local function refresh_diff_view(is_stage)
+      vim.schedule(function()
+        local session_mod = require("codediff.ui.lifecycle.session")
+        local tabpage = vim.api.nvim_get_current_tabpage()
+        local active_diffs = session_mod.get_active_diffs()
+        local session = active_diffs[tabpage]
+        if not session then return end
+
+        local explorer = session.explorer
+        if not explorer then return end
+        if not session.original_path or not session.modified_path then return end
+
+        -- diffキャッシュの該当エントリを無効化
+        local file_path = explorer.current_file_path
+        if file_path then
+          local keys_to_remove = {}
+          for _, key in ipairs(cache_keys) do
+            if key:find(file_path, 1, true) then
+              keys_to_remove[#keys_to_remove + 1] = key
+            end
+          end
+          for _, key in ipairs(keys_to_remove) do
+            diff_cache[key] = nil
+            for i, k in ipairs(cache_keys) do
+              if k == key then
+                table.remove(cache_keys, i)
+                break
+              end
+            end
+          end
+        end
+
+        -- original_revision を決定
+        -- gs: ステージ後は必ず ":0" と比較（staged content が存在する）
+        -- gr: 参照側は変わらないのでセッションの値をそのまま使用
+        local original_revision = session.original_revision
+        if is_stage and session.modified_revision == nil then
+          -- unstaged view (modified = working tree) の場合のみ ":0" に切替
+          original_revision = ":0"
+        end
+
+        local session_config = {
+          mode = "explorer",
+          git_root = session.git_root,
+          original_path = session.original_path,
+          modified_path = session.modified_path,
+          original_revision = original_revision,
+          modified_revision = session.modified_revision,
+        }
+        view_mod.update(tabpage, session_config, false)
+
+        -- explorerツリーも明示的に更新（fs_eventより速い）
+        if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
+          refresh_mod.refresh(explorer)
+        end
+      end)
+    end
+
+    -- Forward declarations for multi-repo navigation (defined in multi-repo section below)
+    local goto_next_repo_tab, goto_prev_repo_tab, get_repo_tab_info, set_tab_label
+
+    -- Auto-select file on cursor move (j/k updates diff with debounce)
+    local keymaps = require("codediff.ui.explorer.keymaps")
+    local orig_setup = keymaps.setup
+    keymaps.setup = function(explorer)
+      orig_setup(explorer)
+      local tree = explorer.tree
+
+      -- on_file_selectをラップしてフォーカス復元 + 大ファイル警告
+      local orig_on_file_select = explorer.on_file_select
+      local large_file_warned = {} -- Track warned files to avoid repeated warnings
+      -- Focus management: generation counter invalidates stale callbacks when user
+      -- explicitly navigates (l/Tab/CR). focus_target controls post-load navigation.
+      local focus_restore_gen = 0
+      local focus_target = nil -- nil = restore to explorer, "diff" = navigate to diff view
+      explorer.on_file_select = function(file_data)
+        -- Large file warning (>1500 lines)
+        if file_data and file_data.path and not large_file_warned[file_data.path] then
+          local full_path = explorer.git_root and (explorer.git_root .. "/" .. file_data.path) or file_data.path
+          local ok, stat = pcall(vim.uv.fs_stat, full_path)
+          if ok and stat and stat.size > 75000 then -- ~1500 lines assuming 50 bytes/line
+            vim.notify("Large file: diff may be slow", vim.log.levels.WARN, { title = "CodeDiff" })
+            large_file_warned[file_data.path] = true
+          end
+        end
+
+        local saved_win = explorer.winid
+        local my_gen = focus_restore_gen
+        local my_target = focus_target
+        focus_target = nil -- Reset for future calls
+
+        -- CodeDiffVirtualFileLoadedでフォーカス復元（非同期パス用）
+        local group = vim.api.nvim_create_augroup("CodeDiffFocusRestore", { clear = true })
+        vim.api.nvim_create_autocmd("User", {
+          group = group,
+          pattern = "CodeDiffVirtualFileLoaded",
+          once = true,
+          callback = function()
+            vim.schedule(function()
+              if focus_restore_gen ~= my_gen then return end
+              if my_target == "diff" then
+                vim.cmd("2wincmd l")
+              elseif vim.api.nvim_win_is_valid(saved_win) then
+                vim.api.nvim_set_current_win(saved_win)
+              end
+            end)
+          end,
+        })
+
+        -- 同期パス用フォールバック
+        vim.defer_fn(function()
+          pcall(vim.api.nvim_del_augroup_by_id, group)
+          if focus_restore_gen ~= my_gen then return end
+          if my_target == "diff" then
+            vim.cmd("2wincmd l")
+          elseif vim.api.nvim_win_is_valid(saved_win) and vim.api.nvim_get_current_win() ~= saved_win then
+            vim.api.nvim_set_current_win(saved_win)
+          end
+        end, 200)
+
+        orig_on_file_select(file_data)
+      end
+
+      -- ヘルプ表示関数（このexplorerに特化）
+      local function update_help_line()
+        local bufnr = explorer.bufnr
+        local winid = explorer.winid
+        if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_win_is_valid(winid) then return end
+
+        local win_height = vim.api.nvim_win_get_height(winid)
+        local line_count = vim.api.nvim_buf_line_count(bufnr)
+        local first_visible = vim.fn.line("w0", winid)
+        local help_height = #explorer_help_lines -- both help tables have similar height
+        -- ウィンドウ下部にヘルプを固定（最低限の領域確保）
+        local max_target = first_visible + win_height - help_height - 2
+        local target_line = math.min(max_target, line_count - 1)
+        if target_line < 0 then target_line = 0 end
+
+        -- diffview にフォーカスがあるか判定 + コンフリクト状態チェック
+        local in_diff = false
+        local in_conflict = false
+        local lifecycle_mod = require("codediff.ui.lifecycle")
+        local tabpage = vim.api.nvim_get_current_tabpage()
+        local original_bufnr, modified_bufnr = lifecycle_mod.get_buffers(tabpage)
+        if original_bufnr and modified_bufnr then
+          local cur_buf = vim.api.nvim_get_current_buf()
+          in_diff = cur_buf == original_bufnr or cur_buf == modified_bufnr
+          -- explorerのコンフリクト追跡フラグを使用
+          if in_diff and explorer._in_conflict then
+            in_conflict = true
+          end
+        end
+        local session_check = require("codediff.ui.lifecycle.session").get_active_diffs()[tabpage]
+        local rexpl = session_check and session_check.explorer
+        local is_review = rexpl and rexpl.base_revision and rexpl.target_revision
+          and rexpl.target_revision ~= "WORKING"
+          and not tostring(rexpl.target_revision):match("^:[0-3]$")
+
+        local help_lines
+        if is_review then
+          help_lines = vim.deepcopy(in_diff and review_diff_help_lines or review_explorer_help_lines)
+          local checked, total = review_counts(rexpl, rexpl.git_root, rexpl.base_revision, rexpl.target_revision)
+          table.insert(help_lines, 1, { { "reviewed ", "Normal" }, { checked .. "/" .. total, "Title" } })
+        elseif in_conflict then
+          help_lines = conflict_help_lines
+        elseif in_diff then
+          local in_staged = false
+          if session_check and session_check.modified_revision == ":0" then
+            in_staged = true
+          end
+          help_lines = in_staged and diff_staged_help_lines or diff_help_lines
+        else
+          help_lines = explorer_help_lines
+        end
+
+        -- Add repo navigation line when multiple repo tabs exist
+        local repo_info = get_repo_tab_info and get_repo_tab_info()
+        if repo_info and repo_info.total > 1 then
+          -- Build repo list: highlight current, dim others
+          local repo_line = {}
+          for i, info in ipairs(repo_info.repos) do
+            if i > 1 then
+              repo_line[#repo_line + 1] = { "  ", "Normal" }
+            end
+            if info.current then
+              repo_line[#repo_line + 1] = { info.name, "Title" }
+            else
+              repo_line[#repo_line + 1] = { info.name, "Comment" }
+            end
+          end
+          -- Copy base help_lines and append repo line
+          help_lines = vim.deepcopy(help_lines)
+          help_lines[#help_lines + 1] = repo_line
+          help_lines[#help_lines + 1] = {
+            { "[", "Special" }, { "]r", "Normal" }, { "/", "Special" }, { "[r", "Normal" }, { "]", "Special" }, { " repo", "Normal" },
+          }
+        end
+
+        vim.api.nvim_buf_clear_namespace(bufnr, help_ns, 0, -1)
+        vim.api.nvim_buf_set_extmark(bufnr, help_ns, target_line, 0, {
+          virt_lines = help_lines,
+          virt_lines_above = false,
+        })
+      end
+
+      -- tree.render をラップして、render 後に必ずヘルプを表示
+      local orig_render = tree.render
+      tree.render = function(self, ...)
+        local result = orig_render(self, ...)
+        vim.schedule(update_help_line)
+        return result
+      end
+
+      -- WinEnter/BufEnter/TabEnter でヘルプ内容を切り替え
+      -- TabEnter: マルチrepoタブ切替時にrepo一覧を更新
+      vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter", "TabEnter" }, {
+        callback = function()
+          if not vim.api.nvim_buf_is_valid(explorer.bufnr) then return end
+          if not vim.api.nvim_win_is_valid(explorer.winid) then return end
+          -- explorerが属するタブページでのみ処理
+          local current_tabpage = vim.api.nvim_get_current_tabpage()
+          local explorer_tabpage = vim.api.nvim_win_get_tabpage(explorer.winid)
+          if current_tabpage ~= explorer_tabpage then return end
+          vim.schedule(update_help_line)
+        end,
+      })
+
+      -- スクロール時にヘルプ位置を更新
+      vim.api.nvim_create_autocmd("WinScrolled", {
+        buffer = explorer.bufnr,
+        callback = function()
+          vim.schedule(update_help_line)
+        end,
+      })
+
+      -- キーマップ追加
+      local map_opts = { buffer = explorer.bufnr, noremap = true, silent = true, nowait = true }
+      vim.keymap.set("n", "]r", function()
+        if goto_next_repo_tab then goto_next_repo_tab() end
+      end, vim.tbl_extend("force", map_opts, { desc = "Next repo tab" }))
+      vim.keymap.set("n", "[r", function()
+        if goto_prev_repo_tab then goto_prev_repo_tab() end
+      end, vim.tbl_extend("force", map_opts, { desc = "Prev repo tab" }))
+      vim.keymap.set("n", "q", function()
+        vim.cmd("tabclose")
+      end, vim.tbl_extend("force", map_opts, { desc = "Close CodeDiff" }))
+      vim.keymap.set("n", "cc", function()
+        invalidate_resolve_cache()
+        vim.cmd("Git commit")
+      end, vim.tbl_extend("force", map_opts, { desc = "Git commit" }))
+      vim.keymap.set("n", "ca", function()
+        invalidate_resolve_cache()
+        vim.cmd("Git commit --amend")
+      end, vim.tbl_extend("force", map_opts, { desc = "Git commit --amend" }))
+      -- Override X to trigger refresh after restore/delete
+      -- (git restore/clean only modify working tree, not .git/, so fs_event watcher doesn't fire)
+      local actions_mod = require("codediff.ui.explorer.actions")
+      vim.keymap.set("n", "X", function()
+        actions_mod.restore_entry(explorer, explorer.tree)
+        invalidate_mutable_cache()
+        vim.defer_fn(function()
+          if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
+            refresh_mod.refresh(explorer)
+          end
+        end, 300)
+      end, vim.tbl_extend("force", map_opts, { desc = "Restore/discard changes" }))
+      local last_node_id = nil -- Tracks which file's diff is currently displayed
+      local is_toggling = false
+      vim.keymap.set("n", "h", function()
+        local node = tree:get_node()
+        if node and node:has_children() and node:is_expanded() then
+          is_toggling = true
+          node:collapse()
+          tree:render()
+          vim.schedule(function()
+            is_toggling = false
+            update_help_line()
+          end)
+        end
+      end, vim.tbl_extend("force", map_opts, { desc = "Collapse directory" }))
+      vim.keymap.set("n", "l", function()
+        local node = tree:get_node()
+        if not node or not node.data then return end
+        if node:has_children() and not node:is_expanded() then
+          is_toggling = true
+          node:expand()
+          tree:render()
+          vim.schedule(function() is_toggling = false end)
+        elseif node.data.path and node.data.type ~= "group" and node.data.type ~= "directory" then
+          -- File node: switch diff view and focus diff
+          last_node_id = node:get_id()
+          focus_restore_gen = focus_restore_gen + 1
+          focus_target = "diff"
+          explorer.on_file_select(node.data)
+        end
+      end, vim.tbl_extend("force", map_opts, { desc = "Select file and focus diff view" }))
+      vim.keymap.set("n", "<Tab>", function()
+        focus_restore_gen = focus_restore_gen + 1
+        vim.cmd("2wincmd l")
+        vim.schedule(update_help_line)
+      end, vim.tbl_extend("force", map_opts, { desc = "Focus diff view" }))
+      vim.keymap.set("n", "<CR>", function()
+        local node = tree:get_node()
+        if not node or not node.data then return end
+        if node:has_children() then
+          is_toggling = true
+          if node:is_expanded() then
+            node:collapse()
+          else
+            node:expand()
+          end
+          tree:render()
+          vim.schedule(function() is_toggling = false end)
+        elseif node.data.path then
+          if node:get_id() == last_node_id then
+            -- Already showing this file's diff: focus diff view
+            focus_restore_gen = focus_restore_gen + 1
+            vim.cmd("2wincmd l")
+            vim.schedule(update_help_line)
+          else
+            -- Switch diff view, stay in explorer
+            last_node_id = node:get_id()
+            focus_restore_gen = focus_restore_gen + 1
+            explorer.on_file_select(node.data)
+          end
+        end
+      end, vim.tbl_extend("force", map_opts, { desc = "Toggle directory or select file" }))
+
+      -- Review mode (two-commit diff): reviewed marks (c) + ,/. file navigation.
+      -- Gated so the normal status/single-revision paths are untouched.
+      if explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
+        vim.keymap.set("n", "c", function()
+          local node = tree:get_node()
+          if not node or not node.data or not node.data.path then return end
+          if node.data.type == "group" or node.data.type == "directory" then return end
+          local gr, o, m = codereview_ctx()
+          if not gr then return end
+          local k = review_key(gr, o, m, node.data.path)
+          reviewed_marks[k] = not reviewed_marks[k] or nil
+          tree:render()
+        end, vim.tbl_extend("force", map_opts, { desc = "Toggle reviewed mark" }))
+        vim.keymap.set("n", ".", function()
+          require("codediff").next_file()
+        end, vim.tbl_extend("force", map_opts, { desc = "Next file" }))
+        vim.keymap.set("n", ",", function()
+          require("codediff").prev_file()
+        end, vim.tbl_extend("force", map_opts, { desc = "Prev file" }))
+        vim.keymap.set("n", "}", function()
+          review_jump_unchecked(explorer, 1)
+        end, vim.tbl_extend("force", map_opts, { desc = "Next unreviewed file" }))
+        vim.keymap.set("n", "{", function()
+          review_jump_unchecked(explorer, -1)
+        end, vim.tbl_extend("force", map_opts, { desc = "Prev unreviewed file" }))
+      end
+    end
+
+    -- staged viewでカーソル位置のhunkをunstageする関数
+    local function unstage_hunk()
+      local ok, session_mod = pcall(require, "codediff.ui.lifecycle.session")
+      if not ok then return end
+      local active_diffs = session_mod.get_active_diffs()
+      local session = active_diffs[vim.api.nvim_get_current_tabpage()]
+      if not session then return end
+
+      if session.modified_revision ~= ":0" then
+        vim.notify("Not in staged diff view", vim.log.levels.WARN)
+        return
+      end
+
+      local git_root = session.git_root
+      local explorer = session.explorer
+      local file_path = explorer and explorer.current_file_path
+      if not file_path then return end
+
+      local cur_buf = vim.api.nvim_get_current_buf()
+      local is_modified = cur_buf == session.modified_bufnr
+      local is_original = cur_buf == session.original_bufnr
+      if not is_modified and not is_original then return end
+
+      local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+
+      vim.system(
+        { "git", "diff", "--cached", "-U0", "--no-color", "--", file_path },
+        { cwd = git_root, text = true },
+        function(obj)
+          if obj.code ~= 0 or not obj.stdout or obj.stdout == "" then
+            vim.schedule(function() vim.notify("No staged diff", vim.log.levels.WARN) end)
+            return
+          end
+
+          local lines = vim.split(obj.stdout, "\n")
+          local header_lines, hunks, current_hunk = {}, {}, nil
+
+          for _, line in ipairs(lines) do
+            local os_str, oc, ns, nc = line:match("^@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@")
+            if os_str then
+              if current_hunk then hunks[#hunks + 1] = current_hunk end
+              current_hunk = {
+                header = line, body = {},
+                old_start = tonumber(os_str), old_count = tonumber(oc ~= "" and oc or "1"),
+                new_start = tonumber(ns), new_count = tonumber(nc ~= "" and nc or "1"),
+              }
+            elseif current_hunk then
+              current_hunk.body[#current_hunk.body + 1] = line
+            else
+              header_lines[#header_lines + 1] = line
+            end
+          end
+          if current_hunk then hunks[#hunks + 1] = current_hunk end
+
+          local matched = nil
+          for _, h in ipairs(hunks) do
+            local s = is_modified and h.new_start or h.old_start
+            local c = is_modified and h.new_count or h.old_count
+            if c == 0 then
+              if cursor_line == s or cursor_line == s + 1 then matched = h; break end
+            elseif cursor_line >= s and cursor_line <= s + c - 1 then
+              matched = h; break
+            end
+          end
+
+          if not matched then
+            vim.schedule(function() vim.notify("No hunk at cursor", vim.log.levels.INFO) end)
+            return
+          end
+
+          local patch = table.concat(header_lines, "\n") .. "\n" .. matched.header .. "\n" .. table.concat(matched.body, "\n")
+          if not patch:match("\n$") then patch = patch .. "\n" end
+
+          vim.system(
+            { "git", "apply", "--reverse", "--cached", "--unidiff-zero", "-" },
+            { cwd = git_root, text = true, stdin = patch },
+            function(apply_obj)
+              vim.schedule(function()
+                if apply_obj.code ~= 0 then
+                  vim.notify("Unstage failed: " .. (apply_obj.stderr or ""), vim.log.levels.ERROR)
+                  return
+                end
+                invalidate_mutable_cache()
+                refresh_diff_view(false)
+              end)
+            end
+          )
+        end
+      )
+    end
+
+    -- diffviewバッファ用のキーマップ
+    local diffview_initialized = {}
+    vim.api.nvim_create_autocmd("BufEnter", {
+      pattern = "*",
+      callback = function(ev)
+        if diffview_initialized[ev.buf] then return end
+
+        -- セッション情報からdiffviewバッファかどうか判定
+        local ok, session_mod = pcall(require, "codediff.ui.lifecycle.session")
+        if not ok then return end
+        local active_diffs = session_mod.get_active_diffs()
+        local session = active_diffs[vim.api.nvim_get_current_tabpage()]
+        if not session then return end
+        if ev.buf ~= session.original_bufnr and ev.buf ~= session.modified_bufnr then return end
+
+        local map_opts = { buffer = ev.buf, noremap = true, silent = true, nowait = true }
+        vim.keymap.set({ "n", "v" }, "gs", function()
+          local gitsigns = require("gitsigns")
+          local range = nil
+          local mode = vim.fn.mode()
+          if mode == "v" or mode == "V" then
+            range = { vim.fn.line("v"), vim.fn.line(".") }
+            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "nx", false)
+          end
+          gitsigns.stage_hunk(range, {}, function()
+            vim.schedule(function()
+              invalidate_mutable_cache()
+              refresh_diff_view(true)
+            end)
+          end)
+        end, vim.tbl_extend("force", map_opts, { desc = "Stage hunk" }))
+        vim.keymap.set({ "n", "v" }, "gr", function()
+          local gitsigns = require("gitsigns")
+          local range = nil
+          local mode = vim.fn.mode()
+          if mode == "v" or mode == "V" then
+            range = { vim.fn.line("v"), vim.fn.line(".") }
+            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "nx", false)
+          end
+          gitsigns.reset_hunk(range, {}, function()
+            vim.schedule(function()
+              invalidate_mutable_cache()
+              refresh_diff_view(false)
+            end)
+          end)
+        end, vim.tbl_extend("force", map_opts, { desc = "Reset hunk" }))
+        vim.keymap.set({ "n", "v" }, "gu", function()
+          unstage_hunk()
+        end, vim.tbl_extend("force", map_opts, { desc = "Unstage hunk" }))
+        vim.keymap.set("n", "<Tab>", function()
+          local ok2, session_mod2 = pcall(require, "codediff.ui.lifecycle.session")
+          if not ok2 then return end
+          local active_diffs2 = session_mod2.get_active_diffs()
+          local session2 = active_diffs2[vim.api.nvim_get_current_tabpage()]
+          if session2 and session2.explorer and session2.explorer.winid and vim.api.nvim_win_is_valid(session2.explorer.winid) then
+            vim.api.nvim_set_current_win(session2.explorer.winid)
+          end
+        end, vim.tbl_extend("force", map_opts, { desc = "Focus sidebar" }))
+        vim.keymap.set("n", "]r", function()
+          if goto_next_repo_tab then goto_next_repo_tab() end
+        end, vim.tbl_extend("force", map_opts, { desc = "Next repo tab" }))
+        vim.keymap.set("n", "[r", function()
+          if goto_prev_repo_tab then goto_prev_repo_tab() end
+        end, vim.tbl_extend("force", map_opts, { desc = "Prev repo tab" }))
+
+        -- Review mode (two-commit diff): ,/. move by file (same as the sidebar),
+        -- [/] move by hunk within the focused file.
+        local rexpl = session.explorer
+        if rexpl and rexpl.base_revision and rexpl.target_revision
+            and rexpl.target_revision ~= "WORKING"
+            and not tostring(rexpl.target_revision):match("^:[0-3]$") then
+          vim.keymap.set("n", ".", function()
+            require("codediff").next_file()
+          end, vim.tbl_extend("force", map_opts, { desc = "Next file" }))
+          vim.keymap.set("n", ",", function()
+            require("codediff").prev_file()
+          end, vim.tbl_extend("force", map_opts, { desc = "Prev file" }))
+          vim.keymap.set("n", "]", function()
+            require("codediff").next_hunk()
+          end, vim.tbl_extend("force", map_opts, { desc = "Next hunk" }))
+          vim.keymap.set("n", "[", function()
+            require("codediff").prev_hunk()
+          end, vim.tbl_extend("force", map_opts, { desc = "Prev hunk" }))
+          vim.keymap.set("n", "}", function()
+            review_jump_unchecked(rexpl, 1)
+          end, vim.tbl_extend("force", map_opts, { desc = "Next unreviewed file" }))
+          vim.keymap.set("n", "{", function()
+            review_jump_unchecked(rexpl, -1)
+          end, vim.tbl_extend("force", map_opts, { desc = "Prev unreviewed file" }))
+        end
+
+        diffview_initialized[ev.buf] = true
+      end,
+    })
+
+    -- =====================================================================
+    -- Multi-repo CodeDiff: open all repos with changes in separate tabs
+    -- =====================================================================
+
+    --- Get info about all repo tabs (for help line display and navigation)
+    ---@return { total: number, current_index: number, repos: { name: string, current: boolean }[] }|nil
+    get_repo_tab_info = function()
+      local tabs = vim.api.nvim_list_tabpages()
+      local current_tab = vim.api.nvim_get_current_tabpage()
+      local repos = {}
+      for _, tab in ipairs(tabs) do
+        local ok, name = pcall(vim.api.nvim_tabpage_get_var, tab, "codediff_repo_name")
+        if ok then
+          repos[#repos + 1] = { name = name, current = tab == current_tab, tabpage = tab }
+        end
+      end
+      if #repos <= 1 then return nil end
+      local current_index = 0
+      for i, r in ipairs(repos) do
+        if r.current then current_index = i end
+      end
+      return { total = #repos, current_index = current_index, repos = repos }
+    end
+
+    --- Navigate to next repo tab
+    goto_next_repo_tab = function()
+      local info = get_repo_tab_info()
+      if not info then return end
+      local next_index = (info.current_index % info.total) + 1
+      vim.api.nvim_set_current_tabpage(info.repos[next_index].tabpage)
+    end
+
+    --- Navigate to previous repo tab
+    goto_prev_repo_tab = function()
+      local info = get_repo_tab_info()
+      if not info then return end
+      local prev_index = ((info.current_index - 2) % info.total) + 1
+      vim.api.nvim_set_current_tabpage(info.repos[prev_index].tabpage)
+    end
+
+    --- Discover all git repos in workspace (parent + submodules + independent clones)
+    ---@param workspace_root string Absolute path to workspace root
+    ---@param callback fun(repo_roots: string[]) Called with deduplicated list of repo roots
+    local function discover_repos(workspace_root, callback)
+      local repos = {}
+      local pending = 3
+
+      local function on_complete()
+        pending = pending - 1
+        if pending == 0 then
+          callback(vim.tbl_keys(repos))
+        end
+      end
+
+      -- 1. Parent repo
+      vim.system(
+        { "git", "rev-parse", "--show-toplevel" },
+        { cwd = workspace_root, text = true },
+        function(obj)
+          if obj.code == 0 and obj.stdout then
+            repos[vim.trim(obj.stdout)] = true
+          end
+          on_complete()
+        end
+      )
+
+      -- 2. Submodules
+      vim.system(
+        { "git", "submodule", "foreach", "--recursive", "--quiet", "echo $toplevel/$sm_path" },
+        { cwd = workspace_root, text = true },
+        function(obj)
+          if obj.code == 0 and obj.stdout then
+            for line in obj.stdout:gmatch("[^\n]+") do
+              local path = vim.trim(line)
+              if path ~= "" then
+                repos[path] = true
+              end
+            end
+          end
+          on_complete()
+        end
+      )
+
+      -- 3. Independent clones (find .git directories, depth-limited)
+      vim.system(
+        { "find", workspace_root, "-maxdepth", "4", "-name", ".git", "-type", "d" },
+        { text = true },
+        function(obj)
+          if obj.code == 0 and obj.stdout then
+            for line in obj.stdout:gmatch("[^\n]+") do
+              local git_dir = vim.trim(line)
+              if git_dir ~= "" then
+                repos[vim.fn.fnamemodify(git_dir, ":h")] = true
+              end
+            end
+          end
+          on_complete()
+        end
+      )
+    end
+
+    --- Check if a repo has any changes
+    ---@param repo_root string
+    ---@param callback fun(has_changes: boolean)
+    local function check_repo_has_changes(repo_root, callback)
+      vim.system(
+        { "git", "status", "--porcelain" },
+        { cwd = repo_root, text = true },
+        function(obj)
+          callback(obj.code == 0 and obj.stdout ~= nil and vim.trim(obj.stdout) ~= "")
+        end
+      )
+    end
+
+    --- Open CodeDiff for a specific repo root (replicates commands.lua handle_explorer pattern)
+    ---@param repo_root string
+    ---@param callback fun()? Called after tab is created
+    local function open_codediff_for_repo(repo_root, callback)
+      local git = require("codediff.core.git")
+
+      git.get_status(repo_root, function(err, status_result)
+        if err then
+          vim.schedule(function()
+            if callback then callback() end
+          end)
+          return
+        end
+
+        local has_conflicts = status_result.conflicts and #status_result.conflicts > 0
+        if #status_result.unstaged == 0 and #status_result.staged == 0 and not has_conflicts then
+          vim.schedule(function()
+            if callback then callback() end
+          end)
+          return
+        end
+
+        vim.schedule(function()
+          local view = require("codediff.ui.view")
+
+          ---@type SessionConfig
+          local session_config = {
+            mode = "explorer",
+            git_root = repo_root,
+            original_path = "",
+            modified_path = "",
+            original_revision = nil,
+            modified_revision = nil,
+            explorer_data = {
+              status_result = status_result,
+            },
+          }
+
+          -- Close snacks explorer before creating CodeDiff tab.
+          -- snacks.nvim replicates its managed layout into new tabs created
+          -- by vim.cmd("tabnew"), causing unwanted horizontal splits.
+          local Snacks = require("snacks")
+          local snacks_explorers = Snacks.picker.get({ source = "explorer", tab = false })
+          for _, p in ipairs(snacks_explorers) do
+            p:close()
+          end
+
+          view.create(session_config, "")
+          vim.cmd("tcd " .. vim.fn.fnameescape(repo_root))
+
+          set_tab_label(vim.api.nvim_get_current_tabpage(), repo_root)
+
+          if callback then callback() end
+        end)
+      end)
+    end
+
+    -- Tab labeling for multi-repo CodeDiff
+    local custom_tabline_active = false
+    local saved_tabline = nil
+
+    ---@param tabpage number
+    ---@param repo_root string
+    set_tab_label = function(tabpage, repo_root)
+      local name = vim.fn.fnamemodify(repo_root, ":t")
+      vim.api.nvim_tabpage_set_var(tabpage, "codediff_repo_name", name)
+    end
+
+    local function codediff_tabline()
+      local tabs = vim.api.nvim_list_tabpages()
+      local current_tab = vim.api.nvim_get_current_tabpage()
+      local parts = {}
+
+      for i, tab in ipairs(tabs) do
+        local hl = tab == current_tab and "%#TabLineSel#" or "%#TabLine#"
+        local label
+        local ok, repo_name = pcall(vim.api.nvim_tabpage_get_var, tab, "codediff_repo_name")
+        if ok and repo_name then
+          label = "  " .. repo_name .. " "
+        else
+          label = " " .. i .. " "
+        end
+        parts[#parts + 1] = hl .. "%" .. i .. "T" .. label
+      end
+
+      parts[#parts + 1] = "%#TabLineFill#%T"
+      return table.concat(parts)
+    end
+
+    _G._codediff_tabline = codediff_tabline
+
+    local function activate_custom_tabline()
+      if not custom_tabline_active then
+        saved_tabline = vim.o.tabline
+        vim.o.tabline = "%!v:lua._codediff_tabline()"
+        custom_tabline_active = true
+      end
+    end
+
+    local function maybe_restore_tabline()
+      if not custom_tabline_active then return end
+      for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+        local ok = pcall(vim.api.nvim_tabpage_get_var, tab, "codediff_repo_name")
+        if ok then return end
+      end
+      vim.o.tabline = saved_tabline or ""
+      custom_tabline_active = false
+    end
+
+    vim.api.nvim_create_autocmd("TabClosed", {
+      callback = function()
+        vim.schedule(maybe_restore_tabline)
+      end,
+    })
+
+    --- Open CodeDiff tabs for all repos with changes in the workspace
+    local function open_all_repos_with_changes()
+      local current_file = vim.api.nvim_buf_get_name(0)
+      local cwd = vim.fn.getcwd()
+      local workspace_dir = current_file ~= "" and vim.fn.fnamemodify(current_file, ":h") or cwd
+
+      vim.system(
+        { "git", "rev-parse", "--show-toplevel" },
+        { cwd = workspace_dir, text = true },
+        function(obj)
+          local workspace_root = obj.code == 0 and obj.stdout and vim.trim(obj.stdout) or cwd
+
+          discover_repos(workspace_root, function(repo_roots)
+            if #repo_roots == 0 then
+              vim.schedule(function()
+                vim.notify("No git repositories found", vim.log.levels.INFO)
+              end)
+              return
+            end
+
+            -- Check all repos for changes in parallel
+            local repos_with_changes = {}
+            local check_pending = #repo_roots
+
+            for _, root in ipairs(repo_roots) do
+              check_repo_has_changes(root, function(has_changes)
+                if has_changes then
+                  repos_with_changes[#repos_with_changes + 1] = root
+                end
+                check_pending = check_pending - 1
+                if check_pending == 0 then
+                  vim.schedule(function()
+                    if #repos_with_changes == 0 then
+                      vim.notify("No repositories with changes", vim.log.levels.INFO)
+                      return
+                    end
+
+                    -- Sort: parent repo first, then alphabetically
+                    table.sort(repos_with_changes, function(a, b)
+                      if a == workspace_root then return true end
+                      if b == workspace_root then return false end
+                      return a < b
+                    end)
+
+                    -- Open tabs sequentially to avoid race conditions
+                    local opened_count = 0
+                    local function open_next(index)
+                      if index > #repos_with_changes then
+                        if opened_count > 1 then
+                          activate_custom_tabline()
+                        end
+                        vim.notify(
+                          string.format("CodeDiff: %d repo%s", opened_count, opened_count > 1 and "s" or ""),
+                          vim.log.levels.INFO
+                        )
+                        return
+                      end
+
+                      open_codediff_for_repo(repos_with_changes[index], function()
+                        opened_count = opened_count + 1
+                        vim.schedule(function()
+                          open_next(index + 1)
+                        end)
+                      end)
+                    end
+
+                    open_next(1)
+                  end)
+                end
+              end)
+            end
+          end)
+        end
+      )
+    end
+
+    vim.keymap.set("n", "<leader>gd", open_all_repos_with_changes, { desc = "CodeDiff Open" })
+
+    -- :CodeReview [base] [target] - two-commit review diff (default HEAD~1 HEAD)
+    vim.api.nvim_create_user_command("CodeReview", function(o)
+      local base = o.fargs[1] or "HEAD~1"
+      local target = o.fargs[2] or "HEAD"
+      vim.cmd(string.format("CodeDiff %s %s", base, target))
+    end, { nargs = "*", desc = "Two-commit review diff (default HEAD~1 HEAD)" })
+
+    -- :CodeReviewBranch [base] - review current branch vs default branch (3-dot)
+    vim.api.nvim_create_user_command("CodeReviewBranch", function(o)
+      local base = o.fargs[1]
+      if not base then
+        -- origin/HEAD -> e.g. "origin/main" (remote-tracking ref); else local main/master
+        local out = vim.fn.systemlist({ "git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD" })
+        if vim.v.shell_error == 0 and out[1] and out[1] ~= "" then
+          base = out[1]
+        else
+          for _, cand in ipairs({ "main", "master" }) do
+            vim.fn.system({ "git", "show-ref", "--verify", "--quiet", "refs/heads/" .. cand })
+            if vim.v.shell_error == 0 then
+              base = cand
+              break
+            end
+          end
+        end
+      end
+      if not base then
+        vim.notify("CodeReviewBranch: cannot detect default branch; pass one explicitly", vim.log.levels.ERROR)
+        return
+      end
+      vim.cmd(string.format("CodeDiff %s...HEAD", base))
+    end, { nargs = "?", desc = "Review current branch vs default branch (3-dot)" })
+end
+
+return M

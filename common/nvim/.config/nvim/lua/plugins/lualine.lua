@@ -27,10 +27,9 @@ return {
       )
     end
 
-    -- initial + periodic refresh
+    -- Refresh on meaningful repository events. Avoid polling git forever,
+    -- especially on large repositories and remote filesystems.
     refresh_repo_diff()
-    local timer = vim.uv.new_timer()
-    timer:start(30000, 30000, vim.schedule_wrap(refresh_repo_diff))
     vim.api.nvim_create_autocmd({ "BufWritePost", "FocusGained" }, {
       callback = refresh_repo_diff,
     })
