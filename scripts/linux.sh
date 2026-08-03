@@ -276,6 +276,8 @@ install_postgresql_apt() {
 _atuin_rc_guard_dir() {
   local d="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/atuin-rc-guard"
   mkdir -p "$d"
+  # atuin checks for this literal init expression.
+  # shellcheck disable=SC2016
   printf 'eval "$(atuin init zsh)"\n' > "$d/.zshrc"
   printf '%s' "$d"
 }
