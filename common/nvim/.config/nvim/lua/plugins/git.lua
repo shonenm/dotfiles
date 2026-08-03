@@ -1,14 +1,4 @@
 return {
-  -- vim-fugitive: Git操作のデファクトスタンダード
-  {
-    "tpope/vim-fugitive",
-    cmd = { "Git", "Gstatus", "Gdiff", "Gblame", "Gwrite", "Gread" },
-    keys = {
-      { "<leader>gs", "<cmd>Git<cr>", desc = "Git Status" },
-      { "<leader>gb", "<cmd>Git blame<cr>", desc = "Git Blame" },
-    },
-  },
-
   -- toggleterm.nvim: lazygit/lazydocker連携用ターミナル
   {
     "akinsho/toggleterm.nvim",

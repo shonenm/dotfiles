@@ -1,7 +1,7 @@
 return {
   "vuki656/package-info.nvim",
   dependencies = { "MunifTanjim/nui.nvim" },
-  ft = "json",
+  event = "BufReadPost package.json",
   keys = {
     { "<leader>np", function() require("package-info").toggle() end, desc = "Toggle Package Versions" },
     { "<leader>nu", function() require("package-info").update() end, desc = "Update Package" },
