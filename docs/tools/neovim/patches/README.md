@@ -1,5 +1,7 @@
 # ローカルパッチ
 
+> **由来:** **Plugin** 対象Neovim plugins / **Local patch** `common/nvim/`のruntime override一覧（[区分](../../../provenance.md#区分)）
+
 サードパーティツール・プラグインに対するローカルワークアラウンドの記録。
 upstream で修正され次第、該当パッチを削除する。
 

@@ -1,5 +1,7 @@
 # No-Sudo Install Mode
 
+> **由来:** **Upstream** pixi・mise・GNU Stow / **Configuration** user-scope package宣言 / **Custom** no-sudo install経路（[区分](../provenance.md#区分)）
+
 sudo 権限のないリモート Linux ホスト (共有サーバー、管理された開発環境、一部コンテナ等) でも dotfiles をセットアップするためのモード。
 
 ## Usage

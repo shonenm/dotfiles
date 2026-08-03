@@ -1,5 +1,7 @@
 # Database 開発環境
 
+> **由来:** **Upstream** PostgreSQL・Docker・DB clients / **Plugin** Neovim DB plugins / **Configuration** 導入・editor・tmux連携（[区分](../provenance.md#区分)）
+
 Docker PostgreSQL を使った DB 開発ワークフロー。Neovim + tmux 統合。
 
 ## ツール一覧

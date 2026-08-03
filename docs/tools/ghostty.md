@@ -1,5 +1,7 @@
 # Ghostty
 
+> **由来:** **Upstream** Ghostty / **Configuration** theme・keybinding・shell integration（[区分](../provenance.md#区分)）
+
 TokyoNight テーマ + 背景画像。macOS 統合対応のモダンターミナル。
 
 ## 基本設定

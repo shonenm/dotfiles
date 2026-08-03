@@ -1,5 +1,7 @@
 # snacks.nvim: explorer diagnostics の Invalid buffer id エラー
 
+> **由来:** **Plugin** snacks.nvim / **Local patch** explorer diagnostics guard（[区分](../../../provenance.md#区分)）
+
 - **ファイル**: `common/nvim/.config/nvim/lua/plugins/explorer.lua`
 - **対象**: `folke/snacks.nvim` - `lua/snacks/explorer/diagnostics.lua:26`
 - **症状**: C 言語ファイル保存時に `Invalid buffer id` エラーが発生

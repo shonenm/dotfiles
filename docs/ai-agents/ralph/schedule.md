@@ -1,5 +1,7 @@
 # Ralph Schedule - 予約投稿型 Claude TUI 実行
 
+> **由来:** **Upstream** Claude Code・tmux / **Configuration** schedule定義 / **Custom** ralph-schedule・実行処理（[区分](../../provenance.md#区分)）
+
 指定時刻に Claude TUI を自動起動し、`/d-ralph` で自律実行させるワンショットスケジューラー。セッション切れ時でもシェルスクリプトのみで予約の登録・実行が完結する。
 
 `ralph-crew` (常駐型定期ディスパッチ) とは異なり、一回限りのスケジュール実行に特化。

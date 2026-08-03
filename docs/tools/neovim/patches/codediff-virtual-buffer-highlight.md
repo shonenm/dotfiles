@@ -1,5 +1,7 @@
 # codediff.nvim: Virtual buffer シンタックスハイライト修復
 
+> **由来:** **Plugin** codediff.nvim / **Local patch** virtual buffer highlight（[区分](../../../provenance.md#区分)）
+
 - **ファイル**: `common/nvim/.config/nvim/lua/plugins/codediff.lua`
 - **対象**: `esmuellert/codediff.nvim` - `codediff/core/virtual_file.lua`
 - **症状**: Explorer mode でPythonファイルの変更前(左側/virtual buffer)が完全にモノクロ表示になる。TypeScriptでは両側正常にハイライトされる

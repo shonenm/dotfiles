@@ -1,5 +1,7 @@
 # codediff.nvim: snacks explorer レイアウト複製
 
+> **由来:** **Plugin** codediff.nvim・snacks.nvim / **Local patch** explorer layout連携（[区分](../../../provenance.md#区分)）
+
 - **ファイル**: `common/nvim/.config/nvim/lua/plugins/codediff.lua`
 - **対象**: `esmuellert/codediff.nvim` - `lua/codediff/ui/explorer/render.lua` と `folke/snacks.nvim` - `lua/snacks/explorer/init.lua`
 - **症状**: `<leader>gd` で CodeDiff を開くと、snacks explorer のレイアウトが新タブに複製され、`snacks_layout_box` ウィンドウが2つ余分に表示される。全ウィンドウの高さが制約され下半分が空白になる

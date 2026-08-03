@@ -1,5 +1,7 @@
 # rcon - リモート接続ツール
 
+> **由来:** **Upstream** SSH・tmux・Docker / **Configuration** target・接続設定 / **Custom** rcon commands・pane連携（[区分](../provenance.md#区分)）
+
 SSH + ホスト側 tmux + Docker をワンコマンドで接続するツール。
 
 > tmux server が重くなった時の再起動・復元手順は

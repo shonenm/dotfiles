@@ -1,5 +1,7 @@
 # pi Web Research Layer
 
+> **由来:** **Upstream** SearXNG・Jina / **Configuration** research運用 / **Custom** web-tools拡張・cache・citation管理（[区分](../../provenance.md#区分)）
+
 `web-tools.ts` が、検索・取得・cache・citationを1つのextensionとして提供する。
 
 ## プロトコル

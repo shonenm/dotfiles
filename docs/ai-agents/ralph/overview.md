@@ -1,5 +1,7 @@
 # Ralph Pattern v2
 
+> **由来:** **Upstream** Claude Code Skills・Hooks・Agents / **Configuration** agent・hook構成 / **Custom** Ralph workflow・state管理（[区分](../../provenance.md#区分)）
+
 An autonomous development loop built entirely with Claude Code's official primitives (Skills, Hooks, Agents). No external tools required.
 
 ## Overview

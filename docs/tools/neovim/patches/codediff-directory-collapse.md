@@ -1,5 +1,7 @@
 # codediff.nvim: ディレクトリ折りたたみ状態が同名ディレクトリで共有される
 
+> **由来:** **Plugin** codediff.nvim / **Local patch** directory折りたたみ状態管理（[区分](../../../provenance.md#区分)）
+
 - **ファイル**: `common/nvim/.config/nvim/lua/plugins/codediff.lua`
 - **対象**: `esmuellert/codediff.nvim` - `lua/codediff/ui/explorer/refresh.lua`
 - **症状**: 同名のディレクトリ（例: 複数の `src/` フォルダ）が異なるパスにある場合、一方を折りたたむと他方も折りたたまれる

@@ -1,5 +1,7 @@
 # AI agent状態管理
 
+> **由来:** **Upstream** tmux・各agent hook API / **Configuration** hook・keybinding / **Custom** agent状態管理・通知・index処理（[区分](../provenance.md#区分)）
+
 Claude Code、pi、Codex、Gemini CLI、Cursor Agent、Command Code の実行状態をtmuxへ集約する現行仕様。
 
 ## 状態の正本

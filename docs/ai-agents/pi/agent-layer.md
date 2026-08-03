@@ -1,5 +1,7 @@
 # Agent共有設定レイヤー
 
+> **由来:** **Upstream** Agent Skills仕様 / **Plugin** package提供skill / **Configuration** 共有設定・symlink / **Custom** dotfiles固有skills・knowledge（[区分](../../provenance.md#区分)）
+
 標準形式で共有できるskillと、横断原則を `~/.config/agent/` に置く。MCP設定はruntime間で要件が異なるため、Claude Codeとは分離する。
 
 ## 構成

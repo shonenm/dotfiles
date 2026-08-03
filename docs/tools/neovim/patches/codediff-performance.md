@@ -1,5 +1,7 @@
 # codediff.nvim: パフォーマンス最適化
 
+> **由来:** **Plugin** codediff.nvim / **Local patch** performance override（[区分](../../../provenance.md#区分)）
+
 - **ファイル**: `common/nvim/.config/nvim/lua/plugins/codediff.lua`
 - **対象**: `esmuellert/codediff.nvim`
 - **症状**: 大きなファイルや連続操作時に差分計算が遅延し、UIがもたつく

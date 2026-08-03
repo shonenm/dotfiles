@@ -1,5 +1,7 @@
 # tmux
 
+> **由来:** **Upstream** tmux / **Plugin** TPM導入plugin / **Configuration** `common/tmux/` / **Custom** `scripts/tmux-*`・local plugin（[区分](../provenance.md#区分)）
+
 TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 
 ## 基本設定

@@ -1,5 +1,7 @@
 # Claude Code Skills
 
+> **由来:** **Upstream** Claude Code Skills仕様 / **Plugin** 外部plugin由来skill / **Configuration** 配置・共有設定 / **Custom** d-* skills（[区分](../../provenance.md#区分)）
+
 Claude Code で使用可能なカスタムスキルのリファレンス。
 
 ## スキル一覧

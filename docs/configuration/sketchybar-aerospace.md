@@ -1,5 +1,7 @@
 # SketchyBar + AeroSpace Integration
 
+> **由来:** **Upstream** SketchyBar・AeroSpace / **Configuration** workspace・keybinding設定 / **Custom** plugins・Pomodoro・通知連携（[区分](../provenance.md#区分)）
+
 A system that integrates the macOS tiling window manager AeroSpace with the status bar SketchyBar to visualize workspaces and applications.
 
 ## Overview

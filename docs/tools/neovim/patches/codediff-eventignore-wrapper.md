@@ -1,5 +1,7 @@
 # codediff.nvim: 外部プラグインとの競合によるエラー
 
+> **由来:** **Plugin** codediff.nvimと競合plugin / **Local patch** eventignore wrapper（[区分](../../../provenance.md#区分)）
+
 - **ファイル**: `common/nvim/.config/nvim/lua/plugins/codediff.lua`
 - **対象**: `esmuellert/codediff.nvim` - `lua/codediff/ui/view/init.lua`
 - **症状**: CodeDiff で仮想ファイル（staged 変更等）を選択すると、package-info.nvim 等の外部プラグインが BufEnter でエラーを出す

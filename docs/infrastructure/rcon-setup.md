@@ -1,5 +1,7 @@
 # rcon Setup Guide
 
+> **由来:** **Upstream** SSH・tmux・Docker / **Configuration** host・container設定 / **Custom** rcon commands・setup skill（[区分](../provenance.md#区分)）
+
 ホスト集約 tmux + docker exec 構成でリモート開発環境をセットアップする手順。
 
 `rcon` の動作原理は [rcon.md](./rcon.md) を参照。本ドキュメントは「新しいターゲットを追加するときに何を設定すればよいか」のレシピ集。

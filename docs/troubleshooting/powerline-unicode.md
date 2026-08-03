@@ -1,5 +1,7 @@
 # Powerline / Nerd Font 文字が Claude Code で破損する
 
+> **由来:** **Upstream** Powerline・Nerd Font / **Configuration** theme生成・安全な編集手順（[区分](../provenance.md#区分)）
+
 **日付**: 2026-01-30
 **環境**: Claude Code (Claude Opus 4.5), macOS, dotfiles 内の starship.toml / tmux テーマ
 

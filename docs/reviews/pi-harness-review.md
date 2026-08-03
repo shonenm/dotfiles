@@ -1,5 +1,7 @@
 # pi エージェントハーネス レビュー (2026-05-29)
 
+> **由来:** **Upstream** pi本体 / **Plugin** community packages / **Configuration** dotfilesのpi構成 / **Custom** extensions（記載時点のレビュー対象）（[区分](../provenance.md#区分)）
+
 > Status: Historical review
 > この文書は2026-05-29時点の監査記録であり、現行backlogや仕様ではない。現在の構成は[pi概要](../ai-agents/pi/overview.md)を参照する。
 

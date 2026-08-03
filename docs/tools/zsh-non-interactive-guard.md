@@ -1,5 +1,7 @@
 # Zsh 非インタラクティブシェル対応
 
+> **由来:** **Upstream** zsh / **Configuration** `.zshrc`のinteractive分離（[区分](../provenance.md#区分)）
+
 Claude Code などのツールが zsh を起動する際、`.zshrc` が読み込まれてビルトインコマンドが上書きされる問題への対策。
 
 ## 問題

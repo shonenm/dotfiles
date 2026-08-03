@@ -37,6 +37,7 @@ macOS / Linux の開発環境設定を GNU Stow で管理する。
 - `README.md` は概要と入口、`docs/INDEX.md` は文書一覧、詳細は各カテゴリに置く。
 - 現行手順、設計仕様、日付付き計画・レビューを混在させない。
 - 説明文は日本語を基本とし、コマンド、パス、API名、公式製品名は原表記を維持する。
+- 詳細文書のタイトル直下には [構成要素の由来](docs/provenance.md) に従い、Upstream / Plugin / Configuration / Custom / Local patch の対象を記載する。由来は各詳細文書を正本とし、別の機能台帳へ重複記載しない。
 
 ## Stow
 

@@ -1,5 +1,7 @@
 # Modern CLI Tools
 
+> **由来:** **Upstream** 各CLI・mise・pixi / **Configuration** package宣言・alias / **Custom** install補助処理（[区分](../provenance.md#区分)）
+
 CLIの導入元とZsh aliasをまとめる。インストール対象の正本は設定ファイルであり、この文書には固定の全件一覧を複製しない。
 
 ## インストール元

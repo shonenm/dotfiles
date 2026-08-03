@@ -1,5 +1,7 @@
 # 新環境セットアップ
 
+> **由来:** **Upstream** OS package managers・GNU Stow / **Configuration** 環境別package宣言 / **Custom** installer・setup手順（[区分](../provenance.md#区分)）
+
 環境別の差分と、新しいツールをdotfilesへ登録する場所をまとめる。基本手順は[インストールガイド](index.md)を正本とする。
 
 ## macOS

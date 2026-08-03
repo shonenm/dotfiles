@@ -1,5 +1,7 @@
 # Claude Code Development Environment
 
+> **由来:** **Upstream** Claude Code / **Plugin** 導入済みplugin / **Configuration** settings・hooks・agents / **Custom** d-* skills・補助スクリプト（[区分](../../provenance.md#区分)）
+
 Claude Code の開発環境設定、カスタムスキル、フック、エージェント、セッション管理ツールのドキュメント。
 
 ## Overview

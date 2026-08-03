@@ -1,5 +1,7 @@
 # Claude Code API Fallback
 
+> **由来:** **Upstream** Claude Code・対応provider / **Configuration** provider切替設定 / **Custom** fallbackスクリプト（[区分](../../provenance.md#区分)）
+
 Anthropic API障害時にOpenRouter経由でClaude Codeを使うための切替機構。
 
 ## 背景

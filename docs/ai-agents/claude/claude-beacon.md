@@ -1,5 +1,7 @@
 # Claude Beacon
 
+> **由来:** **Upstream** Claude Code・tmux・SketchyBar / **Configuration** hook・表示連携 / **Custom** beacon・状態管理スクリプト（[区分](../../provenance.md#区分)）
+
 A system that visualizes Claude Code events (completion, approval pending, input waiting, etc.) through Slack notifications + SketchyBar/tmux badges.
 
 ## Overview

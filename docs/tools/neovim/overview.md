@@ -1,5 +1,7 @@
 # Neovim
 
+> **由来:** **Upstream** Neovim / **Plugin** LazyVim・lazy.nvim導入plugin / **Configuration** `common/nvim/` / **Local patch** runtime override（[区分](../../provenance.md#区分)）
+
 LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 
 ## プラグイン一覧
