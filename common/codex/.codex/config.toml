@@ -7,7 +7,8 @@ model_reasoning_effort = "low"
 approval_policy = "never"
 default_permissions = "repo-autonomous"
 
-# 確認なしで現在の workspace 内を自走する一方、Mac 全体への書き込みは許可しない。
+# 確認なしで現在の workspace 内（Git metadataを含む）を完全に操作する。
+# Mac 全体への書き込みは許可しない。
 # permission profiles と旧 sandbox/sandbox_workspace_write は併用不可。
 [permissions.repo-autonomous]
 description = "Autonomous work limited to the active repository and GitHub"
@@ -17,6 +18,7 @@ description = "Autonomous work limited to the active repository and GitHub"
 
 [permissions.repo-autonomous.filesystem.":workspace_roots"]
 "." = "write"
+".git/**" = "write"
 "**/*.env" = "deny"
 
 [permissions.repo-autonomous.network]
