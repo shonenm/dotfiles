@@ -47,19 +47,10 @@ require("lazy").setup({
 
     -- Editor enhancements
     { import = "lazyvim.plugins.extras.editor.harpoon2" },
-    { import = "lazyvim.plugins.extras.editor.dial" },
     { import = "lazyvim.plugins.extras.editor.inc-rename" },
-    { import = "lazyvim.plugins.extras.editor.outline" },
-    { import = "lazyvim.plugins.extras.editor.refactoring" },
 
     -- UI
     { import = "lazyvim.plugins.extras.ui.treesitter-context" },
-
-    -- Test & Debug
-    { import = "lazyvim.plugins.extras.test.core" },
-    { import = "lazyvim.plugins.extras.dap.core" },
-
-    -- AI
 
     -- Util
     { import = "lazyvim.plugins.extras.util.dot" },
