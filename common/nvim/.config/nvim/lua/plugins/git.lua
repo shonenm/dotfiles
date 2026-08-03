@@ -1,39 +1,9 @@
 return {
-  -- toggleterm.nvim: lazygit/lazydocker連携用ターミナル
+  -- toggleterm.nvim: lazydocker連携用ターミナル
   {
     "akinsho/toggleterm.nvim",
     version = "*",
     keys = {
-      {
-        "<leader>gg",
-        function()
-          local Terminal = require("toggleterm.terminal").Terminal
-          local lazygit = Terminal:new({
-            cmd = "lazygit",
-            dir = "git_dir",
-            direction = "float",
-            float_opts = {
-              border = "rounded",
-              width = function()
-                return math.floor(vim.o.columns * 0.9)
-              end,
-              height = function()
-                return math.floor(vim.o.lines * 0.9)
-              end,
-            },
-            on_open = function(term)
-              vim.cmd("startinsert!")
-              -- lazygit内でのEscを有効にする
-              vim.api.nvim_buf_set_keymap(term.bufnr, "t", "<Esc>", "<Esc>", { noremap = true, silent = true })
-            end,
-            on_close = function(_)
-              vim.cmd("startinsert!")
-            end,
-          })
-          lazygit:toggle()
-        end,
-        desc = "Lazygit",
-      },
       {
         "<leader>od",
         function()
