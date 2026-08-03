@@ -1,5 +1,7 @@
 # インストールガイド
 
+> **由来:** **Upstream** GNU Stow・package managers / **Configuration** package宣言・Stow配置 / **Custom** install.sh・install補助処理（[区分](../provenance.md#区分)）
+
 `install.sh` がmacOS / Linux / no-sudo Linux共通の入口である。
 
 ## モード

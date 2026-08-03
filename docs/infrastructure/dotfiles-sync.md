@@ -1,5 +1,7 @@
 # Dotfiles 同期戦略
 
+> **由来:** **Upstream** Git・GNU Stow・Docker / **Configuration** 同期・mount方針 / **Custom** install・rcon連携（[区分](../provenance.md#区分)）
+
 Mac (source of truth) → ailab (Linux source of truth) → 各 docker container (bind mount で参照) の 3 層構成で、編集箇所を 1 つに保ちつつ全環境へ反映する仕組み。
 
 ## 全体像

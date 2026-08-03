@@ -1,5 +1,7 @@
 # Command Code
 
+> **由来:** **Upstream** Command Code / **Configuration** settings・MCP・hook連携 / **Custom** commands・共有skills・通知スクリプト（[区分](../../provenance.md#区分)）
+
 [Command Code](https://commandcode.ai/) はターミナル向け AI コーディングエージェント（`cmd`）。Taste 学習・カスタムスラッシュコマンド・MCP・Hooks をサポートする。dotfiles では Claude / Cursor と同様に `install.sh` で CLI 導入・設定リンク・通知連携まで行う。
 
 ## 構成

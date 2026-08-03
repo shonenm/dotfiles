@@ -1,5 +1,7 @@
 # Neovim トラブルシューティング
 
+> **由来:** **Upstream** Neovim / **Plugin** LazyVim・lazy.nvim導入plugin / **Configuration** dotfiles設定の診断（[区分](../provenance.md#区分)）
+
 ## SIGKILL (exit 137) でクラッシュ
 
 **日付**: 2026-01-30

@@ -1,5 +1,7 @@
 # ccusage
 
+> **由来:** **Upstream** ccusage / **Configuration** 導入・実行設定 / **Custom** snapshot・schedule連携（[区分](../../provenance.md#区分)）
+
 `ccusage` は各 AI コーディング CLI がローカルに保存する利用記録を集計するツール。Claude Code、Codex、pi、Gemini などを日別・週別・月別に確認できる。請求額ではなくローカル記録と価格表に基づく**推定値**として扱う。
 
 ## 導入

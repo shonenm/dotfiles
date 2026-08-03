@@ -1,5 +1,7 @@
 # Cursor Agent
 
+> **由来:** **Upstream** Cursor Agent CLI / **Plugin** pi向けCursor provider / **Configuration** settings・MCP・hook連携 / **Custom** 通知・補助スクリプト（[区分](../../provenance.md#区分)）
+
 [Cursor Agent](https://cursor.com/docs/agent/overview) は IDE 内 Agent と `cursor-agent` CLI の両方で使えるコーディングエージェント。dotfiles では Claude / Codex / Gemini / pi と同様、`install.sh` 一発で CLI インストール・設定リンク・通知連携まで行う。
 
 ## 構成

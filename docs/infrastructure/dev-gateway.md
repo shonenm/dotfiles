@@ -1,5 +1,7 @@
 # dev-gateway
 
+> **由来:** **Upstream** Traefik・Docker / **Configuration** network・route設定 / **Custom** dev-gateway command・library（[区分](../provenance.md#区分)）
+
 リモートホスト上に Traefik を 1 つ立て、複数 docker container への HTTP/HTTPS 入口を 1 port に集約する個人インフラ。
 
 ## 解決する問題

@@ -1,5 +1,7 @@
 # Git Configuration Management
 
+> **由来:** **Upstream** Git・gh・ghq・delta / **Plugin** forgit / **Configuration** git・shell設定 / **Custom** git補助スクリプト・hooks（[区分](../provenance.md#区分)）
+
 How Git configuration is managed and shared in dotfiles.
 
 ## Overview

@@ -1,5 +1,7 @@
 # Starship Prompt Configuration
 
+> **由来:** **Upstream** Starship / **Configuration** prompt・palette設定 / **Custom** git diff status script（[区分](../provenance.md#区分)）
+
 Starship configuration for customizing shell prompts. Modern prompt based on the Dracula theme.
 
 ## Overview

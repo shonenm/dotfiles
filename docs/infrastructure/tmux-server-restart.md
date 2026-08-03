@@ -1,5 +1,7 @@
 # tmux server 再起動 & 復元 runbook
 
+> **由来:** **Upstream** tmux / **Plugin** tmux-resurrect・tmux-continuum / **Configuration** 保存・復元設定 / **Custom** agent再接続手順（[区分](../provenance.md#区分)）
+
 長寿命 tmux server が重くなった時の再起動判断と、AI と協力してセッション・agent を
 復元する手順。実測は 2026-07-18 の ailab(chronos.lab) 対応に基づく。
 

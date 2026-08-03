@@ -1,5 +1,7 @@
 # pi Memory Layer
 
+> **由来:** **Upstream** pi extension API / **Configuration** memory運用ルール / **Custom** memory拡張（[区分](../../provenance.md#区分)）
+
 セッション間知識継承のための永続化層。pi-memory 互換の Markdown フォーマットを採用。
 
 ## Architecture
