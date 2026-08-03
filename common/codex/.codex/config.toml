@@ -15,6 +15,9 @@ description = "Autonomous work limited to the active repository and GitHub"
 
 [permissions.repo-autonomous.filesystem]
 ":minimal" = "read"
+"/Users/matsushimakouta/.config/gh/**" = "read"
+"/opt/homebrew/bin/gh" = "read"
+"/opt/homebrew/Cellar/gh/**" = "read"
 
 [permissions.repo-autonomous.filesystem.":workspace_roots"]
 "." = "write"
