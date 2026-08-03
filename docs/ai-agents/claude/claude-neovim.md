@@ -1,5 +1,7 @@
 # Claude Code + Neovim 連携
 
+> **由来:** **Upstream** Claude Code・Neovim・tmux-mcp / **Plugin** claudecode.nvim / **Configuration** editor連携設定（[区分](../../provenance.md#区分)）
+
 Claude Code CLI と Neovim の双方向連携。claudecode.nvim（ACP protocol）で Neovim のエディタ状態を Claude Code に共有し、tmux-mcp で隣接ペインの出力を取得する。
 
 ## コンポーネント

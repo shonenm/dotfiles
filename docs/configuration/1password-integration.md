@@ -1,5 +1,7 @@
 # 1Password 連携
 
+> **由来:** **Upstream** 1Password CLI・SSH agent / **Configuration** 連携設定 / **Custom** op-helper・通知連携（[区分](../provenance.md#区分)）
+
 dotfilesのセットアップと日常利用で1Passwordをシークレット管理に活用。
 
 ## 概要

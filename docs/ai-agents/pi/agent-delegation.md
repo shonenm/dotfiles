@@ -1,5 +1,7 @@
 # pi Agent Delegation Layer
 
+> **由来:** **Upstream** pi・pueue / **Plugin** pi-subagents / **Configuration** agent定義・model tier / **Custom** agent-delegation拡張（[区分](../../provenance.md#区分)）
+
 サブエージェントによる並列作業委譲の仕組み。pi-subagents（コミュニティ） + agent-delegation.ts（カスタム）の2層構成。
 
 ## Architecture

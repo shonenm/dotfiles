@@ -1,5 +1,7 @@
 # codediff.nvim: Conflict view 3-way ↔ inline toggle
 
+> **由来:** **Plugin** codediff.nvim / **Local patch** inline conflict表示切替（[区分](../../../provenance.md#区分)）
+
 - **ファイル**: `common/nvim/.config/nvim/lua/plugins/codediff.lua`
 - **対象**: `esmuellert/codediff.nvim` - conflict resolution view
 - **症状**: Conflict 解決ビューが 3-way（theirs | ours | result）のみで、VSCode のような inline 表示（1 ペインに conflict マーカー付き）への切り替えができない

@@ -1,8 +1,10 @@
 # sesh
 
+> **由来:** **Upstream** sesh・tmux / **Configuration** sesh設定・session定義 / **Custom** picker・preview連携（[区分](../provenance.md#区分)）
+
 ファジーファインダー型の tmux セッションマネージャー。zoxide / ghq / 既存 tmux セッションを横断して fuzzy 検索し、新規セッション作成または既存セッション切替を1アクションで行う「tmux のコマンドパレット」。
 
-- Plugin: [joshmedeski/sesh](https://github.com/joshmedeski/sesh)
+- Tool: [joshmedeski/sesh](https://github.com/joshmedeski/sesh)
 - Config: `common/sesh/.config/sesh/sesh.toml`
 - Install (Mac): `brew "joshmedeski/sesh/sesh"` (`config/Brewfile`)
 - Install (Linux): `config/mise-linux.toml` の `github:joshmedeski/sesh`（mise管理）

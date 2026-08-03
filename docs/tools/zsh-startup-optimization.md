@@ -1,5 +1,7 @@
 # Zsh 起動速度の最適化
 
+> **由来:** **Upstream** zsh / **Plugin** sheldon導入plugin / **Configuration** 遅延初期化・cache設定（[区分](../provenance.md#区分)）
+
 tmux pane 起動時の遅延を解消するために実施した最適化の記録。
 
 ## 計測結果

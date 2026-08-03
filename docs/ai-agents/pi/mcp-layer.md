@@ -1,5 +1,7 @@
 # pi MCP Layer
 
+> **由来:** **Upstream** MCP・各MCP server / **Configuration** 共有MCP定義・権限設定 / **Custom** mcp-gateway拡張（[区分](../../provenance.md#区分)）
+
 piは `mcp-gateway.ts` を介してstdio MCP serverをpi toolとして登録する。MCP toolの実行可否は `pi-permission-system` が一元的に判断する。
 
 ## フロー

@@ -1,5 +1,7 @@
 # dotfiles
 
+> **由来:** **Upstream** GNU Stowと導入対象ツール / **Plugin** 各plugin managerの導入物 / **Configuration** `common/`・`mac/`・`linux/`内の設定 / **Custom** `install.sh`・`scripts/`・各種拡張（[区分](docs/provenance.md#区分)）
+
 macOS / Linux の開発環境を GNU Stow で再現する設定リポジトリ。
 
 ## 対応環境
@@ -21,7 +23,7 @@ docs/       導入・運用・仕様ドキュメント
 install.sh  共通インストーラー
 ```
 
-全ドキュメントは [`docs/INDEX.md`](docs/INDEX.md) から参照できる。
+全ドキュメントは [`docs/INDEX.md`](docs/INDEX.md) から参照できる。外部ツール、プラグイン、ローカル実装の境界は[構成要素の由来](docs/provenance.md)にまとめている。
 
 ## 前提条件
 

@@ -1,5 +1,7 @@
 # Ralph Crew - 定期ディスパッチ自律ワーカー管理
 
+> **由来:** **Upstream** Claude Code・tmux / **Configuration** crew定義 / **Custom** ralph-crew・daemon・dispatch処理（[区分](../../provenance.md#区分)）
+
 常駐 Claude TUI ワーカーを tmux 上で管理し、設定ファイルのスケジュールに基づいてタスクを定期注入するシステム。`ralph-parallel` とは独立したライフサイクルモデル (一時的な並列実行 vs 常駐ワーカーへの定期注入)。
 
 ## Architecture

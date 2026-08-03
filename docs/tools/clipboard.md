@@ -1,5 +1,7 @@
 # Clipboard 統合
 
+> **由来:** **Upstream** OSC52・pbcopy・lemonade / **Configuration** terminal・remote clipboard設定 / **Custom** clipboard-copy・install連携（[区分](../provenance.md#区分)）
+
 tmux popup (`display-popup -E`) 内の copy 操作を host (mac) clipboard に
 同期させる仕組み。tmux 3.6 の既知挙動として popup pty からの OSC52 escape
 sequence は outer terminal に転送されないため、OSC52 に依存しない経路を
