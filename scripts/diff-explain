@@ -11,10 +11,14 @@ hunk ID は `<path>#<1始まりの連番>`。explain.json の形式:
 
   {
     "title":    "見出し",
-    "overview": "全体の解説",
+    "subtitle": "対象の説明 (既定は git diff の引数)",
+    "overview": "冒頭の全体解説。Markdown で書ける",
     "files":    {"path/to/file.ts": "ファイル単位の解説"},
     "hunks":    {"path/to/file.ts#1": "この hunk の解説"}
   }
+
+`--diff <path>` を渡すと git diff を実行せず、保存済みの unified diff を読む
+(`gh pr diff <n> > pr.diff` の解説など)。
 """
 
 import argparse
@@ -163,8 +167,8 @@ def guess_lang(path, hunks):
     return ""
 
 
-def load_files(git_args, split):
-    files = parse_diff(git_diff(git_args))
+def load_files(git_args, split, diff_path=None):
+    files = parse_diff(Path(diff_path).read_text() if diff_path else git_diff(git_args))
     for entry in files:
         entry["hunks"] = [part for h in entry["hunks"] for part in split_hunk(h, split)]
         entry["lang"] = guess_lang(entry["path"], entry["hunks"])
@@ -235,6 +239,22 @@ h1 { font-size:22px; margin:0 0 8px; }
 .meta { color:var(--dim); font-size:13px; margin-bottom:24px; }
 .note { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--hl);
         border-radius:8px; padding:12px 16px; margin:12px 0; line-height:1.7; white-space:pre-wrap; }
+.overview { padding:16px 20px; margin-bottom:24px; }
+.overview > :first-child { margin-top:0; } .overview > :last-child { margin-bottom:0; }
+.overview h1 { font-size:18px; margin:20px 0 8px; }
+.overview h2 { font-size:16px; margin:20px 0 8px; }
+.overview h3, .overview h4 { font-size:14px; margin:16px 0 6px; }
+.overview p { margin:8px 0; }
+.overview ul, .overview ol { margin:8px 0; padding-left:22px; }
+.overview li { margin:3px 0; }
+.overview a { color:var(--hl); }
+.overview hr { border:none; border-top:1px solid var(--line); margin:18px 0; }
+.overview blockquote { margin:8px 0; padding-left:12px; border-left:3px solid var(--line); color:var(--dim); }
+.overview pre { background:#0b0e13; border:1px solid var(--line); border-radius:6px;
+                padding:10px 12px; overflow:auto; }
+.overview code { font-family:ui-monospace,SFMono-Regular,monospace; font-size:12.5px; }
+.overview table { width:auto; table-layout:auto; font-family:inherit; font-size:13px; margin:8px 0; }
+.overview th, .overview td { border:1px solid var(--line); padding:4px 10px; text-align:left; }
 .file { border:1px solid var(--line); border-radius:10px; margin:28px 0; overflow:hidden; }
 .file > h2 { position:sticky; top:0; z-index:1; margin:0; padding:10px 16px; font-size:14px;
              background:var(--panel); border-bottom:1px solid var(--line); font-family:ui-monospace,monospace; }
@@ -262,8 +282,17 @@ td.meta { color:var(--dim); text-align:center; }
 .hljs-meta,.hljs-params { color:#ffa657; }
 """
 
-# ponytail: ハイライトは CDN 頼み。オフラインでは色が付かないだけで表示は壊れない
+# ponytail: ハイライトも Markdown も CDN 頼み。オフラインでは色が付かない / 素の
+# Markdown がそのまま出るだけで、表示は壊れない
 HLJS = "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"
+MARKED = "https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"
+OVERVIEW_JS = """
+var intro = document.querySelector('.overview');
+if (intro && window.marked) {
+  intro.innerHTML = marked.parse(intro.textContent);
+  intro.style.whiteSpace = 'normal';
+}
+"""
 HIGHLIGHT_JS = """
 document.querySelectorAll('table[data-lang]').forEach(function (table) {
   var lang = table.dataset.lang;
@@ -298,7 +327,8 @@ def render_html(files, explain, title, subtitle):
         f'<div class="meta">{html.escape(subtitle)}</div>',
     ]
     if explain.get("overview"):
-        out.append(f'<div class="note">{rich_text(explain["overview"])}</div>')
+        # Markdown は JS 側で描画する。生テキストのまま置いて textContent から読ませる
+        out.append(f'<div class="note overview">{html.escape(explain["overview"])}</div>')
 
     nav = []
     for position, entry in enumerate(files):
@@ -345,6 +375,7 @@ def render_html(files, explain, title, subtitle):
         f"<body><div class='layout'><nav>{''.join(nav)}</nav>"
         f"<main>{''.join(out)}</main></div>"
         f'<script src="{HLJS}"></script><script>{HIGHLIGHT_JS}</script>'
+        f'<script src="{MARKED}"></script><script>{OVERVIEW_JS}</script>'
         "</body></html>"
     )
 
@@ -362,6 +393,7 @@ def main():
     parser.add_argument("-e", "--explain", help="解説 JSON のパス (render)")
     parser.add_argument("-o", "--output", help="出力 HTML のパス (render, `-` で stdout)")
     parser.add_argument("--title", help="HTML の見出し")
+    parser.add_argument("--diff", help="git diff の代わりに読む unified diff のパス")
     parser.add_argument("--open", action="store_true", help="生成後にブラウザで開く")
     parser.add_argument(
         "--split",
@@ -372,7 +404,7 @@ def main():
     parser.add_argument("git_args", nargs="*", help="git diff にそのまま渡す引数")
     args = parser.parse_args()
 
-    files = load_files(args.git_args, args.split)
+    files = load_files(args.git_args, args.split, args.diff)
     if not files:
         sys.exit("差分がありません")
 
@@ -388,7 +420,7 @@ def main():
         if key not in known:
             print(f"warning: 存在しない hunk ID: {key}", file=sys.stderr)
 
-    subtitle = " ".join(args.git_args) or "working tree"
+    subtitle = explain.get("subtitle") or " ".join(args.git_args) or "working tree"
     page = render_html(
         files, explain, args.title or explain.get("title") or "Diff Explained", subtitle
     )

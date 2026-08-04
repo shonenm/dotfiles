@@ -101,26 +101,37 @@ git diff の hunk ごとに Claude が解説を書き、解説つきの差分ビ
 
 ### 使い方
 
+解説単位は PR と未コミットのローカル変更を軸に選べます。
+
 ```bash
+/d-diff-explain pr                       # 現在のブランチの PR
+/d-diff-explain pr 123                   # PR #123
+/d-diff-explain local                    # 未コミット変更 (staged + unstaged)
 /d-diff-explain                          # main...HEAD
 /d-diff-explain HEAD~3                   # 直近 3 コミット
 /d-diff-explain main...feature -- src/   # 範囲とパスを指定
 ```
 
+`pr` は `gh pr diff` の出力をファイルに保存し `--diff` で読ませます（PR タイトルと説明も `title` / `overview` に反映）。`local` は untracked ファイルを含みません。
+
 ### 動作
 
-1. `diff-explain hunks <引数>` で hunk ID (`<path>#<連番>`) 付きの diff を取得
+1. `diff-explain hunks <対象>` で hunk ID (`<path>#<連番>`) 付きの diff を取得
 2. 必要に応じて周辺コードを読み、hunk ごとの解説 JSON を `$TMPDIR` に書く
-3. `diff-explain render -e <json> --open <引数>` で HTML を生成してブラウザで開く
+3. `diff-explain render -e <json> --open <対象>` で HTML を生成してブラウザで開く
+
+冒頭の `overview` は全体設計を書くための自由形式セクションで、Markdown（見出し・箇条書き・表・コードブロック）で描画されます。背景、コンポーネントの責務と流れ、設計判断の理由、読む順序、残課題をここにまとめ、hunk 単位の説明は `files` / `hunks` に任せます。
 
 ### diff-explain コマンド
 
 スキルを介さず単体でも使えます（解説なしの差分ビューとして）。
 
 ```bash
-diff-explain hunks [--split N] [<git diff の引数>...]
-diff-explain render -e explain.json [-o out.html] [--open] [--split N] [<git diff の引数>...]
+diff-explain hunks [--split N] [--diff pr.diff] [<git diff の引数>...]
+diff-explain render -e explain.json [-o out.html] [--open] [--split N] [--diff pr.diff] [<git diff の引数>...]
 ```
+
+`--diff` は git diff を実行せず保存済みの unified diff を読みます（`gh pr diff <n> > pr.diff` の解説など）。`hunks` と `render` の両方に同じファイルを渡します。
 
 `--split`（既定 40 行）は長い hunk をトップレベル定義の直前で擬似 hunk に分割し、新規ファイルでも解説を細かく付けられるようにします。`hunks` と `render` は同じ値で分割する必要があります（hunk ID がずれるため）。`0` で無効。
 
@@ -129,7 +140,8 @@ diff-explain render -e explain.json [-o out.html] [--open] [--split N] [<git dif
 ```json
 {
   "title": "見出し",
-  "overview": "全体の解説",
+  "subtitle": "対象の説明 (既定は git diff の引数)",
+  "overview": "冒頭の全体解説。Markdown で書ける",
   "files": {"path/to/file.ts": "ファイル単位の解説"},
   "hunks": {"path/to/file.ts#1": "hunk の解説"}
 }
@@ -148,7 +160,7 @@ diff-explain-open ailab:myproject-dev ~/.cache/diff-explain/x.html   # パス明
 
 差分は左右 2 カラム（左が変更前、右が変更後）で表示します。連続する削除行と追加行を順に突き合わせるだけの対応付けなので、片側しかない行は反対側が空欄になります。
 
-出力先の既定は `$XDG_CACHE_HOME/diff-explain/<repo>-<timestamp>.html`。シンタックスハイライトは highlight.js を CDN から読むため、オフラインでは色が付かないだけで表示自体は保たれます（行単位で解析するため、複数行文字列やブロックコメントの色は正確ではありません）。
+出力先の既定は `$XDG_CACHE_HOME/diff-explain/<repo>-<timestamp>.html`。シンタックスハイライトは highlight.js、`overview` の Markdown 描画は marked を CDN から読むため、オフラインでは色が付かない / Markdown が素のまま表示されるだけで、表示自体は保たれます（ハイライトは行単位で解析するため、複数行文字列やブロックコメントの色は正確ではありません）。
 
 ## /d-news
 
