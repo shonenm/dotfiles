@@ -41,22 +41,22 @@
 
 | ロール | 用途 | 推奨難易度 | モデル |
 |--------|------|:--:|--------|
-| `reviewer` | コードレビュー、セキュリティ監査、品質チェック | high | kimi-k2.6 |
-| `scout` | コードベース探索、read-only調査、依存関係分析 | medium | deepseek-v4-pro |
-| `worker` | 承認済み計画からの実装 | medium | deepseek-v4-pro |
-| `oracle` | セカンドオピニオン、設計レビュー、前提検証 | high | kimi-k2.6 |
+| `reviewer` | コードレビュー、セキュリティ監査、品質チェック | high | gpt-5.6-sol |
+| `scout` | コードベース探索、read-only調査、依存関係分析 | medium | gpt-5.4-mini |
+| `worker` | 承認済み計画からの実装 | medium | gpt-5.4-mini |
+| `oracle` | セカンドオピニオン、設計レビュー、前提検証 | high | gpt-5.6-sol |
 
 ## Model Auto-Selection
 
 `delegate_agent` は difficulty に応じて自動的にモデルを選択する:
 
-| Difficulty | Primary Model | Fallback |
+| Difficulty | Primary Model | Override |
 |:----------:|---------------|----------|
-| `high` | opencode-go/kimi-k2.6:high | opencode-go/kimi-k2.6:high |
-| `medium` | opencode-go/deepseek-v4-pro:high | opencode-go/glm-5.1:high |
-| `low` | opencode-go/deepseek-v4-flash:off | opencode-go/glm-5:high |
+| `high` | openai-codex/gpt-5.6-sol:high | 手動オーバーライド |
+| `medium` | openai-codex/gpt-5.4-mini:medium | 手動オーバーライド |
+| `low` | openai-codex/gpt-5.3-codex-spark:off | 手動オーバーライド |
 
-モデル・フォールバックは手動オーバーライド可能。
+モデルは手動オーバーライド可能。
 
 ## Execution Modes
 

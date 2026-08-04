@@ -20,7 +20,7 @@ export default function (pi: ExtensionAPI) {
       try {
         const escaped = args.replace(/'/g, "'\\''");
         const result = execSync(
-          `pi --model 'opencode-go/deepseek-v4-flash:off' -p '${escaped}' < /dev/null 2>&1`,
+          `pi --model 'openai-codex/gpt-5.3-codex-spark:off' -p '${escaped}' < /dev/null 2>&1`,
           { encoding: "utf-8", timeout: 30_000, stdio: ["pipe", "pipe", "pipe"] }
         );
 

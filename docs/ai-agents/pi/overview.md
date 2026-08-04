@@ -1,10 +1,8 @@
-# pi-coding-agent (OpenCode Go + Codex + Cursor)
+# pi-coding-agent (Codex + Cursor)
 
 > **由来:** **Upstream** pi本体・provider / **Plugin** settings.json導入package / **Configuration** settings・AGENTS.md・テーマ / **Custom** extensions（[区分](../../provenance.md#区分)）
 
-[pi](https://pi.dev/) はミニマルな terminal coding harness。MCP / sub-agents / permission popup / plan mode を持たず、CLI extensions と skills で組み立てる思想。dotfiles では OpenCode Go / Codex を主軸に、Cursor サブスク向けに [pi-cursor-agent](https://www.npmjs.com/package/pi-cursor-agent) プロバイダも同梱している。
-
-参考: [OpenCode Go + pi-coding-agent のすゝめ](https://zenn.dev/kimuson/articles/pi-coding-agent-with-opencode-go)
+[pi](https://pi.dev/) はミニマルな terminal coding harness。MCP / sub-agents / permission popup / plan mode を持たず、CLI extensions と skills で組み立てる思想。dotfiles では Codex を主軸に、Cursor サブスク向けに [pi-cursor-agent](https://www.npmjs.com/package/pi-cursor-agent) プロバイダも同梱している。`enabledModels` で利用対象をこの2 providerに限定している。
 
 ## 構成
 
@@ -51,8 +49,6 @@ ls -la ~/.pi/agent/AGENTS.md  # dotfiles へのシンボリックリンクであ
 ```bash
 pi
 > /login
-# OpenCode Go を選択 → ブラウザで OAuth
-> /login
 # ChatGPT (Codex) を選択 → ブラウザで OAuth
 > /login
 # Cursor Agent を選択 → ブラウザで OAuth (pi-cursor-agent)
@@ -62,10 +58,8 @@ pi
 
 サブスクリプションのおすすめ組合せ:
 
-- **OpenCode Go ($10/月)** をメイン
-  - `deepseek-v4-pro`, `kimi-k2.6`, `glm-5.1` 等の Open Model にアクセス
-- **Codex ($20 or $100/月)** をフォールバックの Frontier モデル枠
-  - `gpt-5.5`, `gpt-5.4`, `gpt-5.3-codex-spark` 等
+- **Codex ($20 or $100/月)** をメイン
+  - `gpt-5.6-sol`, `gpt-5.4-mini`, `gpt-5.3-codex-spark` 等
 - **Cursor Pro/Team** — pi ハーネス内で Composer / Claude / GPT 等を使う場合
   - `/model cursor-agent/composer-2-fast` 等 (`enabledModels`: `cursor-agent/*`)
 - Claude Pro/Max は pi 経由だと利用規約上 extra usage 課金になるため非推奨
@@ -108,15 +102,15 @@ pi
 ### 非対話モード (`-p`)
 
 ```bash
-pi --model 'opencode-go/deepseek-v4-pro:high' \
-   --fallback-models 'openai-codex/gpt-5.4:low' \
+pi --model 'openai-codex/gpt-5.6-sol:high' \
+   --fallback-models 'openai-codex/gpt-5.4-mini:medium' \
    -p '<instructions>'
 ```
 
 ### 並列 delegation (pueue)
 
 ```bash
-pueue add -i --print-task-id -- "pi --model 'opencode-go/deepseek-v4-pro:high' -p '<instruction>' < /dev/null"
+pueue add -i --print-task-id -- "pi --model 'openai-codex/gpt-5.4-mini:medium' -p '<instruction>' < /dev/null"
 pueue wait <task-id>
 pueue log <task-id>
 ```
