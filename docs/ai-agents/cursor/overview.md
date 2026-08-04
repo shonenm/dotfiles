@@ -169,7 +169,7 @@ Cursor CLI をそのままバックエンドにする薄いラッパ。導入は
 ### その他
 
 - **シェル委譲:** `cursor-agent -p --trust "task"` を pi の Bash から実行 (別ハーネス)
-- **delegate_agent:** サブエージェントは引き続き OpenCode Go / Codex の `pi -p` (Cursor モデルにしたい場合はメインセッションを Cursor プロバイダに)
+- **delegate_agent:** サブエージェントは Codex の `pi -p`（Cursor モデルは手動オーバーライド可能）
 
 詳細: [pi overview — Cursor Provider](../pi/overview.md#cursor-provider-pi-cursor-agent)
 
