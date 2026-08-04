@@ -2,6 +2,10 @@
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "low",
+  "enabledModels": [
+    "openai-codex/*",
+    "cursor-agent/*"
+  ],
   "hideThinkingBlock": true,
   "theme": "tokyonight-high-contrast",
   "quietStartup": true,
@@ -78,7 +82,6 @@
     "npm:@narumitw/pi-goal",
     "npm:pi-remote-control",
     "npm:pi-cursor-agent",
-    "npm:pi-commandcode-provider",
     "npm:pi-permission-system",
     "git:github.com/DietrichGebert/ponytail"
   ],

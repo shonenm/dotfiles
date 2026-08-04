@@ -10,9 +10,9 @@
 //   oracle     — Second opinion, challenge assumptions, architecture advice
 //
 // Model selection tiers (from AGENTS.md):
-//   high   → kimi-k2.6:high       (design, review, debugging)
-//   medium → deepseek-v4-pro:high (coding from a plan)
-//   low    → deepseek-v4-flash:off (summaries, extraction)
+//   high   → gpt-5.6-sol:high      (design, review, debugging)
+//   medium → gpt-5.4-mini:medium   (coding from a plan)
+//   low    → gpt-5.3-codex-spark:off (summaries, extraction)
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -30,9 +30,9 @@ const DELEGATION_LOG = join(homedir(), ".pi", "research", "delegation.jsonl");
 const DELEGATE_LABEL = "pi-delegate";
 
 const MODEL_TIERS: Record<string, string> = {
-  high: "opencode-go/kimi-k2.6:high",
-  medium: "opencode-go/deepseek-v4-pro:high",
-  low: "opencode-go/deepseek-v4-flash:off",
+  high: "openai-codex/gpt-5.6-sol:high",
+  medium: "openai-codex/gpt-5.4-mini:medium",
+  low: "openai-codex/gpt-5.3-codex-spark:off",
 };
 
 // ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ export default function (pi: ExtensionAPI) {
       "worker (implement from plan), oracle (second opinion). " +
       "Supports sync (wait for result) and async (background via pueue) modes. " +
       "Use natural language in the task: 'Use reviewer to audit auth module for security issues'. " +
-      "Difficulty auto-selects model: high=kimi-k2.6, medium=deepseek-v4-pro, low=deepseek-v4-flash.",
+      "Difficulty auto-selects model: high=gpt-5.6-sol, medium=gpt-5.4-mini, low=gpt-5.3-codex-spark.",
     promptSnippet: "Delegate a task to a sub-agent (reviewer/scout/worker/oracle)",
     promptGuidelines: [
       "Use delegate_agent for tasks that benefit from a second set of model eyes.",
@@ -97,7 +97,7 @@ export default function (pi: ExtensionAPI) {
       task: Type.String({ description: "Task description/instructions for the sub-agent" }),
       difficulty: Type.Optional(Type.String({ description: "high, medium, or low. Default: medium" })),
       mode: Type.Optional(Type.String({ description: "'async' (pueue background) or 'sync' (wait). Default: 'async'" })),
-      model: Type.Optional(Type.String({ description: "Override model (e.g., 'opencode-go/kimi-k2.6:high')" })),
+      model: Type.Optional(Type.String({ description: "Override model (e.g., 'openai-codex/gpt-5.6-sol:high')" })),
     }),
     async execute(_toolCallId, params, _signal, onUpdate) {
       const difficulty = params.difficulty || "medium";
