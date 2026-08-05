@@ -106,3 +106,5 @@
 	threads = 4
 	windowMemory = 128m
 	deltaCacheSize = 128m
+[user]
+	email = 131980874+shonenm@users.noreply.github.com
