@@ -43,9 +43,8 @@ Powerline 文字を含まない行のみを Edit ツールで変更する。
 
 ```
 # OK: Powerline 文字を含まない行
-$git_metrics\  →  ${custom.git_diff}\
-[git_metrics]  →  [custom.git_diff]
-disabled = false  →  command = "..."
+[git_metrics]
+disabled = true  →  disabled = false
 
 # NG: Powerline 文字を含む行を Edit / Write で書くと破損
 format = '[─](fg:current_line)[](fg:cyan)...'
@@ -58,12 +57,10 @@ format = '[─](fg:current_line)[](fg:cyan)...'
 変更対象行を特定し、Powerline 文字を含まない部分のみを sed で置換する。
 
 ```bash
-# 行番号指定で安全に置換（Powerline 文字に触れない）
-sed -i '' '6s/\$git_metrics/${custom.git_diff}/' starship.toml
-
+# Powerline文字を含まない設定値だけを行番号指定で置換
 # 注意: パターンが複数行にマッチする sed は危険
 # disabled = false のような汎用文字列は行番号指定必須
-sed -i '' '67s/disabled = false/command = "..."/' starship.toml
+sed -i '' '68s/disabled = false/disabled = true/' starship.toml
 ```
 
 **注意**: `sed` のパターンマッチ置換（行番号なし）は、意図しない行まで置換するリスクがある。`disabled = false` のような汎用文字列は必ず行番号を指定すること。

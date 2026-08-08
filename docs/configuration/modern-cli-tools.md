@@ -43,7 +43,7 @@ Linuxで廃止済みの独自 `github_release` 処理は使用しない。prebui
 
 `bat` と `procs` は導入されるが、`cat` と `ps` は置き換えない。元のコマンドを使う場合は `command rm` のようにaliasを回避する。
 
-`rip` の削除先は `$GRAVEYARD=~/.local/share/graveyard`。30日を超えた項目はZsh起動時に削除する。
+`rip` の削除先は `$GRAVEYARD=~/.local/share/graveyard`。30日を超えた項目は、必要なときに`graveyard-purge`で削除する。Zsh起動時にはgraveyardを走査しない。
 
 ## グローバルalias
 
