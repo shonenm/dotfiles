@@ -5,7 +5,7 @@ $os\
 $directory\
 $git_branch\
 $git_status\
-${custom.git_diff}\
+$git_metrics\
 $fill\
 $cmd_duration\
 $time\
@@ -64,12 +64,9 @@ ahead = '⇡${count}'
 behind = '⇣${count}'
 diverged = '⇕⇡${ahead_count}⇣${behind_count}'
 
-[custom.git_diff]
-format = '[─](fg:current_line)[](fg:cyan)[󰊤 ](fg:primary bg:cyan)[](fg:cyan bg:box)[ $output ](fg:foreground bg:box)[](fg:box)'
-command = "~/dotfiles/scripts/starship-git-diff.sh"
-when = true
-detect_folders = [".git"]
-shell = ["bash", "--noprofile", "--norc"]
+[git_metrics]
+disabled = false
+only_nonzero_diffs = true
 
 [fill]
 symbol = '─'

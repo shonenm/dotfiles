@@ -30,7 +30,7 @@ imagemagick
 # --- Git / GitHub ---
 # Ubuntu's system git (2.34) is too old for in-place partial-clone conversion
 # (git fetch --refetch, 2.36+). conda-forge git is current stable and lands in
-# ~/.pixi/bin, which precedes /usr/bin in PATH (.zshrc.common), shadowing it.
+# ~/.pixi/bin, which precedes /usr/bin in PATH (.zshenv), shadowing it.
 git
 gh
 

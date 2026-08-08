@@ -652,9 +652,9 @@ export FORGIT_STASH_FZF_OPTS='...' # stash ブラウザのキーバインド
 
 ### abbreviation との共存
 
-- forgit は zsh-abbr より前に sheldon で読み込まれる
-- abbreviation が同名で定義されている場合は abbreviation が優先される
-- `ga`, `gd` は abbreviation を削除し forgit の関数を直接使用
+- zsh-abbrはstartup時、forgitは`zsh-defer`でprompt表示後に読み込まれる
+- abbreviationが同名で定義されている場合はabbreviationが優先される
+- `ga`, `gd`はabbreviationを削除しforgitの関数を直接使用
 
 ## ghq (Repository Management)
 
