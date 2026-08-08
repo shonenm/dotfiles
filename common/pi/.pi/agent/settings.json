@@ -2,6 +2,16 @@
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "medium",
+  "subagents": {
+    "defaultModel": "openai-codex/gpt-5.4-mini",
+    "defaultThinking": "medium",
+    "modelScope": {
+      "enforce": true,
+      "allow": [
+        "openai-codex/gpt-5.4-mini"
+      ]
+    }
+  },
   "enabledModels": [
     "openai-codex/*",
     "cursor-agent/*"

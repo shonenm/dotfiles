@@ -129,7 +129,9 @@ dotfiles の拡張により Web Research Layer が利用可能。通常はSearXN
 
 ### モデル選択を変更する
 
-`common/pi/.pi/agent/extensions/agent-delegation.ts` の `MODEL_TIERS` を編集し、piを再起動する。runtimeの利用方針だけを `AGENTS.md` に記載する。
+`subagent` の固定モデルは `common/pi/.pi/agent/settings.json` の `subagents.defaultModel` / `defaultThinking` / `modelScope.allow`、`workflow` は `common/pi/.pi/workflows/model-tiers.json` の全tierで管理する。両方を同じモデルへ変更してpiを再起動する。
+
+pueue用の `delegate_agent` だけは独立しているため、必要なら `common/pi/.pi/agent/extensions/agent-delegation.ts` の `MODEL_TIERS` を編集する。runtimeの利用方針は `AGENTS.md` に記載する。
 
 ### TUI テーマ
 

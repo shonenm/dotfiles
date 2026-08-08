@@ -1,0 +1,7 @@
+{
+  "tiers": {
+    "small": "openai-codex/gpt-5.4-mini:medium",
+    "medium": "openai-codex/gpt-5.4-mini:medium",
+    "big": "openai-codex/gpt-5.4-mini:medium"
+  }
+}
