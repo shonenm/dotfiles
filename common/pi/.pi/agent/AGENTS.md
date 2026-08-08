@@ -36,8 +36,9 @@
 ## Delegation
 
 - advisory / explorationは `subagent`（pi-subagents）。
-- pueue backgroundとdifficulty tierが必要なら `delegate_agent`。
-- `high`: kimi-k2.6、`medium`: deepseek-v4-pro、`low`: deepseek-v4-flash。
+- pueue backgroundとdifficulty tierが必要な場合だけ `delegate_agent`。
+- `delegate_agent` のtierは `high`: gpt-5.6-sol、`medium`: gpt-5.4-mini、`low`: gpt-5.3-codex-spark。
+- Piの`web_search`が利用不能なら、共有`deep-research` skillに従いCodex native searchへephemeral委譲する。
 - 同じworking treeへ複数writerを置かない。reviewer / scoutはread-onlyにする。
 
 ## Workflow

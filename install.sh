@@ -304,6 +304,36 @@ cleanup_broken_skill_links() {
   done
 }
 
+link_codex_skills() {
+  local src="$1" dest="$2" skill_dir skill_name target_dir current
+  [[ -d "$src" ]] || return 0
+  mkdir -p "$dest"
+
+  for skill_dir in "$src"/*/; do
+    [[ -d "$skill_dir" ]] || continue
+    skill_dir=${skill_dir%/}
+    skill_name=$(basename "$skill_dir")
+    target_dir="$dest/$skill_name"
+
+    if [[ -L "$target_dir" ]]; then
+      current=$(readlink "$target_dir")
+      if [[ "$current" == "$skill_dir" ]]; then
+        continue
+      fi
+      case "$current" in
+        */common/agent/.config/agent/skills/"$skill_name") ;;
+        *) log_warn "  Kept externally managed Codex skill: $skill_name"; continue ;;
+      esac
+    elif [[ -e "$target_dir" ]]; then
+      log_warn "  Kept unmanaged Codex skill: $skill_name"
+      continue
+    fi
+
+    ln -sfn "$skill_dir" "$target_dir"
+    log_success "  Linked Codex skill: $skill_name"
+  done
+}
+
 # Clean up orphaned (non-symlink) files left behind in stow-managed directories.
 # stow --adopt only handles files present in the stow package. Files that exist
 # only in the target directory are ignored, causing stale configs to persist.
@@ -709,6 +739,9 @@ for name, config in servers.items():
       log_success "  ~/.codex/config.toml already current"
     fi
   fi
+
+  # Shared Agent Skills for Codex. Keep runtime/plugin-managed entries intact.
+  link_codex_skills "$DOTFILES_DIR/common/agent/.config/agent/skills" "$HOME/.codex/skills"
 
   # Gemini CLI
   if [[ -f "$templates_dir/gemini-settings.json" ]]; then
@@ -1211,4 +1244,6 @@ print_install_summary() {
   echo "────────────────────────────────────────────────────────"
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
