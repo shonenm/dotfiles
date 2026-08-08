@@ -35,7 +35,7 @@
 
 ## Delegation
 
-- advisory / explorationは `subagent`（pi-subagents）。
+- advisory / explorationは `subagent`（pi-subagents）。`subagent` と `workflow` の子モデルは設定済みの gpt-5.4-mini:medium を使い、呼び出し時に `model` を指定しない。
 - pueue backgroundとdifficulty tierが必要な場合だけ `delegate_agent`。
 - `delegate_agent` のtierは `high`: gpt-5.6-sol、`medium`: gpt-5.4-mini、`low`: gpt-5.3-codex-spark。
 - Piの`web_search`が利用不能なら、共有`deep-research` skillに従いCodex native searchへephemeral委譲する。
