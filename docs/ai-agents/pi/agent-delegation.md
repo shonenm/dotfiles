@@ -41,10 +41,12 @@
 
 | ロール | 用途 | 推奨難易度 | モデル |
 |--------|------|:--:|--------|
-| `reviewer` | コードレビュー、セキュリティ監査、品質チェック | high | gpt-5.6-sol |
-| `scout` | コードベース探索、read-only調査、依存関係分析 | medium | gpt-5.4-mini |
-| `worker` | 承認済み計画からの実装 | medium | gpt-5.4-mini |
-| `oracle` | セカンドオピニオン、設計レビュー、前提検証 | high | gpt-5.6-sol |
+| `reviewer` | コードレビュー、セキュリティ監査、品質チェック | high | gpt-5.4-mini:medium |
+| `scout` | コードベース探索、read-only調査、依存関係分析 | medium | gpt-5.4-mini:medium |
+| `worker` | 承認済み計画からの実装 | medium | gpt-5.4-mini:medium |
+| `oracle` | セカンドオピニオン、設計レビュー、前提検証 | high | gpt-5.4-mini:medium |
+
+`pi-subagents` は `settings.json` の `subagents.defaultModel` / `defaultThinking` で固定し、`modelScope` で呼び出し時の別モデル指定を拒否する。`pi-dynamic-workflows` は `~/.pi/workflows/model-tiers.json` の全tierを同じモデルへ割り当てる。変更時は両方を同時に更新する。
 
 ## Model Auto-Selection
 
