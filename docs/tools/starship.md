@@ -1,6 +1,6 @@
 # Starship Prompt Configuration
 
-> **由来:** **Upstream** Starship / **Configuration** prompt・palette設定 / **Custom** git diff status script（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** Starship / **Configuration** prompt・palette・Git metrics設定（[区分](../provenance.md#区分)）
 
 Starship configuration for customizing shell prompts. Modern prompt based on the Dracula theme.
 
@@ -8,18 +8,18 @@ Starship configuration for customizing shell prompts. Modern prompt based on the
 
 - **Two-line Prompt**: Separates information display from command input
 - **Dracula Theme**: Unified color palette
-- **Git Integration**: Displays branch, status, file count and diff line counts
+- **Git Integration**: Displays branch, status, and diff line counts using built-in modules
 - **Context Information**: OS, directory, execution time, time, username
 
 ## UI Layout
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  󰉖 ~/dotfiles   main ⇡1  󰊤 3f +10/-5 ─────────────  25ms  󰙦 14:30   user │
+│  󰉖 ~/dotfiles   main ⇡1  +10 -5 ────────────────  25ms  󰙦 14:30   user │
 │ ❯❯                                                                          │
 └─────────────────────────────────────────────────────────────────────────────┘
    ↑       ↑         ↑       ↑           ↑            ↑       ↑       ↑
-  OS   Directory   Branch  Status   Git Diff       Duration Time  Username
+  OS   Directory   Branch  Status   Git Metrics    Duration Time  Username
 ```
 
 | Element | Description | Color |
@@ -28,7 +28,7 @@ Starship configuration for customizing shell prompts. Modern prompt based on the
 | **Directory** | Current directory (up to 2 levels) | Pink |
 | **Git Branch** | Current branch name | Green |
 | **Git Status** | ahead/behind/diverged state | Green (background) |
-| **Git Diff** | File count + added/deleted lines | Cyan |
+| **Git Metrics** | Added/deleted lines | Green/Red |
 | **Duration** | Command execution time (500ms+) | Orange |
 | **Time** | Current time (HH:MM) | Purple |
 | **Username** | Username | Yellow |
@@ -86,19 +86,13 @@ Displays current Git branch. Hidden outside repositories.
 
 Displays diff state from remote.
 
-### Git Diff
+### Git Metrics
 
-```
-┌──────────────────┐
-│ 󰊤 3f +10/-5     │
-└──────────────────┘
+```text
++10 -5
 ```
 
-Displays file count, added lines, and deleted lines for current changes (`git diff HEAD`).
-Custom module using `scripts/starship-git-diff.sh`.
-
-- `detect_folders = [".git"]` で git repo 判定（プロセス生成なし、fs チェックのみ）
-- スクリプト内でパイプラインを使わず `$(git diff)` + while read で処理（タイムアウト時の孤児プロセス防止）
+Starship組み込みの`git_metrics`で、working treeの追加・削除行数を表示する。独自shell scriptを起動しないため、promptごとの追加プロセスを避けられる。差分がない場合は表示しない。
 
 ### Command Duration
 
@@ -152,7 +146,7 @@ Color changes based on previous command's exit code.
 | red | Red | `#FF5555` | OS |
 | pink | Pink | `#FF79C6` | Directory |
 | green | Green | `#50FA7B` | Git Branch, success |
-| cyan | Cyan | `#8BE9FD` | Git Diff |
+| cyan | Cyan | `#8BE9FD` | Available accent color |
 | orange | Orange | `#FFB86C` | Duration |
 | purple | Purple | `#BD93F9` | Time |
 | yellow | Yellow | `#F1FA8C` | Username |
@@ -181,7 +175,7 @@ $os\
 $directory\
 $git_branch\
 $git_status\
-${custom.git_diff}\
+$git_metrics\
 ..."""
 
 # Palette selection
@@ -197,7 +191,7 @@ foreground = '#F8F8F2'
 [directory]
 [git_branch]
 [git_status]
-[custom.git_diff]  # scripts/starship-git-diff.sh
+[git_metrics]
 ...
 ```
 
@@ -240,8 +234,8 @@ time_format = '%Y-%m-%d %H:%M:%S'  # Also show date
 ### Disable Modules
 
 ```toml
-[custom.git_diff]
-disabled = true  # Hide Git Diff
+[git_metrics]
+disabled = true  # Hide Git Metrics
 ```
 
 ## Troubleshooting

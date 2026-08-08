@@ -91,7 +91,7 @@ pixi global で入れた executable は `CONDA_PREFIX` 環境変数が設定さ�
 
 ### PATH 優先順位
 
-`~/.local/bin` と `~/.pixi/bin` が `/usr/local/bin` より前に来る必要がある。zsh の場合は `common/zsh/.zshrc.common` で既に PATH 先頭に追加済み。
+`~/.local/bin` と `~/.pixi/bin` が `/usr/local/bin` より前に来る必要がある。zshの場合は`common/zsh/.zshenv`で既にPATH先頭に追加済み。
 
 ### 一部の機能は無効化される
 

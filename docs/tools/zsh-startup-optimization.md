@@ -1,159 +1,121 @@
-# Zsh 起動速度の最適化
+# Zshパフォーマンス最適化
 
-> **由来:** **Upstream** zsh / **Plugin** sheldon導入plugin / **Configuration** 遅延初期化・cache設定（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** Zsh・mise・direnv・Starship / **Plugin** Sheldon導入plugin / **Configuration** startup・hook・cache設定（[区分](../provenance.md#区分)）
 
-tmux pane 起動時の遅延を解消するために実施した最適化の記録。
+Zshの起動時間だけでなく、prompt表示とdirectory移動の継続コストを抑えるための現行仕様。
 
-## 計測結果
+## 現在の計測値
 
-| 状態 | login shell | non-login shell (tmux pane) |
-|------|------------|-----------|
-| 最適化前 | ~1.3s | ~1.3s |
-| 最適化後 | **180ms** | **150ms** |
+macOS arm64、Zsh 5.9で`hyperfine --warmup 3 --runs 15`を使用した結果。
 
-## ボトルネック分析 (zprof)
+| 対象 | 平均 |
+|---|---:|
+| interactive non-login shell (`zsh -ic exit`) | 約200ms |
+| interactive login shell (`zsh -lic exit`) | 約227ms |
+| Starship prompt（Git repository内） | 約23ms |
+| Starship prompt（`git_metrics`なしとの比較） | 約2ms増 |
 
-`zmodload zsh/zprof` で計測した主要ボトルネック:
+shell起動時間にはmiseの初回environment解決が含まれる。prompt後に遅延実行されるpluginや、通常のコマンド実行中に走るhookは別に確認する。
 
-| 時間(ms) | 関数 | 原因 |
-|----------|------|------|
-| 263 | `compinit` | 補完関数 836 個をフルスキャン（キャッシュなし） |
-| 79 | `compdump` | compinit 内でダンプファイル再生成 |
-| 77 | `compdef` (836回) | 各ツールの eval 内で compdef が呼ばれる |
-| 30 | `zsh-abbr` (97回) | 71 個の略語を 1 個ずつ登録 |
-| 20 | `_mise_hook` | mise activate のフック |
+## Startup構成
 
-## 実施した修正
+### PATH
 
-### 1. tmux auto-reload 削除 (~560ms)
+`.zshenv`を非interactive shellを含むPATH設定の正本とする。
 
-`.zshrc.common` で pane 起動毎に `tmux source tmux.conf` を実行していた。
-設定変更時は `prefix+r` で手動リロードすれば十分。
-
-```bash
-# 削除した箇所 (.zshrc.common)
-if command -v tmux >/dev/null 2>&1 && [ -n "$TMUX" ]; then
-  tmux source ~/.config/tmux/tmux.conf 2>/dev/null
-fi
+```zsh
+typeset -U path PATH
 ```
 
-### 2. compinit キャッシュ化 (~250ms)
+Zshのtied arrayをunique化し、nested shellやstartup fileの再読込で同じPATH要素が蓄積するのを防ぐ。`~/.pixi/bin`、`~/.local/bin`、`~/dotfiles/scripts`は`.zshrc.common`で重ねて追加しない。pnpmとPythonはmise管理のPATHを使用する。
 
-`.zcompdump` が 24 時間以内なら `compinit -C` でキャッシュを再利用。
-zsh コミュニティの標準パターン（glob qualifier `(#qN.mh+24)`）。
+### Completion
 
-```bash
-# common/zsh/.zshrc.common
-autoload -Uz compinit
-if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
-  compinit        # 24h 経過 → フルリビルド
-else
-  compinit -C     # キャッシュ利用（compaudit スキップ）
-fi
+すべての`fpath`を追加した後、`.zshrc`末尾で`compinit`を一度だけ実行する。
+
+- `.zcompdump`が24時間より古い、または存在しない: `compinit`
+- それ以外: `compinit -C`
+
+静的な補完は`~/.zsh/completions`へ置く。毎回CLIから補完scriptを生成しない。
+
+### Sheldon plugins
+
+Sheldonが次を管理する。
+
+- `zsh-completions`: `fpath`のみ追加
+- `zsh-abbr`: startup時に直接読込
+- `forgit`, `zsh-syntax-highlighting`, `zsh-autosuggestions`: `zsh-defer`でprompt表示後に読込
+
+`zsh-abbr`自身が`$ABBR_USER_ABBREVIATIONS_FILE`を読み込むため、OS別`.zshrc.local`から`abbr import`を重ねて実行しない。
+
+## 継続コストの制御
+
+### mise
+
+`mise activate zsh`の`chpwd` hookは残し、projectごとのtool切替を維持する。一方、全promptで外部processを起動する`precmd` hookは解除する。
+
+```zsh
+eval "$(mise activate zsh)"
+add-zsh-hook -d precmd _mise_hook_precmd
 ```
 
-### 3. gh completion を静的ファイル化 (~140ms)
-
-毎回 `eval "$(gh completion -s zsh)"` を実行する代わりに、静的ファイルを fpath に配置。
+同じdirectory内でmise設定を書き換えた場合は、directoryを移動するか次を実行する。
 
 ```bash
-# common/zsh/.zshrc.common
-[[ -d "$HOME/.zsh/completions" ]] && fpath=("$HOME/.zsh/completions" $fpath)
+eval "$(mise hook-env -s zsh)"
 ```
 
-gh アップグレード時に再生成が必要:
+`mise activate --shims`はtool実行ごとにshim解決コストを移すため使用しない。
 
-```bash
-mkdir -p ~/.zsh/completions
-gh completion -s zsh > ~/.zsh/completions/_gh
-```
+### Starship
 
-### 4. sheldon でプラグイン管理
-
-sheldon でプラグインを直接読み込み。
+Git差分は独自shell scriptではなく、Starship組み込みの`git_metrics`を使用する。
 
 ```toml
-# common/sheldon/.config/sheldon/plugins.toml
-[plugins.zsh-completions]
-github = "zsh-users/zsh-completions"
-dir = "src"
-apply = ["fpath"]
-
-[plugins.forgit]
-github = "wfxr/forgit"
-
-[plugins.zsh-abbr]
-github = "olets/zsh-abbr"
-
-[plugins.zsh-syntax-highlighting]
-github = "zsh-users/zsh-syntax-highlighting"
-
-[plugins.zsh-autosuggestions]
-github = "zsh-users/zsh-autosuggestions"
+[git_metrics]
+disabled = false
+only_nonzero_diffs = true
 ```
 
-zsh-completions は `apply = ["fpath"]` で fpath に追加するのみ（source 不要）。compinit 経由で読み込まれるため、起動時間への影響はほぼゼロ。
+`git_status`と並列に評価され、追加・削除行数を表示する。差分ファイル数は表示しない。
 
-> **Note**: 以前は `zsh-defer` (romkatv 製) で遅延読み込みしていたが、macOS zsh 5.9 で `zle -F` コールバックが発火しない問題が発生し、プラグインがロードされなくなったため直接読み込みに変更。起動時間への影響は軽微（~35ms 増）。
+### Directory移動
 
-### 5. brew shellenv 重複排除 (~20ms)
+次のhookは用途があるため維持する。
 
-`.zprofile` と `.zshrc.local` の両方で `eval "$(/opt/homebrew/bin/brew shellenv)"` を実行していた。
-`.zprofile` 側のみに統一。
+- mise: project tool切替
+- direnv: `.envrc`反映
+- zoxide: directory履歴記録
+- `chpwd() { ls }`: directory移動後の一覧表示
 
-### 6. Homebrew Node fallback パス削除
+自動`ls`は大きなdirectoryで遅くなる可能性があるが、現在は操作性を優先して残している。
 
-mise で node を管理しているため、ハードコードされた `/opt/homebrew/Cellar/node/23.2.0/bin` を削除。
+### rip graveyard
 
-### 7. .zprofile の .zshrc 二重ロード解消 (~400ms)
-
-`.zprofile` 末尾で `source "$HOME/.zshrc"` していたため、login shell 時に .zshrc が 2 回実行されていた。
-
-zsh の login + interactive shell ロード順:
-```
-.zshenv → .zprofile → .zshrc → .zlogin
-```
-
-zsh 本体が `.zshrc` を自動でロードするため、`.zprofile` 内の source は冗長。削除。
-
-### 8. tmux pane を non-login shell に変更 (~30ms)
-
-tmux はデフォルトで login shell (`-zsh`) を起動するため、pane 毎に `.zprofile` が実行される。
-親 tmux プロセスが既に PATH 等を設定済みなので不要。
-
-```tmux
-# common/tmux/.config/tmux/tmux.conf
-set -g default-command "${SHELL}"  # non-login shell
-```
-
-pane 起動時は `.zshenv` → `.zshrc` のみが実行され、`.zprofile` をスキップ。
-
-## 変更ファイル一覧
-
-| ファイル | 変更内容 |
-|----------|----------|
-| `common/zsh/.zshrc.common` | tmux reload 削除、compinit キャッシュ化、gh completion 静的化、fzf設定、direnv hook、モダンツール alias |
-| `common/sheldon/.config/sheldon/plugins.toml` | プラグイン管理（zsh-defer 廃止、直接読み込み、zsh-completions 追加） |
-| `mac/zsh/.zshrc.local` | brew shellenv 重複削除、Node fallback 削除 |
-| `common/zsh/.zprofile` | .zshrc 二重ロード行を削除 |
-| `common/tmux/.config/tmux/tmux.conf` | `default-command "${SHELL}"` 追加 |
-
-## 追加ツールの起動コスト
-
-| ツール | 起動コスト | 備考 |
-|--------|-----------|------|
-| direnv hook | ~5ms | `eval "$(direnv hook zsh)"` |
-| fzf 環境変数 | ~0ms | export のみ（eval なし） |
-| zsh-completions | ~0ms | fpath 追加のみ（source 不要） |
-
-## 計測方法
+shell起動時にはgraveyardを走査しない。30日を超えた項目は必要なときだけ削除する。
 
 ```bash
-# 起動時間（hyperfine でベンチマーク）
-hyperfine "zsh -i -c exit"   # 統計的に正確な計測
-time zsh -i -c exit          # non-login shell (tmux pane)
-time zsh -l -i -c exit       # login shell
-
-# プロファイリング
-zsh -c 'zmodload zsh/zprof; source ~/.zshenv; source ~/.zprofile; source ~/.zshrc; zprof'
+graveyard-purge
 ```
+
+## Login shell
+
+macOSのlogin shellではHomebrewの環境を設定する。
+
+```zsh
+eval "$(/opt/homebrew/bin/brew shellenv)"
+```
+
+tmux paneはnon-login Zshを起動するため、pane作成ごとには実行されない。PythonのPATHはmiseへ統一し、固定versionのFramework PATHは追加しない。
+
+## 計測
+
+```bash
+hyperfine --warmup 3 --runs 15 'zsh -ic exit' 'zsh -lic exit'
+starship timings
+
+# cached compinitを含むfunction profile
+zsh -dfi -c 'zmodload zsh/zprof; source ~/.zshrc; zprof'
+```
+
+起動速度だけを改善して処理を毎コマンドへ移さないよう、startup、prompt、`cd`、tool実行を分けて比較する。
