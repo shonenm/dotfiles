@@ -46,6 +46,7 @@ linux/zsh/.zshrc.local
 .pi-subagents/
 .pi-loop/
 .pi/loops/
+.pi/tasks/
 
 # Python
 __pycache__/

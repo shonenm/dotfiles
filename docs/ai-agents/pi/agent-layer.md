@@ -22,13 +22,14 @@
 | pi | `settings.json` の `skills` に `~/.config/agent/skills` を指定 |
 | Command Code | shared skill pathを探索し、MCPはinstall時に `cmd mcp add-json` で登録 |
 | Claude Code | Claude固有skillは `~/.claude/skills`。MCPはClaude専用設定から登録 |
-| Cursor / Codex | 対応する標準skillだけ利用し、runtime固有設定は共有しない |
+| Codex | `install.sh` が共有skillを `~/.codex/skills/` へlink。runtime固有設定は `templates/codex-config.toml` |
+| Cursor | 対応する標準skillだけ利用し、runtime固有設定は共有しない |
 
 ## 責任分離
 
 ### Skills
 
-共有skillの正本は `common/agent/.config/agent/skills/<name>/SKILL.md`。pi固有skillとの重複コピーは置かない。Ponytailはpi package / Claude pluginを正本とする。
+共有skillの正本は `common/agent/.config/agent/skills/<name>/SKILL.md`。pi固有skillとの重複コピーは置かない。PiとCodexの双方で利用するskillはruntime固有toolを分岐して記載する。Ponytailはpi package / Claude pluginを正本とする。
 
 ### MCP
 

@@ -97,7 +97,7 @@ pueued -d
 pi
 ```
 
-`AGENTS.md` の指示に従い、必要に応じてサブエージェント (別 pi インスタンス) を spawn する設計。
+`AGENTS.md` の指示に従い、advisory / explorationは`pi-subagents`、pueue backgroundだけcustom `delegate_agent`を使う。PiのWeb検索が利用不能な場合は共有`deep-research` skillからCodex native searchへephemeral委譲する。
 
 ### 非対話モード (`-p`)
 
@@ -123,7 +123,7 @@ pueue log <task-id>
 
 詳細は [web-research.md](web-research.md) を参照。
 
-dotfiles の拡張により Web Research Layer が利用可能。SearXNG + Jina + ローカルキャッシュで API key 不要の調査基盤。
+dotfiles の拡張により Web Research Layer が利用可能。通常はSearXNG + Jina + ローカルキャッシュを使い、検索backendが利用不能な場合だけ`codex --search exec --ephemeral`のnative searchへfallbackする。Codexには`medium` reasoning、primary-source URL、根拠quoteを要求し、親sessionで取得元を検証する。
 
 ## カスタマイズ
 

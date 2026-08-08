@@ -1,5 +1,64 @@
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
+personality = "pragmatic"
+service_tier = "fast"
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
+default_permissions = "repo-autonomous"
+allow_login_shell = true
+project_doc_fallback_filenames = ["CLAUDE.md"]
+
 # Legacy completion callback remains as a fallback for older Codex builds.
 notify = ["__HOME__/dotfiles/scripts/tmux-claude-pane.sh", "set", "idle", "codex"]
+
+[shell_environment_policy]
+inherit = "all"
+experimental_use_profile = true
+
+[features]
+goals = true
+memories = true
+multi_agent = true
+
+[notice]
+fast_default_opt_out = false
+
+[desktop]
+preventSleepWhileRunning = true
+"show-context-window-usage" = true
+"hotkey-window-projectless-default-enabled" = false
+"enabled-reasoning-efforts" = ["low", "medium", "high", "xhigh", "ultra", "max"]
+
+[plugins."github@openai-curated"]
+enabled = true
+
+# Confirm operations outside the repository while allowing autonomous work inside it.
+[permissions.repo-autonomous]
+description = "Autonomous work limited to the active repository and GitHub"
+
+[permissions.repo-autonomous.filesystem]
+":minimal" = "read"
+"__HOME__/.config/gh/**" = "read"
+"/opt/homebrew/bin/gh" = "read"
+"/opt/homebrew/Cellar/gh/**" = "read"
+
+[permissions.repo-autonomous.filesystem.":workspace_roots"]
+"." = "write"
+".git/**" = "write"
+"**/.env" = "deny"
+"**/.env.*" = "deny"
+"**/*.pem" = "deny"
+"**/*.key" = "deny"
+"**/*.p12" = "deny"
+"**/*.pfx" = "deny"
+
+[permissions.repo-autonomous.network]
+enabled = true
+
+[permissions.repo-autonomous.network.domains]
+"github.com" = "allow"
+"*.github.com" = "allow"
+"**.githubusercontent.com" = "allow"
 
 # Codex 0.135+ stable lifecycle hooks.
 [hooks]

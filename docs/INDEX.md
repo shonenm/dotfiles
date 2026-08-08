@@ -47,6 +47,7 @@
 
 ### その他
 
+- [Codex CLI](ai-agents/codex/overview.md)
 - [Command Code](ai-agents/commandcode/overview.md)
 - [Cursor Agent CLI](ai-agents/cursor/overview.md)
 - [Ralph](ai-agents/ralph/overview.md)
