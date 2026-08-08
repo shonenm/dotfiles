@@ -49,8 +49,11 @@ hooks:
    current_branch=$(git branch --show-current)
    ```
    ベースブランチ上なら「作業ブランチ上で実行してください」とエラー
-3. uncommitted changes がないこと (`git status --porcelain`):
-   未コミットの変更がある場合 → `/d-commit` を先に実行するよう提案して終了
+3. 未コミット変更の処理 (`git status --porcelain`):
+   - 変更がある場合は、ここで `/d-commit` 相当の処理を自動実行する
+   - 現在のセッションで行った変更だけを対象に、変更内容を確認して論理単位ごとにコミットする
+   - セッション外の変更は勝手にコミットせず、対象外として残したまま処理を続行する
+   - コミット後に `git status --porcelain` と `git log --oneline -1` で確認する
 4. 既存 PR の確認:
    ```bash
    gh pr view --json url 2>/dev/null
@@ -136,7 +139,7 @@ issue_num=$(echo "$current_branch" | grep -oE '^[0-9]+')
 ## エッジケース
 
 - `gh auth status` で認証チェック → 未認証なら `gh auth login` を案内して終了
-- uncommitted changes がある場合 → `/d-commit` を先に実行するよう提案して終了
+- uncommitted changes がある場合 → `/d-commit` 相当の処理を自動実行してからPR作成を続行する。セッション外の変更はコミットせず対象外として残す
 - 既に同一ブランチの PR が存在する場合 → 既存 PR の URL を表示して終了
 - main ブランチ上で実行した場合 → エラーメッセージを表示して終了
 - Issue 番号がブランチ名にない場合 → Issue なしで PR を作成
