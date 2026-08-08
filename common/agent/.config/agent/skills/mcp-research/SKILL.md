@@ -10,8 +10,9 @@ MCP toolは、local read / web researchより対象serverの情報が適して�
 
 ## Rules
 
-- `~/.config/agent/mcp.json` を確認し、`enabled: false` のserverを使える前提にしない。
-- sessionに登録された `mcp_<server>_<tool>` だけを利用する。
+- Piでは`~/.config/agent/mcp.json`を確認し、`enabled: false`のserverを使える前提にしない。
+- Codexでは`codex mcp list`とsessionのtool一覧を確認する。
+- runtimeが実際に登録したMCP toolだけを利用し、tool名を推測しない。
 - 最小のserver・toolを選び、取得範囲を絞る。
 - write、外部投稿、browser操作はpermission policyに従う。
 - secret、credential、private source全文をremote serverへ送らない。
@@ -26,7 +27,7 @@ MCP toolは、local read / web researchより対象serverの情報が適して�
 | `serena` | disabled | project code navigation |
 | `token-optimizer` | disabled | context最適化 |
 
-projectの `.mcp.json` / `.pi/mcp.json` でserverが追加・overrideされるため、固定一覧ではなく実際のregistered toolを優先する。
+Piではprojectの`.mcp.json` / `.pi/mcp.json`でserverが追加・overrideされる。Codexのplugin/MCP構成は別管理なので、どちらも固定一覧より実際のregistered toolを優先する。
 
 ## 手順
 
@@ -38,4 +39,4 @@ projectの `.mcp.json` / `.pi/mcp.json` でserverが追加・overrideされる�
 
 ## Permission / Audit
 
-MCP toolの `allow` / `ask` / `deny` はpiのpermission policyが決める。gatewayはresultを既定8000文字に制限し、呼び出しを `~/.pi/research/mcp-audit.jsonl` へ記録する。
+PiではMCP toolの`allow` / `ask` / `deny`をpi-permission-systemが決め、gatewayが呼び出しを`~/.pi/research/mcp-audit.jsonl`へ記録する。CodexではCodexのapproval・permission policyに従う。

@@ -33,11 +33,13 @@ go list -m <module-path>
 
 ### 2. Search for Documentation
 
-Use `web_search` with the package name and the installed version in the query:
+Use the runtime's native search with the package name and installed version. In Pi, call `web_search`; in Codex, use native web search. If Pi search is unavailable, follow the Codex fallback in the `deep-research` skill.
+
+Search for:
 
 ```
-web_search("<package-name> <installed-version> documentation")
-web_search("<package-name> <installed-version> changelog OR release notes")
+<package-name> <installed-version> documentation
+<package-name> <installed-version> changelog OR release notes
 ```
 
 ### 3. Fetch Official Sources
@@ -45,19 +47,13 @@ web_search("<package-name> <installed-version> changelog OR release notes")
 Prioritize in this order:
 
 1. **Official documentation** — docs.{package}.com, package docs URL
-2. **GitHub README / docs directory** — find the repo via `web_search`, then `git clone --depth 1` and read locally (see the github-research skill)
+2. **GitHub README / docs directory** — find the repo with native search, then `git clone --depth 1` and read locally (see the github-research skill)
 3. **Release notes / changelog** — GitHub releases, CHANGELOG.md
 4. **API reference** — JSDoc, OpenAPI spec, type definitions
 
 ### 4. Cache Findings
 
-After fetching useful documentation (`web_fetch` already auto-caches; use
-`web_cache_write` only to store content you assembled yourself):
-
-```
-web_cache_write(url, content)
-web_citation_add(url, title, note)
-```
+In Pi, rely on `web_fetch` auto-caching, use `web_cache_write` only for assembled content, and call `web_citation_add`. In Codex, retain each source URL for the final answer.
 
 ### 5. Present Findings
 
@@ -76,7 +72,7 @@ Structure your answer:
 
 ## Sources
 
-<Citations from web_citation_list>
+<Citations from web_citation_list or retained source URLs>
 ```
 
 ## Rules
