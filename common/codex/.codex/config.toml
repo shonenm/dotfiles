@@ -1,13 +1,38 @@
-# codex は notify(単一プログラム)のみで turn 完了時に呼ばれる。引数末尾に JSON が
-# 付くが tmux-claude-pane.sh set は $2 のみ参照するため無害。turn 完了=入力待ち→ idle。
-# 注: codex は実行中の heartbeat イベントが無いため running/ハング検知は対象外。
-notify = ["/home/matsushima/dotfiles/scripts/tmux-claude-pane.sh", "set", "idle"]
+# install.sh が templates/codex-config.toml から生成するruntime設定と同じ基本方針。
+# lifecycle hooksの絶対パスはtemplate側でHOMEに合わせて生成する。
+notify = ["/home/matsushima/dotfiles/scripts/tmux-claude-pane.sh", "set", "idle", "codex"]
 model = "gpt-5.6-sol"
-model_reasoning_effort = "low"
-approval_policy = "never"
+model_reasoning_effort = "medium"
+personality = "pragmatic"
+service_tier = "fast"
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
 default_permissions = "repo-autonomous"
+allow_login_shell = true
+project_doc_fallback_filenames = ["CLAUDE.md"]
 
-# 確認なしで現在の workspace 内（Git metadataを含む）を完全に操作する。
+[shell_environment_policy]
+inherit = "all"
+experimental_use_profile = true
+
+[features]
+goals = true
+memories = true
+multi_agent = true
+
+[notice]
+fast_default_opt_out = false
+
+[desktop]
+preventSleepWhileRunning = true
+"show-context-window-usage" = true
+"hotkey-window-projectless-default-enabled" = false
+"enabled-reasoning-efforts" = ["low", "medium", "high", "xhigh", "ultra", "max"]
+
+[plugins."github@openai-curated"]
+enabled = true
+
+# workspace内（Git metadataを含む）は自律操作し、範囲外だけ確認する。
 # Mac 全体への書き込みは許可しない。
 # permission profiles と旧 sandbox/sandbox_workspace_write は併用不可。
 [permissions.repo-autonomous]
@@ -22,7 +47,12 @@ description = "Autonomous work limited to the active repository and GitHub"
 [permissions.repo-autonomous.filesystem.":workspace_roots"]
 "." = "write"
 ".git/**" = "write"
-"**/*.env" = "deny"
+"**/.env" = "deny"
+"**/.env.*" = "deny"
+"**/*.pem" = "deny"
+"**/*.key" = "deny"
+"**/*.p12" = "deny"
+"**/*.pfx" = "deny"
 
 [permissions.repo-autonomous.network]
 enabled = true

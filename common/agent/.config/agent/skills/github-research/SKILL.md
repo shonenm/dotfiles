@@ -17,10 +17,12 @@ Investigate GitHub repositories, issues, PRs, and source code using a clone-firs
 
 ### 1. Locate the Repository
 
-Use `web_search` to find the repository (restrict to GitHub):
+Use the runtime's native search to find the repository, restricted to GitHub. In Pi, call `web_search`; in Codex, use native web search. If Pi search is unavailable, follow the Codex fallback in the `deep-research` skill.
+
+Search for:
 
 ```
-web_search("site:github.com <topic OR package-name>")
+site:github.com <topic OR package-name>
 ```
 
 ### 2. Clone the Repository
