@@ -26,14 +26,8 @@ export PI_PERMISSION_SYSTEM_CONFIG_PATH="$HOME/.pi/agent/permission-system.json"
 export TMUX_TMPDIR="${TMUX_TMPDIR:-${XDG_RUNTIME_DIR:-$HOME/.cache}}"
 
 # --- Path ---
-# Pixi global bin (no-sudo install: eza, bat, gh, fd, jq, rg, ...)
-[[ -d "$HOME/.pixi/bin" ]] && export PATH="$HOME/.pixi/bin:$PATH"
-
-# Local bin (source-built tmux 3.6a, sheldon, zoxide, mise, etc.). Prepended
-# AFTER .pixi/bin so ~/.local/bin wins over it. pixi の conda-forge tmux 3.6 は
-# attach 時にクラッシュする ("server exited unexpectedly") ため、source-built の
-# 3.6a で shadow する必要がある。.zshenv / rcon() と同順序。
-[[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH"
+# ~/.pixi/bin, ~/.local/bin, and ~/dotfiles/scripts are initialized in .zshenv
+# because non-interactive shells need them too.
 
 # Bun (installed via curl_pipe into ~/.bun; installer exports this in .bashrc but
 # not in .zshrc, so zsh sessions miss it without this line)
@@ -44,9 +38,6 @@ export TMUX_TMPDIR="${TMUX_TMPDIR:-${XDG_RUNTIME_DIR:-$HOME/.cache}}"
 
 # Cargo
 [[ -d "$HOME/.cargo/bin" ]] && export PATH="$HOME/.cargo/bin:$PATH"
-
-# Dotfiles scripts
-export PATH="$HOME/dotfiles/scripts:$PATH"
 
 # Deno
 export DENO_INSTALL="$HOME/.deno"
@@ -93,7 +84,12 @@ export FORGIT_STASH_FZF_OPTS='
 [[ -o interactive ]] || return
 
 # --- Mise (interactive shell hooks) ---
-command -v mise &>/dev/null && eval "$(mise activate zsh)"
+if command -v mise &>/dev/null; then
+  eval "$(mise activate zsh)"
+  # ponytail: chpwd still switches project environments; run
+  # `eval "$(mise hook-env -s zsh)"` after editing mise config without changing directories.
+  add-zsh-hook -d precmd _mise_hook_precmd
+fi
 
 # --- Direnv (interactive shell hooks) ---
 command -v direnv &>/dev/null && eval "$(direnv hook zsh)"
@@ -122,10 +118,12 @@ command -v tldr &>/dev/null && alias man="tldr"
 command -v sd &>/dev/null && alias sed="sd"
 command -v dust &>/dev/null && alias du="dust"
 command -v btm &>/dev/null && alias top="btm"
-# rip のゴミ箱を /tmp から永続領域へ移し、30日超は自動purge（誤削除保険は30日保持）
+# rip のゴミ箱を /tmp から永続領域へ移す。30日超の項目は graveyard-purge で削除する。
 export GRAVEYARD="$HOME/.local/share/graveyard"
 command -v rip &>/dev/null && alias rm="rip"
-[ -d "$GRAVEYARD" ] && (command find "$GRAVEYARD" -mtime +30 -delete 2>/dev/null &)
+graveyard-purge() {
+  [[ -d "$GRAVEYARD" ]] && command find "$GRAVEYARD" -mtime +30 -delete
+}
 command -v viddy &>/dev/null && alias watch="viddy"
 command -v doggo &>/dev/null && alias dig="doggo"
 command -v xh &>/dev/null && alias http="xh"
