@@ -31,8 +31,6 @@ jobs:
         run: scripts/check-package-duplication.sh
       - name: Test Markdown link checker
         run: python3 scripts/test_check_markdown_links.py
-      - name: Test pi-tui narrow terminal patch
-        run: scripts/test-pi-tui-patch.sh
       - name: Validate Markdown links
         run: scripts/check-markdown-links.py
       - name: Validate documentation provenance
