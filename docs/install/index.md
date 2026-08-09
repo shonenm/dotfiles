@@ -76,28 +76,22 @@ no-sudo環境では `~/.local/bin/op signin` を実行し、再実行にも `--n
 
 新しいツールの追加方法は[新環境セットアップ](setup-new-environment.md#新ツール追加時の登録先)を参照。
 
-## 運用コマンド
+## 完了後
 
 ```bash
-dots apply             # 宣言を反映
-dots update            # fast-forward後に依存を再取得して反映
-dots check             # CIと同じ検証
-dots doctor            # toolとStow linkを診断
-dots lock              # maintainer向け: mise lockfileを更新
+exec zsh
+mise install
+mise run doctor
 ```
-
-`mise run apply|update|check|doctor|lock`も同じ`dots`入口を呼ぶ。初回完了後は`exec zsh`でshellを再起動する。
-
-## Version固定と更新
-
-- mise tool: `common/mise/.config/mise/mise.lock`にmacOS / Linux、x86_64 / arm64のversion・download URL・checksumを固定
-- npm CLI: `config/packages.npm.txt`にversionを固定
-- GitHub Actions: commit SHAを固定
-- 更新: `.github/workflows/dependencies.yml`が週次でRenovateと`dots lock`を実行し、3日以上経過したreleaseだけをPR化
 
 ## CI
 
-GitHub Actionsとローカルの`dots check`は、`scripts/check`を正本としてShellCheck、installer/config test、package parity、Markdown/provenance、Stow dry-runを実行する。
+GitHub Actionsで以下を検証する。
+
+- ShellCheck
+- apt / pixi対応表
+- tracked Markdownのローカルリンク
+- `common/` のStow dry-run
 
 ## 関連文書
 

@@ -35,9 +35,8 @@ try:
     data = json.load(sys.stdin)
 except (ValueError, OSError):
     raise SystemExit(0)
-for name, metadata in data.get("dependencies", {}).items():
-    version = metadata.get("version") if isinstance(metadata, dict) else None
-    print(f"{name}@{version}" if version else name)
+for name in data.get("dependencies", {}):
+    print(name)
 '
 }
 

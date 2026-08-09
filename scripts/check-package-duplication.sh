@@ -57,10 +57,6 @@ declare -a APT_SUDO_ONLY=(
   libevent-dev
   libncurses-dev
   bison
-  autossh         # remote tunnel host capability; no no-sudo bootstrap yet
-  openssh-client  # expected as a no-sudo host prerequisite
-  pueue           # background queue is currently distro-managed on Linux
-  python3         # no-sudo path gets Python from the shared mise config
 )
 
 missing=()
