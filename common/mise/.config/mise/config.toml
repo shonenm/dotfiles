@@ -1,7 +1,3 @@
-[settings]
-lockfile = true
-minimum_release_age = "3d"
-
 [tools]
 node = "lts"
 python = "latest"
@@ -12,26 +8,33 @@ go = "latest"
 cloudflared = "latest"
 "github:babashka/babashka" = { version = "latest", exe = "bb" }
 
-[tasks.apply]
-description = "Apply package declarations and dotfile links"
-run = "~/dotfiles/scripts/dots apply"
-
 [tasks.update]
-description = "Fast-forward dotfiles and apply refreshed dependencies"
-run = "~/dotfiles/scripts/dots update"
-
-[tasks.check]
-description = "Run the same repository checks as CI"
-run = "~/dotfiles/scripts/dots check"
+description = "Update all package managers and tools"
+run = """
+brew update && brew upgrade
+sheldon lock --update
+tldr --update
+"""
 
 [tasks.doctor]
-description = "Check installed tools and Stow links"
-run = "~/dotfiles/scripts/dots doctor"
-
-[tasks.lock]
-description = "Refresh the cross-platform mise lockfile"
-run = "~/dotfiles/scripts/dots lock"
+description = "Check dotfiles health"
+run = """
+echo "==> Checking required tools..."
+for cmd in zsh tmux nvim starship sheldon atuin zoxide fzf fd rg bat eza ghq mise stow; do
+  if command -v "$cmd" >/dev/null 2>&1; then
+    printf "  ✓ %s (%s)\\n" "$cmd" "$(command -v "$cmd")"
+  else
+    printf "  ✗ %s NOT FOUND\\n" "$cmd"
+  fi
+done
+echo ""
+echo "==> Checking stow links..."
+for dir in ~/dotfiles/common/*/; do
+  pkg=$(basename "$dir")
+  stow --dir=~/dotfiles/common --target="$HOME" --no "$pkg" 2>&1 | grep -q "CONFLICT" && echo "  ⚠ $pkg has conflicts" || echo "  ✓ $pkg"
+done
+"""
 
 [tasks.lint]
-description = "Alias for the canonical repository checks"
-run = "~/dotfiles/scripts/dots check"
+description = "Lint shell scripts with shellcheck"
+run = "shellcheck ~/dotfiles/scripts/*.sh"
