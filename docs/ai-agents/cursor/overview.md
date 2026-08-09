@@ -108,7 +108,7 @@ Cursor CLI 内でフッターが見えない場合は `cursor-agent` を再起�
 
 ## tmux 使用量表示
 
-tmux status-right に Claude / Codex / Gemini と並べて Cursor のプラン使用量を表示する (`◆ ▁▁ 2%/3% 29d` 形式)。
+tmux サイドバー (`prefix+b`) と pi のカスタムフッターに Cursor のプラン使用量を表示する。どちらも `ai-usage cursor` の同じキャッシュ済みデータを使う。
 
 | 表示 | 意味 |
 | --- | --- |
