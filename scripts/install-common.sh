@@ -8,6 +8,21 @@
 #   Rust (tools/ cargo workspace): ai-usage / wt / pomodoro
 #   Go (tools/crew): crew (ralph-crew の Go 版。bash ralph-crew と並走、cutover は実サイクル実証後)
 # build 失敗時は当該 binary が欠けるだけの degrade (run_step が失敗を収集し installer は継続)。
+install_mise_tools_from_lock() {
+  local mise_bin="$1" include_linux="${2:-false}" tmp status
+  tmp=$(mktemp -d)
+  mkdir -p "$tmp/mise/conf.d"
+  cp "$DOTFILES_DIR/common/mise/.config/mise/config.toml" "$tmp/mise/config.toml"
+  cp "$DOTFILES_DIR/common/mise/.config/mise/mise.lock" "$tmp/mise/mise.lock"
+  if [[ "$include_linux" == "true" ]]; then
+    cp "$CONFIG_DIR/mise-linux.toml" "$tmp/mise/conf.d/dotfiles-linux.toml"
+  fi
+  XDG_CONFIG_HOME="$tmp" "$mise_bin" install -y
+  status=$?
+  rm -rf "$tmp"
+  return "$status"
+}
+
 install_compiled_tools() {
   mkdir -p "$HOME/.local/bin"
 
@@ -81,13 +96,18 @@ install_npm_packages() {
   while IFS= read -r pkg; do
     local name
     name=$(npm_package_name "$pkg")
-    if ! list_contains_line "$installed" "$name"; then
-      log_info "Installing $pkg..."
-      npm install -g "$pkg"
-      installed="${installed}${installed:+$'\n'}${name}"
-    else
+    if list_contains_line "$installed" "$pkg"; then
       log_success "$pkg already installed"
+      continue
     fi
+    if grep -Fq "${name}@" <<< "$installed"; then
+      log_info "Updating $pkg..."
+    else
+      log_info "Installing $pkg..."
+    fi
+    npm install -g "$pkg"
+    installed=$(printf '%s\n' "$installed" | grep -Fv "${name}@" || true)
+    installed="${installed}${installed:+$'\n'}${pkg}"
   done < <(read_package_list "$npm_file")
 }
 
