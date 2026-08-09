@@ -381,7 +381,7 @@ install_modern_tools() {
     mkdir -p "$HOME/.config/mise/conf.d"
     cp "$CONFIG_DIR/mise-linux.toml" "$HOME/.config/mise/conf.d/dotfiles-linux.toml"
     log_info "Installing mise-managed tools..."
-    "$HOME/.local/bin/mise" install -y 2>/dev/null || true
+    install_mise_tools_from_lock "$HOME/.local/bin/mise" true
     # `mise activate bash` は interactive shell 用 (PROMPT_COMMAND hook) で、
     # installer のような非対話 script では PATH が一切書き換わらない。後続 step
     # (install_npm_packages / install_compiled_tools の go) から mise 管理ツールを

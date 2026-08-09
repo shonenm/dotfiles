@@ -5,48 +5,15 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
-  shellcheck:
-    name: ShellCheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: .
-          # Exclude zsh-only files, config declarations, generated/runtime trees.
-          ignore_paths: common/zsh linux/zsh mac/zsh config .git node_modules
-        env:
-          # SC1090/SC1091: External sources (info-level, safe to ignore)
-          SHELLCHECK_OPTS: -e SC1090 -e SC1091
-
   repository-checks:
     name: Repository Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Validate package parity
-        run: scripts/check-package-duplication.sh
-      - name: Test Markdown link checker
-        run: python3 scripts/test_check_markdown_links.py
-      - name: Validate Markdown links
-        run: scripts/check-markdown-links.py
-      - name: Validate documentation provenance
-        run: scripts/check-doc-provenance.py
-
-  stow-dry-run:
-    name: Stow Dry Run
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install stow
-        run: sudo apt-get update && sudo apt-get install -y stow
-      - name: Dry-run stow for common packages
-        run: |
-          for dir in common/*/; do
-            pkg=$(basename "$dir")
-            echo "==> stow --no (dry-run): $pkg"
-            stow --dir=common --target="$HOME" --no-folding --no "$pkg"
-          done
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install check dependencies
+        run: sudo apt-get update && sudo apt-get install -y shellcheck stow
+      - name: Run canonical checks
+        run: scripts/dots check
