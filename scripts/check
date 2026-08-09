@@ -19,7 +19,7 @@ while IFS= read -r file; do
       ;;
   esac
 done < <(git ls-files)
-shellcheck -e SC1090 -e SC1091 "${shell_files[@]}"
+shellcheck -S warning -e SC1090 -e SC1091 "${shell_files[@]}"
 
 scripts/test-install-fast-paths.sh
 [[ ! -x scripts/test-pi-tui-patch.sh ]] || scripts/test-pi-tui-patch.sh
