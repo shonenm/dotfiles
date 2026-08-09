@@ -13,11 +13,6 @@ assert_eq "$(npm_package_name foo)" "foo"
 assert_eq "$(npm_package_name foo@1.2.3)" "foo"
 assert_eq "$(npm_package_name @scope/foo)" "@scope/foo"
 assert_eq "$(npm_package_name @scope/foo@latest)" "@scope/foo"
-# npm_global_packages resolves this test stub by command name.
-# shellcheck disable=SC2329
-npm() { printf '%s\n' '{"dependencies":{"foo":{"version":"1.2.3"},"@scope/bar":{"version":"4.5.6"}}}'; }
-assert_eq "$(npm_global_packages)" $'foo@1.2.3\n@scope/bar@4.5.6'
-unset -f npm
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT

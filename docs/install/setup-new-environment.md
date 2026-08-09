@@ -91,13 +91,9 @@ scripts/check-package-duplication.sh
 ## 確認
 
 ```bash
-dots check
-dots doctor
-# 同じ入口:
-mise run check
 mise run doctor
+scripts/check-package-duplication.sh
+scripts/check-markdown-links.py
 ```
-
-mise toolを追加・変更した場合は`dots lock`で全対応platformのlockfileを更新する。npm packageはversionまで指定する。通常のversion更新は週次dependency workflowがPR化する。
 
 環境固有の未対応事項は、将来計画ではなく該当する運用文書の「制限」として記録する。
