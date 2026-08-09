@@ -1,0 +1,32 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: ['config:recommended'],
+  labels: ['dependencies'],
+  minimumReleaseAge: '3 days',
+  dependencyDashboard: false,
+  rangeStrategy: 'pin',
+  packageRules: [
+    {
+      matchManagers: ['github-actions'],
+      pinDigests: true,
+    },
+  ],
+  customManagers: [
+    {
+      customType: 'regex',
+      managerFilePatterns: ['/^config\\/packages\\.npm\\.txt$/'],
+      matchStrings: [
+        '(?<depName>(?:@[^\\s/@]+/)?[^\\s@]+)@(?<currentValue>[0-9][^\\s#]*)',
+      ],
+      datasourceTemplate: 'npm',
+      versioningTemplate: 'npm',
+    },
+    {
+      customType: 'regex',
+      managerFilePatterns: ['/^\\.github\\/workflows\\/dependencies\\.yml$/'],
+      matchStrings: [
+        "version: '(?<currentValue>[^']+)' # renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)",
+      ],
+    },
+  ],
+}

@@ -11,17 +11,17 @@ CLIの導入元とZsh aliasをまとめる。インストール対象の正本�
 | macOS Homebrew | `config/Brewfile` |
 | Linux apt / apk | `config/packages.linux.{apt,alpine}.txt` |
 | no-sudo Linux | `config/pixi-packages.txt` |
-| Linux prebuilt CLI | `config/mise-linux.toml`（aqua / github backend） |
+| Linux CLI | `config/mise-linux.toml`（aqua / github / cargo backend） |
 | Linux公式installer、cargo、apt repository | `config/tools.linux.bash` |
 | 全OS共通mise tool | `common/mise/.config/mise/config.toml` |
 
 ```bash
-./install.sh             # macOS / Linux
-./install.sh --no-sudo   # sudoなしLinux
-mise install             # mise管理toolを反映
+dots apply             # macOS / Linux
+# sudoなしLinuxの初回・再適用:
+dots apply --no-sudo
 ```
 
-Linuxで廃止済みの独自 `github_release` 処理は使用しない。prebuilt releaseはmiseへ登録する。
+mise toolは`common/mise/.config/mise/mise.lock`の固定version・URL・checksumから導入する。追加後は`dots lock`を実行する。Linuxで廃止済みの独自 `github_release` 処理は使用せず、prebuilt releaseはmiseへ登録する。
 
 ## Zsh alias
 

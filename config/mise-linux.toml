@@ -14,11 +14,11 @@
 # github backend: aqua 未収録のツール。binary name は repo 名。archive リリースは
 #                 [exe=NAME] で抽出名を上書き (rip2 -> rip, better-docker-ps -> dops)。
 #                 (mise は ubi backend を deprecated とし github backend を推奨。2027.1 で ubi 削除)
-# cargo backend:  raw-binary リリースで exe= が効かない tealdeer は Rust crate としてビルド
-#                 (crate の bin 名 = tldr。install.sh では rust の post_install で cargo が PATH に乗る)。
+# cargo backend: arm64 artifactがないgrexと、raw-binaryでexe=が効かないtealdeerをRust crateとしてビルド。
+#                 install.shではrustのpost_installでcargoがPATHに乗る。
 
 [tools]
-# --- aqua registry (26) ---
+# --- aqua registry (25) ---
 "aqua:junegunn/fzf" = "latest"
 "aqua:fastfetch-cli/fastfetch" = "latest"
 "aqua:dandavison/delta" = "latest"
@@ -41,7 +41,6 @@
 "aqua:sachaos/viddy" = "latest"
 "github:mr-karan/doggo" = "latest"  # aqua registry が doggo 1.2.0 の asset 命名に未追随のため github へ
 "aqua:topgrade-rs/topgrade" = "latest"
-"aqua:pemistahl/grex" = "latest"
 "aqua:typst/typst" = "latest"
 "aqua:direnv/direnv" = "latest"
 
@@ -54,5 +53,6 @@
 "github:lemonade-command/lemonade" = "latest"
 "github:Mikescher/better-docker-ps[exe=dops]" = "latest"
 
-# --- cargo (tealdeer は raw-binary リリースで exe= が効かず tldr 名にできないため crate build) ---
+# --- cargo ---
+"cargo:grex" = "latest"
 "cargo:tealdeer" = "latest"
