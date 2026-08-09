@@ -143,12 +143,12 @@ usage_section() {
   {
     local sc out col icon label gauge pct rem
     for sc in claude codex gemini cursor; do
-      # AI ごとの色分け(ステータスバーと同じ): claude=橙 codex=水色 gemini=青 cursor=紫
+      # AI ごとの色分け: claude=橙 codex=水色 gemini=青 cursor=白
       case "$sc" in
         claude) col=$'\033[38;2;255;102;0m' ;;
         codex)  col=$'\033[38;2;125;211;252m' ;;
         gemini) col=$'\033[38;2;66;133;244m' ;;
-        cursor) col=$'\033[38;2;153;102;255m' ;;
+        cursor) col=$'\033[38;2;255;255;255m' ;;
         *)      col="" ;;
       esac
       out=$(${TO:+$TO 6} ai-usage "$sc" 2>/dev/null)

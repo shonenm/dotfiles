@@ -144,7 +144,7 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 - `Ctrl+T`: 思考ブロックを展開/折り畳み
 - `Ctrl+O`: ツール出力を展開/折り畳み
 - `Esc` を2回: `/tree` を開く。tree 内の `Ctrl+T` でツール結果を表示/非表示
-- `/statusline compact`: フッターを1行表示に切り替え
+- `/statusline compact`: Cursor のプラン上限を含むフッターを1行表示に切り替え（取得元は `ai-usage cursor`）
 - 入力中の既知 skill 名はアクセント色でハイライトされる（`/reload` または再起動で skill 一覧を再読込）。
 
 ### Permission gate
