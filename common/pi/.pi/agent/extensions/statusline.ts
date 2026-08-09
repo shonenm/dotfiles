@@ -3,13 +3,13 @@
 // Balanced telemetry footer with:
 //   Focus rail: goal + extension status
 //   Core rail: branch + model | context gauge
-//   Telemetry rail: tokens | cost | agents | web | MCP
+//   Telemetry rail: tokens | cost | Cursor limits | agents | web | MCP
 //   3 modes: detailed / compact / off (toggle via /statusline)
 
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -109,6 +109,20 @@ function readGoal(): string {
 // Active delegated sub-agents (pueue tasks labeled pi-delegate). Refreshed off
 // the render path (turn_end / session_start) since `pueue status` shells out.
 let agentStatus = { running: 0, queued: 0 };
+let cursorLimits = "";
+
+function refreshCursorLimits(): void {
+  try {
+    const rows = execFileSync("ai-usage", ["cursor"], {
+      encoding: "utf-8", timeout: 6000, stdio: ["ignore", "pipe", "ignore"],
+    }).trim().split("\n");
+    cursorLimits = rows.map((row) => {
+      const [, label, , pct, remaining] = row.split("\x1f");
+      return label && label !== "--" ? `${label} ${pct}${remaining ? ` ${remaining}` : ""}` : "";
+    }).filter(Boolean).join(" · ");
+  } catch { cursorLimits = ""; }
+}
+
 function refreshAgents(): void {
   let running = 0, queued = 0;
   try {
@@ -210,6 +224,7 @@ export default function (pi: ExtensionAPI) {
     if (mode === "off") return;
     recomputeTokens(ctx.sessionManager.getBranch());
     refreshAgents();
+    refreshCursorLimits();
     const now = Date.now();
     if (now - lastDirtyCheck > DIRTY_CHECK_INTERVAL_MS) {
       dirtyState = checkGitDirty(); lastDirtyCheck = now;
@@ -226,6 +241,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     recomputeTokens(ctx.sessionManager.getBranch());
     refreshAgents();
+    refreshCursorLimits();
     if (mode === "off") {
       ctx.ui.setFooter(undefined);
       return;
@@ -292,6 +308,9 @@ export default function (pi: ExtensionAPI) {
           const tokOut = theme.fg("accent", `↓${formatTokens(output)}`);
           const tokenStr = `${label("TOK")} ${tokIn}${minor}${tokOut}`;
           const costStr = `${label("COST")} ${theme.fg("syntaxNumber", `$${cost.toFixed(3)}`)}`;
+          const limitStr = cursorLimits
+            ? `${label("CURSOR")} ${theme.fg("text", cursorLimits)}`
+            : "";
           const agentStr = agentStatus.running > 0 || agentStatus.queued > 0
             ? `${label("AGT")} ${theme.fg("customMessageLabel", `R${agentStatus.running}`)}${minor}${theme.fg("customMessageLabel", `Q${agentStatus.queued}`)}`
             : "";
@@ -311,7 +330,7 @@ export default function (pi: ExtensionAPI) {
               width >= 100 ? 36 : width >= 70 ? 24 : 14,
             );
             return [packCompact(
-              [compactFocus, gaugeStr, branchStr, modelStr, tokenStr, costStr],
+              [compactFocus, gaugeStr, branchStr, modelStr, limitStr, tokenStr, costStr],
               width,
               minor,
             )];
@@ -320,7 +339,7 @@ export default function (pi: ExtensionAPI) {
           const lines: string[] = [];
           if (goalStr || statusStr) lines.push(balanceLine(goalStr, statusStr, width));
           lines.push(balanceLine(projectStr, gaugeStr, width));
-          lines.push(...wrapGroups([tokenStr, costStr, agentStr, webStr, mcpStr], width, major));
+          lines.push(...wrapGroups([tokenStr, costStr, limitStr, agentStr, webStr, mcpStr], width, major));
           return lines;
         },
       };
