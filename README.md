@@ -59,15 +59,18 @@ sudoを利用できないLinuxでは、両方の実行に `--no-sudo` を付け�
 
 containerなどsecretを使わない環境では `--skip-1p` を指定できる。詳しい分岐と実行内容は[インストールガイド](docs/install/index.md)、no-sudo固有事項は[No-Sudo Install Mode](docs/install/install-no-sudo.md)を参照。
 
-## 更新
+## 運用コマンド
 
 ```bash
-cd ~/dotfiles
-git pull
-./install.sh
+dots apply             # package宣言とdotfile linkを反映
+dots update            # git pull --ff-only後、依存を再取得して反映
+dots check             # CIと同じrepository check
+dots doctor            # toolとStow linkを診断
 ```
 
-設定ファイルだけの変更はStow済みのシンボリックリンクへ即時反映される。パッケージ、生成設定、プラグインが変わった場合は `install.sh` を再実行する。
+`mise run apply|update|check|doctor` も同じ入口を呼ぶ。設定ファイルだけの変更はStow済みのシンボリックリンクへ即時反映される。
+
+mise toolはmacOS / Linux x86_64 / arm64のversion・URL・checksumを`common/mise/.config/mise/mise.lock`へ固定する。npm CLIも`config/packages.npm.txt`でversionを固定し、週次workflowが3日以上経過したreleaseだけを更新PRにする。
 
 ## 主な設定
 
