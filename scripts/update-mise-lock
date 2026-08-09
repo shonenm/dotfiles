@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+command -v mise >/dev/null 2>&1 || { echo "update-mise-lock: mise is required" >&2; exit 1; }
+
+if [[ -z "${GITHUB_TOKEN:-}" ]] && command -v gh >/dev/null 2>&1; then
+  GITHUB_TOKEN=$(gh auth token 2>/dev/null || true)
+  export GITHUB_TOKEN
+fi
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/mise/conf.d"
+cp "$root/common/mise/.config/mise/config.toml" "$tmp/mise/config.toml"
+cp "$root/config/mise-linux.toml" "$tmp/mise/conf.d/dotfiles-linux.toml"
+
+XDG_CONFIG_HOME="$tmp" mise lock -g -y \
+  --minimum-release-age 3d \
+  --platform linux-x64,linux-arm64,macos-x64,macos-arm64
+
+python3 - "$tmp/mise/mise.lock" <<'PY'
+import sys, tomllib
+with open(sys.argv[1], "rb") as f:
+    lock = tomllib.load(f)
+assert lock.get("tools"), "mise lockfile contains no tools"
+PY
+cp "$tmp/mise/mise.lock" "$root/common/mise/.config/mise/mise.lock"
+echo "Updated common/mise/.config/mise/mise.lock"
