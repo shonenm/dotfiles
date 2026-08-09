@@ -9,6 +9,7 @@
 | 要素 | 役割 | 配置 |
 | --- | --- | --- |
 | pi CLI | エージェント本体 | `config/packages.npm.txt` の `@earendil-works/pi-coding-agent` (npm global) |
+| pi-tui narrow terminal patch | tmux focus zoomで1列/1行になった間は描画を停止し、Piの終了とscrollを防止 | `scripts/patch-pi-tui.sh` (Local patch) |
 | pi-cursor-agent | Cursor サブスク → pi プロバイダ | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
@@ -33,7 +34,7 @@ cd ~/dotfiles
 ./install.sh
 ```
 
-`install_npm_packages` が `@earendil-works/pi-coding-agent` を含めて global install する。`stow` で `common/pi/` がリンクされ `~/.pi/agent/AGENTS.md` が配置される。
+`install_npm_packages` が `@earendil-works/pi-coding-agent` を含めて global installし、続けて`patch-pi-tui.sh`を適用する。pi-tui 0.84.1はterminal幅1で幅3の行を描画すると例外終了するため、極小paneの間だけ描画を停止するlocal patchを再適用可能な形で管理する。`stow` で `common/pi/` がリンクされ `~/.pi/agent/AGENTS.md` が配置される。
 
 確認:
 
