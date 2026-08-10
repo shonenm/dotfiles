@@ -16,6 +16,7 @@ ASSUME_YES=false
 DRY_RUN=false
 NO_ATTACH=false
 SNAPSHOT_DIR_ARG=""
+ATTACH_WINDOW=0
 HOST="ailab"
 HOST_SET=false
 
@@ -146,16 +147,20 @@ remove_stale_socket() {
 }
 
 start_server() {
-  if "$TMUX_BIN" start-server; then
-    return 0
+  has_session "$ATTACH_SESSION" && return 0
+  if ! "$TMUX_BIN" new-session -d -s "$ATTACH_SESSION" -c "$ATTACH_CWD"; then
+    has_session "$ATTACH_SESSION" && return 0
+    echo 'tmux server startup failed; retrying after stale-socket cleanup.' >&2
+    remove_stale_socket
+    "$TMUX_BIN" new-session -d -s "$ATTACH_SESSION" -c "$ATTACH_CWD"
   fi
-  echo 'tmux server startup failed; retrying after stale-socket cleanup.' >&2
-  remove_stale_socket
-  "$TMUX_BIN" start-server
+  if [[ "$ATTACH_WINDOW" != 0 ]]; then
+    "$TMUX_BIN" move-window -s "$ATTACH_SESSION:0" -t "$ATTACH_SESSION:$ATTACH_WINDOW" 2>/dev/null || true
+  fi
 }
 
 snapshot_state() {
-  local stamp client_session first_session attach_cwd
+  local stamp client_session first_session attach_cwd attach_window
   umask 077
   mkdir -p "$STATE_DIR"
   stamp="$(date +%Y%m%d-%H%M%S)-$$"
@@ -171,6 +176,8 @@ snapshot_state() {
   attach_cwd=$("$TMUX_BIN" list-panes -t "$ATTACH_SESSION" -F '#{pane_current_path}' 2>/dev/null | head -1 || true)
   ATTACH_CWD="${attach_cwd:-$HOME}"
   [[ -d "$ATTACH_CWD" ]] || ATTACH_CWD="$HOME"
+  attach_window=$("$TMUX_BIN" list-windows -t "$ATTACH_SESSION" -F '#{window_index}' 2>/dev/null | head -1 || true)
+  ATTACH_WINDOW="${attach_window:-0}"
 
   "$TMUX_BIN" list-sessions -F \
     "#{session_name}${US}#{@rcon-host}${US}#{@rcon-container}${US}#{@rcon-container-home}" |
@@ -197,6 +204,7 @@ snapshot_state() {
   {
     printf 'attach_session\t%s\n' "$ATTACH_SESSION"
     printf 'attach_cwd\t%s\n' "$ATTACH_CWD"
+    printf 'attach_window\t%s\n' "$ATTACH_WINDOW"
     printf 'sessions\t%s\n' "$EXPECTED_SESSIONS"
     printf 'panes\t%s\n' "$EXPECTED_PANES"
   } > "$SNAPSHOT_DIR/meta.tsv"
@@ -408,6 +416,10 @@ load_snapshot() {
     fatal "incomplete snapshot: $SNAPSHOT_DIR"
   ATTACH_SESSION=$(awk -F '\t' '$1 == "attach_session" { print $2; exit }' "$SNAPSHOT_DIR/meta.tsv")
   ATTACH_CWD=$(awk -F '\t' '$1 == "attach_cwd" { print $2; exit }' "$SNAPSHOT_DIR/meta.tsv")
+  ATTACH_WINDOW=$(awk -F '\t' '$1 == "attach_window" { print $2; exit }' "$SNAPSHOT_DIR/meta.tsv")
+  [[ "$ATTACH_WINDOW" =~ ^[0-9]+$ ]] ||
+    ATTACH_WINDOW=$(awk -F "$US" -v s="$ATTACH_SESSION" '$1 == s { print $2; exit }' "$SNAPSHOT_DIR/windows.tsv")
+  [[ "$ATTACH_WINDOW" =~ ^[0-9]+$ ]] || ATTACH_WINDOW=0
   EXPECTED_SESSIONS=$(awk -F '\t' '$1 == "sessions" { print $2; exit }' "$SNAPSHOT_DIR/meta.tsv")
   EXPECTED_PANES=$(awk -F '\t' '$1 == "panes" { print $2; exit }' "$SNAPSHOT_DIR/meta.tsv")
   [[ -n "$ATTACH_SESSION" && "$EXPECTED_SESSIONS" =~ ^[0-9]+$ && "$EXPECTED_PANES" =~ ^[0-9]+$ ]] ||
