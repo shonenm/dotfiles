@@ -21,7 +21,7 @@ Codexはrepository内の自律作業と、PiからのWeb検索fallback・second 
 - `project_doc_fallback_filenames = ["CLAUDE.md"]`: `AGENTS.md`がないprojectでも既存のproject規則を読む。
 - `service_tier = "fast"`: 対話latencyを優先する。
 - `goals` / `memories` / `multi_agent`: Codex native機能を使う。
-- `approval_policy = "on-request"` + `repo-autonomous`: repository内は自律実行し、範囲外だけ確認する。
+- `approval_policy = "on-request"` + `repo-autonomous`: repository内は自律実行し、範囲外だけ確認する。standalone版の自己再実行に必要な `~/.codex/packages/**` は読み取り許可する。
 
 ## Shared skills
 
