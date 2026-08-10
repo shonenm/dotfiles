@@ -97,6 +97,7 @@ SAVE_SCRIPT="${TMUX_RESURRECT_SAVE_SCRIPT:-$RESURRECT_DIR/scripts/save.sh}"
 RESTORE_SCRIPT="${TMUX_RESURRECT_RESTORE_SCRIPT:-$RESURRECT_DIR/scripts/restore.sh}"
 STATE_DIR="${TMUX_RESTART_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/tmux/restart}"
 US=$'\x1f'
+TMUX_SOCKET="${TMUX_RESTART_SOCKET:-${TMUX_TMPDIR:-/tmp}/tmux-$(id -u)/default}"
 
 fatal() {
   echo "tmux-server-restart: $*" >&2
@@ -131,6 +132,22 @@ current_command() {
 
 send_command() {
   "$TMUX_BIN" send-keys -t "$1" "$2" C-m
+}
+
+remove_stale_socket() {
+  [[ -S "$TMUX_SOCKET" ]] || return 0
+  "$TMUX_BIN" list-sessions >/dev/null 2>&1 && return 0
+  echo "Removing stale tmux socket: $TMUX_SOCKET" >&2
+  rm -f "$TMUX_SOCKET"
+}
+
+start_server() {
+  if "$TMUX_BIN" new-session -d -s "$ATTACH_SESSION" -c "$ATTACH_CWD"; then
+    return 0
+  fi
+  echo 'tmux server startup failed; retrying after stale-socket cleanup.' >&2
+  remove_stale_socket
+  "$TMUX_BIN" new-session -d -s "$ATTACH_SESSION" -c "$ATTACH_CWD"
 }
 
 snapshot_state() {
@@ -354,7 +371,7 @@ echo 'Stopping tmux server...'
 # rcon uses zsh + the full user PATH before starting the server. Do the same.
 export RCON_HOST_HOME="$HOME"
 export RCON_HOST_MACHINE="${RCON_HOST_MACHINE:-$(hostname -s 2>/dev/null || hostname)}"
-"$TMUX_BIN" new-session -d -s "$ATTACH_SESSION" -c "$ATTACH_CWD"
+start_server
 restore_layout
 restore_sessions
 restore_sidebars
