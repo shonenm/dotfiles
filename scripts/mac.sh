@@ -24,7 +24,10 @@ install_brew_bundle() {
     log_success "Brewfile packages already installed"
     return 0
   fi
-  HOMEBREW_NO_AUTO_UPDATE=1 brew bundle --file="$brewfile"
+  if ! HOMEBREW_NO_AUTO_UPDATE=1 brew bundle --file="$brewfile"; then
+    log_error "Homebrew bundle failed"
+    return 1
+  fi
   log_success "Brewfile packages installed"
 }
 

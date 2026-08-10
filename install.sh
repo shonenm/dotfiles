@@ -243,6 +243,7 @@ stow_package() {
   # restowで削除・移動済みsourceの古いsymlinkも掃除する。--adoptは残りの差分を吸収する。
   if ! stow --restow --no-folding -d "$pkg_dir" -t "$HOME" --adopt "$pkg_name" 2>/dev/null; then
     log_warn "  Failed to link $pkg_name"
+    return 1
   fi
   return 0
 }
@@ -270,21 +271,22 @@ stow_package_group() {
         log_info "    Backed up: $file → $file.dotfiles-bak"
       else
         log_warn "    Cannot move $file (bind mount?); using package fallback"
-        local pkg
+        local pkg failed=0
         for pkg in "${packages[@]}"; do
-          stow_package "$pkg_dir" "$pkg"
+          stow_package "$pkg_dir" "$pkg" || failed=1
         done
-        return 0
+        return "$failed"
       fi
     fi
   done <<< "$conflicts"
 
   if ! stow --restow --no-folding -d "$pkg_dir" -t "$HOME" --adopt "${packages[@]}" 2>/dev/null; then
     log_warn "  Grouped stow failed; retrying packages individually"
-    local pkg
+    local pkg failed=0
     for pkg in "${packages[@]}"; do
-      stow_package "$pkg_dir" "$pkg"
+      stow_package "$pkg_dir" "$pkg" || failed=1
     done
+    return "$failed"
   fi
 }
 
@@ -454,7 +456,7 @@ link_dotfiles() {
     return 1
   fi
 
-  local os
+  local os link_failed=false
   os=$(detect_os)
 
   # Abort if the repo has uncommitted changes under the stow source dirs.
@@ -481,7 +483,9 @@ link_dotfiles() {
     for pkg in "$DOTFILES_DIR/common"/*/; do
       common_packages+=("$(basename "$pkg")")
     done
-    stow_package_group "$DOTFILES_DIR/common" "${common_packages[@]}"
+    if ! stow_package_group "$DOTFILES_DIR/common" "${common_packages[@]}"; then
+      link_failed=true
+    fi
   fi
 
   # Stow OS-specific packages
@@ -491,7 +495,9 @@ link_dotfiles() {
     for pkg in "$DOTFILES_DIR/$os"/*/; do
       os_packages+=("$(basename "$pkg")")
     done
-    stow_package_group "$DOTFILES_DIR/$os" "${os_packages[@]}"
+    if ! stow_package_group "$DOTFILES_DIR/$os" "${os_packages[@]}"; then
+      link_failed=true
+    fi
   fi
 
   # Fixup bind-mounted config files (Docker/devcontainer)
@@ -519,7 +525,12 @@ link_dotfiles() {
   # Verify critical symlinks were created
   verify_stow
 
-  log_success "Dotfiles linked successfully"
+  if [[ "$link_failed" == "true" ]]; then
+    SETUP_FAILED=true
+    log_error "Some dotfiles could not be linked"
+  else
+    log_success "Dotfiles linked successfully"
+  fi
 }
 
 # --- 3.7. Setup tmux plugins (TPM + tmux-which-key) ---
@@ -686,7 +697,9 @@ for name, config in servers.items():
       fi
       # Resolve ${HOME} placeholder (e.g. for cache dirs)
       config="${config//\$\{HOME\}/$HOME}"
-      if claude mcp add-json --scope user "$name" "$config" >/dev/null 2>&1; then
+      if claude mcp get "$name" >/dev/null 2>&1; then
+        log_success "  MCP server already registered: $name"
+      elif claude mcp add-json --scope user "$name" "$config" >/dev/null 2>&1; then
         log_success "  Registered MCP server: $name"
       else
         log_warn "  Failed to register MCP server: $name"
@@ -828,7 +841,9 @@ for name, config in servers.items():
         config="${config//\$\{NOTION_TOKEN\}/$notion_token}"
       fi
       config="${config//\$\{HOME\}/$HOME}"
-      if cmd mcp add-json --scope user "$name" "$config" >/dev/null 2>&1; then
+      if cmd mcp get "$name" >/dev/null 2>&1; then
+        log_success "  Command Code MCP server already registered: $name"
+      elif cmd mcp add-json --scope user "$name" "$config" >/dev/null 2>&1; then
         log_success "  Registered Command Code MCP server: $name"
       else
         log_warn "  Failed to register Command Code MCP server: $name"
@@ -1192,7 +1207,8 @@ print_install_summary() {
       ((++npm_total))
       local npm_name
       npm_name=$(npm_package_name "$pkg")
-      if list_contains_line "$installed_npm" "$npm_name"; then
+      if list_contains_line "$installed_npm" "$npm_name" ||
+          grep -Fq -- "${npm_name}@" <<< "$installed_npm"; then
         ((++npm_ok))
       else
         npm_missing+=("$pkg")
@@ -1211,16 +1227,19 @@ print_install_summary() {
     local mise_items=()
     while IFS='=' read -r tool version; do
       tool="${tool// /}"
+      tool="${tool#\"}"
+      tool="${tool%\"}"
       version="${version## }"
       version="${version%% }"
       version="${version//\"/}"
       [[ -z "$tool" ]] && continue
-      mise_items+=("$tool:$version")
+      mise_items+=("$tool"$'\t'"$version")
     done < <(awk '/^\[tools\]/{f=1;next} /^\[/{f=0} f && /=/' "$mise_config")
     printf "  %-14s " "mise"
     local first=true
     for item in "${mise_items[@]}"; do
-      local t="${item%%:*}" v="${item##*:}"
+      local t v
+      IFS=$'\t' read -r t v <<< "$item"
       $first || printf ", "
       printf "%s (%s)" "$t" "$v"
       first=false
