@@ -15,6 +15,7 @@ REMOTE=false
 ASSUME_YES=false
 DRY_RUN=false
 NO_ATTACH=false
+SNAPSHOT_DIR_ARG=""
 HOST="ailab"
 HOST_SET=false
 
@@ -28,6 +29,7 @@ and AI agent sessions.
 Options:
   -y, --yes       Skip the confirmation prompt
       --dry-run   Show the current inventory without changing anything
+      --snapshot=DIR  Restore a previously saved snapshot without saving again
       --no-attach Restore and exit instead of attaching to the session
   -h, --help      Show this help
 EOF
@@ -38,6 +40,7 @@ for arg in "$@"; do
     --remote) REMOTE=true ;;
     -y|--yes) ASSUME_YES=true ;;
     --dry-run) DRY_RUN=true ;;
+    --snapshot=*) SNAPSHOT_DIR_ARG="${arg#--snapshot=}" ;;
     --no-attach) NO_ATTACH=true ;;
     -h|--help) usage; exit 0 ;;
     --*) echo "Unknown option: $arg" >&2; usage >&2; exit 2 ;;
@@ -62,6 +65,7 @@ if [[ "$REMOTE" == false ]]; then
   remote_args=(--remote --yes)
   [[ "$DRY_RUN" == true ]] && remote_args+=(--dry-run)
   [[ "$NO_ATTACH" == true ]] && remote_args+=(--no-attach)
+  [[ -n "$SNAPSHOT_DIR_ARG" ]] && remote_args+=("--snapshot=$SNAPSHOT_DIR_ARG")
   # rcon's PATH is required: /usr/bin/tmux on ailab is the incompatible 3.2a.
   remote_command="export PATH=\"\$HOME/.local/bin:\$HOME/.pixi/bin:\$PATH\"; export TERMINFO_DIRS=\"\$HOME/.terminfo:/usr/share/terminfo:/lib/terminfo\"; exec \"\$HOME/dotfiles/scripts/tmux-server-restart\""
   for remote_arg in "${remote_args[@]}"; do
@@ -355,18 +359,37 @@ launch_agents() {
   echo "Processes launched: $launched, skipped: $skipped"
 }
 
+load_snapshot() {
+  SNAPSHOT_DIR="$SNAPSHOT_DIR_ARG"
+  [[ -d "$SNAPSHOT_DIR" ]] || fatal "snapshot directory not found: $SNAPSHOT_DIR"
+  [[ -f "$SNAPSHOT_DIR/meta.tsv" && -f "$SNAPSHOT_DIR/sessions.tsv" && -f "$SNAPSHOT_DIR/panes.tsv" ]] ||
+    fatal "incomplete snapshot: $SNAPSHOT_DIR"
+  ATTACH_SESSION=$(awk -F '\t' '$1 == "attach_session" { print $2; exit }' "$SNAPSHOT_DIR/meta.tsv")
+  ATTACH_CWD=$(awk -F '\t' '$1 == "attach_cwd" { print $2; exit }' "$SNAPSHOT_DIR/meta.tsv")
+  EXPECTED_SESSIONS=$(awk -F '\t' '$1 == "sessions" { print $2; exit }' "$SNAPSHOT_DIR/meta.tsv")
+  EXPECTED_PANES=$(awk -F '\t' '$1 == "panes" { print $2; exit }' "$SNAPSHOT_DIR/meta.tsv")
+  [[ -n "$ATTACH_SESSION" && "$EXPECTED_SESSIONS" =~ ^[0-9]+$ && "$EXPECTED_PANES" =~ ^[0-9]+$ ]] ||
+    fatal "invalid snapshot metadata: $SNAPSHOT_DIR/meta.tsv"
+  [[ -d "$ATTACH_CWD" ]] || ATTACH_CWD="$HOME"
+  echo "Using snapshot: $SNAPSHOT_DIR"
+  echo "Sessions: $EXPECTED_SESSIONS, panes: $EXPECTED_PANES"
+}
+
 show_inventory
 if [[ "$DRY_RUN" == true ]]; then
   exit 0
 fi
 
-[[ -f "$SAVE_SCRIPT" ]] || fatal "tmux-resurrect save script not found: $SAVE_SCRIPT"
-snapshot_state
-
-echo 'Saving tmux-resurrect snapshot...'
-bash "$SAVE_SCRIPT"
-echo 'Stopping tmux server...'
-"$TMUX_BIN" kill-server
+if [[ -n "$SNAPSHOT_DIR_ARG" ]]; then
+  load_snapshot
+else
+  [[ -f "$SAVE_SCRIPT" ]] || fatal "tmux-resurrect save script not found: $SAVE_SCRIPT"
+  snapshot_state
+  echo 'Saving tmux-resurrect snapshot...'
+  bash "$SAVE_SCRIPT"
+  echo 'Stopping tmux server...'
+  "$TMUX_BIN" kill-server || true
+fi
 
 # rcon uses zsh + the full user PATH before starting the server. Do the same.
 export RCON_HOST_HOME="$HOME"
