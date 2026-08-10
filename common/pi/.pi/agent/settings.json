@@ -1,6 +1,6 @@
 {
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-sol",
+  "defaultModel": "gpt-5.6-luna",
   "defaultThinkingLevel": "medium",
   "subagents": {
     "defaultModel": "openai-codex/gpt-5.4-mini",
@@ -95,5 +95,5 @@
     "npm:pi-permission-system",
     "git:github.com/DietrichGebert/ponytail"
   ],
-  "lastChangelogVersion": "0.83.0"
+  "lastChangelogVersion": "0.84.1"
 }
