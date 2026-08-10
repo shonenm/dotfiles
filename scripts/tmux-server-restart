@@ -146,12 +146,12 @@ remove_stale_socket() {
 }
 
 start_server() {
-  if "$TMUX_BIN" new-session -d -s "$ATTACH_SESSION" -c "$ATTACH_CWD"; then
+  if "$TMUX_BIN" start-server; then
     return 0
   fi
   echo 'tmux server startup failed; retrying after stale-socket cleanup.' >&2
   remove_stale_socket
-  "$TMUX_BIN" new-session -d -s "$ATTACH_SESSION" -c "$ATTACH_CWD"
+  "$TMUX_BIN" start-server
 }
 
 snapshot_state() {
@@ -294,7 +294,7 @@ restore_sidebars() {
       sidebar_index="${sidebar_index:-1}"
       pane=$("$TMUX_BIN" list-panes -t "$session:$window" \
         -F "#{pane_index}${US}#{pane_id}" 2>/dev/null |
-        awk -F "$US" -v index="$sidebar_index" '$1 == index { print $2; exit }')
+        awk -F "$US" -v idx="$sidebar_index" '$1 == idx { print $2; exit }')
     fi
     if [[ -z "$pane" ]]; then
       MISSING_SIDEBARS+=("$session${US}$window")
