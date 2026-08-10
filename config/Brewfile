@@ -27,10 +27,8 @@ brew "neovim"
 brew "tree-sitter-cli"  # nvim-treesitter (main branch) がパーサーの generate/build に必須
 brew "typst"
 brew "fancy-cat"    # ターミナル内PDFビューア（Kitty graphics protocol）
-brew "lazygit"
 brew "trasta298/tap/keifu"
 brew "lazydocker"
-brew "git-delta"
 brew "gh"
 brew "ghq"
 brew "mise"

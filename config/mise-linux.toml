@@ -18,11 +18,9 @@
 #                 install.shではrustのpost_installでcargoがPATHに乗る。
 
 [tools]
-# --- aqua registry (25) ---
+# --- aqua registry (23) ---
 "aqua:junegunn/fzf" = "latest"
 "aqua:fastfetch-cli/fastfetch" = "latest"
-"aqua:dandavison/delta" = "latest"
-"aqua:jesseduffield/lazygit" = "latest"
 "aqua:x-motemen/ghq" = "latest"
 "aqua:neovim/neovim" = "latest"
 "aqua:tree-sitter/tree-sitter" = "latest"  # nvim-treesitter (main) のパーサー generate/build に必須

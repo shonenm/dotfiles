@@ -8,6 +8,8 @@ python = "latest"
 "npm:pnpm" = "latest"
 deno = "latest"
 "npm:cspell" = "latest"
+"aqua:jesseduffield/lazygit" = "latest"
+"aqua:dandavison/delta" = "latest"
 go = "latest"
 cloudflared = "latest"
 "github:babashka/babashka" = { version = "latest", exe = "bb" }
