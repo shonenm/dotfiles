@@ -10,7 +10,7 @@
 セッション開始
   ├─ /pin-goal の pinned note を inject
   ├─ SCRATCHPAD.md の未完了項目を inject
-  ├─ 今日の daily log 末尾を inject
+  ├─ 今日・前日の daily log 末尾を inject
   └─ MEMORY.md を inject（middle-truncate）
   → 合計最大 8K chars
 
@@ -55,13 +55,14 @@
 | 0 | `/pin-goal` の pinned note | 1K |
 | 1 | 未完了 scratchpad 項目 | 2K |
 | 2 | 今日の daily log (末尾) | 3K |
+| 2b | 前日の daily log (末尾) | 1.5K |
 | 3 | MEMORY.md (middle-truncate) | 4K |
 
 注入は `pi.sendMessage()` で行い、会話履歴には表示されない（`display: false`）。`/goal` は `pi-goal` package の autonomous goal mode 用に予約し、軽量な固定コンテキストは `/pin-goal` を使う。
 
 ## Handoff
 
-セッション終了時・compaction 時に、未完了 scratchpad 項目を daily log に自動記録：
+セッション終了時・compaction 時に、未完了 scratchpad 項目を daily log に自動記録する。同一内容が直前の handoff と一致する場合は重複記録しない：
 
 ```markdown
 <!-- HANDOFF 2026-05-24T15:30:00.000Z -->

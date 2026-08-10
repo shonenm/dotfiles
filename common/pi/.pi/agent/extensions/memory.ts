@@ -76,6 +76,15 @@ function appendFile(path: string, content: string) {
   appendFileSync(path, content);
 }
 
+function tailAtLineBoundary(text: string, maxLines: number, maxChars: number): string {
+  const tail = text.split("\n").slice(-maxLines).join("\n");
+  if (tail.length <= maxChars) return tail;
+
+  const truncated = tail.slice(-maxChars);
+  const firstNewline = truncated.indexOf("\n");
+  return firstNewline === -1 ? truncated : truncated.slice(firstNewline + 1);
+}
+
 // ---------------------------------------------------------------------------
 // Scratchpad helpers
 // ---------------------------------------------------------------------------
@@ -124,12 +133,11 @@ function buildInjection(): string {
   // 2. Today's daily log
   const daily = readIfExists(dailyFile());
   if (daily) {
-    const lines = daily.split("\n");
-    const tail = lines.slice(-60).join("\n"); // ~3K chars
-    const budget = Math.min(tail.length, 3000, INJECTION_MAX - used);
+    const budget = Math.min(3000, INJECTION_MAX - used);
     if (budget > 0) {
-      parts.push(`## Today (${todayStr()})\n${tail.slice(-budget)}`);
-      used += budget;
+      const tail = tailAtLineBoundary(daily, 60, budget);
+      parts.push(`## Today (${todayStr()})\n${tail}`);
+      used += tail.length;
     }
   }
 
@@ -138,11 +146,11 @@ function buildInjection(): string {
     const yStr = dateStrDaysAgo(1);
     const yday = readIfExists(dailyFile(yStr));
     if (yday) {
-      const tail = yday.split("\n").slice(-30).join("\n");
-      const budget = Math.min(tail.length, 1500, INJECTION_MAX - used);
+      const budget = Math.min(1500, INJECTION_MAX - used);
       if (budget > 0) {
-        parts.push(`## Yesterday (${yStr})\n${tail.slice(-budget)}`);
-        used += budget;
+        const tail = tailAtLineBoundary(yday, 30, budget);
+        parts.push(`## Yesterday (${yStr})\n${tail}`);
+        used += tail.length;
       }
     }
   }
@@ -203,16 +211,18 @@ export default function (pi: ExtensionAPI) {
     const items = parseScratchpad().filter((i) => !i.done);
     if (items.length === 0) return;
 
+    const body = [
+      "**Open scratchpad items:**",
+      ...items.map((item) => `- [ ] ${item.text}`),
+    ].join("\n") + "\n";
+    if (readIfExists(dailyFile()).endsWith(body)) return;
+
     const now = new Date().toISOString();
-    const lines = [
+    appendFile(dailyFile(), [
       `\n<!-- HANDOFF ${now} -->`,
       `## Session Handoff (${now.slice(0, 16)})`,
-    ];
-    lines.push("**Open scratchpad items:**");
-    for (const item of items) {
-      lines.push(`- [ ] ${item.text}`);
-    }
-    appendFile(dailyFile(), lines.join("\n") + "\n");
+      body,
+    ].join("\n"));
   };
 
   pi.on("session_shutdown", async () => writeHandoff());
