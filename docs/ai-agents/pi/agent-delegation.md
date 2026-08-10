@@ -2,7 +2,7 @@
 
 > **由来:** **Upstream** pi・pueue / **Plugin** pi-subagents / **Configuration** agent定義・model tier / **Custom** agent-delegation拡張（[区分](../../provenance.md#区分)）
 
-サブエージェントによる並列作業委譲の仕組み。pi-subagents（コミュニティ） + agent-delegation.ts（カスタム）の2層構成。
+利用者が明示的にopt-inした場合だけ使うサブエージェント委譲の仕組み。pi-subagents（コミュニティ） + agent-delegation.ts（カスタム）の2層構成。通常実装の品質向上を理由に自動起動せず、reviewは原則1 passとする。
 
 ## Architecture
 
@@ -101,7 +101,7 @@ pueue wait <id>  # 完了待ち
 | **自然言語委譲** | ✅ | ✅ |
 | **インストール** | `pi install npm:pi-subagents` | dotfiles 内蔵 |
 
-両方インストールして併用するのが推奨構成。
+両方を用途別に利用可能にするが、自動選択はしない。reviewerの提案は元のacceptance criteriaを拡張せず、再reviewは利用者が明示した場合だけ行う。
 
 ## Extensions
 

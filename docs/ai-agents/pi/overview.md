@@ -13,13 +13,17 @@
 | pi-cursor-agent | Cursor サブスク → pi プロバイダ | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
-| pi-goal | `/goal` で完了まで継続する goal mode | `settings.json` の `packages` → `pi install npm:@narumitw/pi-goal` |
+| pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
 | AGENTS.md | グローバル指示書 | `common/pi/.pi/agent/AGENTS.md` → `~/.pi/agent/AGENTS.md` |
 | pueue | バックグラウンドタスク・並列 delegation 用キュー | `config/Brewfile` (mac), `packages.linux.{apt,alpine}.txt` (linux) |
 
-## LoopとGoalの使い分け
+## 対話・Plan・Goalの使い分け
 
-「全件完了まで継続」のように作業完了を停止条件とする実装には`/goal <goal>`を使う。利用者が「loop」と表現しても、時間間隔に意味がなければcron loopへ変換しない。
+通常対話では、質問・課題感・暫定要件を実装依頼として扱わない。`実装して`などの明示後に変更を開始し、動作するfirst implementationと最小の関連検証まで進めて利用者へ制御を返す。実装中の通常のedit/bashはYOLO modeで止めず、方針変更や節目を自然言語で報告する。
+
+要件や方式を先に固める場合は`/plan`を使う。read-onlyで調査・計画し、画面上のExecute選択または明示的な実装指示まで変更しない。
+
+「全件完了まで継続」のように無人完遂を明示する場合だけ`/goal <goal>`を使う。`pi-goal.json`で自動応答を4回、無進捗を2回に制限し、上限到達時は状態を保持して停止する。必要なら利用者が`/goal resume`を選ぶ。利用者が「loop」と表現しても、時間間隔に意味がなければcron loopへ変換しない。
 
 `/loop <goal>`のdynamic loopは、iteration上限内の反復作業に使う。各iterationの完了後に`LoopUpdate`で次回wakeを設定するため、agent実行中のtimer tickでは`maxFires`を消費しないが、iteration上限に達すると終了する。
 
@@ -98,7 +102,7 @@ pueued -d
 pi
 ```
 
-`AGENTS.md` の指示に従い、advisory / explorationは`pi-subagents`、pueue backgroundだけcustom `delegate_agent`を使う。PiのWeb検索が利用不能な場合は共有`deep-research` skillからCodex native searchへephemeral委譲する。
+subagent / workflowは利用者がdelegation、並列調査、multi-agent reviewを明示した場合だけ使う。通常実装の品質向上を理由に自動reviewせず、reviewは原則1 passとする。明示されたpueue backgroundだけcustom `delegate_agent`を使う。PiのWeb検索が利用不能な場合は、Web調査依頼に限り共有`deep-research` skillからCodex native searchへephemeral委譲する。
 
 ### 非対話モード (`-p`)
 
@@ -145,10 +149,13 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 - `Ctrl+T`: 思考ブロックを展開/折り畳み
 - `Ctrl+O`: ツール出力を展開/折り畳み
 - `Esc` を2回: `/tree` を開く。tree 内の `Ctrl+T` でツール結果を表示/非表示
+- 実行中は現在のtoolと`Esc/Enter`をフッターに表示（`Esc`は停止、`Enter`はsteer）
 - `/statusline compact`: Cursor のプラン上限を含むフッターを1行表示に切り替え（取得元は `ai-usage cursor`）
 - 入力中の既知 skill 名はアクセント色でハイライトされる（`/reload` または再起動で skill 一覧を再読込）。
 
 ### Permission gate
+
+`permission-system.json`の`yoloMode`と`settings.json`の`hideThinkingBlock`は有効のままにする。対話の承認境界はwrite permissionではなく、明示的な実装指示と`/plan`で管理するため、実装開始後の通常操作は止めない。
 
 `common/pi/.pi/agent/extensions/permission-gate.ts`はdangerous shell commandを実行前に確認する。agentはセッション開始時のmain repositoryまたは既存worktreeで実装し、利用者の明示なしに別worktreeへ移動しない。worktree capacity追加は確認対象ではなくhard denyし、`git worktree add`と`pnpm wt provision`は実行しない。利用者が明示した既存pooled slotのclaim/listは許可する。capacity追加が必要な場合は利用者がpi外のterminalから実行する。
 

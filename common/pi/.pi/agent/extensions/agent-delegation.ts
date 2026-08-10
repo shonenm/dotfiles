@@ -87,9 +87,9 @@ export default function (pi: ExtensionAPI) {
       "Difficulty auto-selects model: high=gpt-5.6-sol, medium=gpt-5.4-mini, low=gpt-5.3-codex-spark.",
     promptSnippet: "Delegate a task to a sub-agent (reviewer/scout/worker/oracle)",
     promptGuidelines: [
-      "Use delegate_agent for tasks that benefit from a second set of model eyes.",
+      "Use delegate_agent only when the user explicitly requests delegation, subagents, or multi-agent review.",
       "Prefer role names in the task: 'Use reviewer to...', 'Use scout to explore...', 'Use oracle for a second opinion on...'.",
-      "Run parallel reviewers for different concerns: correctness, tests, complexity.",
+      "Run at most one review pass unless the user explicitly requests another; reviewer suggestions do not expand the task scope.",
       "Use async mode (default) for independent work. Use sync for sequential dependencies.",
       "Difficulty: high=review/design/debug, medium=coding from plan, low=summaries.",
     ],
