@@ -178,9 +178,19 @@ snapshot_state() {
   "$TMUX_BIN" list-panes -a -F \
     "#{session_name}${US}#{window_index}${US}#{pane_index}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{@agent_provider}${US}#{@agent_transcript_path}" |
     agent_unvis > "$SNAPSHOT_DIR/panes.tsv"
-  "$TMUX_BIN" list-windows -a -F \
-    "#{session_name}${US}#{window_index}${US}#{@agent_sidebar_pane}" |
-    agent_unvis > "$SNAPSHOT_DIR/windows.tsv"
+  while IFS="$US" read -r session window sidebar; do
+    sidebar_index=""
+    if [[ -n "$sidebar" ]]; then
+      sidebar_index=$("$TMUX_BIN" list-panes -t "$session:$window" \
+        -F "#{pane_id}${US}#{pane_index}" 2>/dev/null |
+        awk -F "$US" -v pane="$sidebar" '$1 == pane { print $2; exit }')
+    fi
+    printf '%s%s%s%s%s%s%s\n' "$session" "$US" "$window" "$US" "$sidebar" "$US" "$sidebar_index"
+  done < <(
+    "$TMUX_BIN" list-windows -a -F \
+      "#{session_name}${US}#{window_index}${US}#{@agent_sidebar_pane}" |
+      agent_unvis
+  ) > "$SNAPSHOT_DIR/windows.tsv"
 
   EXPECTED_SESSIONS=$(wc -l < "$SNAPSHOT_DIR/sessions.tsv" | tr -d ' ')
   EXPECTED_PANES=$(wc -l < "$SNAPSHOT_DIR/panes.tsv" | tr -d ' ')
@@ -269,20 +279,52 @@ restore_sessions() {
   "$TMUX_BIN" set-environment -g RCON_HOST_MACHINE "${RCON_HOST_MACHINE:-$(hostname -s 2>/dev/null || hostname)}"
 }
 
+MISSING_SIDEBARS=()
+
 restore_sidebars() {
-  local session window old_sidebar pane socket_path server_pid tmux_env
-  while IFS="$US" read -r session window old_sidebar; do
+  local session window old_sidebar sidebar_index pane socket_path server_pid tmux_env sidebar_command
+  while IFS="$US" read -r session window old_sidebar sidebar_index; do
     [[ -n "$old_sidebar" ]] || continue
     has_session "$session" || continue
+
+    pane=$("$TMUX_BIN" show-options -w -t "$session:$window" -qv @agent_sidebar_pane 2>/dev/null || true)
+    if [[ -z "$pane" ]]; then
+      # Legacy snapshots did not record the index. The sidebar implementation
+      # always creates it before the other panes, so pane 1 is the safe fallback.
+      sidebar_index="${sidebar_index:-1}"
+      pane=$("$TMUX_BIN" list-panes -t "$session:$window" \
+        -F "#{pane_index}${US}#{pane_id}" 2>/dev/null |
+        awk -F "$US" -v index="$sidebar_index" '$1 == index { print $2; exit }')
+    fi
+    if [[ -z "$pane" ]]; then
+      MISSING_SIDEBARS+=("$session${US}$window")
+      continue
+    fi
+
+    "$TMUX_BIN" set-option -w -t "$session:$window" @agent_sidebar_pane "$pane"
+    "$TMUX_BIN" set-option -p -t "$pane" @agent_status "" 2>/dev/null || true
+    sidebar_command="bash $(shell_quote "$SCRIPT_DIR/tmux-agent-sidebar.sh") run"
+    "$TMUX_BIN" respawn-pane -k -t "$pane" "$sidebar_command" 2>/dev/null ||
+      echo "Warning: could not restart sidebar in $session:$window" >&2
+    socket_path=$("$TMUX_BIN" display-message -p -t "$pane" '#{socket_path}' 2>/dev/null || true)
+    server_pid=$("$TMUX_BIN" display-message -p -t "$pane" '#{pid}' 2>/dev/null || true)
+    tmux_env="${socket_path:-default},${server_pid:-0},0"
+    TMUX="$tmux_env" TMUX_PANE="$pane" "$SCRIPT_DIR/tmux-agent-sidebar.sh" rehook >/dev/null 2>&1 || true
+  done < "$SNAPSHOT_DIR/windows.tsv"
+}
+
+restore_missing_sidebars() {
+  local target session window pane socket_path server_pid tmux_env
+  for target in "${MISSING_SIDEBARS[@]}"; do
+    IFS="$US" read -r session window <<< "$target"
     pane=$("$TMUX_BIN" list-panes -t "$session:$window" -F '#{pane_id}' 2>/dev/null | head -1 || true)
     [[ -n "$pane" ]] || continue
-    [[ -n "$("$TMUX_BIN" show-options -w -t "$session:$window" -qv @agent_sidebar_pane 2>/dev/null || true)" ]] && continue
     socket_path=$("$TMUX_BIN" display-message -p -t "$pane" '#{socket_path}' 2>/dev/null || true)
     server_pid=$("$TMUX_BIN" display-message -p -t "$pane" '#{pid}' 2>/dev/null || true)
     tmux_env="${socket_path:-default},${server_pid:-0},0"
     TMUX="$tmux_env" TMUX_PANE="$pane" "$SCRIPT_DIR/tmux-agent-sidebar.sh" toggle >/dev/null 2>&1 ||
-      echo "Warning: could not restore sidebar in $session:$window" >&2
-  done < "$SNAPSHOT_DIR/windows.tsv"
+      echo "Warning: could not create missing sidebar in $session:$window" >&2
+  done
 }
 
 wait_for_pane_shell() {
@@ -400,6 +442,7 @@ restore_sessions
 restore_sidebars
 "$SCRIPT_DIR/tmux-session-group.sh" restore >/dev/null 2>&1 || true
 launch_agents
+restore_missing_sidebars
 
 if [[ "$NO_ATTACH" == false ]]; then
   exec "$TMUX_BIN" attach-session -t "$ATTACH_SESSION"

@@ -67,7 +67,7 @@ tmux-server-restart ailab --dry-run # 状態確認のみ
 - 稼働中 container session の `default-command` と pane shell の復元
 - Claude (`--resume`)、Pi (`--continue`)、Codex (`resume --last`) の再開
 - nvim の resurrect / resession 復元
-- 保存時に sidebar があれば sidebar pane の再作成
+- 保存時の sidebar pane を layout 内で再利用し、必要な場合だけ再作成
 
 container が停止中の場合は pane を壊さず host shell のまま警告し、agent の自動再開を省略する。
 同一 cwd に複数の Codex session がある場合、Codex は `--last` の仕様に従い最新 session を選ぶ。
