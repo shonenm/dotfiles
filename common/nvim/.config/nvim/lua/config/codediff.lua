@@ -1593,8 +1593,8 @@ function M.setup(opts)
       end, vim.tbl_extend("force", map_opts, { desc = "Toggle directory or select file" }))
 
       -- Review mode (two-commit diff): reviewed marks (c), file navigation,
-      -- and hunk navigation. CodeDiff moves focus to the modified diff window
-      -- when next_hunk()/prev_hunk() are invoked from the explorer.
+      -- and hunk navigation. CodeDiff temporarily moves to the modified diff
+      -- window for hunk navigation, so restore the explorer focus afterwards.
       -- Gated so the normal status/single-revision paths are untouched.
       if explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
         vim.keymap.set("n", "c", function()
@@ -1615,9 +1615,15 @@ function M.setup(opts)
         end, vim.tbl_extend("force", map_opts, { desc = "Prev file" }))
         vim.keymap.set("n", "]", function()
           require("codediff").next_hunk()
+          if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
+            vim.api.nvim_set_current_win(explorer.winid)
+          end
         end, vim.tbl_extend("force", map_opts, { desc = "Next hunk" }))
         vim.keymap.set("n", "[", function()
           require("codediff").prev_hunk()
+          if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
+            vim.api.nvim_set_current_win(explorer.winid)
+          end
         end, vim.tbl_extend("force", map_opts, { desc = "Prev hunk" }))
         vim.keymap.set("n", "}", function()
           review_jump_unchecked(explorer, 1)
