@@ -17,14 +17,6 @@ install_mise_tools_from_lock() {
   if [[ "$include_linux" == "true" ]]; then
     cp "$CONFIG_DIR/mise-linux.toml" "$tmp/mise/conf.d/dotfiles-linux.toml"
   fi
-  if [[ "${UPDATE_INSTALL:-false}" == "true" ]]; then
-    # live-pr is the explicitly opt-in always-latest tool; do not apply the
-    # repository-wide release-age delay to this temporary lock update.
-    if ! XDG_CONFIG_HOME="$tmp" "$mise_bin" lock -g -y --minimum-release-age 0d github:shonenm/live-pr; then
-      rm -rf "$tmp"
-      return 1
-    fi
-  fi
   XDG_CONFIG_HOME="$tmp" "$mise_bin" install -y
   status=$?
   rm -rf "$tmp"
