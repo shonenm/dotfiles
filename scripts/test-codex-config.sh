@@ -28,6 +28,10 @@ fallback_policy = fallback["permissions"]["repo-autonomous"]
 assert generated_policy["description"] == fallback_policy["description"]
 assert generated_policy["network"] == fallback_policy["network"]
 assert generated_policy["filesystem"][":minimal"] == fallback_policy["filesystem"][":minimal"]
+generated_packages = [key for key in generated_policy["filesystem"] if key.endswith("/.codex/packages/**")]
+assert len(generated_packages) == 1
+assert generated_policy["filesystem"][generated_packages[0]] == "read"
+assert fallback_policy["filesystem"]["/Users/matsushimakouta/.codex/packages/**"] == "read"
 for pattern in (".", ".git/**", "**/.env", "**/.env.*", "**/*.pem", "**/*.key", "**/*.p12", "**/*.pfx"):
     assert generated_policy["filesystem"][":workspace_roots"][pattern] == fallback_policy["filesystem"][":workspace_roots"][pattern]
 PY

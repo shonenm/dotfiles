@@ -40,6 +40,8 @@ description = "Autonomous work limited to the active repository and GitHub"
 
 [permissions.repo-autonomous.filesystem]
 ":minimal" = "read"
+# Standalone Codex re-executes itself inside bwrap; expose its runtime tree.
+"/Users/matsushimakouta/.codex/packages/**" = "read"
 "/Users/matsushimakouta/.config/gh/**" = "read"
 "/opt/homebrew/bin/gh" = "read"
 "/opt/homebrew/Cellar/gh/**" = "read"
