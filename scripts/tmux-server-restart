@@ -424,6 +424,8 @@ fi
 
 if [[ -n "$SNAPSHOT_DIR_ARG" ]]; then
   load_snapshot
+  echo 'Stopping current tmux server before snapshot restore...'
+  "$TMUX_BIN" kill-server || true
 else
   [[ -f "$SAVE_SCRIPT" ]] || fatal "tmux-resurrect save script not found: $SAVE_SCRIPT"
   snapshot_state
