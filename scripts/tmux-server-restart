@@ -1,0 +1,368 @@
+#!/usr/bin/env bash
+# tmux server restart with layout, session-group, container, and agent recovery.
+#
+# Usage:
+#   tmux-server-restart [host] [--yes]
+#   tmux-server-restart [host] --dry-run
+#
+# The local mode invokes the same script on the remote host, so the restart
+# happens outside tmux and the SSH tty can attach to the restored session.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REMOTE=false
+ASSUME_YES=false
+DRY_RUN=false
+NO_ATTACH=false
+HOST="ailab"
+HOST_SET=false
+
+usage() {
+  cat <<'EOF'
+Usage: tmux-server-restart [host] [options]
+
+Restart a remote tmux server and recover its saved layout, groups, containers,
+and AI agent sessions.
+
+Options:
+  -y, --yes       Skip the confirmation prompt
+      --dry-run   Show the current inventory without changing anything
+      --no-attach Restore and exit instead of attaching to the session
+  -h, --help      Show this help
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --remote) REMOTE=true ;;
+    -y|--yes) ASSUME_YES=true ;;
+    --dry-run) DRY_RUN=true ;;
+    --no-attach) NO_ATTACH=true ;;
+    -h|--help) usage; exit 0 ;;
+    --*) echo "Unknown option: $arg" >&2; usage >&2; exit 2 ;;
+    *)
+      if [[ "$REMOTE" == false && "$HOST_SET" == false ]]; then
+        HOST="$arg"
+        HOST_SET=true
+      else
+        echo "Unexpected argument: $arg" >&2; usage >&2; exit 2
+      fi
+      ;;
+  esac
+done
+
+if [[ "$REMOTE" == false ]]; then
+  if [[ "$ASSUME_YES" == false && "$DRY_RUN" == false ]]; then
+    printf 'Restart tmux server on %s and restore its sessions? [y/N] ' "$HOST" >&2
+    read -r answer
+    [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo 'Cancelled.' >&2; exit 0; }
+  fi
+
+  remote_args=(--remote --yes)
+  [[ "$DRY_RUN" == true ]] && remote_args+=(--dry-run)
+  [[ "$NO_ATTACH" == true ]] && remote_args+=(--no-attach)
+  # rcon's PATH is required: /usr/bin/tmux on ailab is the incompatible 3.2a.
+  remote_command="export PATH=\"\$HOME/.local/bin:\$HOME/.pixi/bin:\$PATH\"; export TERMINFO_DIRS=\"\$HOME/.terminfo:/usr/share/terminfo:/lib/terminfo\"; exec \"\$HOME/dotfiles/scripts/tmux-server-restart\""
+  for remote_arg in "${remote_args[@]}"; do
+    remote_command+=" $(printf '%q' "$remote_arg")"
+  done
+  exec ssh -tt "$HOST" "$remote_command"
+fi
+
+[[ -z "${TMUX:-}" ]] || {
+  echo 'tmux-server-restart: run from outside the target tmux server.' >&2
+  exit 1
+}
+
+if [[ "$ASSUME_YES" == false && "$DRY_RUN" == false ]]; then
+  printf 'Restart this tmux server and restore its sessions? [y/N] ' >&2
+  read -r answer
+  [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]] || { echo 'Cancelled.' >&2; exit 0; }
+fi
+
+export PATH="$HOME/.local/bin:$HOME/.pixi/bin:$PATH"
+export TERMINFO_DIRS="$HOME/.terminfo:/usr/share/terminfo:/lib/terminfo"
+if zsh_bin=$(command -v zsh 2>/dev/null); then
+  export SHELL="$zsh_bin"
+fi
+
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/tmux-agent-lib.sh"
+
+TMUX_BIN="$(command -v tmux 2>/dev/null || true)"
+[[ -n "$TMUX_BIN" ]] || { echo 'tmux-server-restart: tmux not found' >&2; exit 1; }
+RESURRECT_DIR="${TMUX_RESURRECT_DIR:-$HOME/.tmux/plugins/tmux-resurrect}"
+SAVE_SCRIPT="${TMUX_RESURRECT_SAVE_SCRIPT:-$RESURRECT_DIR/scripts/save.sh}"
+RESTORE_SCRIPT="${TMUX_RESURRECT_RESTORE_SCRIPT:-$RESURRECT_DIR/scripts/restore.sh}"
+STATE_DIR="${TMUX_RESTART_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/tmux/restart}"
+US=$'\x1f'
+
+fatal() {
+  echo "tmux-server-restart: $*" >&2
+  exit 1
+}
+
+count_lines() {
+  awk 'NF { n++ } END { print n + 0 }'
+}
+
+shell_quote() {
+  printf '%q' "$1"
+}
+
+has_session() {
+  "$TMUX_BIN" has-session -t "$1" 2>/dev/null
+}
+
+pane_exists() {
+  local target="$1" session window pane
+  session="${target%%:*}"
+  window="${target#*:}"
+  window="${window%%.*}"
+  pane="${target##*.}"
+  "$TMUX_BIN" list-panes -t "$session:$window" -F '#{pane_index}' 2>/dev/null |
+    grep -qxF "$pane"
+}
+
+current_command() {
+  "$TMUX_BIN" display-message -p -t "$1" '#{pane_current_command}' 2>/dev/null || true
+}
+
+send_command() {
+  "$TMUX_BIN" send-keys -t "$1" "$2" C-m
+}
+
+snapshot_state() {
+  local stamp client_session first_session attach_cwd
+  umask 077
+  mkdir -p "$STATE_DIR"
+  stamp="$(date +%Y%m%d-%H%M%S)-$$"
+  SNAPSHOT_DIR="$STATE_DIR/$stamp"
+  mkdir -p "$SNAPSHOT_DIR"
+
+  "$SCRIPT_DIR/tmux-session-group.sh" sync >/dev/null 2>&1 || true
+
+  client_session=$("$TMUX_BIN" list-clients -F '#{client_session}' 2>/dev/null | head -1 || true)
+  first_session=$("$TMUX_BIN" list-sessions -F '#{session_name}' 2>/dev/null | head -1 || true)
+  ATTACH_SESSION="${client_session:-$first_session}"
+  [[ -n "$ATTACH_SESSION" ]] || fatal 'no tmux session found'
+  attach_cwd=$("$TMUX_BIN" list-panes -t "$ATTACH_SESSION" -F '#{pane_current_path}' 2>/dev/null | head -1 || true)
+  ATTACH_CWD="${attach_cwd:-$HOME}"
+  [[ -d "$ATTACH_CWD" ]] || ATTACH_CWD="$HOME"
+
+  "$TMUX_BIN" list-sessions -F \
+    "#{session_name}${US}#{@rcon-host}${US}#{@rcon-container}${US}#{@rcon-container-home}" |
+    agent_unvis > "$SNAPSHOT_DIR/sessions.tsv"
+  "$TMUX_BIN" list-panes -a -F \
+    "#{session_name}${US}#{window_index}${US}#{pane_index}${US}#{pane_current_path}${US}#{pane_current_command}${US}#{@agent_provider}${US}#{@agent_transcript_path}" |
+    agent_unvis > "$SNAPSHOT_DIR/panes.tsv"
+  "$TMUX_BIN" list-windows -a -F \
+    "#{session_name}${US}#{window_index}${US}#{@agent_sidebar_pane}" |
+    agent_unvis > "$SNAPSHOT_DIR/windows.tsv"
+
+  EXPECTED_SESSIONS=$(wc -l < "$SNAPSHOT_DIR/sessions.tsv" | tr -d ' ')
+  EXPECTED_PANES=$(wc -l < "$SNAPSHOT_DIR/panes.tsv" | tr -d ' ')
+  {
+    printf 'attach_session\t%s\n' "$ATTACH_SESSION"
+    printf 'attach_cwd\t%s\n' "$ATTACH_CWD"
+    printf 'sessions\t%s\n' "$EXPECTED_SESSIONS"
+    printf 'panes\t%s\n' "$EXPECTED_PANES"
+  } > "$SNAPSHOT_DIR/meta.tsv"
+
+  echo "Snapshot: $SNAPSHOT_DIR"
+  echo "Sessions: $EXPECTED_SESSIONS, panes: $EXPECTED_PANES"
+}
+
+show_inventory() {
+  local panes
+  panes=$("$TMUX_BIN" list-panes -a -F \
+    '#{session_name}|#{window_index}.#{pane_index}|#{pane_current_command}|#{@agent_provider}|#{pane_current_path}' 2>/dev/null || true)
+  printf '%s\n' "$panes"
+}
+
+restore_layout() {
+  local sessions panes
+  # continuum starts restore one second after the new server loads. Give it
+  # ownership first, then use the plugin script only when it did not restore.
+  sleep 2
+  for _ in $(seq 1 30); do
+    sessions=$("$TMUX_BIN" list-sessions 2>/dev/null | count_lines)
+    panes=$("$TMUX_BIN" list-panes -a 2>/dev/null | count_lines)
+    if (( sessions >= EXPECTED_SESSIONS && panes >= EXPECTED_PANES )); then
+      echo "Layout restored: $sessions sessions, $panes panes"
+      return 0
+    fi
+    sleep 1
+  done
+
+  if [[ -x "$RESTORE_SCRIPT" ]]; then
+    echo 'Automatic restore did not reach the saved topology; running restore.sh.' >&2
+    if ! "$RESTORE_SCRIPT"; then
+      echo 'Warning: restore.sh failed; continuing with the partial restore.' >&2
+    fi
+    for _ in $(seq 1 10); do
+      sessions=$("$TMUX_BIN" list-sessions 2>/dev/null | count_lines)
+      panes=$("$TMUX_BIN" list-panes -a 2>/dev/null | count_lines)
+      if (( sessions >= EXPECTED_SESSIONS && panes >= EXPECTED_PANES )); then
+        echo "Layout restored: $sessions sessions, $panes panes"
+        return 0
+      fi
+      sleep 1
+    done
+  fi
+
+  echo 'Warning: restored topology is smaller than the snapshot.' >&2
+  "$TMUX_BIN" list-sessions >&2 || true
+}
+
+container_running() {
+  command -v docker >/dev/null 2>&1 || return 1
+  [[ "$(docker inspect -f '{{.State.Running}}' "$1" 2>/dev/null || true)" == true ]]
+}
+
+restore_sessions() {
+  local session rcon_host container container_home docker_cmd pane
+  while IFS="$US" read -r session rcon_host container container_home; do
+    [[ -n "$session" ]] || continue
+    has_session "$session" || continue
+    [[ -n "$rcon_host" ]] && "$TMUX_BIN" set-option -t "$session" @rcon-host "$rcon_host"
+    [[ -n "$container" ]] || continue
+
+    "$TMUX_BIN" set-option -t "$session" @rcon-container "$container"
+    [[ -n "$container_home" ]] &&
+      "$TMUX_BIN" set-option -t "$session" @rcon-container-home "$container_home"
+    docker_cmd="exec $(shell_quote "$SCRIPT_DIR/tmux-docker-enter") $(shell_quote "$container")"
+    "$TMUX_BIN" set-option -t "$session" default-command "$docker_cmd"
+
+    if ! container_running "$container"; then
+      echo "Warning: container '$container' is not running; left panes untouched." >&2
+      continue
+    fi
+    while IFS= read -r pane; do
+      [[ -n "$pane" ]] || continue
+      "$TMUX_BIN" respawn-pane -k -t "$pane" "$docker_cmd" 2>/dev/null || true
+    done < <("$TMUX_BIN" list-panes -t "$session" -F '#{pane_id}' 2>/dev/null)
+  done < "$SNAPSHOT_DIR/sessions.tsv"
+  "$TMUX_BIN" set-environment -g RCON_HOST_HOME "$HOME"
+  "$TMUX_BIN" set-environment -g RCON_HOST_MACHINE "${RCON_HOST_MACHINE:-$(hostname -s 2>/dev/null || hostname)}"
+}
+
+restore_sidebars() {
+  local session window old_sidebar pane socket_path server_pid tmux_env
+  while IFS="$US" read -r session window old_sidebar; do
+    [[ -n "$old_sidebar" ]] || continue
+    has_session "$session" || continue
+    pane=$("$TMUX_BIN" list-panes -t "$session:$window" -F '#{pane_id}' 2>/dev/null | head -1 || true)
+    [[ -n "$pane" ]] || continue
+    [[ -n "$("$TMUX_BIN" show-options -w -t "$session:$window" -qv @agent_sidebar_pane 2>/dev/null || true)" ]] && continue
+    socket_path=$("$TMUX_BIN" display-message -p -t "$pane" '#{socket_path}' 2>/dev/null || true)
+    server_pid=$("$TMUX_BIN" display-message -p -t "$pane" '#{pid}' 2>/dev/null || true)
+    tmux_env="${socket_path:-default},${server_pid:-0},0"
+    TMUX="$tmux_env" TMUX_PANE="$pane" "$SCRIPT_DIR/tmux-agent-sidebar.sh" toggle >/dev/null 2>&1 ||
+      echo "Warning: could not restore sidebar in $session:$window" >&2
+  done < "$SNAPSHOT_DIR/windows.tsv"
+}
+
+wait_for_pane_shell() {
+  local pane="$1" cmd
+  for _ in $(seq 1 10); do
+    cmd=$(current_command "$pane")
+    case "$cmd" in
+      tmux-docker-enter|docker) sleep 0.2 ;;
+      *) return 0 ;;
+    esac
+  done
+}
+
+launch_agents() {
+  local session window pane path saved_cmd provider transcript target current kind command qpath
+  local transcript_path resume_id container
+  local launched=0 skipped=0
+  while IFS="$US" read -r session window pane path saved_cmd provider transcript; do
+    [[ -n "$session" ]] || continue
+    target="$session:$window.$pane"
+    pane_exists "$target" || { echo "Warning: missing pane $target" >&2; skipped=$((skipped + 1)); continue; }
+
+    container=$(awk -F "$US" -v s="$session" '$1 == s { print $3; exit }' "$SNAPSHOT_DIR/sessions.tsv")
+    if [[ -n "$container" ]] && container_running "$container"; then
+      wait_for_pane_shell "$target"
+      qpath=$(shell_quote "$path")
+      send_command "$target" "cd -- $qpath"
+      sleep 0.2
+    fi
+
+    provider=$(printf '%s' "$provider" | tr '[:upper:]' '[:lower:]')
+    kind="$provider"
+    if [[ -z "$kind" ]]; then
+      case "$saved_cmd" in
+        claude*) kind=claude ;;
+        pi*) kind=pi ;;
+        codex*) kind=codex ;;
+        nvim|vim|view) kind=nvim ;;
+        *) kind='' ;;
+      esac
+    fi
+    transcript_path="$transcript"
+    resume_id=""
+    case "$kind" in
+      claude)
+        if [[ -n "$transcript_path" ]]; then
+          resume_id="${transcript_path##*/}"
+          resume_id="${resume_id%.jsonl}"
+          command="claude --resume $(shell_quote "$resume_id")"
+        else
+          command='claude --continue'
+        fi
+        ;;
+      pi) command='pi --continue' ;;
+      codex) command='codex resume --last' ;;
+      nvim) command='nvim' ;;
+      *) continue ;;
+    esac
+
+    current=$(current_command "$target")
+    if ! agent_is_shell "$current"; then
+      case "$kind:$current" in
+        nvim:nvim|nvim:vim|claude:claude|pi:pi|codex:codex) continue ;;
+        *) echo "Warning: $target is running '$current'; skipped '$command'." >&2; skipped=$((skipped + 1)); continue ;;
+      esac
+    fi
+
+    [[ -n "$provider" ]] && "$TMUX_BIN" set-option -p -t "$target" @agent_provider "$provider" 2>/dev/null || true
+    [[ -n "$transcript_path" ]] &&
+      "$TMUX_BIN" set-option -p -t "$target" @agent_transcript_path "$transcript_path" 2>/dev/null || true
+    send_command "$target" "$command"
+    launched=$((launched + 1))
+  done < "$SNAPSHOT_DIR/panes.tsv"
+  echo "Processes launched: $launched, skipped: $skipped"
+}
+
+show_inventory
+if [[ "$DRY_RUN" == true ]]; then
+  exit 0
+fi
+
+[[ -f "$SAVE_SCRIPT" ]] || fatal "tmux-resurrect save script not found: $SAVE_SCRIPT"
+snapshot_state
+
+echo 'Saving tmux-resurrect snapshot...'
+bash "$SAVE_SCRIPT"
+echo 'Stopping tmux server...'
+"$TMUX_BIN" kill-server
+
+# rcon uses zsh + the full user PATH before starting the server. Do the same.
+export RCON_HOST_HOME="$HOME"
+export RCON_HOST_MACHINE="${RCON_HOST_MACHINE:-$(hostname -s 2>/dev/null || hostname)}"
+"$TMUX_BIN" new-session -d -s "$ATTACH_SESSION" -c "$ATTACH_CWD"
+restore_layout
+restore_sessions
+restore_sidebars
+"$SCRIPT_DIR/tmux-session-group.sh" restore >/dev/null 2>&1 || true
+launch_agents
+
+if [[ "$NO_ATTACH" == false ]]; then
+  exec "$TMUX_BIN" attach-session -t "$ATTACH_SESSION"
+fi
+
+echo "Restored. Attach with: tmux attach -t $(shell_quote "$ATTACH_SESSION")"

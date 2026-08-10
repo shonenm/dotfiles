@@ -48,11 +48,33 @@ tmux -L bench kill-server
 continuum が 15 分毎に session/window/pane 構成 + レイアウト + cwd を
 `~/.local/share/tmux/resurrect/` に自動保存している(`@continuum-restore on`)。
 再起動時のレイアウト復元はこれで自動。ただし **復元されるのは shell だけ**で、
-agent(claude/pi)は whitelist 外のため手動再起動が要る。
+agent(Claude/Pi/Codex)は whitelist 外のため、復旧ラッパーが別途再開する。
 
-## 再起動 & 復元手順(AI と協力)
+## 再起動 & 復元手順
 
-### 1. 事前採取(kill 前・read-only)
+通常は今回の status bar 最適化後、fork latency が再び悪化した時だけ再起動する。
+復元を手作業にしないため、推奨コマンドを用意している。
+
+```bash
+tmux-server-restart ailab          # 確認後に再起動・復元・attach
+tmux-server-restart ailab --dry-run # 状態確認のみ
+```
+
+このコマンドは次を自動化する:
+
+- `tmux-resurrect` の保存と layout / cwd の復元
+- session group の再適用
+- 稼働中 container session の `default-command` と pane shell の復元
+- Claude (`--resume`)、Pi (`--continue`)、Codex (`resume --last`) の再開
+- nvim の resurrect / resession 復元
+- 保存時に sidebar があれば sidebar pane の再作成
+
+container が停止中の場合は pane を壊さず host shell のまま警告し、agent の自動再開を省略する。
+同一 cwd に複数の Codex session がある場合、Codex は `--last` の仕様に従い最新 session を選ぶ。
+
+### 手動復旧手順(AI と協力)
+
+#### 1. 事前採取(kill 前・read-only)
 ```bash
 # 稼働中 agent(pi/claude) pane の特定
 tmux list-panes -a -F '#{session_name}|#{window_index}.#{pane_index}|#{pane_current_command}|#{pane_current_path}'
@@ -65,7 +87,7 @@ tmux list-windows -a -F '#{session_name}|#{window_layout}' > ~/.cache/tmux-resto
   pane 数分。同一 cwd に複数 claude があるなら最新 N 個を明示 `--resume <id>` で対応。
 - pi は `pi --continue`(cwd の最新セッション自動再開)で足りる。ID 不要。
 
-### 2. 再起動 — **必ず rcon 経由で起動する**
+#### 2. 再起動 — **必ず rcon 経由で起動する**
 > 手動 `tmux new-session` で起動してはいけない。非対話 env で起動すると:
 > - `SHELL=bash` + 最小 PATH になり pane が nix/pixi zsh でなく bash に。
 >   claude は zsh 関数(`.zshrc.common`)、pi は pixi/mise の PATH 依存なので起動不可。
@@ -80,7 +102,7 @@ tmux kill-server        # 全 session 終了・断片化解放
 rcon ailab              # 正しい env で新サーバ起動 + attach
 ```
 
-### 3. 復元
+#### 3. 復元
 1. attach 状態(client あり = TTY)で作業する。レイアウトが端末サイズへ再展開される。
 2. continuum が自動復元しない場合のみ明示実行:
    `~/.tmux/plugins/tmux-resurrect/scripts/restore.sh`
@@ -91,7 +113,7 @@ rcon ailab              # 正しい env で新サーバ起動 + attach
    (または左端 pane で `exec ~/dotfiles/scripts/tmux-agent-sidebar.sh run` +
    `tmux set-option -w @agent_sidebar_pane <pane_id>` で in-place 復活)
 
-### 4. 落とし穴(2026-07-18 に踏んだもの)
+#### 4. 落とし穴(2026-07-18 に踏んだもの)
 - **headless での `kill-pane` や hung プロセス kill は "server exited unexpectedly"
   クラッシュを誘発しやすい**(ghostty 絡みの既知不安定性)。pane 操作は attach 後に。
 - クラッシュしても resurrect save から復旧できる。慌てず `restore.sh`。
