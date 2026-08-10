@@ -41,13 +41,12 @@ STATUS_DIR="${AGENT_STATUS_DIR:-${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/stat
 TAB=$'\t'
 ESC_K=$'\033[K'   # 行末までクリア(全画面クリアせず=チカチカしない)
 
-# どれかの client が zoom / choose-tree / copy-mode 中なら true。
-# その間は sidebar の幅補正 resize を止める: zoom した window に sidebar pane があると、
-# 補正 resize (run ループ / window-layout-changed 経由の resize-all) が zoom を解除して
-# しまう (tmux は zoom 中の window の pane を resize すると unzoom する)。
+# どれかの client が native/pseudo zoom / choose-tree / copy-mode 中なら true。
+# 擬似 zoom は window_zoomed_flag が立たないため、@pzoom_pane も判定する。
+# その間に sidebar を resize すると、zoom 中の layout と競合して pane 内容が崩れる。
 # transient な状態なので、抜けた後の tick で補正すれば十分。
 sidebar_user_busy() {
-  tmux list-clients -F '#{window_zoomed_flag}#{pane_in_mode}' 2>/dev/null | grep -q 1
+  tmux list-clients -F '#{window_zoomed_flag}#{pane_in_mode}#{@pzoom_pane}' 2>/dev/null | grep -q 1
 }
 
 # 表示幅基準の切り詰め(全角=2幅近似)。[[:ascii:]] は macOS 非対応のため case で判定
@@ -363,7 +362,7 @@ case "${1:-toggle}" in
       # zoom 中は補正しない: zoom もレイアウト変更なので本 hook を撃つが、resize-pane は
       # zoom 中の window を unzoom してしまう(prefix-z が一瞬で戻る)。if-shell -F は format
       # 評価のみで shell を fork しないため、同期・無 fork のまま zoom を素通しできる。
-      tmux set-hook -w -t "$win" window-layout-changed "if-shell -F '#{?window_zoomed_flag,0,1}' 'resize-pane -t $pane -x $WIDTH'" 2>/dev/null || true
+      tmux set-hook -w -t "$win" window-layout-changed "if-shell -F '#{?#{||:#{window_zoomed_flag},#{@pzoom_pane}},0,1}' 'resize-pane -t $pane -x $WIDTH'" 2>/dev/null || true
       tmux select-pane -t "$src" 2>/dev/null || true   # 作業 pane にフォーカスを残す
       # daemon は「サイドバーが1つも無い」と自分で畳むので、開くたびに起動を保証する。
       # 新 pane を index に載せてから起動する(古い cache のまま起動すると即 exit する)。
@@ -399,7 +398,7 @@ case "${1:-toggle}" in
     while IFS=$'\t' read -r win pane; do
       [[ -z "$pane" ]] && continue
       tmux list-panes -t "$win" -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane" || continue
-      tmux set-hook -w -t "$win" window-layout-changed "if-shell -F '#{?window_zoomed_flag,0,1}' 'resize-pane -t $pane -x $WIDTH'" 2>/dev/null || true
+      tmux set-hook -w -t "$win" window-layout-changed "if-shell -F '#{?#{||:#{window_zoomed_flag},#{@pzoom_pane}},0,1}' 'resize-pane -t $pane -x $WIDTH'" 2>/dev/null || true
     done < <(tmux list-windows -a -F "#{window_id}$(printf '\t')#{@agent_sidebar_pane}" 2>/dev/null)
     # daemon が落ちている場合の復帰口も兼ねる(既に居れば pid ファイル判定で即 exit する)
     tmux run-shell -b "exec bash '$SELF' daemon >/dev/null 2>&1" 2>/dev/null || true
