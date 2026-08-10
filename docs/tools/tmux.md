@@ -82,7 +82,7 @@ prefix 不要のグループ移動キー（root table）:
 | `g` | lazygit（カレントパスで起動） | 80% × 80% |
 | `k` | keifu（Git コミットグラフ TUI） | 80% × 80% |
 | `Q` | quay（TUI ポートマネージャー） | 80% × 80% |
-| `G` | gh-dash（GitHub Dashboard） | 85% × 85% |
+| `G` | live-pr（Pull Request Dashboard） | 85% × 85% |
 | `P` | pgcli（PostgreSQL クライアント） | 80% × 80% |
 | `j` | Scratchpadシェル（永続 `scratch` セッション、トグル） | 80% × 80% |
 | `f` | セッション切り替え（fzf + プレビュー） | 60% × 60% |
@@ -92,7 +92,7 @@ prefix 不要のグループ移動キー（root table）:
 
 - `-E` フラグにより、コマンド終了時に popup 自動クローズ
 - `P` のpgcliは `$DATABASE_URL` があれば使用し、なければ `postgresql://postgres:postgres@localhost:5432/postgres` にフォールバック
-- `G` の gh-dash は 85% サイズ（列が多いため lazygit より少し大きめ）
+- `G` の live-pr は 85% サイズ（列が多いため lazygit より少し大きめ）
 - `j` のScratchpadは永続セッション (`scratch`) を使用。再度 `prefix + j` でトグル（セッション状態を維持）
 - `f` はデフォルトの `find-window` を上書き
 - `F` はプロジェクト名でセッションを作成（既存なら切り替え）。プロジェクトルートに `.tmux` ファイルがあれば新規セッション時に自動実行
@@ -180,7 +180,7 @@ Prefix (`Ctrl+Space`) 押下時、ステータスバー右側全体がキーバ�
 | `-` | 垂直分割 |
 | `\|` | 水平分割 |
 | `g` | lazygit popup |
-| `G` | gh-dash popup |
+| `G` | live-pr popup |
 | `k` | keifu popup（Git コミットグラフ） |
 | `j` | Scratchpadシェル |
 | `f` | セッション切り替え |

@@ -23,10 +23,10 @@
     "action": { "popup": "~/dotfiles/scripts/tmux-popup-in-container quay" }
   },
   {
-    "title": "gh-dash",
-    "description": "GitHub dashboard",
-    "aliases": ["gh", "pr", "github"],
-    "action": { "popup": "~/dotfiles/scripts/tmux-popup-in-container gh dash" }
+    "title": "live-pr",
+    "description": "Live pull request dashboard",
+    "aliases": ["pr", "github"],
+    "action": { "popup": "~/dotfiles/scripts/tmux-popup-in-container live-pr" }
   },
   {
     "title": "Scratchpad",

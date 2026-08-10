@@ -37,9 +37,7 @@ if [[ -n "${CONTAINER:-}" ]]; then
   exec docker "${args[@]}"
 fi
 
-# Fallback: run on host. Use `zsh -lc` (login non-interactive), which skips
-# interactive plugins, completion, and prompt hooks. Popup-launched commands
-# only need their binary on PATH; `.zshenv` provides user-local paths without
-# loading the full interactive configuration.
+# Fallback: run on host. Use interactive zsh so mise activation adds shims
+# for tools installed after the tmux server was started.
 host_cmd_str=$(printf '%q ' "$@")
-exec zsh -lc "exec $host_cmd_str"
+exec zsh -ic "exec $host_cmd_str"
