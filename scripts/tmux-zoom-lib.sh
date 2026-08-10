@@ -32,7 +32,9 @@ pzoom_restore() {   # $1=win
     local layout
     layout=$(tmux show-options -w -t "$1" -qv @pzoom_layout 2>/dev/null)
     [ -n "$layout" ] || return 1
+    # レイアウト復元が完了するまで zoom marker を残す。layout-change hook からも
+    # 復元中の window を busy として見せ、競合する sidebar resize を止める。
+    tmux select-layout -t "$1" "$layout" 2>/dev/null || return 1
     tmux set-option -w -t "$1" -u @pzoom_layout 2>/dev/null
     tmux set-option -w -t "$1" -u @pzoom_pane 2>/dev/null
-    tmux select-layout -t "$1" "$layout" 2>/dev/null
 }
