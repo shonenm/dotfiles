@@ -4,26 +4,32 @@
 - User communication: Japanese (日本語)
 - Documentation and code comments: Preserve the existing language; do not translate them.
 
-## Execution Behavior
-Counters over-caution common in coding agents. Follow unless the user says otherwise.
-- Finish the full requested scope in one pass. Implement end-to-end, including the
-  supporting changes (wiring, types, tests, docs) needed to make it actually work.
-  Do not ship a deliberately minimal/partial version when the request implies more.
-- Do not stop early to save context or cost, and do not split one coherent task into
-  artificial phases. The user owns context and budget; your job is to complete the
-  task. Keep going until it is done or you hit a real blocker.
-- Pause only when genuinely blocked: a decision only the user can make, a truly
-  ambiguous requirement, or a destructive/irreversible action. Otherwise make a
-  reasonable assumption, state it, and proceed — do not ask permission for routine steps.
-- A pure question is not a work request. "how / why / can you / what" asks for an
-  answer, not action; answer it and stop. Do not edit files or run commands off a
-  question. Act only on an explicit request ("do it / fix it / implement it"). When
-  the answer implies a change, state it and let the user decide whether to start.
+## Interaction and Execution
+Classify the user's intent before acting. Follow unless the user explicitly says otherwise.
+- Questions, problem statements, tentative requirements, and requests for advice are
+  discussion, not implementation. Answer them without modifying files or running
+  mutating commands. Read-only investigation is allowed when needed for an accurate answer.
+- Start implementation only after an explicit action request such as "do it", "fix it",
+  or "implement it". If the user asks to discuss, plan, or settle requirements first,
+  wait for explicit implementation approval even when the likely solution seems obvious.
+- Once implementation is explicitly approved, do not interrupt for routine edits,
+  commands, or reasonable implementation details. Make a reasonable assumption, state it,
+  and proceed; ask only about genuinely ambiguous product decisions or irreversible actions.
+- In normal interactive work, deliver a working 70–80% first implementation with the
+  smallest relevant verification, then return control for user review. Do not chase
+  optional polish, broad CI, exhaustive audits, or speculative edge cases. Use full
+  end-to-end completion only when the user explicitly asks to finalize/autonomously finish
+  or activates `/goal`.
+- Never launch subagents, workflows, parallel reviewers, adversarial reviews, or repeat
+  reviews unless the user explicitly requests delegation or multi-agent review. Reviewer
+  suggestions do not expand the requested scope or acceptance criteria.
+- Give concise natural-language progress updates: before the first tool call, after a
+  meaningful milestone, when the approach changes, on an unexpected finding or blocker,
+  and before a long-running command. Do not narrate every command.
 - If you must estimate or phase work, estimate in autonomous execution time (minutes),
-  never human developer time. Never say "this takes a day/week" for work you can do
-  now; prefer doing it now over proposing a future phase.
-- "Nothing more, nothing less" means do not invent unrequested features — it does NOT
-  mean stopping short of a working result. Bias toward completion over deferral.
+  never human developer time.
+- "Nothing more, nothing less" means implement the explicit request as a working result
+  without inventing adjacent features.
 
 ## Design Principles
 - **Root cause over workarounds.** Investigate the actual mechanism before applying a fix.
@@ -40,9 +46,12 @@ Counters over-caution common in coding agents. Follow unless the user says other
   The user decides what is worth doing.
 
 ## Development Workflow
-- Before finishing any task: run type checks and relevant tests.
+- Before returning an implementation, run the smallest relevant type check and tests.
+  Do not run the full CI pipeline or unrelated suites unless explicitly requested.
+- Fix failures caused by the change. Report unrelated pre-existing failures without
+  expanding the task to fix them.
 - Prefer small, reviewable diffs.
-- When behavior changes, update or add tests.
+- When behavior changes, update or add focused tests.
 - Do not edit generated files (dist/, coverage/, .next/, node_modules/) unless regenerating.
 
 ## Safety

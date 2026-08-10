@@ -195,7 +195,8 @@ export default function (pi: ExtensionAPI) {
       "Difficulty selects the model tier (high/medium/low).",
     promptSnippet: "Run independent tasks concurrently across sub-agents",
     promptGuidelines: [
-      "Use agent_parallel when tasks are independent and benefit from concurrency.",
+      "Use agent_parallel only when the user explicitly requests parallel or multi-agent work.",
+      "Do not create iterative review loops; one review pass is the default.",
       "Set jsonKeys when you need to machine-read each result.",
       "Set budgetUSD to cap spend; tasks beyond the budget are skipped.",
     ],
@@ -261,7 +262,8 @@ export default function (pi: ExtensionAPI) {
       "Returns the final output per item plus total tokens/cost.",
     promptSnippet: "Run each item through ordered sub-agent stages",
     promptGuidelines: [
-      "Use agent_pipeline for per-item multi-step transforms (summarize→verify, draft→refine).",
+      "Use agent_pipeline only when the user explicitly requests a multi-agent pipeline.",
+      "Do not use repeated critique/refine stages as an open-ended quality loop.",
       "Reference {input} (previous stage output) and {item} (original item) in stage prompts.",
     ],
     parameters: Type.Object({

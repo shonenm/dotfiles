@@ -217,6 +217,21 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
+  // Keep interrupt/steer controls visible while a run is active. Progress
+  // narration stays in the system prompt; this is the deterministic fallback.
+  pi.on("agent_start", async (_event, ctx) => {
+    ctx.ui.setStatus("run-control", "RUN · Esc/Ent");
+  });
+  pi.on("tool_execution_start", async (event, ctx) => {
+    ctx.ui.setStatus("run-control", `${event.toolName} · Esc/Ent`);
+  });
+  pi.on("tool_execution_end", async (_event, ctx) => {
+    ctx.ui.setStatus("run-control", "RUN · Esc/Ent");
+  });
+  pi.on("agent_settled", async (_event, ctx) => {
+    ctx.ui.setStatus("run-control", undefined);
+  });
+
   // -----------------------------------------------------------------------
   // Git dirty check
   // -----------------------------------------------------------------------

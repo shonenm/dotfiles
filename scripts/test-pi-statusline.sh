@@ -16,7 +16,8 @@ printf '%s' 'Refine the pi statusline' >"$tmp/home/.pi/agent/goal"
 printf '%s\n' '#!/bin/sh' \
   'printf '\''%s'\'' '\''{"tasks":{"1":{"label":"pi-delegate","status":"Running"},"2":{"label":"pi-delegate","status":"Queued"}}}'\''' \
   >"$tmp/bin/pueue"
-chmod +x "$tmp/bin/pueue"
+printf '%s\n' '#!/bin/sh' 'exit 1' >"$tmp/bin/ai-usage"
+chmod +x "$tmp/bin/pueue" "$tmp/bin/ai-usage"
 
 cd "$tmp"
 HOME="$tmp/home" PATH="$tmp/bin:$PATH" node --experimental-strip-types --preserve-symlinks --input-type=module - "$tmp" <<'JS'
@@ -30,6 +31,7 @@ const commands = new Map();
 let footerFactory;
 let contextPercent = 42;
 let reloaded = false;
+const statuses = new Map([["stash", "📝 STASHED"]]);
 
 registerStatusline({
   registerCommand: (name, options) => commands.set(name, options),
@@ -54,12 +56,15 @@ const ctx = {
   model: { id: "gpt-5.6-sol", contextWindow: 100000 },
   ui: {
     setFooter: (factory) => { footerFactory = factory; },
+    setStatus: (key, value) => value === undefined ? statuses.delete(key) : statuses.set(key, value),
     notify: () => {},
   },
   reload: async () => { reloaded = true; },
 };
 
 for (const handler of handlers.get("session_start")) await handler({}, ctx);
+for (const handler of handlers.get("agent_start")) await handler({}, ctx);
+for (const handler of handlers.get("tool_execution_start")) await handler({ toolName: "bash" }, ctx);
 
 const ansi = { success: 32, warning: 33, error: 31, muted: 37, dim: 90 };
 const theme = {
@@ -68,7 +73,7 @@ const theme = {
 };
 const footerData = {
   getGitBranch: () => "main",
-  getExtensionStatuses: () => new Map([["stash", "📝 STASHED"]]),
+  getExtensionStatuses: () => statuses,
   onBranchChange: () => () => {},
 };
 const component = footerFactory({ requestRender() {} }, theme, footerData);
@@ -82,6 +87,10 @@ for (const [width, maxLines] of [[100, 3], [80, 3], [60, 4], [40, 5]]) {
     assert(text.includes(expected), `${width} column render omitted ${expected}`);
   }
 }
+
+assert(component.render(100).join("\n").includes("bash · Esc/Ent"));
+for (const handler of handlers.get("agent_settled")) await handler({}, ctx);
+assert(!component.render(100).join("\n").includes("Esc/Ent"));
 
 assert(component.render(80).join("\n").includes("\x1b[32m42%\x1b[0m"));
 contextPercent = 75;
@@ -103,5 +112,5 @@ assert.equal(footerFactory, undefined);
 await commands.get("statusline").handler("detailed", ctx);
 assert(reloaded);
 
-console.log("OK: statusline fits 100/80/60/40 columns and colors context usage thresholds");
+console.log("OK: statusline fits 100/80/60/40 columns, shows run controls, and colors context usage thresholds");
 JS
