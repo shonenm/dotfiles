@@ -384,10 +384,11 @@ client-session-changed → tmux-claude-focus.sh
 |------|-----|------|
 | status-interval | 30秒 | 更新頻度を抑制（SSH環境での遅延対策） |
 | history-limit | 5000 | スクロールバック行数（大量履歴による遅延対策） |
-| スクリプトキャッシュ | 3秒 | CPU/RAM/GPU/Storage/Git branch すべてにキャッシュ適用 |
+| メトリクス更新 | 3秒 | `tmux-metrics-daemon.sh` が `@sysstat` / `@git_branch` を更新 |
+| スクリプトキャッシュ | 3秒 | daemon 内の CPU/RAM/GPU/Storage/Git branch に適用 |
 | キャッシュ場所 | `${XDG_CACHE_HOME:-$HOME/.cache}/tmux/sysstat/` | XDG キャッシュに統一 |
 
-キャッシュにより、同じ更新周期内に複数回参照されても3秒以内の再呼び出しはキャッシュから返却される。
+status-right は server option を参照し、再描画ごとに CPU/RAM/GPU/Storage/Git の外部コマンドを fork しない。
 
 ## テーマ再生成
 
@@ -419,8 +420,9 @@ scripts/
 ├── tmux-ram.sh               # RAM 使用率取得（macOS: vm_stat / Linux: /proc/meminfo、3秒キャッシュ）
 ├── tmux-gpu.sh               # GPU 使用率取得（macmon / nvidia-smi、3秒キャッシュ）
 ├── tmux-storage.sh           # ストレージ使用率取得（閾値超過時のみ表示、3秒キャッシュ）
+├── tmux-metrics-daemon.sh    # メトリクス/Git branch を tmux option へ反映（3秒間隔）
 ├── tmux-git-branch.sh        # Git ブランチ名取得（パスごとに3秒キャッシュ、単独利用）
-├── tmux-git-status.sh        # Git ブランチ + ahead/behind(⇡⇣) + 差分統計(Nf +A/-D)（5秒キャッシュ、status-right 用）
+├── tmux-git-status.sh        # Git ブランチ + ahead/behind(⇡⇣) + 差分統計(Nf +A/-D）（個別利用）
 ├── tmux-claude-badge.sh      # 通知バッジ表示
 ├── tmux-claude-focus.sh      # 通知自動消去
 ├── tmux-session-color.sh     # Per-session アクセントカラー（apply / refresh / fzf-sessions）
