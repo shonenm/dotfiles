@@ -340,7 +340,7 @@ wait_for_pane_shell() {
   for _ in $(seq 1 10); do
     cmd=$(current_command "$pane")
     case "$cmd" in
-      tmux-docker-enter|docker) sleep 0.2 ;;
+      tmux-docker-enter|docker|sleep) sleep 0.2 ;;
       *) return 0 ;;
     esac
   done
@@ -355,9 +355,9 @@ launch_agents() {
     target="$session:$window.$pane"
     pane_exists "$target" || { echo "Warning: missing pane $target" >&2; skipped=$((skipped + 1)); continue; }
 
+    wait_for_pane_shell "$target"
     container=$(awk -F "$US" -v s="$session" '$1 == s { print $3; exit }' "$SNAPSHOT_DIR/sessions.tsv")
     if [[ -n "$container" ]] && container_running "$container"; then
-      wait_for_pane_shell "$target"
       qpath=$(shell_quote "$path")
       send_command "$target" "cd -- $qpath"
       sleep 0.2
