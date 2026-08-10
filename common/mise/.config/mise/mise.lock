@@ -497,24 +497,24 @@ checksum = "sha256:70d1c8684fa6d14b5843787ec8d1ea8e18b23650e424f4ea43d849a506487
 url = "https://github.com/cloudflare/cloudflared/releases/download/2026.7.3/cloudflared-darwin-amd64.tgz"
 
 [[tools.deno]]
-version = "2.9.4"
+version = "2.9.5"
 backend = "core:deno"
 
 [tools.deno."platforms.linux-arm64"]
-checksum = "sha256:111da5c05c240cfdc4340f234a0e3539d39dbcb6755221f19dcd60bacc8be5aa"
-url = "https://dl.deno.land/release/v2.9.4/deno-aarch64-unknown-linux-gnu.zip"
+checksum = "sha256:6b7cae3a8fc4385a59dea3146fcb8bad7fea4230e0ad36a8c692afacbc254be0"
+url = "https://dl.deno.land/release/v2.9.5/deno-aarch64-unknown-linux-gnu.zip"
 
 [tools.deno."platforms.linux-x64"]
-checksum = "sha256:c24f955d9fbfe0ea5ae2b501c8e71ae76e31e4c9782390a54a284b3364fda725"
-url = "https://dl.deno.land/release/v2.9.4/deno-x86_64-unknown-linux-gnu.zip"
+checksum = "sha256:8b010a3b1a4a0188a67cdb8a7a27348b2a501af78aec7fc74f2ace167368d530"
+url = "https://dl.deno.land/release/v2.9.5/deno-x86_64-unknown-linux-gnu.zip"
 
 [tools.deno."platforms.macos-arm64"]
-checksum = "sha256:6d17647fdbf9c587a581dba205054c4ccf732dae0a196cc1e9b44c07589db412"
-url = "https://dl.deno.land/release/v2.9.4/deno-aarch64-apple-darwin.zip"
+checksum = "sha256:b796aadd131f6930560c1ee040cf0d6f53933fbb987464e9ff46bd7ea4830615"
+url = "https://dl.deno.land/release/v2.9.5/deno-aarch64-apple-darwin.zip"
 
 [tools.deno."platforms.macos-x64"]
-checksum = "sha256:f757df6d3991e37601c69fad56c22b37c4ea77b5dcfad3636a642c2ba4c9b19f"
-url = "https://dl.deno.land/release/v2.9.4/deno-x86_64-apple-darwin.zip"
+checksum = "sha256:c1b8b89a81e91b2a8b3f96def3195d08cfe3a105651da7908d53061f7140510d"
+url = "https://dl.deno.land/release/v2.9.5/deno-x86_64-apple-darwin.zip"
 
 [[tools."github:Mikescher/better-docker-ps"]]
 version = "1.18"
@@ -681,28 +681,28 @@ url = "https://github.com/lemonade-command/lemonade/releases/download/v1.1.1/lem
 url_api = "https://api.github.com/repos/lemonade-command/lemonade/releases/assets/2516207"
 
 [[tools."github:mr-karan/doggo"]]
-version = "1.2.0"
+version = "1.2.1"
 backend = "github:mr-karan/doggo"
 
 [tools."github:mr-karan/doggo"."platforms.linux-arm64"]
-checksum = "sha256:b15e3e56b1e1d2e4bb3bf81b292a49a1b55781465ab2cb858cdb7f081fd95d0f"
-url = "https://github.com/mr-karan/doggo/releases/download/v1.2.0/doggo-linux-aarch64.tar.gz"
-url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/455378184"
+checksum = "sha256:391fab20b5b44259654ec2581051510cc7122abd2758f1afb0830c5c56849617"
+url = "https://github.com/mr-karan/doggo/releases/download/v1.2.1/doggo-linux-aarch64.tar.gz"
+url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/504661984"
 
 [tools."github:mr-karan/doggo"."platforms.linux-x64"]
-checksum = "sha256:aa6760e7f163958e7626420447385ab938fdc127983edaceb121f809bd3e2bca"
-url = "https://github.com/mr-karan/doggo/releases/download/v1.2.0/doggo-linux-x86_64.tar.gz"
-url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/455378176"
+checksum = "sha256:88c3b892b0edb4dc08916ae279e92555f0a72807903197515c71fef57c96a30e"
+url = "https://github.com/mr-karan/doggo/releases/download/v1.2.1/doggo-linux-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/504661921"
 
 [tools."github:mr-karan/doggo"."platforms.macos-arm64"]
-checksum = "sha256:aa8b866d8bc96ce7a004f3d2f99c26e4bb0dd140c7bd151b2eb12a1d0b01cc06"
-url = "https://github.com/mr-karan/doggo/releases/download/v1.2.0/doggo-darwin-aarch64.tar.gz"
-url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/455378202"
+checksum = "sha256:5db445f3d2d2c1afd16f681624780a29f7871d99b5ea762bf8a4c1307578268f"
+url = "https://github.com/mr-karan/doggo/releases/download/v1.2.1/doggo-darwin-aarch64.tar.gz"
+url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/504661961"
 
 [tools."github:mr-karan/doggo"."platforms.macos-x64"]
-checksum = "sha256:2d88ad833fd7616ae5e8908cf76593fbecfb5fd4463784afe8731686bee0cefe"
-url = "https://github.com/mr-karan/doggo/releases/download/v1.2.0/doggo-darwin-x86_64.tar.gz"
-url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/455378251"
+checksum = "sha256:0223d6c372fd64df1dd95f9046493c472fe33ba6a79a52ab783b5ff0e13a9018"
+url = "https://github.com/mr-karan/doggo/releases/download/v1.2.1/doggo-darwin-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/504661923"
 
 [[tools."github:ouch-org/ouch"]]
 version = "0.8.1"
