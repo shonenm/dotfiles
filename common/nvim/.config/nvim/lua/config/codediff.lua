@@ -181,14 +181,82 @@ function M.setup(opts)
       end)
     end
 
-    -- Review mode (two-commit diff): reviewed-file marks.
-    -- In-memory only; keyed by git_root + base + target + path so different
-    -- commit ranges keep independent marks. Cleared when nvim exits. ponytail:
-    -- in-memory, add disk persistence under $XDG_STATE_HOME if it needs to survive restarts.
+    -- Review mode (two-commit diff): reviewed-file marks. Marks live in
+    -- Neovim's user state, not in the repository. Each mark stores the current
+    -- file diff fingerprint; editing that diff clears the mark on the next
+    -- review render, like GitHub's reviewed-file state.
     local reviewed_marks = {}
+    local review_fingerprints = {}
+    local review_marks_changed = false
+    local reviewed_marks_path = vim.fn.stdpath("state") .. "/codediff/reviewed.json"
+
+    local function load_reviewed_marks()
+      local file = io.open(reviewed_marks_path, "r")
+      if not file then return end
+      local data = file:read("*a")
+      file:close()
+      local ok, decoded = pcall(vim.json.decode, data)
+      if not ok or type(decoded) ~= "table" then return end
+      for k, fingerprint in pairs(decoded) do
+        if type(k) == "string" and type(fingerprint) == "string" then
+          reviewed_marks[k] = fingerprint
+        end
+      end
+    end
+
+    local function save_reviewed_marks()
+      vim.fn.mkdir(vim.fn.fnamemodify(reviewed_marks_path, ":h"), "p")
+      local tmp = reviewed_marks_path .. ".tmp-" .. tostring(vim.fn.getpid())
+      local file = io.open(tmp, "w")
+      if not file then return end
+      file:write(vim.json.encode(reviewed_marks), "\n")
+      file:close()
+      os.rename(tmp, reviewed_marks_path)
+    end
+
     local function review_key(git_root, base_rev, target_rev, path)
       return table.concat({ git_root or "", base_rev, target_rev, path }, "\0")
     end
+
+    local function review_diff_fingerprint(git_root, base_rev, target_rev, path)
+      local result = vim.system({ "git", "diff", "--no-ext-diff", "--no-color", base_rev, target_rev, "--", path }, {
+        cwd = git_root,
+        text = true,
+      }):wait()
+      if result.code ~= 0 then return nil end
+      return vim.fn.sha256(result.stdout or "")
+    end
+
+    local function is_reviewed(git_root, base_rev, target_rev, path)
+      local key = review_key(git_root, base_rev, target_rev, path)
+      local expected = reviewed_marks[key]
+      if not expected then return false end
+      local current = review_fingerprints[key]
+      if current == nil then
+        current = review_diff_fingerprint(git_root, base_rev, target_rev, path)
+        review_fingerprints[key] = current or false
+      end
+      if current == false then return true end -- preserve marks on transient git errors
+      if current ~= expected then
+        reviewed_marks[key] = nil
+        review_fingerprints[key] = nil
+        review_marks_changed = true
+        save_reviewed_marks()
+        return false
+      end
+      return true
+    end
+
+    local function mark_reviewed(git_root, base_rev, target_rev, path)
+      local key = review_key(git_root, base_rev, target_rev, path)
+      local fingerprint = review_diff_fingerprint(git_root, base_rev, target_rev, path)
+      if not fingerprint then return end
+      reviewed_marks[key] = fingerprint
+      review_fingerprints[key] = fingerprint
+      save_reviewed_marks()
+    end
+
+    load_reviewed_marks()
     -- Returns git_root, base_rev, target_rev when the current tab is a two-commit
     -- review diff (both sides real commits), else nil. Reads the explorer object
     -- (authoritative for base/target; the session's revisions can lag before a file
@@ -216,9 +284,17 @@ function M.setup(opts)
       local files = review_all_files(explorer)
       local checked = 0
       for _, f in ipairs(files) do
-        if f.data and f.data.path and reviewed_marks[review_key(git_root, base_rev, target_rev, f.data.path)] then
+        if f.data and f.data.path and is_reviewed(git_root, base_rev, target_rev, f.data.path) then
           checked = checked + 1
         end
+      end
+      if review_marks_changed then
+        review_marks_changed = false
+        vim.schedule(function()
+          if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
+            explorer.tree:render()
+          end
+        end)
       end
       return checked, #files
     end
@@ -239,7 +315,7 @@ function M.setup(opts)
       if ci == 0 then ci = 1 end
       for step = 1, #files do
         local f = files[((ci - 1 + dir * step) % #files) + 1]
-        if not reviewed_marks[review_key(gr, o, m, f.data.path)] then
+        if not is_reviewed(gr, o, m, f.data.path) then
           if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
             local lc = vim.api.nvim_buf_line_count(explorer.bufnr)
             for l = 1, lc do
@@ -462,7 +538,7 @@ function M.setup(opts)
         local review_mark_hl = nil
         local rgr, ro, rm = codereview_ctx()
         if rgr then
-          if reviewed_marks[review_key(rgr, ro, rm, full_path)] then
+          if is_reviewed(rgr, ro, rm, full_path) then
             hunk_str, review_mark_hl = "✓", "String"
           else
             hunk_str, review_mark_hl = "○", "Comment"
@@ -1604,7 +1680,13 @@ function M.setup(opts)
           local gr, o, m = codereview_ctx()
           if not gr then return end
           local k = review_key(gr, o, m, node.data.path)
-          reviewed_marks[k] = not reviewed_marks[k] or nil
+          if is_reviewed(gr, o, m, node.data.path) then
+            reviewed_marks[k] = nil
+            review_fingerprints[k] = nil
+            save_reviewed_marks()
+          else
+            mark_reviewed(gr, o, m, node.data.path)
+          end
           tree:render()
         end, vim.tbl_extend("force", map_opts, { desc = "Toggle reviewed mark" }))
         vim.keymap.set("n", ".", function()
