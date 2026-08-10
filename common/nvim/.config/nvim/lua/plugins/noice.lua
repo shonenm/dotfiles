@@ -6,6 +6,12 @@ return {
         long_message_to_split = false, -- 長さベースのsplit分岐を無効化
       },
       routes = {
+        -- CodeDiff の hunk 位置は専用の常時表示 notification で描画する。
+        -- upstream の移動時メッセージは重複するため非表示にする。
+        {
+          filter = { event = "msg_show", find = "^Hunk %d+ of %d+$" },
+          opts = { skip = true },
+        },
         -- エラーメッセージ: notify（目立つ、右上に表示）
         {
           filter = { error = true },

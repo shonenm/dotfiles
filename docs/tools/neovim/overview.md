@@ -463,6 +463,8 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 
 `gs`/`gr` は gitsigns コマンド実行後に diff キャッシュを無効化し、仮想バッファ・実ファイルバッファ・diff 計算結果を自動再読み込みする。ビジュアルモードでの範囲選択にも対応。`gu` は staged diff view（HEAD vs `:0`）でカーソル位置のハンクを `git apply --reverse --cached` で個別 unstage する。
 
+CodeDiff の diff を表示している間は、右上の notification に現在の hunk 位置（`Hunk N of M`）を常時表示する。カーソル移動・hunk 移動・ファイル切替に追従し、CodeDiff のタブを離れると閉じる。通常の CodeDiff とレビューモードで共通の表示となる。
+
 `<leader>gd` はワークスペース内の全 git リポジトリ（parent・submodule・独立 clone）を自動探索し、変更のあるリポジトリごとに CodeDiff タブを開く。複数タブがある場合、ヘルプラインにリポジトリ一覧が表示され、`]r`/`[r` でタブ間を移動できる。
 
 stage/restore/reset 等で全ての変更が解消されると（unstaged・staged・conflicts がすべて空）、CodeDiff タブは自動的に閉じる。revision 比較・ファイル履歴では発動しない。
@@ -478,6 +480,8 @@ stage/restore/reset 等で全ての変更が解消されると（unstaged・stag
 | `c`   | レビュー済み印トグル（`○` ↔ `✓`）   |
 | `.`   | 次のファイルへ                      |
 | `,`   | 前のファイルへ                      |
+| `]`   | 次の hunk へ（Diff ビューへ移動）   |
+| `[`   | 前の hunk へ（Diff ビューへ移動）   |
 | `}`   | 次の未チェックファイルへ            |
 | `{`   | 前の未チェックファイルへ            |
 

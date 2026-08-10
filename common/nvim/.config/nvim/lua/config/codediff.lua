@@ -257,6 +257,92 @@ function M.setup(opts)
       vim.notify("All files reviewed", vim.log.levels.INFO)
     end
 
+    -- Keep the current hunk position visible while a CodeDiff tab is active.
+    -- This is shared by normal CodeDiff and two-commit CodeReview sessions.
+    local hunk_notification_id = "codediff_hunk_position"
+    local hunk_notification_label = nil
+
+    local function hide_hunk_notification()
+      if hunk_notification_label and _G.Snacks and Snacks.notifier then
+        Snacks.notifier.hide(hunk_notification_id)
+      end
+      hunk_notification_label = nil
+    end
+
+    local function update_hunk_notification()
+      local ok, session_mod = pcall(require, "codediff.ui.lifecycle.session")
+      local session = ok and session_mod.get_active_diffs()[vim.api.nvim_get_current_tabpage()] or nil
+      local changes = session and session.stored_diff_result and session.stored_diff_result.changes or nil
+      if not changes or #changes == 0 then
+        hide_hunk_notification()
+        return
+      end
+
+      local current_buf = vim.api.nvim_get_current_buf()
+      local target_win = vim.api.nvim_get_current_win()
+      local use_original = current_buf == session.original_bufnr and session.layout ~= "inline"
+      local in_diff = use_original
+        or current_buf == session.modified_bufnr
+        or (session.result_bufnr and current_buf == session.result_bufnr)
+
+      -- When the explorer has focus, retain the position from the modified pane.
+      if not in_diff then
+        target_win = session.modified_win
+        use_original = false
+      end
+      if not target_win or not vim.api.nvim_win_is_valid(target_win) then
+        hide_hunk_notification()
+        return
+      end
+
+      local current_line = vim.api.nvim_win_get_cursor(target_win)[1]
+      local current_hunk = 1
+      for i, mapping in ipairs(changes) do
+        local side = use_original and mapping.original or mapping.modified
+        if side.start_line <= current_line then
+          current_hunk = i
+        else
+          break
+        end
+      end
+
+      local label = string.format("Hunk %d of %d", current_hunk, #changes)
+      if label == hunk_notification_label then return end
+      hunk_notification_label = label
+
+      if _G.Snacks and Snacks.notifier then
+        Snacks.notifier.notify(label, vim.log.levels.INFO, {
+          id = hunk_notification_id,
+          title = "CodeDiff",
+          timeout = false,
+          history = false,
+        })
+      else
+        vim.notify(label, vim.log.levels.INFO, { title = "CodeDiff", timeout = false })
+      end
+    end
+
+    local hunk_notification_group = vim.api.nvim_create_augroup("CodeDiffHunkNotification", { clear = true })
+    vim.api.nvim_create_autocmd({ "CursorMoved", "BufEnter", "WinEnter", "TabEnter" }, {
+      group = hunk_notification_group,
+      callback = function()
+        vim.schedule(update_hunk_notification)
+      end,
+    })
+    vim.api.nvim_create_autocmd("User", {
+      group = hunk_notification_group,
+      pattern = "CodeDiffVirtualFileLoaded",
+      callback = function()
+        vim.schedule(update_hunk_notification)
+      end,
+    })
+    vim.api.nvim_create_autocmd({ "TabClosed", "WinClosed" }, {
+      group = hunk_notification_group,
+      callback = function()
+        vim.schedule(update_hunk_notification)
+      end,
+    })
+
     -- Monkey-patch nodes.prepare_node to show hunk counts
     local nodes_mod = require("codediff.ui.explorer.nodes")
     nodes_mod.prepare_node = function(node, max_width, selected_path, selected_group)
@@ -848,7 +934,7 @@ function M.setup(opts)
     }
     local review_explorer_help_lines = {
       { { "[c]", "Special" }, { " reviewed  ", "Normal" }, { "[,]", "Special" }, { "/", "Normal" }, { "[.]", "Special" }, { " file  ", "Normal" }, { "{ }", "Special" }, { " next unchecked", "Normal" } },
-      { { "[Tab]", "Special" }, { " diff  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+      { { "[ / ]", "Special" }, { " hunk  ", "Normal" }, { "[Tab]", "Special" }, { " diff  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
     local review_diff_help_lines = {
       { { "[,]", "Special" }, { "/", "Normal" }, { "[.]", "Special" }, { " file  ", "Normal" }, { "[ / ]", "Special" }, { " hunk  ", "Normal" }, { "{ }", "Special" }, { " unchecked", "Normal" } },
@@ -1506,7 +1592,9 @@ function M.setup(opts)
         end
       end, vim.tbl_extend("force", map_opts, { desc = "Toggle directory or select file" }))
 
-      -- Review mode (two-commit diff): reviewed marks (c) + ,/. file navigation.
+      -- Review mode (two-commit diff): reviewed marks (c), file navigation,
+      -- and hunk navigation. CodeDiff moves focus to the modified diff window
+      -- when next_hunk()/prev_hunk() are invoked from the explorer.
       -- Gated so the normal status/single-revision paths are untouched.
       if explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
         vim.keymap.set("n", "c", function()
@@ -1525,6 +1613,12 @@ function M.setup(opts)
         vim.keymap.set("n", ",", function()
           require("codediff").prev_file()
         end, vim.tbl_extend("force", map_opts, { desc = "Prev file" }))
+        vim.keymap.set("n", "]", function()
+          require("codediff").next_hunk()
+        end, vim.tbl_extend("force", map_opts, { desc = "Next hunk" }))
+        vim.keymap.set("n", "[", function()
+          require("codediff").prev_hunk()
+        end, vim.tbl_extend("force", map_opts, { desc = "Prev hunk" }))
         vim.keymap.set("n", "}", function()
           review_jump_unchecked(explorer, 1)
         end, vim.tbl_extend("force", map_opts, { desc = "Next unreviewed file" }))
