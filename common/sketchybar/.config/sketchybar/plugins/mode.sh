@@ -67,9 +67,6 @@ else
     sketchybar --remove '/pomodoro_item\..*/' 2>/dev/null
 fi
 
-# JankyBorders 更新
-borders active_color="$MODE_COLOR" 2>/dev/null
-
 # layout_anchor popup の色も更新（開いていれば）
 sketchybar --set layout_anchor popup.background.border_color="$MODE_COLOR" 2>/dev/null
 
