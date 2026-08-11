@@ -89,7 +89,6 @@ brew "macmon"      # Apple Silicon GPU/CPU monitoring (tmux status bar)
 
 # --- macOS UI ---
 brew "sketchybar"
-brew "borders"
 
 # --- Casks ---
 cask "ghostty"

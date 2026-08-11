@@ -56,7 +56,6 @@ When entering Service Mode, the entire UI changes to orange:
 - Workspace borders
 - App borders
 - Focused highlight
-- Window borders (JankyBorders)
 
 Additionally, keybinding help is displayed on the right:
 
@@ -250,7 +249,6 @@ sketchybar --trigger aerospace_mode_change
 mode.sh → Update mode display
         → Change all UI colors
         → Show/hide keybinding help
-        → Change JankyBorders color
 ```
 
 ### On Focus Change
