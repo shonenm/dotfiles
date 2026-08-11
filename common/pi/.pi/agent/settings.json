@@ -1,6 +1,6 @@
 {
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.6-luna",
+  "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "medium",
   "subagents": {
     "defaultModel": "openai-codex/gpt-5.4-mini",
@@ -93,7 +93,44 @@
     "npm:pi-remote-control",
     "npm:pi-cursor-agent",
     "npm:pi-permission-system",
-    "git:github.com/DietrichGebert/ponytail"
+    "npm:@czottmann/pi-automode",
+    "git:github.com/DietrichGebert/ponytail",
+    {
+      "source": "npm:pi-open-tui",
+      "extensions": [
+        "!extensions/open-tui/index.ts"
+      ]
+    },
+    "npm:awesome-pi-themes",
+    "npm:pi-studio",
+    "npm:pi-extmgr",
+    {
+      "source": "npm:pi-beautiful-tui",
+      "extensions": [
+        "!index.ts"
+      ]
+    },
+    {
+      "source": "npm:pi-agent-extensions",
+      "extensions": [
+        "!extensions/powerline-footer/index.ts",
+        "!extensions/whimsical/index.ts",
+        "!extensions/workflow/index.ts"
+      ]
+    },
+    {
+      "source": "npm:pi-system-theme",
+      "extensions": [
+        "!index.ts"
+      ]
+    },
+    {
+      "source": "git:github.com/tomsej/pi-ext",
+      "extensions": [
+        "!extensions/custom-footer/custom-footer.ts",
+        "!extensions/permissions/permissions.ts"
+      ]
+    }
   ],
   "lastChangelogVersion": "0.84.1"
 }
