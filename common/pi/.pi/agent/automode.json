@@ -1,0 +1,12 @@
+{
+  "autoMode": {
+    "classifierModel": "openai-codex/gpt-5.4-mini",
+    "classifierReasoningLevel": "low",
+    "allowInsideWorkingDirectory": true,
+    "classifyReadOnlyTools": false,
+    "log": {
+      "enabled": false,
+      "classifierIo": false
+    }
+  }
+}
