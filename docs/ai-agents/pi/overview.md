@@ -14,6 +14,8 @@
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
 | pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
+| pi-automode | Claude Code-styleの実行前classifier guardrail | `settings.json` の `packages` + `automode.json` |
+| UI比較package | header / footer / editor / theme / browser workspaceを実機比較 | `settings.json` の `packages`（下記参照） |
 | AGENTS.md | グローバル指示書 | `common/pi/.pi/agent/AGENTS.md` → `~/.pi/agent/AGENTS.md` |
 | pueue | バックグラウンドタスク・並列 delegation 用キュー | `config/Brewfile` (mac), `packages.linux.{apt,alpine}.txt` (linux) |
 
@@ -142,22 +144,51 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 
 `tokyonight-high-contrast` を標準テーマとして `common/pi/.pi/agent/themes/` で管理する。通常は `settings.json` の `theme` がこれを選ぶ。pi を再起動すると反映され、調整中のテーマファイルは pi 上で自動再読込される。
 
+### 統合Pi UI shell
+
+`extensions/statusline.ts`がheader、composer、footer、working indicator、terminal tab titleを単一ownerとして管理する。packageを重ねて同じsurfaceを後勝ちで上書きせず、既存のprompt history editorとskill highlightをwrapして入力機能を保持する。
+
+- compact header: model、作業directory、Pi version
+- state composer: `ASK` / `RUN` / `TOOL`、thinking level、context、`/status`導線
+- responsive footer: Goal、extension status、branch、model、context、tokens、cost、Cursor上限、agents、Web、MCP
+- `/status`: 常時表示から省いた情報も含むsession telemetry overlay
+- terminal tab: `READY` / `RUN` / tool名 / dirty状態
+- working indicator: Tokyo Nightのaccentに合わせたPi orbit
+
+`/statusline detailed|balanced|minimal|legacy|off`で表示密度を切り替える。`detailed`は幅が狭いと自動的にbalanced表示へ縮退し、`legacy`は従来の3段情報量を確認する比較用profileとして残す。
+
+比較用packageはinstall状態を維持するが、surface ownershipが競合する`pi-open-tui`、`pi-beautiful-tui`、`pi-system-theme`のextension entrypointはfilterする。theme collection、Pi Studio、extmgr、leader palette、tool pills、session／todo機能など、統合shellと重複しない機能は引き続き読み込む。
+
+| Package | 状態・利用箇所 |
+| --- | --- |
+| `pi-open-tui` | install維持、UI entrypointは統合shellとの競合を避けてfilter |
+| `awesome-pi-themes` | theme比較用に有効 |
+| `pi-studio` | browser workspace、preview、annotationを有効 |
+| `pi-extmgr` | package管理overlayを有効 |
+| `pi-beautiful-tui` | install維持、UI entrypointはfilter |
+| `pi-agent-extensions` | footer、workflow、周期的にworking messageを書き換えるwhimsicalをfilter。session / todo / prompt history等は有効 |
+| `pi-system-theme` | Tokyo Night固定と競合するためentrypointをfilter |
+| `git:github.com/tomsej/pi-ext` | custom footerと重複permissionをfilter、tool pillsとleader palette等は有効 |
+
 ### 表示を簡潔にする
 
-標準設定では思考ブロックを隠し、起動ヘッダーを省略し、`/tree` はツール結果を除外して開く。必要な詳細だけをキーバインドで表示する。
+独自UI導入前の標準設定では思考ブロックを隠し、起動ヘッダーを省略し、`/tree` はツール結果を除外して開く。必要な詳細だけをキーバインドで表示する。
 
 - `Ctrl+T`: 思考ブロックを展開/折り畳み
 - `Ctrl+O`: ツール出力を展開/折り畳み
 - `Esc` を2回: `/tree` を開く。tree 内の `Ctrl+T` でツール結果を表示/非表示
 - 実行中は現在のtoolと`Esc/Enter`をフッターに表示（`Esc`は停止、`Enter`はsteer）
-- `/statusline compact`: Cursor のプラン上限を含むフッターを1行表示に切り替え（取得元は `ai-usage cursor`）
+- `/statusline minimal`: Cursor のプラン上限を含む優先度ベースの1行表示へ切り替え（取得元は `ai-usage cursor`）
+- `/status`: Goal、usage、agents、Web、MCP、extension statusをoverlayで一覧表示
 - 入力中の既知 skill 名はアクセント色でハイライトされる（`/reload` または再起動で skill 一覧を再読込）。
 
-### Permission gate
+### Permission gate / Auto Mode
 
 `permission-system.json`の`yoloMode`と`settings.json`の`hideThinkingBlock`は有効のままにする。対話の承認境界はwrite permissionではなく、明示的な実装指示と`/plan`で管理するため、実装開始後の通常操作は止めない。
 
-`common/pi/.pi/agent/extensions/permission-gate.ts`はdangerous shell commandを実行前に確認する。agentはセッション開始時のmain repositoryまたは既存worktreeで実装し、利用者の明示なしに別worktreeへ移動しない。worktree capacity追加は確認対象ではなくhard denyし、`git worktree add`と`pnpm wt provision`は実行しない。利用者が明示した既存pooled slotのclaim/listは許可する。capacity追加が必要な場合は利用者がpi外のterminalから実行する。
+`@czottmann/pi-automode`はagentのtool callを実行前に分類する。`automode.json`で`allowInsideWorkingDirectory: true`にし、working tree内の通常file操作はclassifierなしで許可する。bash、MCP、外部path、protected pathは`openai-codex/gpt-5.4-mini:low`で判定し、classifier障害時はfail-closedとする。`/automode status`で状態確認、`/automode off`でsession中だけ無効化できる。dotfiles自身のpermission・auto-mode設定を変更する作業ではhard-denyと衝突するため、明示的にoffにしてから行う。
+
+`common/pi/.pi/agent/extensions/permission-gate.ts`はautomodeとは独立してdangerous shell commandを実行前に確認する。agentはセッション開始時のmain repositoryまたは既存worktreeで実装し、利用者の明示なしに別worktreeへ移動しない。worktree capacity追加は確認対象ではなくhard denyし、`git worktree add`と`pnpm wt provision`は実行しない。利用者が明示した既存pooled slotのclaim/listは許可する。capacity追加が必要な場合は利用者がpi外のterminalから実行する。
 
 ### 拡張機能
 
