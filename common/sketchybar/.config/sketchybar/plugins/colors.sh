@@ -19,6 +19,13 @@ TIMER_MODE_COLOR="0xff28a745"
 
 # === 関数 ===
 
+# AeroSpaceの再起動・再接続時にCLIが無期限待機するのを防ぐ。
+# 表示更新は次のSketchyBarイベントで再試行される。
+AEROSPACE_BIN=$(command -v aerospace)
+aerospace() {
+    /usr/bin/perl -e 'alarm shift; exec @ARGV' 2 "$AEROSPACE_BIN" "$@"
+}
+
 # システムアクセントカラーまたはカスタムカラーを取得
 get_accent_color() {
     if [ -n "$CUSTOM_ACCENT_COLOR" ]; then
