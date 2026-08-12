@@ -447,7 +447,27 @@ function M.setup(opts)
       end
     end
 
+    local function enable_codediff_wrap()
+      local ok, session_mod = pcall(require, "codediff.ui.lifecycle.session")
+      if not ok then return end
+      for _, session in pairs(session_mod.get_active_diffs()) do
+        for _, win in ipairs({ session.original_win, session.modified_win, session.result_win }) do
+          if win and vim.api.nvim_win_is_valid(win) then
+            vim.wo[win].wrap = true
+            vim.wo[win].linebreak = true
+            vim.wo[win].breakindent = true
+          end
+        end
+      end
+    end
+
     local hunk_notification_group = vim.api.nvim_create_augroup("CodeDiffHunkNotification", { clear = true })
+    vim.api.nvim_create_autocmd({ "CursorMoved", "BufEnter", "WinEnter", "TabEnter", "VimResized" }, {
+      group = hunk_notification_group,
+      callback = function()
+        vim.schedule(enable_codediff_wrap)
+      end,
+    })
     vim.api.nvim_create_autocmd({ "CursorMoved", "BufEnter", "WinEnter", "TabEnter" }, {
       group = hunk_notification_group,
       callback = function()
@@ -458,7 +478,10 @@ function M.setup(opts)
       group = hunk_notification_group,
       pattern = "CodeDiffVirtualFileLoaded",
       callback = function()
-        vim.schedule(update_hunk_notification)
+        vim.schedule(function()
+          enable_codediff_wrap()
+          update_hunk_notification()
+        end)
       end,
     })
     vim.api.nvim_create_autocmd({ "TabClosed", "WinClosed" }, {
@@ -1368,8 +1391,8 @@ function M.setup(opts)
           vim.api.nvim_win_set_cursor(modified_win, { 1, 0 })
           vim.wo[original_win].scrollbind = true
           vim.wo[modified_win].scrollbind = true
-          vim.wo[original_win].wrap = false
-          vim.wo[modified_win].wrap = false
+          vim.wo[original_win].wrap = true
+          vim.wo[modified_win].wrap = true
 
           if auto_scroll_to_first_hunk and #cached_diff.changes > 0 then
             local first_change = cached_diff.changes[1]
