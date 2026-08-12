@@ -20,6 +20,10 @@ install_brew_bundle() {
     return 1
   fi
   log_info "Installing Homebrew packages from Brewfile..."
+  # Homebrew 6 refuses formulae from third-party taps until explicitly trusted.
+  while IFS= read -r tap; do
+    brew trust --tap "$tap" >/dev/null
+  done < <(sed -n 's/^tap "\([^"]*\)".*/\1/p' "$brewfile")
   if brew bundle check --file="$brewfile" >/dev/null 2>&1; then
     log_success "Brewfile packages already installed"
     return 0
