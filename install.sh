@@ -226,7 +226,7 @@ normalize_dotfiles_symlinks() {
     for source in "$DOTFILES_DIR"/common/*/"$relative" "$DOTFILES_DIR"/mac/*/"$relative"; do
       [[ -e "$source" && "$resolved" == "$(realpath "$source")" ]] && { unlink "$link"; break; }
     done
-  done < <(find "$HOME/.pi" "$HOME/.config/raycast" -type l -print0 2>/dev/null)
+  done < <(find "$HOME/.pi" -type l -print0 2>/dev/null)
 }
 
 # Stow a package with conflict detection and backup
@@ -497,6 +497,7 @@ link_dotfiles() {
     log_info "Linking common dotfiles..."
     local common_packages=()
     for pkg in "$DOTFILES_DIR/common"/*/; do
+      git -C "$DOTFILES_DIR" ls-files --error-unmatch "${pkg#"$DOTFILES_DIR"/}" >/dev/null 2>&1 || continue
       common_packages+=("$(basename "$pkg")")
     done
     if ! stow_package_group "$DOTFILES_DIR/common" "${common_packages[@]}"; then
@@ -509,6 +510,7 @@ link_dotfiles() {
     log_info "Linking $os-specific dotfiles..."
     local os_packages=()
     for pkg in "$DOTFILES_DIR/$os"/*/; do
+      git -C "$DOTFILES_DIR" ls-files --error-unmatch "${pkg#"$DOTFILES_DIR"/}" >/dev/null 2>&1 || continue
       os_packages+=("$(basename "$pkg")")
     done
     if ! stow_package_group "$DOTFILES_DIR/$os" "${os_packages[@]}"; then
