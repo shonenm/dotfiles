@@ -8,6 +8,20 @@
 -- Disable built-in spell check for markdown etc. (Japanese text gets flagged as SpellBad)
 vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
+-- Neovim only tries a-z for ShaDa temporary files. Stale files can exhaust all
+-- names and cause E138 on exit, so remove only old leftovers from dead sessions.
+do
+  local shada_dir = vim.fn.stdpath("state") .. "/shada"
+  local cutoff = os.time() - 24 * 60 * 60
+  for name, kind in vim.fs.dir(shada_dir) or function() return nil end do
+    if kind == "file" and name:match("^main%.shada%.tmp%.[a-z]$") then
+      local path = shada_dir .. "/" .. name
+      local stat = vim.uv.fs_stat(path)
+      if stat and stat.mtime.sec < cutoff then vim.uv.fs_unlink(path) end
+    end
+  end
+end
+
 -- Auto reload files when changed externally. Focus/entry checks are sufficient;
 -- CursorHold and one fs_event watcher per buffer caused duplicate polling.
 vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter" }, {
