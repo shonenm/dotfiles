@@ -175,6 +175,12 @@ class MCPClient {
         // silently ignore; MCP spec says servers should not write to stderr
       });
 
+      // A dead server closes stdin; the next write emits EPIPE as an async
+      // 'error' event. Without this listener Node crashes the whole process.
+      this.proc.stdin?.on("error", () => {
+        // ponytail: swallow; the 'exit' handler owns cleanup and pending rejection
+      });
+
       this.proc.on("error", (err) => {
         clearTimeout(timeout);
         reject(err);
