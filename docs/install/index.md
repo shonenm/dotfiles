@@ -79,8 +79,8 @@ no-sudo環境では `~/.local/bin/op signin` を実行し、再実行にも `--n
 ## 運用コマンド
 
 ```bash
-dots apply             # 宣言を反映
-dots update            # fast-forward後に依存を再取得して反映
+dots apply             # 現在の宣言とlockfileを反映
+dots update            # fast-forward後にmise lockを更新し、依存を再取得して反映
 dots check             # CIと同じ検証
 dots doctor            # toolとStow linkを診断
 dots lock              # maintainer向け: mise lockfileを更新
@@ -93,7 +93,7 @@ dots lock              # maintainer向け: mise lockfileを更新
 - mise tool: `common/mise/.config/mise/mise.lock`にmacOS / Linux、x86_64 / arm64のversion・download URL・checksumを固定
 - npm CLI: `config/packages.npm.txt`にversionを固定
 - GitHub Actions: commit SHAを固定
-- 更新: `.github/workflows/dependencies.yml`が週次でRenovateと`dots lock`を実行し、3日以上経過したreleaseだけをPR化
+- 更新: `dots update`または`.github/workflows/dependencies.yml`の週次実行が`dots lock`を更新する。3日以上経過したreleaseだけを対象とする
 
 ## CI
 
