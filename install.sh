@@ -214,6 +214,21 @@ setup_environment() {
 
 # --- 3. Link Dotfiles (Stow) ---
 
+# Replace absolute links into this repository with links owned by Stow.
+# Older installer runs created these links directly; Stow 2.4 rejects them even
+# though source and target resolve to the same file.
+normalize_dotfiles_symlinks() {
+  local link relative resolved source
+  while IFS= read -r -d '' link; do
+    [[ $(readlink "$link") == /* ]] || continue
+    relative=${link#"$HOME"/}
+    resolved=$(realpath "$link" 2>/dev/null || true)
+    for source in "$DOTFILES_DIR"/common/*/"$relative" "$DOTFILES_DIR"/mac/*/"$relative"; do
+      [[ -e "$source" && "$resolved" == "$(realpath "$source")" ]] && { unlink "$link"; break; }
+    done
+  done < <(find "$HOME/.pi" "$HOME/.config/raycast" -type l -print0 2>/dev/null)
+}
+
 # Stow a package with conflict detection and backup
 stow_package() {
   local pkg_dir="$1"
@@ -475,6 +490,7 @@ link_dotfiles() {
   # Create .config if not exists
   mkdir -p "$HOME/.config"
   cleanup_broken_skill_links
+  normalize_dotfiles_symlinks
 
   # Stow common packages
   if [[ -d "$DOTFILES_DIR/common" ]]; then
@@ -1010,7 +1026,7 @@ install_pi_packages() {
 import json
 with open('$settings_file') as f:
     for pkg in json.load(f).get('packages', []):
-        print(pkg)
+        print(pkg if isinstance(pkg, str) else pkg['source'])
 " 2>/dev/null) || {
     log_warn "Failed to read pi packages from settings.json"
     return 0
@@ -1028,15 +1044,19 @@ with open('$settings_file') as f:
   fi
 
   log_info "Installing pi packages..."
+  local package_failed=false
   while IFS= read -r pkg; do
     [[ -z "$pkg" ]] && continue
     if pi install "$pkg" >/dev/null 2>&1; then
       log_success "  pi package: $pkg"
     else
       log_warn "  pi package failed: $pkg"
+      package_failed=true
     fi
   done <<< "$packages"
-  record_install_state pi-packages "$packages_fp"
+  if [[ "$package_failed" == "false" ]]; then
+    record_install_state pi-packages "$packages_fp"
+  fi
 }
 
 # --- 4.5. Configure rtk Claude Code hook ---
