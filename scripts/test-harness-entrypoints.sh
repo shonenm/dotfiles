@@ -14,6 +14,10 @@ fi
 python3 - "$root" <<'PY'
 import pathlib, sys, tomllib
 root = pathlib.Path(sys.argv[1])
+dots = (root / "scripts/dots").read_text()
+update_case = dots.split("  update)\n", 1)[1].split("    ;;\n", 1)[0]
+assert "git -C \"$root\" pull --ff-only" in update_case
+assert "update-mise-lock" not in update_case
 config = tomllib.loads((root / "common/mise/.config/mise/config.toml").read_text())
 linux = tomllib.loads((root / "config/mise-linux.toml").read_text())
 lock = tomllib.loads((root / "common/mise/.config/mise/mise.lock").read_text())

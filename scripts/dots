@@ -11,7 +11,6 @@ case "$command" in
     ;;
   update)
     git -C "$root" pull --ff-only
-    "$root/scripts/update-mise-lock"
     exec "$root/install.sh" --update "$@"
     ;;
   check)
