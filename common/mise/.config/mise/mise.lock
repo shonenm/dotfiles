@@ -385,27 +385,27 @@ url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.9.0/topgrad
 provenance = "github-attestations"
 
 [[tools."aqua:tree-sitter/tree-sitter"]]
-version = "0.26.11"
+version = "0.26.12"
 backend = "aqua:tree-sitter/tree-sitter"
 
 [tools."aqua:tree-sitter/tree-sitter"."platforms.linux-arm64"]
-checksum = "sha256:e47dd59bf2f21ad7c15771546a724464ee3c008a60fbb61c6860bd19a44b3060"
-url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.11/tree-sitter-linux-arm64.gz"
+checksum = "sha256:cfbf3d9aad8e326878ab1846885a9c2b782a0333273591616f34bf556d525586"
+url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.12/tree-sitter-linux-arm64.gz"
 provenance = "github-attestations"
 
 [tools."aqua:tree-sitter/tree-sitter"."platforms.linux-x64"]
-checksum = "sha256:8dac3c89bb632eece700ea7a261ad963b251f2228c4aef3b58458ebea8dbe4eb"
-url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.11/tree-sitter-linux-x64.gz"
+checksum = "sha256:d00ac0daefc4bf8c4b57842a5c0509927232faad1d83157b64fbad4e2e8d9a8b"
+url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.12/tree-sitter-linux-x64.gz"
 provenance = "github-attestations"
 
 [tools."aqua:tree-sitter/tree-sitter"."platforms.macos-arm64"]
-checksum = "sha256:0bb646b2a29007233bd44855f00d0b8e238084d5b442f097d841b476318c2c90"
-url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.11/tree-sitter-macos-arm64.gz"
+checksum = "sha256:a7ddeff2507391ebdfd0b8fa0dfe91babed291ea00d86426cb0e6cfade891697"
+url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.12/tree-sitter-macos-arm64.gz"
 provenance = "github-attestations"
 
 [tools."aqua:tree-sitter/tree-sitter"."platforms.macos-x64"]
-checksum = "sha256:0da547d2622ba1583e4c748bb44db5b79af56462da41acf377b9fdc2eb2cd49f"
-url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.11/tree-sitter-macos-x64.gz"
+checksum = "sha256:6827b218bce4d5403cb76ae3c269bc836d3124b75bb3477197ee9a8c8f6e79dc"
+url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.12/tree-sitter-macos-x64.gz"
 provenance = "github-attestations"
 
 [[tools."aqua:typst/typst"]]
@@ -565,28 +565,28 @@ url = "https://github.com/MilesCranmer/rip2/releases/download/v0.9.6/rip-macOS-D
 url_api = "https://api.github.com/repos/MilesCranmer/rip2/releases/assets/331924484"
 
 [[tools."github:achristmascarl/rainfrog"]]
-version = "0.4.2"
+version = "0.4.3"
 backend = "github:achristmascarl/rainfrog"
 
 [tools."github:achristmascarl/rainfrog"."platforms.linux-arm64"]
-checksum = "sha256:4e8d2c9a39eb966246b218dc2acd0712fcf4c620e96162ae27679f71f9c76426"
-url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.2/rainfrog-v0.4.2-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/492907824"
+checksum = "sha256:2098a8c8ffc7c687a97f090fb2a0a290bd88c4651667d2b1f3b28a4c0e944663"
+url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.3/rainfrog-v0.4.3-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/506124166"
 
 [tools."github:achristmascarl/rainfrog"."platforms.linux-x64"]
-checksum = "sha256:8878df66c5c8fbc48c1e40ce7a898da4c125b158e6a1040ae2b144c4e74c77c8"
-url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.2/rainfrog-v0.4.2-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/492905487"
+checksum = "sha256:50050cb714e1d6e0f4018e7ed077105acec0ce3037e0060e58f6d090c30462c3"
+url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.3/rainfrog-v0.4.3-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/506122519"
 
 [tools."github:achristmascarl/rainfrog"."platforms.macos-arm64"]
-checksum = "sha256:efd5b1ceda4f3fc98c5a139d132656daf0758303dc688b45accc74201317fd80"
-url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.2/rainfrog-v0.4.2-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/492904621"
+checksum = "sha256:ddbbc8f42c03a09b40a165a4ff0b67c167736fe2fd23920d23dd6ab2ca4ec6c0"
+url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.3/rainfrog-v0.4.3-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/506118283"
 
 [tools."github:achristmascarl/rainfrog"."platforms.macos-x64"]
-checksum = "sha256:46277fcf619ec9b012a9d5219df8f5b97f6968ede0cde768a0dd0f7efbccf4ce"
-url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.2/rainfrog-v0.4.2-x86_64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/492907915"
+checksum = "sha256:911657b03061eb2c4c3e94a56ea24f1a9cfc5bf248eabaa47f53870b1cca85c3"
+url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.3/rainfrog-v0.4.3-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/506121138"
 
 [[tools."github:babashka/babashka"]]
 version = "1.13.219"
@@ -681,28 +681,28 @@ url = "https://github.com/lemonade-command/lemonade/releases/download/v1.1.1/lem
 url_api = "https://api.github.com/repos/lemonade-command/lemonade/releases/assets/2516207"
 
 [[tools."github:mr-karan/doggo"]]
-version = "1.2.0"
+version = "1.3.0"
 backend = "github:mr-karan/doggo"
 
 [tools."github:mr-karan/doggo"."platforms.linux-arm64"]
-checksum = "sha256:b15e3e56b1e1d2e4bb3bf81b292a49a1b55781465ab2cb858cdb7f081fd95d0f"
-url = "https://github.com/mr-karan/doggo/releases/download/v1.2.0/doggo-linux-aarch64.tar.gz"
-url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/455378184"
+checksum = "sha256:f034f0d525b165b771370e0ee77e161e1d9bd1f89aa5b20de81b9053cde35d44"
+url = "https://github.com/mr-karan/doggo/releases/download/v1.3.0/doggo-linux-aarch64.tar.gz"
+url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/504896302"
 
 [tools."github:mr-karan/doggo"."platforms.linux-x64"]
-checksum = "sha256:aa6760e7f163958e7626420447385ab938fdc127983edaceb121f809bd3e2bca"
-url = "https://github.com/mr-karan/doggo/releases/download/v1.2.0/doggo-linux-x86_64.tar.gz"
-url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/455378176"
+checksum = "sha256:c0d3f064ab40670720b30833a71e6178ed84242ea53ffb5dfab7b315dcce61c2"
+url = "https://github.com/mr-karan/doggo/releases/download/v1.3.0/doggo-linux-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/504896308"
 
 [tools."github:mr-karan/doggo"."platforms.macos-arm64"]
-checksum = "sha256:aa8b866d8bc96ce7a004f3d2f99c26e4bb0dd140c7bd151b2eb12a1d0b01cc06"
-url = "https://github.com/mr-karan/doggo/releases/download/v1.2.0/doggo-darwin-aarch64.tar.gz"
-url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/455378202"
+checksum = "sha256:3898d3563e216a0ffbfc457288b16b7027d3743f5512222ad589074ae4990b93"
+url = "https://github.com/mr-karan/doggo/releases/download/v1.3.0/doggo-darwin-aarch64.tar.gz"
+url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/504896267"
 
 [tools."github:mr-karan/doggo"."platforms.macos-x64"]
-checksum = "sha256:2d88ad833fd7616ae5e8908cf765a9734e52c6521d6e46a0b1714c935088708ce"
-url = "https://github.com/mr-karan/doggo/releases/download/v1.2.0/doggo-darwin-x86_64.tar.gz"
-url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/455378251"
+checksum = "sha256:ec67fb4f33a4e630b89462f520365574881b78310845ee8623545eeca233f667"
+url = "https://github.com/mr-karan/doggo/releases/download/v1.3.0/doggo-darwin-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/mr-karan/doggo/releases/assets/504896301"
 
 [[tools."github:ouch-org/ouch"]]
 version = "0.8.1"
@@ -733,28 +733,28 @@ url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471616"
 provenance = "github-attestations"
 
 [[tools."github:shonenm/live-pr"]]
-version = "0.1.0-alpha.12"
+version = "0.1.0"
 backend = "github:shonenm/live-pr"
 
 [tools."github:shonenm/live-pr"."platforms.linux-arm64"]
-checksum = "sha256:8bed92089213fff39a11eb851541f856106753dc63b87cf6aaaf69c52bb341a1"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.1.0-alpha.12/live-pr_0.1.0-alpha.12_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/510219791"
+checksum = "sha256:ad1a57a17ed54920eca3a6547594217ae15e45ceaa716b13d70754f7ba12d3cf"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.1.0/live-pr_0.1.0_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/510393159"
 
 [tools."github:shonenm/live-pr"."platforms.linux-x64"]
-checksum = "sha256:e6e216c4f6fb9e8014ce131653c34cba614291883b198a34b554d8f3370b460d"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.1.0-alpha.12/live-pr_0.1.0-alpha.12_Linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/510219788"
+checksum = "sha256:a4aab54909cbb9110bbecb5e7c98067f6c54bccfa5423d34083c036946c91e01"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.1.0/live-pr_0.1.0_Linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/510393143"
 
 [tools."github:shonenm/live-pr"."platforms.macos-arm64"]
-checksum = "sha256:8d4e68be6aef36b2ed49406698612293afc8c89a24e6e0bb56c26d4129aeba88"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.1.0-alpha.12/live-pr_0.1.0-alpha.12_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/510219810"
+checksum = "sha256:85d794f54fae0688aac88f3feb530bae3dd601a62dd084d65b4d037a672fe345"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.1.0/live-pr_0.1.0_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/510393144"
 
 [tools."github:shonenm/live-pr"."platforms.macos-x64"]
-checksum = "sha256:7587e441ed175af8bde58b39ba7bbc4b110ee2fb1de46ee0ad369678d654344b"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.1.0-alpha.12/live-pr_0.1.0-alpha.12_Darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/510219789"
+checksum = "sha256:49994416b3168598e0913ac9713de4eee5bf4e013944060719ced3c57c24f367"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.1.0/live-pr_0.1.0_Darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/510393142"
 
 [[tools.go]]
 version = "1.26.5"

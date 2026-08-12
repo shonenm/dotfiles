@@ -4,6 +4,8 @@
 # --- Taps ---
 tap "dotenvx/brew"
 tap "FelixKratz/formulae"
+tap "joshmedeski/sesh"
+tap "nikitabobko/tap"
 tap "trasta298/tap"
 tap "oven-sh/bun"
 

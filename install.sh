@@ -214,6 +214,21 @@ setup_environment() {
 
 # --- 3. Link Dotfiles (Stow) ---
 
+# Replace absolute links into this repository with links owned by Stow.
+# Older installer runs created these links directly; Stow 2.4 rejects them even
+# though source and target resolve to the same file.
+normalize_dotfiles_symlinks() {
+  local link relative resolved source
+  while IFS= read -r -d '' link; do
+    [[ $(readlink "$link") == /* ]] || continue
+    relative=${link#"$HOME"/}
+    resolved=$(realpath "$link" 2>/dev/null || true)
+    for source in "$DOTFILES_DIR"/common/*/"$relative" "$DOTFILES_DIR"/mac/*/"$relative"; do
+      [[ -e "$source" && "$resolved" == "$(realpath "$source")" ]] && { unlink "$link"; break; }
+    done
+  done < <(find "$HOME/.pi" -type l -print0 2>/dev/null)
+}
+
 # Stow a package with conflict detection and backup
 stow_package() {
   local pkg_dir="$1"
@@ -475,12 +490,14 @@ link_dotfiles() {
   # Create .config if not exists
   mkdir -p "$HOME/.config"
   cleanup_broken_skill_links
+  normalize_dotfiles_symlinks
 
   # Stow common packages
   if [[ -d "$DOTFILES_DIR/common" ]]; then
     log_info "Linking common dotfiles..."
     local common_packages=()
     for pkg in "$DOTFILES_DIR/common"/*/; do
+      git -C "$DOTFILES_DIR" ls-files --error-unmatch "${pkg#"$DOTFILES_DIR"/}" >/dev/null 2>&1 || continue
       common_packages+=("$(basename "$pkg")")
     done
     if ! stow_package_group "$DOTFILES_DIR/common" "${common_packages[@]}"; then
@@ -493,6 +510,7 @@ link_dotfiles() {
     log_info "Linking $os-specific dotfiles..."
     local os_packages=()
     for pkg in "$DOTFILES_DIR/$os"/*/; do
+      git -C "$DOTFILES_DIR" ls-files --error-unmatch "${pkg#"$DOTFILES_DIR"/}" >/dev/null 2>&1 || continue
       os_packages+=("$(basename "$pkg")")
     done
     if ! stow_package_group "$DOTFILES_DIR/$os" "${os_packages[@]}"; then
@@ -628,8 +646,7 @@ generate_ai_cli_configs() {
 
   # Claude CLI — merge the template into the existing settings instead of
   # regenerating from scratch. Template keys win (single source of truth),
-  # but keys only present locally (model, hooks registered by other steps
-  # like rtk, feedbackSurveyState, ...) are preserved.
+  # but keys only present locally (model, feedbackSurveyState, ...) are preserved.
   if [[ -f "$templates_dir/claude-settings.json" ]]; then
     mkdir -p "$HOME/.claude"
     local rendered_template
@@ -956,10 +973,6 @@ main() {
   # 4. Generate AI CLI configs (with absolute paths)
   generate_ai_cli_configs
 
-  # 4.5. Configure rtk Claude Code hook (token compression)
-  configure_rtk_claude_hook
-  configure_rtk_passthrough
-
   # 4.6. Disable Serena MCP dashboard auto-open
   configure_serena_dashboard
 
@@ -1010,7 +1023,7 @@ install_pi_packages() {
 import json
 with open('$settings_file') as f:
     for pkg in json.load(f).get('packages', []):
-        print(pkg)
+        print(pkg if isinstance(pkg, str) else pkg['source'])
 " 2>/dev/null) || {
     log_warn "Failed to read pi packages from settings.json"
     return 0
@@ -1028,80 +1041,19 @@ with open('$settings_file') as f:
   fi
 
   log_info "Installing pi packages..."
+  local package_failed=false
   while IFS= read -r pkg; do
     [[ -z "$pkg" ]] && continue
     if pi install "$pkg" >/dev/null 2>&1; then
       log_success "  pi package: $pkg"
     else
       log_warn "  pi package failed: $pkg"
+      package_failed=true
     fi
   done <<< "$packages"
-  record_install_state pi-packages "$packages_fp"
-}
-
-# --- 4.5. Configure rtk Claude Code hook ---
-# rtk init -g registers a Bash hook in ~/.claude/settings.json that transparently
-# rewrites commands like `git status` -> `rtk git status` for 60-90% token reduction.
-# --auto-patch is required: without it rtk prompts before patching settings.json,
-# and in non-interactive installs the prompt fails, leaving RTK.md claiming a
-# hook that was never installed.
-# Idempotent: skips if hook already configured. Must run after
-# generate_ai_cli_configs, whose template merge resets the hook arrays.
-configure_rtk_claude_hook() {
-  if ! command_exists rtk; then
-    log_warn "rtk not installed, skipping rtk Claude hook setup"
-    return 0
+  if [[ "$package_failed" == "false" ]]; then
+    record_install_state pi-packages "$packages_fp"
   fi
-
-  local settings_file="$HOME/.claude/settings.json"
-  if [[ -f "$settings_file" ]] && grep -q '"rtk"' "$settings_file" 2>/dev/null; then
-    log_info "rtk Claude hook already configured"
-    return 0
-  fi
-
-  log_info "Configuring rtk Claude Code hook (token compression)..."
-  if rtk init -g --auto-patch; then
-    log_success "rtk Claude hook configured"
-  else
-    log_warn "rtk init -g --auto-patch failed (non-fatal)"
-  fi
-}
-
-# rtk's heuristic digest corrupts machine-readable output: it truncates long
-# file reads, caps grep/ls results, mangles git porcelain, and has even
-# fabricated content. List the file-op and git commands in
-# [hooks].exclude_commands of ~/.config/rtk/config.toml so they pass through
-# raw, while test/lint/typecheck/build commands stay digested (where the token
-# savings actually are). Idempotent: rewrites only the exclude_commands array,
-# preserving rtk's other (machine-local) keys such as telemetry consent.
-configure_rtk_passthrough() {
-  command_exists rtk || return 0
-  local cfg="${XDG_CONFIG_HOME:-$HOME/.config}/rtk/config.toml"
-  [[ -f "$cfg" ]] || rtk config --create >/dev/null 2>&1 || true
-  [[ -f "$cfg" ]] || { log_warn "rtk config.toml absent, skipping passthrough setup"; return 0; }
-
-  python3 - "$cfg" <<'PYEOF'
-import re, sys
-
-path = sys.argv[1]
-with open(path) as f:
-    text = f.read()
-
-excluded = ["cat", "head", "tail", "sed", "awk", "ls", "grep", "rg", "find", "wc", "git"]
-array = "exclude_commands = [\n" + "".join(f'    "{c}",\n' for c in excluded) + "]"
-
-pattern = re.compile(r'exclude_commands\s*=\s*\[[^\]]*\]')
-if pattern.search(text):
-    text = pattern.sub(array, text, count=1)
-elif re.search(r'^\[hooks\]\s*$', text, re.M):
-    text = re.sub(r'(^\[hooks\][^\n]*\n)', r'\1' + array + "\n", text, count=1, flags=re.M)
-else:
-    text = text.rstrip() + "\n\n[hooks]\n" + array + "\n"
-
-with open(path, "w") as f:
-    f.write(text)
-PYEOF
-  log_success "  rtk: file-op/git commands pass through raw (savings kept for test/lint/build)"
 }
 
 # --- 4.6. Disable Serena MCP dashboard auto-open ---
