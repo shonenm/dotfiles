@@ -6,7 +6,10 @@ return {
     "folke/snacks.nvim",
     keys = { { "<leader>gd", false } },
     opts = {
-      notifier = { margin = { top = 3, right = 1, bottom = 0 } },
+      notifier = {
+        margin = { top = 3, right = 1, bottom = 0 },
+        width = { min = 40, max = 0.9 },
+      },
       styles = { notification = { wo = { wrap = true } } },
     },
   },
