@@ -41,7 +41,16 @@
       "Shell(sudo **)",
       "Shell(chmod 777 **)",
       "Shell(git push --force**)",
-      "Shell(git reset --hard**)"
+      "Shell(git reset --hard**)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/*.pem)",
+      "Read(**/id_rsa*)",
+      "Read(**/id_ed25519*)",
+      "Read(~/.ssh/id_*)",
+      "Read(~/.local/share/ai-notify/**)",
+      "Read(**/*_webhook)",
+      "Read(**/credentials*)"
     ]
   },
   "editor": {

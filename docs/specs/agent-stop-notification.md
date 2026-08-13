@@ -27,7 +27,7 @@ Claude Code、pi、Codex、Gemini CLI、Cursor Agent、Command Code、Grok Build
 | pi | `agent_start` | `message_update`、tool execution events（5秒間引き） | `agent_settled` | assistant `stopReason`、`session_shutdown` |
 | Codex | `UserPromptSubmit` | `PreToolUse`、`PostToolUse` | `PermissionRequest`、`Stop` | legacy `notify`はidle fallback |
 | Gemini CLI | `BeforeAgent` | `BeforeTool`、`AfterTool` | `AfterAgent` | `SessionEnd` |
-| Cursor Agent | `beforeSubmitPrompt` | shell/read/edit/thought hooks | `stop` | CLI hook APIの範囲でbest effort |
+| Cursor Agent | `sessionStart`、`beforeSubmitPrompt` | shell/read/edit/thought hooks | `stop`（idle + Slack complete） | `sessionEnd` で clear。`/tmp` は `beforeShellExecution` で deny |
 | Command Code | 最初の`PreToolUse` | `PreToolUse`、`PostToolUse` | `Stop` | prompt開始eventがないためtext-only turnのrunningは取得不可 |
 | Grok Build | `UserPromptSubmit` | `PreToolUse`、`PostToolUse`、`PostToolUseFailure` | `Notification`(permission_prompt)、`Stop` | `StopFailure`、`SessionEnd` |
 
