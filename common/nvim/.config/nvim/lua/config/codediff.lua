@@ -1155,11 +1155,11 @@ function M.setup(opts)
     }
     local diff_help_lines = {
       { { "[", "Special" }, { "]c", "Normal" }, { "/", "Special" }, { "[c", "Normal" }, { "]", "Special" }, { " hunk  ", "Normal" }, { "[gs]", "Special" }, { " stage  ", "Normal" }, { "[gr]", "Special" }, { " reset", "Normal" } },
-      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[h]/[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
     local diff_staged_help_lines = {
       { { "[", "Special" }, { "]c", "Normal" }, { "/", "Special" }, { "[c", "Normal" }, { "]", "Special" }, { " hunk  ", "Normal" }, { "[gu]", "Special" }, { " unstage  ", "Normal" }, { "[gr]", "Special" }, { " reset", "Normal" } },
-      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+      { { "[do]", "Special" }, { " get  ", "Normal" }, { "[dp]", "Special" }, { " put  ", "Normal" }, { "[h]/[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
     local review_explorer_help_lines = {
       { { "[c]", "Special" }, { " reviewed  ", "Normal" }, { "[,]", "Special" }, { "/", "Normal" }, { "[.]", "Special" }, { " file  ", "Normal" }, { "{ }", "Special" }, { " next unchecked", "Normal" } },
@@ -1167,11 +1167,11 @@ function M.setup(opts)
     }
     local review_diff_help_lines = {
       { { "[,]", "Special" }, { "/", "Normal" }, { "[.]", "Special" }, { " file  ", "Normal" }, { "[ / ]", "Special" }, { " hunk  ", "Normal" }, { "{ }", "Special" }, { " unchecked", "Normal" } },
-      { { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+      { { "[h]/[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
     local conflict_help_lines = {
       { { "[co]", "Special" }, { " ours  ", "Normal" }, { "[ct]", "Special" }, { " theirs  ", "Normal" }, { "[cb]", "Special" }, { " both  ", "Normal" }, { "[c0]", "Special" }, { " none", "Normal" } },
-      { { "[", "Special" }, { "]x", "Normal" }, { "/", "Special" }, { "[x", "Normal" }, { "]", "Special" }, { " conflict  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
+      { { "[", "Special" }, { "]x", "Normal" }, { "/", "Special" }, { "[x", "Normal" }, { "]", "Special" }, { " conflict  ", "Normal" }, { "[h]/[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
     local review_progress_colors = { "#f7768e", "#ff9e64", "#e0af68", "#9ece6a", "#73daca", "#7dcfff", "#7aa2f7" }
     for i, color in ipairs(review_progress_colors) do
@@ -2048,6 +2048,16 @@ function M.setup(opts)
         vim.keymap.set("n", "[r", function()
           if goto_prev_repo_tab then goto_prev_repo_tab() end
         end, vim.tbl_extend("force", map_opts, { desc = "Prev repo tab" }))
+        vim.keymap.set("n", "h", function()
+          if vim.v.count == 0 and vim.fn.virtcol(".") == 1 then
+            local expl = session.explorer
+            if expl and expl.winid and vim.api.nvim_win_is_valid(expl.winid) then
+              vim.api.nvim_set_current_win(expl.winid)
+              return
+            end
+          end
+          vim.cmd("normal! " .. vim.v.count1 .. "h")
+        end, vim.tbl_extend("force", map_opts, { desc = "Left, or focus explorer at line start" }))
 
         -- Review mode (two-commit diff): ,/. move by file (same as the sidebar),
         -- [/] move by hunk within the focused file.
