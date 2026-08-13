@@ -12,7 +12,7 @@ deno = "latest"
 go = "latest"
 cloudflared = "latest"
 "github:babashka/babashka" = { version = "latest", exe = "bb" }
-"github:shonenm/live-pr" = { version = "latest", minimum_release_age = "0s" }
+"github:shonenm/live-pr" = { version = "0.2.2", minimum_release_age = "0s" }
 
 [tasks.apply]
 description = "Apply package declarations and dotfile links"
