@@ -799,6 +799,15 @@ for name, config in servers.items():
     fi
   fi
 
+  # Grok Build
+  if [[ -f "$templates_dir/grok-hooks.json" ]]; then
+    if render_home_template "$templates_dir/grok-hooks.json" "$HOME/.grok/hooks/tmux-agent.json"; then
+      log_success "  Generated ~/.grok/hooks/tmux-agent.json"
+    else
+      log_success "  ~/.grok/hooks/tmux-agent.json already current"
+    fi
+  fi
+
   # Command Code CLI
   if [[ -f "$templates_dir/commandcode-settings.json" ]]; then
     if render_home_template "$templates_dir/commandcode-settings.json" "$HOME/.commandcode/settings.json"; then

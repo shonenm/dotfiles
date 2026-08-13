@@ -467,7 +467,7 @@ AI エージェント状態監視（自前スクリプト）:
 - `scripts/tmux-agent-status.sh`は全agentのread-only previewとpane jumpを提供する。実paneのswapは行わない
 - `scripts/tmux-agent-sidebar.sh`は同じindexからセッショングループ別の状態を常時表示する
 - event heartbeat対応providerではTUI spinnerを無視し、120秒進捗がなければhang表示する
-- サイドバー下部に Claude / Codex / Gemini / Cursor の使用量を表示。Codex は `~/.codex/auth.json` の OAuth token を自動 refresh するが、refresh token invalidated の場合は `codex login` が必要
+- サイドバー下部に Claude / Codex / Gemini / Cursor / Grok の使用量を表示。Codex は `~/.codex/auth.json` の OAuth token を自動 refresh するが、refresh token invalidated の場合は `codex login` が必要。Grok は `~/.grok/auth.json` の session token を使い、切れたら `grok login`
 - サイドバーがある window では `prefix z` / `prefix Z` が native zoom ではなく擬似 zoom（layout 保存 + resize）になり、サイドバーを表示したまま残り領域で最大化する。tmux は pane を隠せないため、他の pane は 1 行のスリットとして残る。`prefix C-z` は常に native zoom（サイドバーごと全画面）
 - 擬似 zoom 中は `window_zoomed_flag` が立たないため、status-right のモード表示と `pane-active-border-style` は `@pzoom_pane` も見て ZOOM を表示する（`regenerate-tmux-theme.sh` が正本）
 - 詳細は[AI agent状態管理](../specs/agent-stop-notification.md)を参照

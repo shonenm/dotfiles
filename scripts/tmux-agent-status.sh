@@ -198,11 +198,12 @@ case "${1:-popup}" in
     runtime_dir=$(agent_runtime_dir)
     base=$(agent_runtime_base)
     for lock in "$runtime_dir/hang-watch.pid" "$runtime_dir/index/daemon.pid" \
+                "$runtime_dir/sidebar-daemon.pid" \
                 "$base/claude/hang-watch.pid" "$base/claude/tmux-agent-index/daemon.pid"; do
       [[ -f "$lock" ]] || continue
       daemon_pid=$(cat "$lock" 2>/dev/null || true)
       if [[ -n "$daemon_pid" ]]; then
-        case "$lock" in *index*) expected=tmux-agent-index.sh;; *) expected=tmux-agent-hang-watch.sh;; esac
+        case "$lock" in *index*) expected=tmux-agent-index.sh;; *sidebar*) expected=tmux-agent-sidebar.sh;; *) expected=tmux-agent-hang-watch.sh;; esac
         daemon_command=$(ps -p "$daemon_pid" -o command= 2>/dev/null || true)
         [[ "$daemon_command" == *"$expected"* ]] || continue
         kill "$daemon_pid" 2>/dev/null || true
@@ -215,6 +216,7 @@ case "${1:-popup}" in
     done
     tmux run-shell -b "$SCRIPT_DIR/tmux-agent-index.sh daemon >/dev/null 2>&1 || true"
     tmux run-shell -b "$SCRIPT_DIR/tmux-agent-hang-watch.sh >/dev/null 2>&1 || true"
+    tmux run-shell -b "$SCRIPT_DIR/tmux-agent-sidebar.sh daemon >/dev/null 2>&1 || true"
     "$SCRIPT_DIR/tmux-claude-pane.sh" hang-scan 2>/dev/null || true
     "$SCRIPT_DIR/tmux-agent-index.sh" refresh 2>/dev/null || true
     tmux refresh-client -S 2>/dev/null || true
