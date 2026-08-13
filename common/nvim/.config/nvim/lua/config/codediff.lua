@@ -221,7 +221,10 @@ function M.setup(opts)
     end
 
     local function review_diff_fingerprint(git_root, base_rev, target_rev, path)
-      local result = vim.system({ "git", "diff", "--no-ext-diff", "--no-color", base_rev, target_rev, "--", path }, {
+      local args = { "git", "diff", "--no-ext-diff", "--no-color", base_rev }
+      if target_rev ~= "WORKING" then args[#args + 1] = target_rev end
+      vim.list_extend(args, { "--", path })
+      local result = vim.system(args, {
         cwd = git_root,
         text = true,
       }):wait()
@@ -291,18 +294,20 @@ function M.setup(opts)
         if explorer and explorer.tree then explorer.tree:render() end
       end,
     })
-    -- Returns git_root, base_rev, target_rev when the current tab is a two-commit
-    -- review diff (both sides real commits), else nil. Reads the explorer object
-    -- (authoritative for base/target; the session's revisions can lag before a file
-    -- loads). This is the sole discriminator for review-mode UI; the normal
-    -- status/single-revision/WORKING paths return nil.
+    local function is_codereview_target(target_rev)
+      return target_rev and not tostring(target_rev):match("^:[0-3]$")
+        and (target_rev ~= "WORKING" or vim.env.LIVE_PR_REVIEW == "1")
+    end
+
+    -- Returns git_root, base_rev, target_rev for explicit review diffs. live-pr
+    -- also reviews WORKING so uncommitted changes stay in the review range.
     local function codereview_ctx()
       local ok, lc = pcall(require, "codediff.ui.lifecycle")
       if not ok or not lc.get_explorer then return nil end
       local expl = lc.get_explorer(vim.api.nvim_get_current_tabpage())
       if not expl then return nil end
       local b, t = expl.base_revision, expl.target_revision
-      if b and t and t ~= "WORKING" and not tostring(t):match("^:[0-3]$") then
+      if b and is_codereview_target(t) then
         return expl.git_root, b, t
       end
       return nil
@@ -1618,9 +1623,7 @@ function M.setup(opts)
         end
         local session_check = require("codediff.ui.lifecycle.session").get_active_diffs()[tabpage]
         local rexpl = session_check and session_check.explorer
-        local is_review = rexpl and rexpl.base_revision and rexpl.target_revision
-          and rexpl.target_revision ~= "WORKING"
-          and not tostring(rexpl.target_revision):match("^:[0-3]$")
+        local is_review = rexpl and rexpl.base_revision and is_codereview_target(rexpl.target_revision)
 
         local help_lines
         if is_review then
@@ -1803,7 +1806,7 @@ function M.setup(opts)
       -- and hunk navigation. CodeDiff temporarily moves to the modified diff
       -- window for hunk navigation, so restore the explorer focus afterwards.
       -- Gated so the normal status/single-revision paths are untouched.
-      if explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
+      if explorer.base_revision and is_codereview_target(explorer.target_revision) then
         vim.keymap.set("n", "c", function()
           local node = tree:get_node()
           if not node or not node.data or node.data.type == "group" then return end
@@ -2007,9 +2010,7 @@ function M.setup(opts)
         -- Review mode (two-commit diff): ,/. move by file (same as the sidebar),
         -- [/] move by hunk within the focused file.
         local rexpl = session.explorer
-        if rexpl and rexpl.base_revision and rexpl.target_revision
-            and rexpl.target_revision ~= "WORKING"
-            and not tostring(rexpl.target_revision):match("^:[0-3]$") then
+        if rexpl and rexpl.base_revision and is_codereview_target(rexpl.target_revision) then
           vim.keymap.set("n", ".", function()
             require("codediff").next_file()
           end, vim.tbl_extend("force", map_opts, { desc = "Next file" }))
