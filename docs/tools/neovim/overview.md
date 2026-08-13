@@ -518,6 +518,8 @@ Diff ビュー（`,`/`.` はサイドバーと同じくファイル移動。hunk
 
 `:CodeReviewBranch` は3点diff（`merge-base..HEAD`、このブランチ独自のコミットのみ）で開く。`base` 省略時はデフォルトブランチを自動検出する（`origin/HEAD` → なければ `main`/`master`）。ロジックは nvim コマンド側に集約し、シェルコマンドは `nvim -c "..."` で起動するだけ。
 
+幅が160列未満なら縦（inline）、それ以上なら横（side-by-side）で開く。リサイズでも同じ閾値で切り替える。`t` の手動切替は次の閾値越え resize で上書きされる。
+
 **コンフリクト解消操作** (git-conflict.nvim):
 
 | キー  | 動作                     |

@@ -299,6 +299,61 @@ function M.setup(opts)
         and (target_rev ~= "WORKING" or vim.env.LIVE_PR_REVIEW == "1")
     end
 
+    -- explorer 40 + two panes ~60. Below this, side-by-side is unreadable.
+    local SIDE_BY_SIDE_MIN_COLUMNS = 160
+    local last_auto_layout
+    local last_auto_layout_columns
+
+    local function layout_for_columns(columns)
+      return (columns or vim.o.columns) < SIDE_BY_SIDE_MIN_COLUMNS and "inline" or "side-by-side"
+    end
+
+    local function layout_flag(columns)
+      return layout_for_columns(columns) == "inline" and "--inline" or "--side-by-side"
+    end
+
+    local function apply_review_layout(tabpage)
+      local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
+      if not ok then return end
+      tabpage = tabpage or vim.api.nvim_get_current_tabpage()
+      local session = lifecycle.get_session and lifecycle.get_session(tabpage)
+      local explorer = lifecycle.get_explorer and lifecycle.get_explorer(tabpage)
+      if not session or not explorer or not explorer.base_revision or not is_codereview_target(explorer.target_revision) then
+        return
+      end
+      if session.result_win and vim.api.nvim_win_is_valid(session.result_win) then
+        return
+      end
+      local wanted = layout_for_columns()
+      if session.layout == wanted then
+        last_auto_layout = wanted
+        last_auto_layout_columns = vim.o.columns
+        return
+      end
+      require("codediff.ui.view.toggle").toggle(tabpage)
+      last_auto_layout = wanted
+      last_auto_layout_columns = vim.o.columns
+    end
+
+    local function jump_review_hunk(direction)
+      local ok, session_mod = pcall(require, "codediff.ui.lifecycle.session")
+      if not ok then return end
+      local session = session_mod.get_active_diffs()[vim.api.nvim_get_current_tabpage()]
+      if not session then return end
+      local current_win = vim.api.nvim_get_current_win()
+      local target_win = session.modified_win
+      if not target_win or not vim.api.nvim_win_is_valid(target_win) then return end
+      vim.api.nvim_set_current_win(target_win)
+      if direction == "next" then
+        require("codediff").next_hunk()
+      else
+        require("codediff").prev_hunk()
+      end
+      if vim.api.nvim_win_is_valid(current_win) then
+        vim.api.nvim_set_current_win(current_win)
+      end
+    end
+
     -- Returns git_root, base_rev, target_rev for explicit review diffs. live-pr
     -- also reviews WORKING so uncommitted changes stay in the review range.
     local function codereview_ctx()
@@ -1831,16 +1886,10 @@ function M.setup(opts)
           require("codediff").prev_file()
         end, vim.tbl_extend("force", map_opts, { desc = "Prev file" }))
         vim.keymap.set("n", "]", function()
-          require("codediff").next_hunk()
-          if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
-            vim.api.nvim_set_current_win(explorer.winid)
-          end
+          jump_review_hunk("next")
         end, vim.tbl_extend("force", map_opts, { desc = "Next hunk" }))
         vim.keymap.set("n", "[", function()
-          require("codediff").prev_hunk()
-          if explorer.winid and vim.api.nvim_win_is_valid(explorer.winid) then
-            vim.api.nvim_set_current_win(explorer.winid)
-          end
+          jump_review_hunk("prev")
         end, vim.tbl_extend("force", map_opts, { desc = "Prev hunk" }))
         vim.keymap.set("n", "}", function()
           review_jump_unchecked(explorer, 1)
@@ -2360,7 +2409,7 @@ function M.setup(opts)
     vim.api.nvim_create_user_command("CodeReview", function(o)
       local base = o.fargs[1] or "HEAD~1"
       local target = o.fargs[2] or "HEAD"
-      vim.cmd(string.format("CodeDiff %s %s", base, target))
+      vim.cmd(string.format("CodeDiff %s %s %s", layout_flag(), base, target))
     end, { nargs = "*", desc = "Two-commit review diff (default HEAD~1 HEAD)" })
 
     -- :CodeReviewBranch [base] - review current branch vs default branch (3-dot)
@@ -2385,8 +2434,19 @@ function M.setup(opts)
         vim.notify("CodeReviewBranch: cannot detect default branch; pass one explicitly", vim.log.levels.ERROR)
         return
       end
-      vim.cmd(string.format("CodeDiff %s...HEAD", base))
+      vim.cmd(string.format("CodeDiff %s %s...HEAD", layout_flag(), base))
     end, { nargs = "?", desc = "Review current branch vs default branch (3-dot)" })
+
+    vim.api.nvim_create_autocmd("VimResized", {
+      callback = function()
+        if last_auto_layout_columns == vim.o.columns then return end
+        if last_auto_layout == layout_for_columns() then
+          last_auto_layout_columns = vim.o.columns
+          return
+        end
+        apply_review_layout()
+      end,
+    })
 end
 
 return M
