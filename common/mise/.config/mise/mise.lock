@@ -896,6 +896,10 @@ url = "https://nodejs.org/dist/v24.19.0/node-v24.19.0-darwin-arm64.tar.gz"
 checksum = "sha256:d1b5e999db158c62fe8f7267a4476b035d8bd93b1a605bac24a3f0dd166e3316"
 url = "https://nodejs.org/dist/v24.19.0/node-v24.19.0-darwin-x64.tar.gz"
 
+[[tools."npm:@xai-official/grok"]]
+version = "1.0.0"
+backend = "npm:@xai-official/grok"
+
 [[tools."npm:cspell"]]
 version = "10.0.1"
 backend = "npm:cspell"
