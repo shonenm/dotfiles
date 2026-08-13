@@ -6,3 +6,5 @@
 \.cursor/skills-cursor
 \.cursor/cli-config\.json
 \.cursor/hooks\.json
+\.cursor/mcp\.json
+\.cursor/skills

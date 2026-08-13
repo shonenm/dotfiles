@@ -12,10 +12,11 @@
 | rules | グローバル振る舞いルール | `common/cursor/.cursor/rules/` → `~/.cursor/rules/` |
 | cli-config.json | CLI 権限・承認モード | `templates/cursor-cli-config.json` → `~/.cursor/cli-config.json` |
 | statusline | CLI フッター (ctx/model/git) | `common/cursor/.cursor/statusline-command.sh` (Claude と共有) |
-| hooks.json | tmux状態・完了通知 | `templates/cursor-hooks.json` → `~/.cursor/hooks.json` |
+| hooks.json | tmux状態・完了通知・`/tmp` deny | `templates/cursor-hooks.json` → `~/.cursor/hooks.json` |
+| mcp.json | 共有 MCP | `common/agent/.config/agent/mcp.json` → `~/.cursor/mcp.json` |
+| 共有 skills | ツール横断スキル | `common/agent/.config/agent/skills/` → `~/.cursor/skills/` |
 | tmux 使用量 | プラン制限の可視化 | `ai-usage cursor` (tools/ai-usage) |
 | d-* skills | dotfiles ワークフロー | `common/claude/.claude/skills/` → `~/.claude/skills/` (Cursor 互換読み込み) |
-| 共有 MCP / skills | ツール横断設定 | `common/agent/.config/agent/` → `~/.config/agent/` |
 
 ## セットアップ
 
@@ -31,7 +32,8 @@ cd ~/dotfiles
 1. `cursor-agent` CLI をインストール (未インストール時)
 2. `stow` で `common/cursor/` をリンク (`~/.cursor/rules/`)
 3. `~/.cursor/cli-config.json` と `~/.cursor/hooks.json` をテンプレートから生成
-4. 1Password から Cursor Webhook をキャッシュ (エントリがある場合)
+4. 共有 skill を `~/.cursor/skills/` へ symlink、有効な MCP を `~/.cursor/mcp.json` へ生成
+5. 1Password から Cursor Webhook をキャッシュ (エントリがある場合)
 
 確認:
 
@@ -40,6 +42,8 @@ cursor-agent --version
 ls -la ~/.cursor/rules/communication.mdc   # dotfiles へのシンボリックリンク
 test -f ~/.cursor/cli-config.json && echo "cli-config ok"
 test -f ~/.cursor/hooks.json && echo "hooks ok"
+test -f ~/.cursor/mcp.json && echo "mcp ok"
+ls ~/.cursor/skills/
 ```
 
 ### 2. 認証
@@ -70,15 +74,26 @@ ai-notify.sh --setup cursor
 
 ## スキル
 
-Cursor は以下からスキルを自動読み込みする:
+Cursor が自動読み込みするパス:
 
 | パス | 内容 |
 | --- | --- |
-| `~/.cursor/skills/` | Cursor 専用スキル |
+| `~/.cursor/skills/` | 共有 agent skill (`install.sh` が symlink) と Cursor 専用スキル |
 | `~/.claude/skills/` | Claude 互換 (dotfiles の `d-*` スキル) |
-| `~/.config/agent/skills/` | ツール横断共有スキル |
+| `~/.codex/skills/` | Codex 互換 (Codex 導入時は同じ共有 skill が見える) |
+| `.cursor/skills/` / `.agents/skills/` | プロジェクト固有 |
 
-dotfiles の `d-commit`, `d-pr`, `d-issue` 等は `common/claude/.claude/skills/` 経由で Claude と Cursor 両方から使える。
+`~/.config/agent/skills/` は Cursor の探索対象ではない。正本は `common/agent/.config/agent/skills/` に置き、Codex と同じく runtime ディレクトリへ link する。
+
+dotfiles の `d-commit`, `d-pr`, `d-issue` 等は `common/claude/.claude/skills/` 経由で Claude と Cursor 両方から使える。ハーネス監査は `/d-harness-audit`。
+
+## MCP
+
+`install.sh` は `common/agent/.config/agent/mcp.json` の `enabled: true` (省略時も有効) を `~/.cursor/mcp.json` へ upsert する。ユーザーが追加した server は残す。secret が必要な server は共有 mcp.json に入れず、Claude 専用 mcp と同じく個別登録する。
+
+```bash
+test -f ~/.cursor/mcp.json && jq '.mcpServers | keys' ~/.cursor/mcp.json
+```
 
 ## CLI の使い方
 
@@ -180,10 +195,20 @@ Cursor CLI をそのままバックエンドにする薄いラッパ。導入は
 | インストール | npm global | curl (`cursor.com/install`) |
 | グローバル設定 | `~/.claude/settings.json` (生成) | `~/.cursor/cli-config.json` (生成) |
 | ルール形式 | `.claude/rules/*.md` | `.cursor/rules/*.mdc` |
-| 通知イベント | lifecycle / permission / idle | prompt / shell / read / edit / thought / stop |
+| 共有 skill | `~/.claude/skills/` (stow) | `~/.cursor/skills/` (install.sh link) + Claude 互換 |
+| MCP | `claude mcp add-json` | `~/.cursor/mcp.json` (共有 mcp.json から生成) |
+| 通知イベント | lifecycle / permission / idle | sessionStart / prompt / shell / read / edit / thought / stop / sessionEnd |
 | Statusline | hooks statusLine | cli-config statusLine |
 | tmux 使用量 | ai-usage claude | ai-usage cursor |
 | SketchyBar 連携 | あり | なし (Slack のみ) |
+
+## 検証
+
+```bash
+scripts/test-cursor-config.sh
+scripts/check-markdown-links.py
+scripts/check-package-duplication.sh
+```
 
 ## 関連
 
