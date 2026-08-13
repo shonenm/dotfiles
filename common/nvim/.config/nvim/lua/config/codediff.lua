@@ -1229,12 +1229,46 @@ function M.setup(opts)
       snacks_explorer_patched = true
     end
 
+    local saved_autoread
+    local function sync_review_autoread()
+      local review_open = false
+      local ok_lc, lifecycle = pcall(require, "codediff.ui.lifecycle")
+      for tab, _ in pairs(codediff_tabs) do
+        if vim.api.nvim_tabpage_is_valid(tab) then
+          local explorer = ok_lc and lifecycle.get_explorer and lifecycle.get_explorer(tab)
+          if explorer and explorer.base_revision and is_codereview_target(explorer.target_revision) then
+            review_open = true
+            break
+          end
+        else
+          codediff_tabs[tab] = nil
+        end
+      end
+      if review_open then
+        if saved_autoread == nil then
+          saved_autoread = vim.o.autoread
+          vim.o.autoread = false
+        end
+      elseif saved_autoread ~= nil then
+        vim.o.autoread = saved_autoread
+        saved_autoread = nil
+      end
+    end
+
     local orig_view_create = view_mod.create
     view_mod.create = function(session_config, filetype, on_ready)
       patch_snacks_explorer_autocmd()
+      local is_review = session_config.original_revision and is_codereview_target(session_config.modified_revision)
+      if is_review and saved_autoread == nil then
+        saved_autoread = vim.o.autoread
+        vim.o.autoread = false
+      end
       local ok, result = pcall(orig_view_create, session_config, filetype, on_ready)
       codediff_tabs[vim.api.nvim_get_current_tabpage()] = true
-      if not ok then error(result) end
+      if not ok then
+        sync_review_autoread()
+        error(result)
+      end
       return result
     end
 
@@ -1244,6 +1278,7 @@ function M.setup(opts)
         local tab = tonumber(ev.match)
         if tab then
           codediff_tabs[tab] = nil
+          sync_review_autoread()
         end
       end,
     })
@@ -2006,18 +2041,7 @@ function M.setup(opts)
         vim.keymap.set({ "n", "v" }, "gu", function()
           unstage_hunk()
         end, vim.tbl_extend("force", map_opts, { desc = "Unstage hunk" }))
-        vim.keymap.set("n", "h", function()
-          if vim.fn.col(".") ~= 1 then
-            return vim.cmd("normal! h")
-          end
-          local ok2, session_mod2 = pcall(require, "codediff.ui.lifecycle.session")
-          if not ok2 then return end
-          local active_diffs2 = session_mod2.get_active_diffs()
-          local session2 = active_diffs2[vim.api.nvim_get_current_tabpage()]
-          if session2 and session2.explorer and session2.explorer.winid and vim.api.nvim_win_is_valid(session2.explorer.winid) then
-            vim.api.nvim_set_current_win(session2.explorer.winid)
-          end
-        end, vim.tbl_extend("force", map_opts, { desc = "Focus explorer at line start" }))
+
         vim.keymap.set("n", "]r", function()
           if goto_next_repo_tab then goto_next_repo_tab() end
         end, vim.tbl_extend("force", map_opts, { desc = "Next repo tab" }))
