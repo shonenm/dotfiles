@@ -14,7 +14,8 @@
   },
   "enabledModels": [
     "openai-codex/*",
-    "cursor-agent/*"
+    "cursor-agent/*",
+    "xai/*"
   ],
   "hideThinkingBlock": true,
   "theme": "tokyonight-high-contrast",
