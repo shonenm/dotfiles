@@ -197,6 +197,8 @@ function M.setup(opts)
       file:close()
       local ok, decoded = pcall(vim.json.decode, data)
       if not ok or type(decoded) ~= "table" then return end
+      reviewed_marks = {}
+      review_fingerprints = {}
       for k, fingerprint in pairs(decoded) do
         if type(k) == "string" and type(fingerprint) == "string" then
           reviewed_marks[k] = fingerprint
@@ -256,7 +258,39 @@ function M.setup(opts)
       save_reviewed_marks()
     end
 
+    local function toggle_reviewed_paths(git_root, base_rev, target_rev, paths)
+      local mark = false
+      for _, path in ipairs(paths) do
+        if not is_reviewed(git_root, base_rev, target_rev, path) then
+          mark = true
+          break
+        end
+      end
+      for _, path in ipairs(paths) do
+        local key = review_key(git_root, base_rev, target_rev, path)
+        if mark then
+          local fingerprint = review_diff_fingerprint(git_root, base_rev, target_rev, path)
+          if fingerprint then
+            reviewed_marks[key] = fingerprint
+            review_fingerprints[key] = fingerprint
+          end
+        else
+          reviewed_marks[key] = nil
+          review_fingerprints[key] = nil
+        end
+      end
+      save_reviewed_marks()
+    end
+
     load_reviewed_marks()
+    vim.api.nvim_create_autocmd("FocusGained", {
+      callback = function()
+        load_reviewed_marks()
+        local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
+        local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
+        if explorer and explorer.tree then explorer.tree:render() end
+      end,
+    })
     -- Returns git_root, base_rev, target_rev when the current tab is a two-commit
     -- review diff (both sides real commits), else nil. Reads the explorer object
     -- (authoritative for base/target; the session's revisions can lag before a file
@@ -333,16 +367,22 @@ function M.setup(opts)
       vim.notify("All files reviewed", vim.log.levels.INFO)
     end
 
-    -- Keep the current hunk position visible while a CodeDiff tab is active.
-    -- This is shared by normal CodeDiff and two-commit CodeReview sessions.
-    local hunk_notification_id = "codediff_hunk_position"
+    -- Keep the current hunk position in a dedicated top-right window. Normal
+    -- notifications reserve these rows and therefore always stack below it.
     local hunk_notification_label = nil
+    local hunk_notification_buf = nil
+    local hunk_notification_win = nil
 
     local function hide_hunk_notification()
-      if hunk_notification_label and _G.Snacks and Snacks.notifier then
-        Snacks.notifier.hide(hunk_notification_id)
+      if hunk_notification_win and vim.api.nvim_win_is_valid(hunk_notification_win) then
+        vim.api.nvim_win_close(hunk_notification_win, true)
+      end
+      if hunk_notification_buf and vim.api.nvim_buf_is_valid(hunk_notification_buf) then
+        vim.api.nvim_buf_delete(hunk_notification_buf, { force = true })
       end
       hunk_notification_label = nil
+      hunk_notification_buf = nil
+      hunk_notification_win = nil
     end
 
     local function update_hunk_notification()
@@ -386,19 +426,48 @@ function M.setup(opts)
       if label == hunk_notification_label then return end
       hunk_notification_label = label
 
-      if _G.Snacks and Snacks.notifier then
-        Snacks.notifier.notify(label, vim.log.levels.INFO, {
-          id = hunk_notification_id,
-          title = "CodeDiff",
-          timeout = false,
-          history = false,
-        })
+      if not hunk_notification_buf or not vim.api.nvim_buf_is_valid(hunk_notification_buf) then
+        hunk_notification_buf = vim.api.nvim_create_buf(false, true)
+      end
+      vim.bo[hunk_notification_buf].modifiable = true
+      vim.api.nvim_buf_set_lines(hunk_notification_buf, 0, -1, false, { " " .. label .. " " })
+      vim.bo[hunk_notification_buf].modifiable = false
+      local width = vim.fn.strdisplaywidth(label) + 2
+      local row = vim.o.showtabline == 0 and 0 or 1
+      local config = {
+        relative = "editor", row = row, col = math.max(0, vim.o.columns - width - 2),
+        width = width, height = 1, style = "minimal", border = "rounded",
+        focusable = false, noautocmd = true, zindex = 110,
+      }
+      if hunk_notification_win and vim.api.nvim_win_is_valid(hunk_notification_win) then
+        vim.api.nvim_win_set_config(hunk_notification_win, config)
       else
-        vim.notify(label, vim.log.levels.INFO, { title = "CodeDiff", timeout = false })
+        hunk_notification_win = vim.api.nvim_open_win(hunk_notification_buf, false, config)
+        vim.wo[hunk_notification_win].winhighlight = "Normal:SnacksNotifierInfo,FloatBorder:SnacksNotifierBorderInfo"
+      end
+    end
+
+    local function enable_codediff_wrap()
+      local ok, session_mod = pcall(require, "codediff.ui.lifecycle.session")
+      if not ok then return end
+      for _, session in pairs(session_mod.get_active_diffs()) do
+        for _, win in ipairs({ session.original_win, session.modified_win, session.result_win }) do
+          if win and vim.api.nvim_win_is_valid(win) then
+            vim.wo[win].wrap = true
+            vim.wo[win].linebreak = true
+            vim.wo[win].breakindent = true
+          end
+        end
       end
     end
 
     local hunk_notification_group = vim.api.nvim_create_augroup("CodeDiffHunkNotification", { clear = true })
+    vim.api.nvim_create_autocmd({ "CursorMoved", "BufEnter", "WinEnter", "TabEnter", "VimResized" }, {
+      group = hunk_notification_group,
+      callback = function()
+        vim.schedule(enable_codediff_wrap)
+      end,
+    })
     vim.api.nvim_create_autocmd({ "CursorMoved", "BufEnter", "WinEnter", "TabEnter" }, {
       group = hunk_notification_group,
       callback = function()
@@ -409,7 +478,10 @@ function M.setup(opts)
       group = hunk_notification_group,
       pattern = "CodeDiffVirtualFileLoaded",
       callback = function()
-        vim.schedule(update_hunk_notification)
+        vim.schedule(function()
+          enable_codediff_wrap()
+          update_hunk_notification()
+        end)
       end,
     })
     vim.api.nvim_create_autocmd({ "TabClosed", "WinClosed" }, {
@@ -460,7 +532,11 @@ function M.setup(opts)
 
       if data.type == "group" then
         line:append(" ", "Directory")
-        line:append(node.text, "Directory")
+        if codereview_ctx() then
+          line:append(string.format("Files (%d)", data.file_count or 0), "Directory")
+        else
+          line:append(node.text, "Directory")
+        end
       elseif data.type == "directory" then
         local indent = build_indent_markers(data.indent_state)
         local folder_icon, folder_color = nodes_mod.get_folder_icon(node:is_expanded())
@@ -1020,6 +1096,15 @@ function M.setup(opts)
       { { "[co]", "Special" }, { " ours  ", "Normal" }, { "[ct]", "Special" }, { " theirs  ", "Normal" }, { "[cb]", "Special" }, { " both  ", "Normal" }, { "[c0]", "Special" }, { " none", "Normal" } },
       { { "[", "Special" }, { "]x", "Normal" }, { "/", "Special" }, { "[x", "Normal" }, { "]", "Special" }, { " conflict  ", "Normal" }, { "[Tab]", "Special" }, { " sidebar  ", "Normal" }, { "[q]", "Special" }, { " close", "Normal" } },
     }
+    local review_progress_colors = { "#f7768e", "#ff9e64", "#e0af68", "#9ece6a", "#73daca", "#7dcfff", "#7aa2f7" }
+    for i, color in ipairs(review_progress_colors) do
+      vim.api.nvim_set_hl(0, "CodeReviewProgress" .. i, { fg = color, bold = true })
+    end
+
+    local function review_progress_hl(checked, total)
+      local ratio = total == 0 and 1 or checked / total
+      return "CodeReviewProgress" .. math.min(7, math.floor(ratio * 7) + 1)
+    end
 
     -- view.updateをラップしてeventignoreを設定
     -- オリジナルのview.updateを使いつつ、BufEnter/WinEnterのみを一時的に抑制
@@ -1306,8 +1391,8 @@ function M.setup(opts)
           vim.api.nvim_win_set_cursor(modified_win, { 1, 0 })
           vim.wo[original_win].scrollbind = true
           vim.wo[modified_win].scrollbind = true
-          vim.wo[original_win].wrap = false
-          vim.wo[modified_win].wrap = false
+          vim.wo[original_win].wrap = true
+          vim.wo[modified_win].wrap = true
 
           if auto_scroll_to_first_hunk and #cached_diff.changes > 0 then
             local first_change = cached_diff.changes[1]
@@ -1463,6 +1548,45 @@ function M.setup(opts)
         orig_on_file_select(file_data)
       end
 
+      local path_buf = nil
+      local path_win = nil
+
+      local function hide_review_path()
+        if path_win and vim.api.nvim_win_is_valid(path_win) then vim.api.nvim_win_close(path_win, true) end
+        if path_buf and vim.api.nvim_buf_is_valid(path_buf) then
+          vim.api.nvim_buf_delete(path_buf, { force = true })
+        end
+        path_buf, path_win = nil, nil
+      end
+
+      local function update_review_path(path)
+        if not path then
+          hide_review_path()
+          return
+        end
+        if not path_buf or not vim.api.nvim_buf_is_valid(path_buf) then
+          path_buf = vim.api.nvim_create_buf(false, true)
+        end
+        vim.bo[path_buf].modifiable = true
+        vim.api.nvim_buf_set_lines(path_buf, 0, -1, false, { " " .. path .. " " })
+        vim.bo[path_buf].modifiable = false
+        local width = math.max(1, math.min(vim.o.columns - 2, vim.fn.strdisplaywidth(path) + 2))
+        local height = math.max(1, math.ceil((vim.fn.strdisplaywidth(path) + 2) / width))
+        local status_height = vim.o.laststatus == 0 and 0 or 1
+        local row = math.max(0, vim.o.lines - vim.o.cmdheight - status_height - height - 2)
+        local config = {
+          relative = "editor", row = row, col = 0, width = width, height = height,
+          style = "minimal", border = "rounded", focusable = false, noautocmd = true, zindex = 105,
+        }
+        if path_win and vim.api.nvim_win_is_valid(path_win) then
+          vim.api.nvim_win_set_config(path_win, config)
+        else
+          path_win = vim.api.nvim_open_win(path_buf, false, config)
+          vim.wo[path_win].wrap = true
+          vim.wo[path_win].winhighlight = "Normal:NormalFloat,FloatBorder:Comment"
+        end
+      end
+
       -- ヘルプ表示関数（このexplorerに特化）
       local function update_help_line()
         local bufnr = explorer.bufnr
@@ -1472,7 +1596,7 @@ function M.setup(opts)
         local win_height = vim.api.nvim_win_get_height(winid)
         local line_count = vim.api.nvim_buf_line_count(bufnr)
         local first_visible = vim.fn.line("w0", winid)
-        local help_height = #explorer_help_lines -- both help tables have similar height
+        local help_height = 5 -- progress/path plus the largest help table
         -- ウィンドウ下部にヘルプを固定（最低限の領域確保）
         local max_target = first_visible + win_height - help_height - 2
         local target_line = math.min(max_target, line_count - 1)
@@ -1502,16 +1626,20 @@ function M.setup(opts)
         if is_review then
           help_lines = vim.deepcopy(in_diff and review_diff_help_lines or review_explorer_help_lines)
           local checked, total = review_counts(rexpl, rexpl.git_root, rexpl.base_revision, rexpl.target_revision)
-          table.insert(help_lines, 1, { { "reviewed ", "Normal" }, { checked .. "/" .. total, "Title" } })
+          table.insert(help_lines, 1, { { "reviewed ", "Normal" }, { checked .. "/" .. total, review_progress_hl(checked, total) } })
+          update_review_path(rexpl.current_file_path and (rexpl.git_root .. "/" .. rexpl.current_file_path) or nil)
         elseif in_conflict then
+          hide_review_path()
           help_lines = conflict_help_lines
         elseif in_diff then
+          hide_review_path()
           local in_staged = false
           if session_check and session_check.modified_revision == ":0" then
             in_staged = true
           end
           help_lines = in_staged and diff_staged_help_lines or diff_help_lines
         else
+          hide_review_path()
           help_lines = explorer_help_lines
         end
 
@@ -1565,6 +1693,9 @@ function M.setup(opts)
           if current_tabpage ~= explorer_tabpage then return end
           vim.schedule(update_help_line)
         end,
+      })
+      vim.api.nvim_create_autocmd({ "TabLeave", "TabClosed" }, {
+        callback = hide_review_path,
       })
 
       -- スクロール時にヘルプ位置を更新
@@ -1675,18 +1806,19 @@ function M.setup(opts)
       if explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
         vim.keymap.set("n", "c", function()
           local node = tree:get_node()
-          if not node or not node.data or not node.data.path then return end
-          if node.data.type == "group" or node.data.type == "directory" then return end
+          if not node or not node.data or node.data.type == "group" then return end
           local gr, o, m = codereview_ctx()
           if not gr then return end
-          local k = review_key(gr, o, m, node.data.path)
-          if is_reviewed(gr, o, m, node.data.path) then
-            reviewed_marks[k] = nil
-            review_fingerprints[k] = nil
-            save_reviewed_marks()
-          else
-            mark_reviewed(gr, o, m, node.data.path)
+          local paths = {}
+          if node.data.type == "directory" then
+            for _, file in ipairs(node.data.files or {}) do
+              paths[#paths + 1] = file.path
+            end
+          elseif node.data.path then
+            paths[1] = node.data.path
           end
+          if #paths == 0 then return end
+          toggle_reviewed_paths(gr, o, m, paths)
           tree:render()
         end, vim.tbl_extend("force", map_opts, { desc = "Toggle reviewed mark" }))
         vim.keymap.set("n", ".", function()
@@ -2208,6 +2340,20 @@ function M.setup(opts)
     end
 
     vim.keymap.set("n", "<leader>gd", open_all_repos_with_changes, { desc = "CodeDiff Open" })
+
+    vim.api.nvim_create_user_command("CodeReviewCopyPath", function()
+      local git_root, _, _ = codereview_ctx()
+      local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
+      local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
+      local path = explorer and explorer.current_file_path or nil
+      if not git_root or not path then
+        vim.notify("No CodeReview file selected", vim.log.levels.WARN)
+        return
+      end
+      local full_path = git_root .. "/" .. path
+      vim.fn.setreg("+", full_path)
+      vim.notify("Copied: " .. full_path, vim.log.levels.INFO)
+    end, { desc = "Copy current CodeReview file path" })
 
     -- :CodeReview [base] [target] - two-commit review diff (default HEAD~1 HEAD)
     vim.api.nvim_create_user_command("CodeReview", function(o)
