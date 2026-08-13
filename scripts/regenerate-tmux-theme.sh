@@ -168,7 +168,7 @@ HELP="#[fg=${COLOR_WARNING} bg=default]${LEFT}#[fg=${BG_DARK} bg=${COLOR_WARNING
 
 # 通常表示の各パーツ
 # スタイル指定 #[...] 内のカンマを #, でエスケープ（ネストされた #{?...} のカンマはそのまま）
-# AI エージェントの使用量ゲージ(claude/codex/gemini/cursor)はサイドバー(prefix+b)へ移動。
+# AI エージェントの使用量ゲージ(claude/codex/gemini/cursor/grok)はサイドバー(prefix+b)へ移動。
 # ここには cpu/ram/gpu/storage のみ残す。
 SR_SYSSTAT="#[fg=${BG_HIGHLIGHT}${EC}bg=default]${LEFT}#{@sysstat}#[fg=${BG_HIGHLIGHT}${EC}bg=default]${RIGHT} "
 SR_MODE="#{?#{==:#{client_key_table},off},#[fg=${FG_SUBTLE}]${LEFT}#[fg=${BG_DARK} bg=${FG_SUBTLE} bold]  OFF #[fg=${FG_SUBTLE} bg=default]${RIGHT},#{?#{==:#{@reload_mode},1},#[fg=${COLOR_RELOAD}]${LEFT}#[fg=${BG_DARK} bg=${COLOR_RELOAD} bold]  RELOAD #[fg=${COLOR_RELOAD} bg=default]${RIGHT},#{?#{==:#{window_name},[thumbs]},#[fg=${COLOR_THUMBS}]${LEFT}#[fg=${BG_DARK} bg=${COLOR_THUMBS} bold] 󰆤 THUMBS #[fg=${COLOR_THUMBS} bg=default]${RIGHT},#{?pane_in_mode,#[fg=${COLOR_ERROR}]${LEFT}#[fg=${BG_DARK} bg=${COLOR_ERROR} bold] COPY #[fg=${COLOR_ERROR} bg=default]${RIGHT},#{?pane_synchronized,#[fg=${COLOR_SUCCESS}]${LEFT}#[fg=${BG_DARK} bg=${COLOR_SUCCESS} bold] SYNC #[fg=${COLOR_SUCCESS} bg=default]${RIGHT},#{?#{||:#{window_zoomed_flag},#{@pzoom_pane}},#[fg=${COLOR_ZOOM}]${LEFT}#[fg=${BG_DARK} bg=${COLOR_ZOOM} bold]  ZOOM #P/#{window_panes} #[fg=${COLOR_ZOOM} bg=default]${RIGHT},#[fg=${ACCENT_PRIMARY}]${LEFT}#[fg=${BG_DARK} bg=${ACCENT_PRIMARY}] NORMAL #[fg=${ACCENT_PRIMARY} bg=default]${RIGHT}}}}}}}"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # tmux AI Agent ペーン状態管理 (純tmuxローカル / 状態の正本)
-# 各エージェント(Claude Code / Codex / Cursor / Command Code / pi)の hooks から呼ばれ、
+# 各エージェント(Claude Code / Codex / Cursor / Command Code / pi / Grok)の hooks から呼ばれ、
 # pane user option で状態を管理する。pane option を状態の Single Source of Truth とし、
 # ウィンドウバッジ・SketchyBar・Slack はこの集約から導出する派生ビューとする。
 # 仕様: docs/specs/agent-stop-notification.md

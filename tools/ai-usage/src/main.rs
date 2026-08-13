@@ -1,5 +1,5 @@
 // ai-usage — tmux status-right の usage widget を 1 binary に統合。
-//   usage: ai-usage <claude|codex|gemini|cursor>
+//   usage: ai-usage <claude|codex|gemini|cursor|grok>
 //   出力は bash 版と bit 互換の US(0x1f) 区切りレコード。失敗しても exit 0 で
 //   placeholder を出し、呼び出し側 (tmux/sidebar) を絶対に壊さない (fail-open)。
 
@@ -17,6 +17,7 @@ fn provider_for(name: &str) -> Option<Box<dyn Provider>> {
         "codex" => Some(Box::new(providers::codex::Codex)),
         "gemini" => Some(Box::new(providers::gemini::Gemini)),
         "cursor" => Some(Box::new(providers::cursor::Cursor)),
+        "grok" => Some(Box::new(providers::grok::Grok)),
         _ => None,
     }
 }
@@ -72,7 +73,7 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         None => {
-            eprintln!("usage: ai-usage <claude|codex|gemini|cursor>");
+            eprintln!("usage: ai-usage <claude|codex|gemini|cursor|grok>");
             ExitCode::FAILURE
         }
     }
