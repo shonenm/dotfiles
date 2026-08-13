@@ -4,6 +4,12 @@ set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 command=${1:-help}
 [[ $# -eq 0 ]] || shift
+lockfile=common/mise/.config/mise/mise.lock
+
+commit_mise_lock() {
+  git -C "$root" diff --quiet HEAD -- "$lockfile" && return 0
+  git -C "$root" commit --only -m "chore(deps): update mise lockfile" -- "$lockfile"
+}
 
 case "$command" in
   apply)
@@ -11,6 +17,8 @@ case "$command" in
     ;;
   update)
     git -C "$root" pull --ff-only
+    "$root/scripts/update-mise-lock"
+    commit_mise_lock
     exec "$root/install.sh" --update "$@"
     ;;
   check)
@@ -54,7 +62,7 @@ case "$command" in
 Usage: dots <command> [options]
 
   apply    Apply package declarations and dotfile links
-  update   Fast-forward the repository, then apply refreshed dependencies
+  update   Fast-forward, refresh mise.lock (commit if needed), then apply
   check    Run the same repository checks as CI
   doctor   Check installed tools and Stow conflicts
   lock     Refresh the cross-platform mise lockfile

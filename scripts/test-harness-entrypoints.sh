@@ -17,7 +17,10 @@ root = pathlib.Path(sys.argv[1])
 dots = (root / "scripts/dots").read_text()
 update_case = dots.split("  update)\n", 1)[1].split("    ;;\n", 1)[0]
 assert "git -C \"$root\" pull --ff-only" in update_case
-assert "update-mise-lock" not in update_case
+assert "update-mise-lock" in update_case
+assert "commit_mise_lock" in update_case
+assert "commit --only" in dots
+assert "git push" not in dots
 assert 'XDG_CACHE_HOME="$tmp/cache"' in (root / "scripts/update-mise-lock").read_text()
 config = tomllib.loads((root / "common/mise/.config/mise/config.toml").read_text())
 linux = tomllib.loads((root / "config/mise-linux.toml").read_text())

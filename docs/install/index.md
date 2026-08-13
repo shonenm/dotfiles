@@ -80,7 +80,7 @@ no-sudo環境では `~/.local/bin/op signin` を実行し、再実行にも `--n
 
 ```bash
 dots apply             # 現在の宣言とlockfileを反映
-dots update            # fast-forward後、コミット済みlockfileで依存を再取得して反映
+dots update            # fast-forward後、mise.lockを更新して必要ならcommitし、依存を反映
 dots check             # CIと同じ検証
 dots doctor            # toolとStow linkを診断
 dots lock              # maintainer向け: mise lockfileを更新
@@ -93,8 +93,8 @@ dots lock              # maintainer向け: mise lockfileを更新
 - mise tool: `common/mise/.config/mise/mise.lock`にmacOS / Linux、x86_64 / arm64のversion・download URL・checksumを固定
 - npm CLI: `config/packages.npm.txt`にversionを固定
 - GitHub Actions: commit SHAを固定
-- 更新: `dots lock`または`.github/workflows/dependencies.yml`の週次実行がlockfileを更新する。原則3日以上経過したreleaseだけを対象とし、自作toolはtool単位で待機期間を無効化する
-- 適用: `dots update`はrepositoryをfast-forwardし、コミット済みlockfileを変更せず各環境へ反映する
+- 更新: `dots update`はfast-forward後にmise.lockを更新し、変わった場合はmise.lockだけをcommitする（pushしない）。`dots lock`はlock更新のみ。週次workflowもlockfileを更新する。原則3日以上経過したreleaseだけを対象とし、自作toolはtool単位で待機期間を無効化する
+- 適用: `dots apply`はコミット済みlockfileを各環境へ反映する。`dots update`はlock更新後に同じapplyを行う
 
 ## CI
 

@@ -20,7 +20,7 @@ description = "Apply package declarations and dotfile links"
 run = "~/dotfiles/scripts/dots apply"
 
 [tasks.update]
-description = "Fast-forward dotfiles and apply refreshed dependencies"
+description = "Fast-forward, refresh mise.lock, commit it if needed, then apply"
 run = "~/dotfiles/scripts/dots update"
 
 [tasks.check]

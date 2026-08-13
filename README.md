@@ -63,7 +63,7 @@ containerなどsecretを使わない環境では `--skip-1p` を指定できる�
 
 ```bash
 dots apply             # package宣言とdotfile linkを反映
-dots update            # git pull --ff-only後、依存を再取得して反映
+dots update            # git pull --ff-only後、mise.lockを更新して必要ならcommitし、依存を反映
 dots check             # CIと同じrepository check
 dots doctor            # toolとStow linkを診断
 ```
