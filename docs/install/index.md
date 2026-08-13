@@ -93,7 +93,7 @@ dots lock              # maintainer向け: mise lockfileを更新
 - mise tool: `common/mise/.config/mise/mise.lock`にmacOS / Linux、x86_64 / arm64のversion・download URL・checksumを固定
 - npm CLI: `config/packages.npm.txt`にversionを固定
 - GitHub Actions: commit SHAを固定
-- 更新: `dots lock`または`.github/workflows/dependencies.yml`の週次実行がlockfileを更新する。3日以上経過したreleaseだけを対象とする
+- 更新: `dots lock`または`.github/workflows/dependencies.yml`の週次実行がlockfileを更新する。原則3日以上経過したreleaseだけを対象とし、自作toolはtool単位で待機期間を無効化する
 - 適用: `dots update`はrepositoryをfast-forwardし、コミット済みlockfileを変更せず各環境へ反映する
 
 ## CI
