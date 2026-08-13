@@ -1,6 +1,6 @@
 # pi-coding-agent (Codex + Cursor)
 
-> **由来:** **Upstream** pi本体・provider / **Plugin** settings.json導入package / **Configuration** settings・AGENTS.md・テーマ / **Custom** extensions（[区分](../../provenance.md#区分)）
+> **由来:** **Upstream** pi本体・provider / **Plugin** settings.json導入package / **Configuration** settings・AGENTS.md・テーマ / **Custom** extensions / **Local patch** `scripts/patch-pi-tui.sh`・`scripts/patch-pi-automode.sh`（[区分](../../provenance.md#区分)）
 
 [pi](https://pi.dev/) はミニマルな terminal coding harness。MCP / sub-agents / permission popup / plan mode を持たず、CLI extensions と skills で組み立てる思想。dotfiles では Codex を主軸に、Cursor サブスク向けに [pi-cursor-agent](https://www.npmjs.com/package/pi-cursor-agent) プロバイダも同梱し、xAI の Grok も選べるようにしている。`enabledModels` は `openai-codex/*`、`cursor-agent/*`、`xai/*`。
 
@@ -15,6 +15,7 @@
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
 | pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
 | pi-automode | Claude Code-styleの実行前classifier guardrail | `settings.json` の `packages` + `automode.json` |
+| pi-automode classifier fallback patch | classifier認証切れ時にHaiku / GPT mini / Grokへ倒す | `scripts/patch-pi-automode.sh` (Local patch) |
 | UI比較package | header / footer / editor / theme / browser workspaceを実機比較 | `settings.json` の `packages`（下記参照） |
 | AGENTS.md | グローバル指示書 | `common/pi/.pi/agent/AGENTS.md` → `~/.pi/agent/AGENTS.md` |
 | pueue | バックグラウンドタスク・並列 delegation 用キュー | `config/Brewfile` (mac), `packages.linux.{apt,alpine}.txt` (linux) |
@@ -189,7 +190,7 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 
 `permission-system.json`の`yoloMode`と`settings.json`の`hideThinkingBlock`は有効のままにする。対話の承認境界はwrite permissionではなく、明示的な実装指示と`/plan`で管理するため、実装開始後の通常操作は止めない。
 
-`@czottmann/pi-automode`はagentのtool callを実行前に分類する。`automode.json`で`allowInsideWorkingDirectory: true`にし、working tree内の通常file操作はclassifierなしで許可する。bash、MCP、外部path、protected pathは`openai-codex/gpt-5.4-mini:low`で判定し、classifier障害時はfail-closedとする。`/automode status`で状態確認、`/automode off`でsession中だけ無効化できる。dotfiles自身のpermission・auto-mode設定を変更する作業ではhard-denyと衝突するため、明示的にoffにしてから行う。
+`@czottmann/pi-automode`はagentのtool callを実行前に分類する。`automode.json`で`allowInsideWorkingDirectory: true`にし、working tree内の通常file操作はclassifierなしで許可する。bash、MCP、外部path、protected pathは`anthropic/claude-haiku-4-5` → `openai-codex/gpt-5.4-mini` → `xai/grok-4.3`の順で判定する。認証切れやquota障害だけ次候補へ倒し、policy blockはそのまま fail-closed する。`/automode status`で状態確認、`/automode off`でsession中だけ無効化できる。dotfiles自身のpermission・auto-mode設定を変更する作業ではhard-denyと衝突するため、明示的にoffにしてから行う。
 
 `common/pi/.pi/agent/extensions/permission-gate.ts`はautomodeとは独立してdangerous shell commandを実行前に確認する。agentはセッション開始時のmain repositoryまたは既存worktreeで実装し、利用者の明示なしに別worktreeへ移動しない。worktree capacity追加は確認対象ではなくhard denyし、`git worktree add`と`pnpm wt provision`は実行しない。利用者が明示した既存pooled slotのclaim/listは許可する。capacity追加が必要な場合は利用者がpi外のterminalから実行する。
 

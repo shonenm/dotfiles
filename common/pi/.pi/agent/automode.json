@@ -1,6 +1,6 @@
 {
   "autoMode": {
-    "classifierModel": "openai-codex/gpt-5.4-mini",
+    "classifierModel": "anthropic/claude-haiku-4-5,openai-codex/gpt-5.4-mini,xai/grok-4.3",
     "classifierReasoningLevel": "low",
     "allowInsideWorkingDirectory": true,
     "classifyReadOnlyTools": false,
