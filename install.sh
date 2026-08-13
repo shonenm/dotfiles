@@ -309,7 +309,8 @@ stow_package_group() {
 # Restrict cleanup to skill roots; runtime files elsewhere under ~/.pi are untouched.
 cleanup_broken_skill_links() {
   local root link
-  for root in "$HOME/.config/agent/skills" "$HOME/.pi/agent/skills"; do
+  for root in "$HOME/.config/agent/skills" "$HOME/.pi/agent/skills" \
+              "$HOME/.codex/skills" "$HOME/.cursor/skills"; do
     [[ -d "$root" ]] || continue
     while IFS= read -r -d '' link; do
       if [[ ! -e "$link" ]]; then
@@ -321,8 +322,10 @@ cleanup_broken_skill_links() {
   done
 }
 
-link_codex_skills() {
-  local src="$1" dest="$2" skill_dir skill_name target_dir current
+# Link shared agent skills into a runtime dest. Relink only when the existing
+# link still points at common/agent skills; keep plugin/user-managed entries.
+link_runtime_skills() {
+  local src="$1" dest="$2" label="$3" skill_dir skill_name target_dir current
   [[ -d "$src" ]] || return 0
   mkdir -p "$dest"
 
@@ -339,16 +342,74 @@ link_codex_skills() {
       fi
       case "$current" in
         */common/agent/.config/agent/skills/"$skill_name") ;;
-        *) log_warn "  Kept externally managed Codex skill: $skill_name"; continue ;;
+        *) log_warn "  Kept externally managed $label skill: $skill_name"; continue ;;
       esac
     elif [[ -e "$target_dir" ]]; then
-      log_warn "  Kept unmanaged Codex skill: $skill_name"
+      log_warn "  Kept unmanaged $label skill: $skill_name"
       continue
     fi
 
     ln -sfn "$skill_dir" "$target_dir"
-    log_success "  Linked Codex skill: $skill_name"
+    log_success "  Linked $label skill: $skill_name"
   done
+}
+
+link_codex_skills() {
+  link_runtime_skills "$1" "$2" "Codex"
+}
+
+# Upsert enabled servers from shared agent mcp.json into ~/.cursor/mcp.json.
+# Extra user servers are kept. Returns 1 when dest is already current.
+write_cursor_mcp() {
+  local src="$1" dest="$2" tmp
+  [[ -f "$src" ]] || return 0
+  mkdir -p "$(dirname "$dest")"
+  tmp=$(mktemp)
+  if ! python3 - "$src" "$dest" "$HOME" >"$tmp" <<'PY'
+import json, sys
+from pathlib import Path
+
+src, dest, home = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+servers = json.loads(src.read_text())["mcpServers"]
+
+def resolve(value):
+    if isinstance(value, str):
+        return value.replace("${HOME}", home)
+    if isinstance(value, list):
+        return [resolve(item) for item in value]
+    if isinstance(value, dict):
+        return {key: resolve(item) for key, item in value.items()}
+    return value
+
+from_src = {}
+for name, cfg in servers.items():
+    if cfg.get("enabled", True) is False:
+        continue
+    entry = {key: value for key, value in cfg.items()
+             if key not in ("description", "permission", "enabled")}
+    from_src[name] = resolve(entry)
+
+existing = {}
+if dest.exists():
+    try:
+        existing = json.loads(dest.read_text()).get("mcpServers") or {}
+    except (OSError, ValueError):
+        existing = {}
+
+merged = dict(existing)
+merged.update(from_src)
+json.dump({"mcpServers": merged}, sys.stdout, indent=2, ensure_ascii=False)
+sys.stdout.write("\n")
+PY
+  then
+    rm -f "$tmp"
+    return 1
+  fi
+  if [[ -f "$dest" ]] && cmp -s "$tmp" "$dest"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mv "$tmp" "$dest"
 }
 
 # Clean up orphaned (non-symlink) files left behind in stow-managed directories.
@@ -796,6 +857,18 @@ for name, config in servers.items():
       log_success "  Generated ~/.cursor/hooks.json"
     else
       log_success "  ~/.cursor/hooks.json already current"
+    fi
+  fi
+
+  # Shared Agent Skills for Cursor. d-* stay on ~/.claude/skills (Cursor compat).
+  link_runtime_skills "$DOTFILES_DIR/common/agent/.config/agent/skills" "$HOME/.cursor/skills" "Cursor"
+
+  local cursor_mcp_src="$DOTFILES_DIR/common/agent/.config/agent/mcp.json"
+  if [[ -f "$cursor_mcp_src" ]]; then
+    if write_cursor_mcp "$cursor_mcp_src" "$HOME/.cursor/mcp.json"; then
+      log_success "  Generated ~/.cursor/mcp.json"
+    else
+      log_success "  ~/.cursor/mcp.json already current"
     fi
   fi
 

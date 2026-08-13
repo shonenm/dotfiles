@@ -1,12 +1,23 @@
 {
   "version": 1,
   "hooks": {
+    "sessionStart": [
+      {
+        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh track cursor"
+      },
+      {
+        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle cursor"
+      }
+    ],
     "beforeSubmitPrompt": [
       {
         "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh start cursor event"
       }
     ],
     "beforeShellExecution": [
+      {
+        "command": "__HOME__/dotfiles/common/claude/.claude/hooks/block-tmp.sh"
+      },
       {
         "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat cursor event"
       }
@@ -34,6 +45,14 @@
     "stop": [
       {
         "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle cursor"
+      },
+      {
+        "command": "__HOME__/dotfiles/scripts/ai-notify.sh cursor complete"
+      }
+    ],
+    "sessionEnd": [
+      {
+        "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh clear"
       }
     ]
   }

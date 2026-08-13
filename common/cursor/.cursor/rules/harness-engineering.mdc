@@ -16,10 +16,12 @@ alwaysApply: true
 | skills/ | `~/.cursor/skills/` | `.cursor/skills/` | 定型ワークフロー |
 | hooks.json | `~/.cursor/hooks.json` | `.cursor/hooks.json` | イベント駆動の自動処理 |
 | cli-config.json | `~/.cursor/cli-config.json` | `.cursor/cli.json` | CLI 権限・承認モード |
+| mcp.json | `~/.cursor/mcp.json` | `.cursor/mcp.json` | MCP サーバー |
 
 ## 共有設定
 
 ツール非依存の設定は `~/.config/agent/` に集約する（MCP、共有スキル、知識ベース）。
+`install.sh` が共有 skill を `~/.cursor/skills/` へ link し、有効な MCP を `~/.cursor/mcp.json` へ生成する。
 Cursor は `~/.claude/skills/` も互換読み込みするため、dotfiles の `d-*` スキルは Claude と共有される。
 
 ## 設計原則
