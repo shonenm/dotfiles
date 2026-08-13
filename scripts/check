@@ -23,6 +23,7 @@ shellcheck -S warning -e SC1090 -e SC1091 "${shell_files[@]}"
 
 scripts/test-install-fast-paths.sh
 [[ ! -x scripts/test-pi-tui-patch.sh ]] || scripts/test-pi-tui-patch.sh
+[[ ! -x scripts/test-pi-automode-patch.sh ]] || scripts/test-pi-automode-patch.sh
 scripts/test-harness-entrypoints.sh
 scripts/test-codex-config.sh
 scripts/test-pi-permission-gate.sh

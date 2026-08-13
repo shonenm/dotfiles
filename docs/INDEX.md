@@ -30,6 +30,7 @@
 ### pi
 
 - [概要](ai-agents/pi/overview.md)
+  - [automode classifier fallback](ai-agents/pi/patches/automode-classifier-fallback.md)
 - [Agent delegation](ai-agents/pi/agent-delegation.md)
 - [共有設定レイヤー](ai-agents/pi/agent-layer.md)
 - [MCPレイヤー](ai-agents/pi/mcp-layer.md)
