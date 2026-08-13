@@ -463,7 +463,7 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 
 `gs`/`gr` は gitsigns コマンド実行後に diff キャッシュを無効化し、仮想バッファ・実ファイルバッファ・diff 計算結果を自動再読み込みする。ビジュアルモードでの範囲選択にも対応。`gu` は staged diff view（HEAD vs `:0`）でカーソル位置のハンクを `git apply --reverse --cached` で個別 unstage する。
 
-CodeDiff の diff を表示している間は、右上の notification に現在の hunk 位置（`Hunk N of M`）を常時表示する。カーソル移動・hunk 移動・ファイル切替に追従し、CodeDiff のタブを離れると閉じる。通常の CodeDiff とレビューモードで共通の表示となる。
+CodeDiff の diff を表示している間は、右上最上段の固定枠に現在の hunk 位置（`Hunk N of M`）を常時表示する。カーソル移動・hunk 移動・ファイル切替に追従し、CodeDiff のタブを離れると閉じる。通常の notification はその下へ積まれる。diffのコード行はpane幅を超えると折り返す。通常の CodeDiff とレビューモードで共通の表示となる。
 
 `<leader>gd` はワークスペース内の全 git リポジトリ（parent・submodule・独立 clone）を自動探索し、変更のあるリポジトリごとに CodeDiff タブを開く。複数タブがある場合、ヘルプラインにリポジトリ一覧が表示され、`]r`/`[r` でタブ間を移動できる。
 
@@ -477,7 +477,7 @@ stage/restore/reset 等で全ての変更が解消されると（unstaged・stag
 
 | キー  | 動作                                |
 | ----- | ----------------------------------- |
-| `c`   | レビュー済み印トグル（`○` ↔ `✓`）   |
+| `c`   | ファイル/ディレクトリ配下のレビュー済み印トグル（`○` ↔ `✓`） |
 | `.`   | 次のファイルへ                      |
 | `,`   | 前のファイルへ                      |
 | `]`   | 次の hunk へ（sidebar focus を維持） |
@@ -496,7 +496,9 @@ Diff ビュー（`,`/`.` はサイドバーと同じくファイル移動。hunk
 | `}`   | 次の未チェックファイルへ |
 | `{`   | 前の未チェックファイルへ |
 
-ヘルプラインに `reviewed <チェック済み>/<総数>` の進捗を表示する。レビュー印はメモリ保持のみ（nvim 終了で消える）。`git_root`・`rev1`・`rev2`・path をキーにするため、比較対象が違えば印は独立する。
+左下には現在選択中ファイルの絶対パスと `reviewed <チェック済み>/<総数>` を常時表示する。進捗値は割合に応じて赤から青まで7段階で変化する。`:CodeReviewCopyPath` で現在の絶対パスをclipboardへコピーできる。
+
+レビュー印は `stdpath("state")/codediff/reviewed.json` に永続化する。`git_root`・`rev1`・`rev2`・path をキーにするため比較対象ごとに独立し、対象ファイルのdiffが変わると自動的に未チェックへ戻る。
 
 起動方法:
 
@@ -504,10 +506,15 @@ Diff ビュー（`,`/`.` はサイドバーと同じくファイル移動。hunk
 | -------- | ---- | ---- |
 | `:CodeReview [base] [target]` | nvim 内 | 2コミット間レビュー（省略時 `HEAD~1 HEAD`） |
 | `:CodeReviewBranch [base]` | nvim 内 | 現在ブランチ vs デフォルトブランチの3点diff |
-| `codereview [base] [target]` | シェル関数 | `:CodeReview` を nvim で起動する薄いラッパー |
-| `codereview-branch [base]` | シェル関数 | `:CodeReviewBranch` を nvim で起動する薄いラッパー |
+| `codereview [base] [target]` | shell | `:CodeReview` を nvim で起動 |
+| `codereview status [base] [target]` | shell | チェック進捗を表示 |
+| `codereview unchecked [base] [target]` | shell | 未チェックファイルを1行1件で表示 |
+| `codereview checked [base] [target]` | shell | チェック済みファイルを1行1件で表示 |
+| `codereview check BASE TARGET PATH...` | shell | ファイルまたはディレクトリ配下をチェック |
+| `codereview uncheck BASE TARGET PATH...` | shell | ファイルまたはディレクトリ配下を未チェックへ戻す |
+| `codereview-branch [base]` | shell function | `:CodeReviewBranch` を nvim で起動 |
 
-シェル関数は `common/zsh/.zshrc.common` に定義（独立スクリプトではない）。エイリアス `cr` = `codereview`、`crb` = `codereview-branch`。
+`codereview` の実体は `scripts/codereview`。エイリアス `cr` = `codereview`、`crb` = `codereview-branch`。一覧はパスだけを標準出力するため、そのままコピーしたりLLMへの指示に貼り付けられる。
 
 `:CodeReviewBranch` は3点diff（`merge-base..HEAD`、このブランチ独自のコミットのみ）で開く。`base` 省略時はデフォルトブランチを自動検出する（`origin/HEAD` → なければ `main`/`master`）。ロジックは nvim コマンド側に集約し、シェルコマンドは `nvim -c "..."` で起動するだけ。
 
