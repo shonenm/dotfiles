@@ -79,6 +79,10 @@ Edit/Write/MultiEdit 後に自動で型チェック・lint・テスト実行。
 
 **タイムアウト**: 15秒
 
+### PreToolUse Hook (`block-tmp.sh`)
+
+Bash が literal `/tmp` を触れたら deny する。Cursor の `beforeShellExecution` からも呼ばれ、Claude は `tool_name` / `tool_input.command`、Cursor は `command` を読む。
+
 ### PreToolUse Hook (skill frontmatter)
 
 Ralph ループ中に AskUserQuestion や EnterPlanMode をブロック。

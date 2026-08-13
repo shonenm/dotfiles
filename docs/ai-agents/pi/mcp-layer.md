@@ -22,7 +22,7 @@ LLM
 2. `<project>/.mcp.json` — project設定
 3. `<project>/.pi/mcp.json` — pi override
 
-Claude Codeは `common/claude/.config/claude/mcp.json` を別の正本とし、`install.sh` が `claude mcp add-json --scope user` で登録する。
+Claude Codeは `common/claude/.config/claude/mcp.json` を別の正本とし、`install.sh` が `claude mcp add-json --scope user` で登録する。Cursorは共有mcp.jsonの有効serverを `~/.cursor/mcp.json` へ生成する。
 
 ```json
 {

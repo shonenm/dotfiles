@@ -23,7 +23,7 @@
 | Command Code | shared skill pathを探索し、MCPはinstall時に `cmd mcp add-json` で登録 |
 | Claude Code | Claude固有skillは `~/.claude/skills`。MCPはClaude専用設定から登録 |
 | Codex | `install.sh` が共有skillを `~/.codex/skills/` へlink。runtime固有設定は `templates/codex-config.toml` |
-| Cursor | 対応する標準skillだけ利用し、runtime固有設定は共有しない |
+| Cursor | `install.sh` が共有skillを `~/.cursor/skills/` へlink。MCPは `~/.cursor/mcp.json` を共有mcp.jsonから生成。d-* は Claude互換読み込み |
 
 ## 責任分離
 
@@ -35,6 +35,7 @@
 
 - pi / Command Code: `common/agent/.config/agent/mcp.json`
 - Claude Code: `common/claude/.config/claude/mcp.json`
+- Cursor: 共有mcp.json → `~/.cursor/mcp.json`（`install.sh` が生成。ユーザー追加serverは残す）
 
 server集合とpermission機構が異なるため、「全runtimeで1ファイル」とはしない。詳細は[MCPレイヤー](mcp-layer.md)を参照。
 
