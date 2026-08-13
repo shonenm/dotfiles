@@ -459,6 +459,7 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | `[c`    | 前の hunk へ                               |
 | `do`    | diff obtain (get)                          |
 | `dp`    | diff put                                   |
+| `h`     | 行先頭（折り返し込みの見た目左端）で Explorer に戻る |
 | `<Tab>` | Explorer に戻る                            |
 
 `gs`/`gr` は gitsigns コマンド実行後に diff キャッシュを無効化し、仮想バッファ・実ファイルバッファ・diff 計算結果を自動再読み込みする。ビジュアルモードでの範囲選択にも対応。`gu` は staged diff view（HEAD vs `:0`）でカーソル位置のハンクを `git apply --reverse --cached` で個別 unstage する。
@@ -495,6 +496,8 @@ Diff ビュー（`,`/`.` はサイドバーと同じくファイル移動。hunk
 | `[`   | 前の hunk へ             |
 | `}`   | 次の未チェックファイルへ |
 | `{`   | 前の未チェックファイルへ |
+| `h`   | 行先頭で Explorer に戻る |
+| `<Tab>` | Explorer に戻る        |
 
 statusline に現在選択中ファイルのリポジトリ相対パスを表示する。`reviewed <チェック済み>/<総数>` は explorer 下部に残し、総数は折りたたみに依存しない。進捗値は割合に応じて赤から青まで7段階で変化する。`:CodeReviewCopyPath` で現在の絶対パスをclipboardへコピーできる。
 
