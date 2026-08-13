@@ -125,7 +125,7 @@ session_glyphs() {
 
 # 各 AI の使用量(セッションリミット)を2行で出力(1行目: アイコン+残り時間 / 2行目: ゲージ+%)
 # usage スクリプト出力 "ICON GAUGE PCT/PCT REMAINING"(失敗時 "ICON --")をパースして整形。
-# 4スクリプトを毎 render 走らせると重いので結果を30秒キャッシュする。
+# 各 usage を毎 render 走らせると重いので結果を30秒キャッシュする。
 USAGE_CACHE="$RUNTIME_BASE/claude/sidebar-usage"
 usage_section() {
   local now mt age
@@ -141,13 +141,14 @@ usage_section() {
   local TO; TO="$(command -v timeout || command -v gtimeout || true)"
   {
     local sc out col icon label gauge pct rem
-    for sc in claude codex gemini cursor; do
-      # AI ごとの色分け: claude=橙 codex=水色 gemini=青 cursor=白
+    for sc in claude codex gemini cursor grok; do
+      # AI ごとの色分け: claude=橙 codex=水色 gemini=青 cursor=白 grok=ティール
       case "$sc" in
         claude) col=$'\033[38;2;255;102;0m' ;;
         codex)  col=$'\033[38;2;125;211;252m' ;;
         gemini) col=$'\033[38;2;66;133;244m' ;;
         cursor) col=$'\033[38;2;255;255;255m' ;;
+        grok)   col=$'\033[38;2;94;234;212m' ;;
         *)      col="" ;;
       esac
       out=$(${TO:+$TO 6} ai-usage "$sc" 2>/dev/null)
