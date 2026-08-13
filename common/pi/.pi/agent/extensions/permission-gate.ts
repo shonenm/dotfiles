@@ -6,12 +6,16 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
+type PermissionSystemGlobal = typeof globalThis & {
+  __piPermissionSystem?: { getYoloMode(): boolean };
+};
+
 const execFileAsync = promisify(execFile);
 
 // Defense-in-depth only. This is a denylist and is inherently bypassable
 // (e.g. `rm -r -f`, base64-encoded commands, obscure flag spellings); it is not
-// a security boundary. Its job is to catch the obvious-footgun cases and force
-// a human decision, not to stop a determined adversary.
+// a security boundary. In manual mode it catches obvious footguns; YOLO mode
+// delegates them to pi-automode while keeping HARD_DENY_PATTERNS unconditional.
 // Capacity creation must originate outside the agent, so these commands do not
 // offer the confirmation escape hatch used by the general denylist.
 const HARD_DENY_PATTERNS = [
@@ -113,6 +117,10 @@ function getShellCommand(input: unknown): string {
   return String(fields.command ?? fields.cmd ?? "");
 }
 
+export function isPermissionSystemYoloEnabled(): boolean {
+  return (globalThis as PermissionSystemGlobal).__piPermissionSystem?.getYoloMode() === true;
+}
+
 export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
     if (!SHELL_TOOLS.has(event.toolName)) return;
@@ -126,7 +134,7 @@ export default function (pi: ExtensionAPI) {
     }
 
     const matched = DANGEROUS_PATTERNS.find((p) => p.test(command));
-    if (!matched) return;
+    if (!matched || isPermissionSystemYoloEnabled()) return;
 
     if (await isTrustedGitProjectCommand(command, ctx.cwd)) return;
 

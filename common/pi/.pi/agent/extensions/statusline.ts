@@ -260,7 +260,7 @@ function installEditor(pi: ExtensionAPI, ctx: ExtensionContext): void {
       const state = currentTool ? ` TOOL · ${currentTool} ` : running ? " RUN " : " ASK ";
       const stateColor = currentTool ? "warning" : running ? "accent" : "success";
       const topLeft = theme.bold(theme.fg(stateColor, state));
-      const topRight = theme.fg("dim", ` ${pi.getThinkingLevel()} `);
+      const topRight = theme.fg("dim", ` THINK ${pi.getThinkingLevel()} `);
       const bottomLeft = theme.fg("muted", ` ${ctx.model?.id ?? "no-model"} · ${contextLabel(ctx)} `);
       const bottomRight = theme.fg("dim", " /status ");
       lines[0] = fitBorder(topLeft, topRight, width, (text) => theme.fg(stateColor, text));
@@ -341,7 +341,7 @@ export default function (pi: ExtensionAPI) {
       await ctx.ui.custom<void>(
         (_tui, theme, _keybindings, done) => new StatusOverlay(theme, [
           ["PROJECT", `${formatCwd(ctx.cwd)}${dirtyState ? "  *dirty" : ""}`],
-          ["MODEL", `${ctx.model?.provider ?? "—"}/${ctx.model?.id ?? "—"} · ${pi.getThinkingLevel()}`],
+          ["MODEL", `${ctx.model?.provider ?? "—"}/${ctx.model?.id ?? "—"} · THINK ${pi.getThinkingLevel()}`],
           ["CONTEXT", usage?.percent == null ? "unknown" : `${usage.percent.toFixed(1)}% / ${formatTokens(usage.contextWindow ?? 0)}`],
           ["TOKENS", `↑${formatTokens(tokCache.input)}  ↓${formatTokens(tokCache.output)}  $${tokCache.cost.toFixed(3)}`],
           ["CURSOR", cursorLimits],
