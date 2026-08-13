@@ -1,0 +1,95 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle grok"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh start grok event"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat grok event"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat grok event"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh heartbeat grok event"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/ai-notify.sh grok permission"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/ai-notify.sh grok complete"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/ai-notify.sh grok error"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh clear"
+          }
+        ]
+      }
+    ]
+  }
+}

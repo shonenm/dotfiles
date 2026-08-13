@@ -1,10 +1,11 @@
-// Provider 抽象 — 4 プロバイダ共通の「token → fetch → parse → 2 window」の型。
+// Provider 抽象 — 各プロバイダ共通の「token → fetch → parse → 2 window」の型。
 // 各 provider は cache 行の serialize/deserialize を bash 互換で実装する。
 
 pub mod claude;
 pub mod codex;
 pub mod cursor;
 pub mod gemini;
+pub mod grok;
 
 use std::path::PathBuf;
 

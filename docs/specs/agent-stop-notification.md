@@ -2,7 +2,7 @@
 
 > **由来:** **Upstream** tmux・各agent hook API / **Configuration** hook・keybinding / **Custom** agent状態管理・通知・index処理（[区分](../provenance.md#区分)）
 
-Claude Code、pi、Codex、Gemini CLI、Cursor Agent、Command Code の実行状態をtmuxへ集約する現行仕様。
+Claude Code、pi、Codex、Gemini CLI、Cursor Agent、Command Code、Grok Build の実行状態をtmuxへ集約する現行仕様。
 
 ## 状態の正本
 
@@ -11,7 +11,7 @@ Claude Code、pi、Codex、Gemini CLI、Cursor Agent、Command Code の実行状
 | option | 内容 |
 | --- | --- |
 | `@agent_status` | `running` / `idle` / `permission` / `complete` / `hang` / `error` |
-| `@agent_provider` | `claude` / `pi` / `codex` / `gemini` / `cursor` / `cmd` |
+| `@agent_provider` | `claude` / `pi` / `codex` / `gemini` / `cursor` / `cmd` / `grok` |
 | `@agent_state_since` | 現状態へ遷移したUnix時刻 |
 | `@agent_heartbeat` | 最後に実イベントまたは画面変化を観測したUnix時刻 |
 | `@agent_heartbeat_source` | `event`または`screen` |
@@ -29,6 +29,7 @@ Claude Code、pi、Codex、Gemini CLI、Cursor Agent、Command Code の実行状
 | Gemini CLI | `BeforeAgent` | `BeforeTool`、`AfterTool` | `AfterAgent` | `SessionEnd` |
 | Cursor Agent | `beforeSubmitPrompt` | shell/read/edit/thought hooks | `stop` | CLI hook APIの範囲でbest effort |
 | Command Code | 最初の`PreToolUse` | `PreToolUse`、`PostToolUse` | `Stop` | prompt開始eventがないためtext-only turnのrunningは取得不可 |
+| Grok Build | `UserPromptSubmit` | `PreToolUse`、`PostToolUse`、`PostToolUseFailure` | `Notification`(permission_prompt)、`Stop` | `StopFailure`、`SessionEnd` |
 
 Provider hookはpane state更新を同期完了してから戻る。pi extensionはPromise queueで更新順を保証する。Codexは初回起動時にhook trust確認が表示されるため、内容を確認して許可する。
 
