@@ -32,7 +32,7 @@ install_compiled_tools() {
     for b in ai-usage wt pomodoro; do
       if target_needs_rebuild "$HOME/.local/bin/$b" \
           "$DOTFILES_DIR/tools/Cargo.toml" "$DOTFILES_DIR/tools/Cargo.lock" \
-          "$DOTFILES_DIR/tools/crates"; then
+          "$DOTFILES_DIR/tools/ai-usage" "$DOTFILES_DIR/tools/wt" "$DOTFILES_DIR/tools/pomodoro"; then
         rust_rebuild=true
         break
       fi

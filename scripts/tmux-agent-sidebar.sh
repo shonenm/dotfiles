@@ -269,6 +269,30 @@ build_frame() {
 
 DAEMON_PID_FILE="$(agent_runtime_dir)/sidebar-daemon.pid"
 
+# bash は起動時にスクリプトを読む。更新後も古い USAGE / 状態源のままになるので、
+# ファイルが新しくなっていたら cache を捨てて自分を差し替える。
+script_mtime() {
+  case "$(uname -s)" in Darwin) stat -f %m "$SELF" 2>/dev/null;; *) stat -c %Y "$SELF" 2>/dev/null;; esac
+}
+
+restart_daemon() {
+  local pid command
+  pid=$(cat "$DAEMON_PID_FILE" 2>/dev/null || true)
+  if [[ -n "$pid" ]]; then
+    command=$(ps -p "$pid" -o command= 2>/dev/null || true)
+    if [[ "$command" == *tmux-agent-sidebar.sh* ]]; then
+      kill "$pid" 2>/dev/null || true
+      local i
+      for i in 1 2 3 4 5 6 7 8 9 10; do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.1
+      done
+    fi
+  fi
+  rm -f "$DAEMON_PID_FILE" "$USAGE_CACHE"
+  tmux run-shell -b "exec bash '$SELF' daemon >/dev/null 2>&1" 2>/dev/null || true
+}
+
 # index cache からサイドバー pane を列挙する。
 # @agent_sidebar_pane は window option なので pane 文脈でも継承されて見える。
 # よって「自分の pane_id == @agent_sidebar_pane」の行がサイドバー本体。
@@ -310,7 +334,7 @@ case "${1:-toggle}" in
     mkdir -p "$(dirname "$DAEMON_PID_FILE")" 2>/dev/null || exit 0
     if [[ -f "$DAEMON_PID_FILE" ]]; then
       existing=$(cat "$DAEMON_PID_FILE" 2>/dev/null || true)
-      if [[ -n "$existing" ]]; then
+      if [[ -n "$existing" && "$existing" != "$$" ]]; then
         command=$(ps -p "$existing" -o command= 2>/dev/null || true)
         [[ "$command" == *tmux-agent-sidebar.sh* ]] && exit 0
       fi
@@ -322,10 +346,18 @@ case "${1:-toggle}" in
     # USR1 = 即時再描画。ハンドラは no-op でよい: sleep の wait が中断されて
     # ループ先頭に戻る = REFRESH 待ちを飛ばして描画する。
     trap 'true' USR1
+    started=$(script_mtime)
     while true; do
       tmux info >/dev/null 2>&1 || exit 0
       owner="$(cat "$DAEMON_PID_FILE" 2>/dev/null || true)"
       [[ -n "$owner" && "$owner" != "$$" ]] && exit 0
+      if [[ -n "$started" ]]; then
+        now_mt=$(script_mtime)
+        if [[ -n "$now_mt" && "$now_mt" -gt "$started" ]]; then
+          rm -f "$USAGE_CACHE"
+          exec bash "$SELF" daemon
+        fi
+      fi
       sidebar_tick || exit 0
       sleep "$REFRESH" & wait $! || true
     done
@@ -401,8 +433,7 @@ case "${1:-toggle}" in
       tmux list-panes -t "$win" -F '#{pane_id}' 2>/dev/null | grep -qxF "$pane" || continue
       tmux set-hook -w -t "$win" window-layout-changed "if-shell -F '#{?#{||:#{window_zoomed_flag},#{@pzoom_pane}},0,1}' 'resize-pane -t $pane -x $WIDTH'" 2>/dev/null || true
     done < <(tmux list-windows -a -F "#{window_id}$(printf '\t')#{@agent_sidebar_pane}" 2>/dev/null)
-    # daemon が落ちている場合の復帰口も兼ねる(既に居れば pid ファイル判定で即 exit する)
-    tmux run-shell -b "exec bash '$SELF' daemon >/dev/null 2>&1" 2>/dev/null || true
+    restart_daemon
     ;;
   poke)
     # daemon へ即時再描画を要求 (session/window 切替 hook から呼ぶ)。

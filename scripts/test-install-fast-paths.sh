@@ -33,6 +33,17 @@ sleep 1
 touch "$tmpdir/src/input"
 target_needs_rebuild "$tmpdir/target" "$tmpdir/src"
 
+for crate in ai-usage wt pomodoro; do
+  grep -q "\$DOTFILES_DIR/tools/$crate" "$SCRIPT_DIR/install-common.sh" || {
+    echo "install-common missing $crate rebuild input" >&2
+    exit 1
+  }
+done
+if grep -q 'tools/crates' "$SCRIPT_DIR/install-common.sh"; then
+  echo "install-common still watches missing tools/crates" >&2
+  exit 1
+fi
+
 list_contains_line $'foo\n@scope/bar' '@scope/bar'
 if list_contains_line $'foobar\nbar' 'foo'; then
   echo "list_contains_line accepted a partial match" >&2
