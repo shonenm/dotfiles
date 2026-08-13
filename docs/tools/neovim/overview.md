@@ -520,6 +520,8 @@ statusline に現在選択中ファイルのリポジトリ相対パスを表示
 
 幅が160列未満なら縦（inline）、それ以上なら横（side-by-side）で開く。リサイズでも同じ閾値で切り替える。`t` の手動切替は次の閾値越え resize で上書きされる。
 
+`:CodeReview` 起動中は `autoread` を無効化する。revision 比較では実ファイル監視が不要で、Linux の inotify 上限（`:h inotify-limitations`）を避ける。タブを閉じると元に戻す。
+
 **コンフリクト解消操作** (git-conflict.nvim):
 
 | キー  | 動作                     |
