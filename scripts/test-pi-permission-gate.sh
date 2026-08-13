@@ -2,12 +2,9 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-pi_bin=$(realpath "$(command -v pi)")
-pi_package=$(cd "$(dirname "$pi_bin")/.." && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-ln -s "$pi_package/node_modules" "$tmp/node_modules"
 ln -s "$root/common/pi/.pi/agent/extensions/permission-gate.ts" "$tmp/permission-gate.ts"
 ln -s "$root/common/pi/.pi/agent/extensions/statusline.ts" "$tmp/statusline.ts"
 
