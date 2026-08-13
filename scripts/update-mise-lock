@@ -11,11 +11,11 @@ fi
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/mise/conf.d"
+mkdir -p "$tmp/mise/conf.d" "$tmp/cache"
 cp "$root/common/mise/.config/mise/config.toml" "$tmp/mise/config.toml"
 cp "$root/config/mise-linux.toml" "$tmp/mise/conf.d/dotfiles-linux.toml"
 
-XDG_CONFIG_HOME="$tmp" mise lock -g -y --bump \
+XDG_CONFIG_HOME="$tmp" XDG_CACHE_HOME="$tmp/cache" mise lock -g -y --bump \
   --platform linux-x64,linux-arm64,macos-x64,macos-arm64
 
 python3 - "$root" "$tmp/mise/mise.lock" <<'PY'
