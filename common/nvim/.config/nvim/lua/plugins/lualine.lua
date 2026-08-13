@@ -89,6 +89,44 @@ return {
 
     opts.sections.lualine_x = lualine_x
 
+    opts.sections.lualine_c = {
+      {
+        function()
+          local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
+          local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
+          return explorer and explorer.current_file_path or ""
+        end,
+        cond = function()
+          local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
+          local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
+          local target = explorer and explorer.target_revision
+          return explorer
+            and explorer.base_revision
+            and explorer.current_file_path
+            and target
+            and not tostring(target):match("^:[0-3]$")
+            and (target ~= "WORKING" or vim.env.LIVE_PR_REVIEW == "1")
+            or false
+        end,
+      },
+      {
+        "filename",
+        cond = function()
+          local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
+          local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
+          local target = explorer and explorer.target_revision
+          return not (
+            explorer
+            and explorer.base_revision
+            and explorer.current_file_path
+            and target
+            and not tostring(target):match("^:[0-3]$")
+            and (target ~= "WORKING" or vim.env.LIVE_PR_REVIEW == "1")
+          )
+        end,
+      },
+    }
+
     -- ── section y: lsp + encoding/format + position ─────────
     local lsp_names = {}
 

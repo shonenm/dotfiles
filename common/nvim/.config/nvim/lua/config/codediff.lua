@@ -373,12 +373,29 @@ function M.setup(opts)
       return require("codediff.ui.explorer.refresh").get_all_files(explorer.tree)
     end
 
+    -- All review files, including those under collapsed directories.
+    local function review_status_files(explorer)
+      local status = explorer.status_result or {}
+      local files = {}
+      local seen = {}
+      for _, group in ipairs({ "unstaged", "staged", "conflicts" }) do
+        for _, file in ipairs(status[group] or {}) do
+          local path = file.path
+          if path and not seen[path] then
+            seen[path] = true
+            files[#files + 1] = path
+          end
+        end
+      end
+      return files
+    end
+
     -- Reviewed / total counts for the review explorer
     local function review_counts(explorer, git_root, base_rev, target_rev)
-      local files = review_all_files(explorer)
+      local files = review_status_files(explorer)
       local checked = 0
-      for _, f in ipairs(files) do
-        if f.data and f.data.path and is_reviewed(git_root, base_rev, target_rev, f.data.path) then
+      for _, path in ipairs(files) do
+        if is_reviewed(git_root, base_rev, target_rev, path) then
           checked = checked + 1
         end
       end
@@ -1608,45 +1625,6 @@ function M.setup(opts)
         orig_on_file_select(file_data)
       end
 
-      local path_buf = nil
-      local path_win = nil
-
-      local function hide_review_path()
-        if path_win and vim.api.nvim_win_is_valid(path_win) then vim.api.nvim_win_close(path_win, true) end
-        if path_buf and vim.api.nvim_buf_is_valid(path_buf) then
-          vim.api.nvim_buf_delete(path_buf, { force = true })
-        end
-        path_buf, path_win = nil, nil
-      end
-
-      local function update_review_path(path)
-        if not path then
-          hide_review_path()
-          return
-        end
-        if not path_buf or not vim.api.nvim_buf_is_valid(path_buf) then
-          path_buf = vim.api.nvim_create_buf(false, true)
-        end
-        vim.bo[path_buf].modifiable = true
-        vim.api.nvim_buf_set_lines(path_buf, 0, -1, false, { " " .. path .. " " })
-        vim.bo[path_buf].modifiable = false
-        local width = math.max(1, math.min(vim.o.columns - 2, vim.fn.strdisplaywidth(path) + 2))
-        local height = math.max(1, math.ceil((vim.fn.strdisplaywidth(path) + 2) / width))
-        local status_height = vim.o.laststatus == 0 and 0 or 1
-        local row = math.max(0, vim.o.lines - vim.o.cmdheight - status_height - height - 2)
-        local config = {
-          relative = "editor", row = row, col = 0, width = width, height = height,
-          style = "minimal", border = "rounded", focusable = false, noautocmd = true, zindex = 105,
-        }
-        if path_win and vim.api.nvim_win_is_valid(path_win) then
-          vim.api.nvim_win_set_config(path_win, config)
-        else
-          path_win = vim.api.nvim_open_win(path_buf, false, config)
-          vim.wo[path_win].wrap = true
-          vim.wo[path_win].winhighlight = "Normal:NormalFloat,FloatBorder:Comment"
-        end
-      end
-
       -- ヘルプ表示関数（このexplorerに特化）
       local function update_help_line()
         local bufnr = explorer.bufnr
@@ -1685,19 +1663,15 @@ function M.setup(opts)
           help_lines = vim.deepcopy(in_diff and review_diff_help_lines or review_explorer_help_lines)
           local checked, total = review_counts(rexpl, rexpl.git_root, rexpl.base_revision, rexpl.target_revision)
           table.insert(help_lines, 1, { { "reviewed ", "Normal" }, { checked .. "/" .. total, review_progress_hl(checked, total) } })
-          update_review_path(rexpl.current_file_path and (rexpl.git_root .. "/" .. rexpl.current_file_path) or nil)
         elseif in_conflict then
-          hide_review_path()
           help_lines = conflict_help_lines
         elseif in_diff then
-          hide_review_path()
           local in_staged = false
           if session_check and session_check.modified_revision == ":0" then
             in_staged = true
           end
           help_lines = in_staged and diff_staged_help_lines or diff_help_lines
         else
-          hide_review_path()
           help_lines = explorer_help_lines
         end
 
@@ -1752,10 +1726,6 @@ function M.setup(opts)
           vim.schedule(update_help_line)
         end,
       })
-      vim.api.nvim_create_autocmd({ "TabLeave", "TabClosed" }, {
-        callback = hide_review_path,
-      })
-
       -- スクロール時にヘルプ位置を更新
       vim.api.nvim_create_autocmd("WinScrolled", {
         buffer = explorer.bufnr,
@@ -1825,11 +1795,7 @@ function M.setup(opts)
           explorer.on_file_select(node.data)
         end
       end, vim.tbl_extend("force", map_opts, { desc = "Select file and focus diff view" }))
-      vim.keymap.set("n", "<Tab>", function()
-        focus_restore_gen = focus_restore_gen + 1
-        vim.cmd("2wincmd l")
-        vim.schedule(update_help_line)
-      end, vim.tbl_extend("force", map_opts, { desc = "Focus diff view" }))
+
       vim.keymap.set("n", "<CR>", function()
         local node = tree:get_node()
         if not node or not node.data then return end
@@ -2040,7 +2006,10 @@ function M.setup(opts)
         vim.keymap.set({ "n", "v" }, "gu", function()
           unstage_hunk()
         end, vim.tbl_extend("force", map_opts, { desc = "Unstage hunk" }))
-        vim.keymap.set("n", "<Tab>", function()
+        vim.keymap.set("n", "h", function()
+          if vim.fn.col(".") ~= 1 then
+            return vim.cmd("normal! h")
+          end
           local ok2, session_mod2 = pcall(require, "codediff.ui.lifecycle.session")
           if not ok2 then return end
           local active_diffs2 = session_mod2.get_active_diffs()
@@ -2048,7 +2017,7 @@ function M.setup(opts)
           if session2 and session2.explorer and session2.explorer.winid and vim.api.nvim_win_is_valid(session2.explorer.winid) then
             vim.api.nvim_set_current_win(session2.explorer.winid)
           end
-        end, vim.tbl_extend("force", map_opts, { desc = "Focus sidebar" }))
+        end, vim.tbl_extend("force", map_opts, { desc = "Focus explorer at line start" }))
         vim.keymap.set("n", "]r", function()
           if goto_next_repo_tab then goto_next_repo_tab() end
         end, vim.tbl_extend("force", map_opts, { desc = "Next repo tab" }))
