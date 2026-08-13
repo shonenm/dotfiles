@@ -25,6 +25,7 @@ scripts/test-install-fast-paths.sh
 [[ ! -x scripts/test-pi-tui-patch.sh ]] || scripts/test-pi-tui-patch.sh
 scripts/test-harness-entrypoints.sh
 scripts/test-codex-config.sh
+scripts/test-pi-permission-gate.sh
 python3 scripts/test_check_markdown_links.py
 scripts/check-markdown-links.py
 scripts/check-doc-provenance.py
