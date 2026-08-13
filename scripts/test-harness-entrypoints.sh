@@ -21,7 +21,15 @@ assert "update-mise-lock" in update_case
 assert "commit_mise_lock" in update_case
 assert "commit --only" in dots
 assert "git push" not in dots
-assert 'XDG_CACHE_HOME="$tmp/cache"' in (root / "scripts/update-mise-lock").read_text()
+lock_script = (root / "scripts/update-mise-lock").read_text()
+assert 'XDG_CACHE_HOME="$tmp/cache"' in lock_script
+assert 'MISE_LOG_LEVEL="${MISE_LOG_LEVEL:-warn}"' in lock_script
+assert "Processing .*tool" in lock_script
+assert "python3 -c" in lock_script
+assert not any(
+    line.lstrip().startswith("mise lock") and ("--quiet" in line or " -q " in line)
+    for line in lock_script.splitlines()
+)
 config = tomllib.loads((root / "common/mise/.config/mise/config.toml").read_text())
 linux = tomllib.loads((root / "config/mise-linux.toml").read_text())
 lock = tomllib.loads((root / "common/mise/.config/mise/mise.lock").read_text())

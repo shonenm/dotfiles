@@ -15,8 +15,33 @@ mkdir -p "$tmp/mise/conf.d" "$tmp/cache"
 cp "$root/common/mise/.config/mise/config.toml" "$tmp/mise/config.toml"
 cp "$root/config/mise-linux.toml" "$tmp/mise/conf.d/dotfiles-linux.toml"
 
-XDG_CONFIG_HOME="$tmp" XDG_CACHE_HOME="$tmp/cache" mise lock -g -y --bump \
-  --platform linux-x64,linux-arm64,macos-x64,macos-arm64
+platforms=linux-x64,linux-arm64,macos-x64,macos-arm64
+tool_count=$(python3 - "$root" <<'PY'
+import pathlib, sys, tomllib
+root = pathlib.Path(sys.argv[1])
+print(sum(
+    len(tomllib.loads(path.read_text())["tools"])
+    for path in (
+        root / "common/mise/.config/mise/config.toml",
+        root / "config/mise-linux.toml",
+    )
+))
+PY
+)
+echo "Locking $tool_count tools for ${platforms//,/, }"
+
+# ponytail: keep clx progress (stderr TTY). --quiet would also kill it.
+# Drop mise's one-line tool dump / tmp lock path; hide info! provenance downloads.
+MISE_LOG_LEVEL="${MISE_LOG_LEVEL:-warn}" \
+XDG_CONFIG_HOME="$tmp" XDG_CACHE_HOME="$tmp/cache" \
+  mise lock -g -y --bump --platform "$platforms" \
+  > >(python3 -c '
+import re, sys
+pat = re.compile(r"Targeting .*platform|Processing .*tool|Lockfile written to")
+for line in sys.stdin:
+    if not pat.search(line):
+        sys.stdout.write(line)
+')
 
 python3 - "$root" "$tmp/mise/mise.lock" <<'PY'
 import pathlib, sys, tomllib
