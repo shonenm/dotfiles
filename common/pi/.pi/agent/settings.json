@@ -1,6 +1,6 @@
 {
   "defaultProvider": "xai",
-  "defaultModel": "grok-4.5",
+  "defaultModel": "grok-4.6",
   "defaultThinkingLevel": "medium",
   "subagents": {
     "defaultModel": "openai-codex/gpt-5.4-mini",
