@@ -73,6 +73,7 @@ impl Provider for Claude {
             a_reset,
             b_pct,
             b_reset,
+            ..Usage::default()
         })
     }
 
@@ -104,6 +105,7 @@ mod tests {
             a_reset: Reset::Iso("2026-07-18T10:00:00Z".into()),
             b_pct: 88,
             b_reset: Reset::None,
+            ..Usage::default()
         };
         let line = c.to_cache(&u);
         assert_eq!(line, "42|88|2026-07-18T10:00:00Z|");

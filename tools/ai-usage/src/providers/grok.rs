@@ -1,14 +1,19 @@
 // Grok / SuperGrok usage — ~/.grok/auth.json の session token で
-// cli-chat-proxy.grok.com の billing を叩く。refresh は grok CLI に任せる。
+// cli-chat-proxy.grok.com の billing を叩く。session token の寿命は 6h しかないので、
+// 期限切れなら refresh_token grant (OIDC issuer の token endpoint) で自前に更新し
+// auth.json へ書き戻す (grok CLI を起動していない間も表示を維持するため)。
 
 use super::{Provider, Reset, Usage, clamp_pct, tmux_cache_path};
+use crate::authstore;
 use crate::http;
 use anyhow::{Context, Result, anyhow};
-use serde_json::Value;
+use serde_json::{Value, json};
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const API_KEY_SCOPE: &str = "xai::api_key";
 const DEFAULT_PROXY: &str = "https://cli-chat-proxy.grok.com/v1";
+const DEFAULT_ISSUER: &str = "https://auth.x.ai";
 
 pub struct Grok;
 
@@ -62,31 +67,142 @@ fn pi_oauth(store: &Value) -> Option<(String, String)> {
     Some((access, String::new()))
 }
 
-/// session scope を優先し、API key scope は SuperGrok 週次枠ではないので使わない。
-fn session_auth(store: &Value) -> Option<(String, String)> {
+/// session scope の (scope, entry) を返す。API key scope は SuperGrok 週次枠ではないので使わない。
+fn session_entry(store: &Value) -> Option<(String, Value)> {
     let obj = store.as_object()?;
     let mut fallback = None;
     for (scope, entry) in obj {
         if scope == API_KEY_SCOPE {
             continue;
         }
-        let key = entry.get("key").and_then(Value::as_str).unwrap_or("");
-        if key.is_empty() {
-            continue;
-        }
-        let user_id = entry
-            .get("user_id")
+        if entry
+            .get("key")
             .and_then(Value::as_str)
             .unwrap_or("")
-            .to_string();
+            .is_empty()
+        {
+            continue;
+        }
         let mode = entry.get("auth_mode").and_then(Value::as_str).unwrap_or("");
-        let pair = (key.to_string(), user_id);
+        let pair = (scope.clone(), entry.clone());
         if matches!(mode, "oidc" | "web_login" | "external") {
             return Some(pair);
         }
         fallback.get_or_insert(pair);
     }
     fallback
+}
+
+fn entry_auth(entry: &Value) -> (String, String) {
+    let key = entry
+        .get("key")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+    let user_id = entry
+        .get("user_id")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+    (key, user_id)
+}
+
+fn now_secs() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+/// entry の失効時刻 (unix 秒)。フィールドが無い / 解釈できない場合は 0 = 不明。
+fn expires_at_secs(entry: &Value) -> i64 {
+    let s = entry
+        .get("expires_at")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    match s.parse::<jiff::Timestamp>() {
+        Ok(ts) => ts.as_second(),
+        Err(_) => 0,
+    }
+}
+
+fn token_url(entry: &Value) -> String {
+    if let Ok(u) = std::env::var("GROK_TOKEN_URL")
+        && !u.is_empty()
+    {
+        return u;
+    }
+    let issuer = entry
+        .get("oidc_issuer")
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .unwrap_or(DEFAULT_ISSUER);
+    format!("{}/oauth2/token", issuer.trim_end_matches('/'))
+}
+
+/// 期限切れ session を refresh_token grant で更新し、auth.json へ書き戻す。
+/// 戻り値: (access_token, user_id)。
+///
+/// ponytail: 排他は ai-usage 同士のみ (grok CLI は auth.json.lock で独自プロトコル)。
+/// 書き込みは atomic rename なので CLI が壊れた JSON を読むことはないが、CLI 側の
+/// 書き戻しと交差すると lost update で 1 回 refresh が無駄になる。実害は次回の
+/// refresh で解消するため、CLI の lock 形式に追従するのはそれが問題になってから。
+fn refresh_session(scope: &str) -> Result<(String, String)> {
+    let path = auth_file();
+    let path_str = path.to_string_lossy().to_string();
+    let _lock = authstore::lock(&format!(
+        "{}.refresh.lock",
+        tmux_cache_path("grok_usage").display()
+    ))?;
+
+    // lock 待ちの間に他プロセスが更新している可能性があるので読み直す。
+    let body =
+        std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+    let mut store: Value = serde_json::from_str(body.trim()).context("parsing grok auth.json")?;
+    let entry = store
+        .get(scope)
+        .cloned()
+        .ok_or_else(|| anyhow!("grok auth scope vanished"))?;
+    let (key, user_id) = entry_auth(&entry);
+    if !key.is_empty() && expires_at_secs(&entry) > now_secs() + 60 {
+        return Ok((key, user_id));
+    }
+
+    let refresh = entry
+        .get("refresh_token")
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| anyhow!("no grok refresh_token"))?;
+    let client_id = entry
+        .get("oidc_client_id")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let mut res = http::agent()
+        .post(token_url(&entry))
+        .send_form([
+            ("grant_type", "refresh_token"),
+            ("refresh_token", refresh),
+            ("client_id", client_id),
+        ])
+        .context("grok token refresh")?;
+    let r: Value = serde_json::from_str(&res.body_mut().read_to_string()?)
+        .context("parsing refresh response")?;
+    let access = r["access_token"]
+        .as_str()
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| anyhow!("refresh returned no access_token"))?
+        .to_string();
+    let new_refresh = r["refresh_token"].as_str().unwrap_or(refresh).to_string();
+    let expires_in = r["expires_in"].as_i64().unwrap_or(0);
+
+    let e = &mut store[scope];
+    e["key"] = json!(access);
+    e["refresh_token"] = json!(new_refresh);
+    if expires_in > 0 {
+        e["expires_at"] = json!(authstore::iso_from_unix(now_secs() + expires_in));
+    }
+    authstore::write_json(&path_str, &store)?;
+    Ok((access, user_id))
 }
 
 fn cents(v: &Value) -> Option<i64> {
@@ -153,6 +269,7 @@ fn parse_billing(v: &Value) -> Option<Usage> {
         a_reset: weekly_reset,
         b_pct: extra,
         b_reset: Reset::None,
+        ..Usage::default()
     })
 }
 
@@ -165,9 +282,17 @@ impl Grok {
         }
         if let Ok(body) = std::fs::read_to_string(auth_file())
             && let Ok(v) = serde_json::from_str::<Value>(body.trim())
-            && let Some(auth) = session_auth(&v)
+            && let Some((scope, entry)) = session_entry(&v)
         {
-            return Ok(auth);
+            let (key, user_id) = entry_auth(&entry);
+            let exp = expires_at_secs(&entry);
+            if exp == 0 || exp > now_secs() + 60 {
+                return Ok((key, user_id));
+            }
+            // 期限切れ: refresh に失敗したら pi 側の token へ落とす。
+            if let Ok(auth) = refresh_session(&scope) {
+                return Ok(auth);
+            }
         }
         let path = pi_auth_file();
         let body = std::fs::read_to_string(&path)
@@ -258,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    fn session_auth_skips_api_key() {
+    fn session_entry_skips_api_key() {
         let v: Value = serde_json::from_str(
             r#"{
                 "xai::api_key": {"key":"xai-secret","user_id":"u0","auth_mode":"api_key"},
@@ -266,7 +391,22 @@ mod tests {
             }"#,
         )
         .unwrap();
-        assert_eq!(session_auth(&v), Some(("sess".into(), "u1".into())));
+        let (scope, entry) = session_entry(&v).unwrap();
+        assert_eq!(scope, "https://auth.x.ai");
+        assert_eq!(entry_auth(&entry), ("sess".into(), "u1".into()));
+    }
+
+    #[test]
+    fn expires_at_and_token_url() {
+        let entry: Value = serde_json::from_str(
+            r#"{"expires_at":"2026-08-13T12:01:52.094913Z","oidc_issuer":"https://auth.x.ai/"}"#,
+        )
+        .unwrap();
+        assert_eq!(expires_at_secs(&entry), 1786622512);
+        assert_eq!(token_url(&entry), "https://auth.x.ai/oauth2/token");
+        // expires_at が無い形式は「不明」= refresh せず現 token を使う。
+        assert_eq!(expires_at_secs(&json!({})), 0);
+        assert_eq!(token_url(&json!({})), "https://auth.x.ai/oauth2/token");
     }
 
     #[test]
@@ -289,6 +429,7 @@ mod tests {
             a_reset: Reset::Iso("2026-08-20T00:00:00Z".into()),
             b_pct: 10,
             b_reset: Reset::None,
+            ..Usage::default()
         };
         let line = g.to_cache(&u);
         assert_eq!(line, "42|10|2026-08-20T00:00:00Z|");

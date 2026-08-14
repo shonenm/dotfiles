@@ -10,8 +10,9 @@ pub mod grok;
 use std::path::PathBuf;
 
 /// reset 時刻の表現。cache にはこの生値を保存し、render 時に現在時刻から残りを計算。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Reset {
+    #[default]
     None,
     Iso(String),
     #[allow(dead_code)] // codex/cursor (M2/M3) で使用
@@ -30,12 +31,16 @@ impl Reset {
 }
 
 /// 2 window ぶんの使用率と reset。label は provider 定数。
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Usage {
     pub a_pct: i64,
     pub a_reset: Reset,
     pub b_pct: i64,
     pub b_reset: Reset,
+    /// 実データ由来の window ラベル。None なら Provider::labels() の既定を使う。
+    /// 2 番目が None の window は API 側に存在しないので行を出さない
+    /// (plan によって window 構成が変わる codex 用)。
+    pub labels: Option<(String, Option<String>)>,
 }
 
 /// 0-100 にクランプ（bash の max(0,min(100,...)) 相当）。
@@ -77,6 +82,7 @@ pub fn parse_two_iso_cache(line: &str) -> Option<Usage> {
         a_reset: iso(2),
         b_pct,
         b_reset: iso(3),
+        ..Usage::default()
     })
 }
 
