@@ -455,12 +455,15 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | `gs`    | Hunk stage（diff ビュー自動更新）          |
 | `gr`    | Hunk reset（diff ビュー自動更新）          |
 | `gu`    | Hunk unstage（staged view のみ）           |
+| `gd`    | 定義へジャンプ（実ファイルを別タブで開く） |
 | `]c`    | 次の hunk へ                               |
 | `[c`    | 前の hunk へ                               |
 | `do`    | diff obtain (get)                          |
 | `dp`    | diff put                                   |
 | `h`     | 行先頭（折り返し込みの見た目左端）で Explorer に戻る |
 | `<Tab>` | Explorer に戻る                            |
+
+revision 側のバッファ（`codediff://` 仮想バッファと inline のスクラッチバッファ）には LSP が attach しないため、`gd` は素の Vim 検索にフォールバックして定義に飛べない。この場合の `gd` はワーキングツリーの実ファイルを別タブで開き、同じ行・同じシンボル（行がずれていれば最寄りの同名シンボル）へカーソルを移してから LSP の定義ジャンプを実行する。実ファイルバッファ側（通常の CodeDiff の右ペイン）は LSP がそのまま効くため上書きしない。
 
 `gs`/`gr` は gitsigns コマンド実行後に diff キャッシュを無効化し、仮想バッファ・実ファイルバッファ・diff 計算結果を自動再読み込みする。ビジュアルモードでの範囲選択にも対応。`gu` は staged diff view（HEAD vs `:0`）でカーソル位置のハンクを `git apply --reverse --cached` で個別 unstage する。
 
@@ -496,6 +499,7 @@ Diff ビュー（`,`/`.` はサイドバーと同じくファイル移動。hunk
 | `[`   | 前の hunk へ             |
 | `}`   | 次の未チェックファイルへ |
 | `{`   | 前の未チェックファイルへ |
+| `gd`  | 定義へジャンプ（実ファイルを別タブで開く） |
 | `h`   | 行先頭で Explorer に戻る |
 | `<Tab>` | Explorer に戻る        |
 
