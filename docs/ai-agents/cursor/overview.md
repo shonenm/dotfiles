@@ -125,11 +125,17 @@ Cursor CLI 内でフッターが見えない場合は `cursor-agent` を再起�
 
 tmux サイドバー (`prefix+b`) と pi のカスタムフッターに Cursor のプラン使用量を表示する。どちらも `ai-usage cursor` の同じキャッシュ済みデータを使う。
 
+Pro+ 以降、プラン枠は 2 プールに分かれる。サイドバーはこの 2 つをそのまま並べる。
+
 | 表示 | 意味 |
 | --- | --- |
-| 1つ目の % | 含まれる使用量の総利用率 (`planUsage.totalPercentUsed`) |
-| 2つ目の % | Auto/Composer モデル利用率 (`autoPercentUsed`) |
+| `cursor` の % | Cursor Models (Composer / Grok / Vega) の利用率 (`autoPercentUsed`) |
+| `other` の % | Other Models (Claude / GPT / Gemini) の利用率 (`apiPercentUsed`)。Pro+ は $70 の API 枠 |
 | 末尾 | 請求周期終了までの残り日数 |
+
+使用が止まるゲートはプールごとの割合で、どちらかが 100% に達すると on-demand spend に落ちる。非ゼロの利用が 0% と表示されないよう、下限は 1% に丸める (Cursor ダッシュボードと同じ挙動)。
+
+`planUsage.includedSpend / limit` は単一プール時代の名残で使わない。分子が両プール合計の消費額・分母が Other Models だけの枠を指すため、実消費 4% / 1% が 48% に化ける。
 
 データソース: `api2.cursor.sh` の `GetCurrentPeriodUsage` (Pro/Team/Ultra)。Enterprise は `/auth/usage` にフォールバック。
 
