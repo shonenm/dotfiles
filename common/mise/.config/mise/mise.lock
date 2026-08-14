@@ -20,6 +20,7 @@ provenance = "github-attestations"
 checksum = "sha256:aaf5c61c0c29b35a205fe1cff590d900716ea61e7d7c5efc8a3ebfbf624a81a2"
 url = "https://github.com/ClementTsang/bottom/releases/download/0.14.7/bottom_aarch64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/ClementTsang/bottom/releases/assets/491705631"
+provenance = "github-attestations"
 
 [tools."aqua:ClementTsang/bottom"."platforms.macos-x64"]
 checksum = "sha256:2ef391201ed2fc874a67e19aebd05fc289e0a75c0116fba14e93b48232223eca"
@@ -817,13 +818,13 @@ checksum = "sha256:b515aac953cf37d85d81a563eba37e4fee7b0960994f008cfad2e9fa1a09b
 url = "https://github.com/ouch-org/ouch/releases/download/0.8.1/ouch-x86_64-unknown-linux-gnu.tar.gz"
 url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471619"
 provenance = "github-attestations"
+provenance_verified = true
 
 [tools."github:ouch-org/ouch"."platforms.macos-arm64"]
 checksum = "sha256:ae4b406486c6105913ff86477938a4984636422de2c4766d3c444c580e8bf989"
 url = "https://github.com/ouch-org/ouch/releases/download/0.8.1/ouch-aarch64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471617"
 provenance = "github-attestations"
-provenance_verified = true
 
 [tools."github:ouch-org/ouch"."platforms.macos-x64"]
 checksum = "sha256:5f27ea43b4f6a73609c94a0e5c2b6fb6b69a2f842bdecf040183303a6dda6378"
