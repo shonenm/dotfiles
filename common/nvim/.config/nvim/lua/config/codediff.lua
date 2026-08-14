@@ -1660,20 +1660,110 @@ function M.setup(opts)
         orig_on_file_select(file_data)
       end
 
-      -- ヘルプ表示関数（このexplorerに特化）
+      -- ヘルプは float で描画する。virt_lines をビューポート基準の行に貼ると
+      -- スクロール・再レンダリングのたびに挿入位置が変わり、その下の行と
+      -- カーソルの画面位置が数行ぶん揺れるため（一覧の途中にヘルプが割り込む）。
+      -- バッファ末尾に固定の pad だけを置いて float 分の領域を確保する。
+      local help_buf, help_win
+      local help_pad_ns = vim.api.nvim_create_namespace("codediff_help_pad")
+
+      local function close_help_window()
+        if help_win and vim.api.nvim_win_is_valid(help_win) then
+          vim.api.nvim_win_close(help_win, true)
+        end
+        help_win = nil
+      end
+
+      local function render_help_window(lines)
+        local winid = explorer.winid
+        local width = vim.api.nvim_win_get_width(winid)
+        local height = vim.api.nvim_win_get_height(winid)
+        if height <= #lines then
+          close_help_window()
+          return false
+        end
+
+        if not help_buf or not vim.api.nvim_buf_is_valid(help_buf) then
+          help_buf = vim.api.nvim_create_buf(false, true)
+        end
+        local texts, marks = {}, {}
+        for i, chunks in ipairs(lines) do
+          local text = ""
+          for _, chunk in ipairs(chunks) do
+            local col = #text
+            text = text .. chunk[1]
+            if chunk[2] then
+              marks[#marks + 1] = { i - 1, col, #text, chunk[2] }
+            end
+          end
+          texts[i] = text
+        end
+        vim.bo[help_buf].modifiable = true
+        vim.api.nvim_buf_set_lines(help_buf, 0, -1, false, texts)
+        vim.bo[help_buf].modifiable = false
+        vim.api.nvim_buf_clear_namespace(help_buf, help_ns, 0, -1)
+        for _, mark in ipairs(marks) do
+          pcall(vim.api.nvim_buf_set_extmark, help_buf, help_ns, mark[1], mark[2], {
+            end_col = mark[3], hl_group = mark[4],
+          })
+        end
+
+        local config = {
+          relative = "win", win = winid, row = height - #lines, col = 0,
+          width = width, height = #lines, style = "minimal",
+          focusable = false, noautocmd = true, zindex = 30,
+        }
+        if help_win and vim.api.nvim_win_is_valid(help_win) then
+          vim.api.nvim_win_set_config(help_win, config)
+        else
+          help_win = vim.api.nvim_open_win(help_buf, false, config)
+          -- サイドバーと同じ背景で描画し、float に見えないようにする
+          vim.wo[help_win].winhighlight = vim.wo[winid].winhighlight
+          vim.wo[help_win].wrap = false
+        end
+        return true
+      end
+
+      -- カーソル行が float の下に隠れたときだけ表示をずらす。カーソル行自体は
+      -- 動かさず topline だけ調整するため、ヘルプ位置との相互作用は起きない。
+      local help_line_count = 0
+      local function keep_cursor_above_help()
+        local winid = explorer.winid
+        if help_line_count <= 0 then return end
+        if not vim.api.nvim_win_is_valid(winid) then return end
+        if vim.api.nvim_get_current_win() ~= winid then return end
+        local limit = vim.api.nvim_win_get_height(winid) - help_line_count
+        if limit <= 0 then return end
+        local overflow = vim.fn.winline() - limit
+        if overflow > 0 then
+          vim.fn.winrestview({ topline = vim.fn.line("w0") + overflow })
+        end
+      end
+
+      -- float が隠す行数ぶん、バッファ末尾に空行を確保する（アンカーは末尾固定）
+      local function update_help_pad(count)
+        local bufnr = explorer.bufnr
+        local last = vim.api.nvim_buf_line_count(bufnr) - 1
+        vim.api.nvim_buf_clear_namespace(bufnr, help_pad_ns, 0, -1)
+        if count <= 0 or last < 0 then return end
+        local pad = {}
+        for i = 1, count do pad[i] = { { "", "Normal" } } end
+        pcall(vim.api.nvim_buf_set_extmark, bufnr, help_pad_ns, last, 0, {
+          virt_lines = pad, virt_lines_above = false,
+        })
+      end
+
       local function update_help_line()
         local bufnr = explorer.bufnr
         local winid = explorer.winid
-        if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_win_is_valid(winid) then return end
-
-        local win_height = vim.api.nvim_win_get_height(winid)
-        local line_count = vim.api.nvim_buf_line_count(bufnr)
-        local first_visible = vim.fn.line("w0", winid)
-        local help_height = 5 -- progress/path plus the largest help table
-        -- ウィンドウ下部にヘルプを固定（最低限の領域確保）
-        local max_target = first_visible + win_height - help_height - 2
-        local target_line = math.min(max_target, line_count - 1)
-        if target_line < 0 then target_line = 0 end
+        if not vim.api.nvim_buf_is_valid(bufnr) or not vim.api.nvim_win_is_valid(winid) then
+          close_help_window()
+          return
+        end
+        if explorer.is_hidden then
+          close_help_window()
+          return
+        end
 
         -- diffview にフォーカスがあるか判定 + コンフリクト状態チェック
         local in_diff = false
@@ -1733,11 +1823,10 @@ function M.setup(opts)
           }
         end
 
-        vim.api.nvim_buf_clear_namespace(bufnr, help_ns, 0, -1)
-        vim.api.nvim_buf_set_extmark(bufnr, help_ns, target_line, 0, {
-          virt_lines = help_lines,
-          virt_lines_above = false,
-        })
+        local shown = render_help_window(help_lines)
+        help_line_count = shown and #help_lines or 0
+        update_help_pad(help_line_count)
+        keep_cursor_above_help()
       end
 
       -- tree.render をラップして、render 後に必ずヘルプを表示
@@ -1761,11 +1850,23 @@ function M.setup(opts)
           vim.schedule(update_help_line)
         end,
       })
-      -- スクロール時にヘルプ位置を更新
-      vim.api.nvim_create_autocmd("WinScrolled", {
+      -- カーソルが float の下に入らないようにする（表示位置のみ調整）
+      vim.api.nvim_create_autocmd("CursorMoved", {
         buffer = explorer.bufnr,
+        callback = keep_cursor_above_help,
+      })
+      -- ウィンドウサイズ変更で float の位置・幅を追従させる
+      vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
         callback = function()
+          if not vim.api.nvim_win_is_valid(explorer.winid) then return end
           vim.schedule(update_help_line)
+        end,
+      })
+      -- explorer ウィンドウが閉じたら float も閉じる
+      vim.api.nvim_create_autocmd({ "WinClosed", "TabClosed" }, {
+        callback = function()
+          if vim.api.nvim_win_is_valid(explorer.winid) then return end
+          close_help_window()
         end,
       })
 
