@@ -484,7 +484,7 @@ rcon() {
     # - new-session -A: attach if exists, create otherwise
     # - set-option default-command: subsequent pane splits / new windows also run the wrapper
     # - absolute path so tmux's /bin/sh can locate the wrapper without PATH hacks
-    # PATH picks up the source-built tmux 3.6a from ~/.local/bin (no-sudo
+    # PATH picks up the source-built tmux 3.7b from ~/.local/bin (no-sudo
     # install path via install_tmux_source), or /usr/bin/tmux in sudo mode.
     # We deliberately avoid pixi's conda-forge tmux 3.6 because it crashes
     # on attach under xterm-ghostty ("server exited unexpectedly"), and the
@@ -519,7 +519,7 @@ rcon() {
     # makes `rcon ailab myproject` land in ~/myproject without manual cd.
     local sess="${session:-main}"
     # PATH order: .local/bin BEFORE .pixi/bin so that the source-built
-    # tmux 3.6a at ~/.local/bin/tmux wins over pixi's conda-forge tmux 3.6.
+    # tmux 3.7b at ~/.local/bin/tmux wins over pixi's conda-forge tmux 3.6.
     # The conda-forge build crashes on attach under xterm-ghostty (same
     # reason documented in the container branch above). pixi stays on PATH
     # for tools that only live there (e.g. zsh on no-sudo hosts).
