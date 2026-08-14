@@ -5,4 +5,4 @@
 # Conversation (left) : Review (right) = 2 : 8.
 split_ratio = 20
 # Floor for either pane so the narrow conversation column stays usable.
-min_pane_width = 30
+min_pane_width = 60
