@@ -212,6 +212,24 @@ install_code_review_graph() {
   log_success "code-review-graph installed (run 'crg-daemon add <path>' per project to enable)"
 }
 
+# live-pr が ```mermaid を ASCII 図に差し替える optional CLI (PyPI のみ)。
+# macOS 用。Linux は config/tools.linux.bash の uv tool 経路。
+install_termaid() {
+  if ! command_exists uv; then
+    log_warn "uv not found, skipping termaid"
+    return
+  fi
+
+  if command_exists termaid; then
+    log_success "termaid already installed"
+    return
+  fi
+
+  log_info "Installing termaid (live-pr Mermaid terminal renderer)..."
+  uv tool install termaid
+  log_success "termaid installed"
+}
+
 install_auto_mode() {
   if ! command_exists jq; then
     log_warn "jq not found, skipping auto mode default"

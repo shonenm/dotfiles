@@ -158,6 +158,12 @@ TOOL_pgcli_method="curl_pipe"
 TOOL_pgcli_curl_cmd='uv tool install pgcli'
 TOOL_pgcli_depends_on="uv"
 
+# termaid: live-pr Mermaid → terminal ASCII (PyPI only; also install-common on macOS)
+TOOL_termaid_check_cmd="termaid"
+TOOL_termaid_method="curl_pipe"
+TOOL_termaid_curl_cmd='uv tool install termaid'
+TOOL_termaid_depends_on="uv"
+
 # Cursor CLI (headless AI coding agent, Composer 2.5)
 TOOL_cursor_check_cmd="cursor-agent"
 TOOL_cursor_method="curl_pipe"
@@ -179,7 +185,7 @@ LINUX_TOOL_ORDER=(
   # Cargo tools (depend on rust)
   tokei procs quay gitabsorb cargoupdate keifu gittype tmuxexpose
   # Python tools (depend on uv)
-  pgcli
+  pgcli termaid
 )
 # GitHub-release tools (fzf, fastfetch, delta, lazygit, ghq, smug, dops, yazi,
 # rainfrog, typst, just, watchexec, hyperfine, gitleaks, xh, ouch, glow, gum, viddy,
