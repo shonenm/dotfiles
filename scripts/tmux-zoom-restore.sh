@@ -8,6 +8,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/tmux-zoom-lib.sh"
 
 win=$(tmux display-message -p '#{window_id}')
 pane=$(tmux display-message -p '#{pane_id}')
+
+# apply/restore の break-pane/join-pane 中に本 hook が再入すると layout が壊れる
+pzoom_locked "$win" && exit 0
+
 pzoomed=$(tmux show-options -w -t "$win" -qv @pzoom_pane 2>/dev/null)
 sticky=$(tmux show-options -pqv @zoom-sticky 2>/dev/null)
 zoomed=$(tmux display-message -p '#{window_zoomed_flag}')

@@ -43,10 +43,12 @@ ESC_K=$'\033[K'   # 行末までクリア(全画面クリアせず=チカチカ�
 
 # どれかの client が native/pseudo zoom / choose-tree / copy-mode 中なら true。
 # 擬似 zoom は window_zoomed_flag が立たないため、@pzoom_pane も判定する。
+# @pzoom_pane は "%62" のような pane id。値を連結して grep 1 すると digit 1 を
+# 含まない id で擬似 zoom を見逃すので、空判定だけ見る。
 # その間に sidebar を resize すると、zoom 中の layout と競合して pane 内容が崩れる。
 # transient な状態なので、抜けた後の tick で補正すれば十分。
 sidebar_user_busy() {
-  tmux list-clients -F '#{window_zoomed_flag}#{pane_in_mode}#{@pzoom_pane}' 2>/dev/null | grep -q 1
+  tmux list-clients -F '#{?window_zoomed_flag,1,}#{?pane_in_mode,1,}#{?@pzoom_pane,1,}' 2>/dev/null | grep -q 1
 }
 
 # 表示幅基準の切り詰め(全角=2幅近似)。[[:ascii:]] は macOS 非対応のため case で判定
