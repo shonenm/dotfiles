@@ -2112,6 +2112,47 @@ function M.setup(opts)
       return path ~= "" and path or nil
     end
 
+    -- Tabs opened by gd from a diff buffer, mapped to where the jump started.
+    -- tabedit copies the origin window's jumplist, so without this a second
+    -- C-o pulls the diff buffer into the definition tab's own window instead
+    -- of returning to CodeDiff. The copy is cleared on entry and the boundary
+    -- is handled below.
+    local definition_tabs = {}
+
+    local function return_to_codediff(origin)
+      local tab = vim.api.nvim_get_current_tabpage()
+      definition_tabs[tab] = nil
+      if origin.tab ~= tab and vim.api.nvim_tabpage_is_valid(origin.tab) then
+        pcall(vim.cmd, "tabclose")
+        pcall(vim.api.nvim_set_current_tabpage, origin.tab)
+      end
+      if vim.api.nvim_win_is_valid(origin.win) then
+        pcall(vim.api.nvim_set_current_win, origin.win)
+        pcall(vim.api.nvim_win_set_cursor, origin.win, origin.pos)
+      end
+    end
+
+    vim.keymap.set("n", "<C-o>", function()
+      local origin = definition_tabs[vim.api.nvim_get_current_tabpage()]
+      local buf = vim.api.nvim_get_current_buf()
+      local pos = vim.api.nvim_win_get_cursor(0)
+      vim.cmd("normal! " .. vim.v.count1 .. "\15")
+      if not origin then return end
+      -- The tab's jumplist was cleared on entry, so a C-o that moves nothing
+      -- means we are back at the definition lookup's starting point.
+      if buf == vim.api.nvim_get_current_buf() and pos[1] == vim.api.nvim_win_get_cursor(0)[1] then
+        return_to_codediff(origin)
+      end
+    end, { desc = "Jump back (leaves a CodeDiff definition tab at its start)" })
+
+    vim.api.nvim_create_autocmd("TabClosed", {
+      callback = function()
+        for tab in pairs(definition_tabs) do
+          if not vim.api.nvim_tabpage_is_valid(tab) then definition_tabs[tab] = nil end
+        end
+      end,
+    })
+
     local function goto_definition_in_working_tree(real_path)
       if vim.fn.filereadable(real_path) == 0 then
         vim.notify(vim.fn.fnamemodify(real_path, ":t") .. " is not in the working tree", vim.log.levels.WARN)
@@ -2124,8 +2165,17 @@ function M.setup(opts)
         return
       end
       local line = vim.api.nvim_win_get_cursor(0)[1]
+      local origin = {
+        tab = vim.api.nvim_get_current_tabpage(),
+        win = vim.api.nvim_get_current_win(),
+        pos = vim.api.nvim_win_get_cursor(0),
+      }
 
       vim.cmd("tabedit " .. vim.fn.fnameescape(real_path))
+      -- Drop the jumplist copied from the diff window: its entries point at
+      -- buffers this tab must not display, and they hide where the lookup began.
+      vim.cmd("clearjumps")
+      definition_tabs[vim.api.nvim_get_current_tabpage()] = origin
       local buf = vim.api.nvim_get_current_buf()
       pcall(vim.api.nvim_win_set_cursor, 0, { math.min(line, vim.api.nvim_buf_line_count(buf)), 0 })
       -- 同じ行の同名シンボルへ。ワーキングツリー側で行がずれていれば折り返して最寄りを探す
