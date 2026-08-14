@@ -216,12 +216,17 @@ function M.setup(opts)
       os.rename(tmp, reviewed_marks_path)
     end
 
-    -- target_rev is deliberately excluded: it moves with every commit, so
-    -- including it orphans every mark as soon as one is made — even for files
-    -- the commit never touched. The stored fingerprint already clears a mark
-    -- when that file's own diff changes, matching GitHub's reviewed state.
-    local function review_key(git_root, base_rev, _target_rev, path)
-      return table.concat({ git_root or "", base_rev, path }, "\0")
+    -- Both revisions are deliberately excluded: target_rev moves with every
+    -- commit and base_rev moves whenever the branch merges or rebases onto its
+    -- base, so including either orphans every mark at once — even for files the
+    -- change never touched. The stored fingerprint already clears a mark when
+    -- that file's own diff changes, matching GitHub's reviewed state.
+    local function review_key(git_root, path)
+      return table.concat({ git_root or "", path }, "\0")
+    end
+
+    local function review_range(base_rev, target_rev)
+      return table.concat({ base_rev, target_rev }, "\0")
     end
 
     local function review_diff_fingerprint(git_root, base_rev, target_rev, path)
@@ -237,19 +242,20 @@ function M.setup(opts)
     end
 
     local function is_reviewed(git_root, base_rev, target_rev, path)
-      local key = review_key(git_root, base_rev, target_rev, path)
+      local key = review_key(git_root, path)
       local expected = reviewed_marks[key]
       if not expected then return false end
-      -- The cache is tagged with the revision it was computed against, because
-      -- the key no longer is: a commit must force a recompute so a file whose
-      -- diff actually changed still loses its mark.
+      -- The cache is tagged with the range it was computed against, because the
+      -- key no longer is: moving either end must force a recompute so a file
+      -- whose diff actually changed still loses its mark.
+      local range = review_range(base_rev, target_rev)
       local cached = review_fingerprints[key]
       local current
-      if cached ~= nil and cached.rev == target_rev then
+      if cached ~= nil and cached.range == range then
         current = cached.value
       else
         current = review_diff_fingerprint(git_root, base_rev, target_rev, path)
-        review_fingerprints[key] = { rev = target_rev, value = current or false }
+        review_fingerprints[key] = { range = range, value = current or false }
       end
       if current == false then return true end -- preserve marks on transient git errors
       if current ~= expected then
@@ -262,15 +268,6 @@ function M.setup(opts)
       return true
     end
 
-    local function mark_reviewed(git_root, base_rev, target_rev, path)
-      local key = review_key(git_root, base_rev, target_rev, path)
-      local fingerprint = review_diff_fingerprint(git_root, base_rev, target_rev, path)
-      if not fingerprint then return end
-      reviewed_marks[key] = fingerprint
-      review_fingerprints[key] = { rev = target_rev, value = fingerprint }
-      save_reviewed_marks()
-    end
-
     local function toggle_reviewed_paths(git_root, base_rev, target_rev, paths)
       local mark = false
       for _, path in ipairs(paths) do
@@ -280,12 +277,12 @@ function M.setup(opts)
         end
       end
       for _, path in ipairs(paths) do
-        local key = review_key(git_root, base_rev, target_rev, path)
+        local key = review_key(git_root, path)
         if mark then
           local fingerprint = review_diff_fingerprint(git_root, base_rev, target_rev, path)
           if fingerprint then
             reviewed_marks[key] = fingerprint
-            review_fingerprints[key] = { rev = target_rev, value = fingerprint }
+            review_fingerprints[key] = { range = review_range(base_rev, target_rev), value = fingerprint }
           end
         else
           reviewed_marks[key] = nil
