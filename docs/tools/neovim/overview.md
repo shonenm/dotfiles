@@ -471,6 +471,8 @@ CodeDiff の diff を表示している間は、右上最上段の固定枠に�
 
 `<leader>gd` はワークスペース内の全 git リポジトリ（parent・submodule・独立 clone）を自動探索し、変更のあるリポジトリごとに CodeDiff タブを開く。複数タブがある場合、ヘルプラインにリポジトリ一覧が表示され、`]r`/`[r` でタブ間を移動できる。
 
+explorer 下部のヘルプライン（進捗・キーマップ・リポジトリ一覧）は explorer ウィンドウに重ねた float で描画する。バッファ内の virt_lines として表示するとスクロールや再レンダリングのたびに挿入位置が変わり、ファイル一覧の途中にヘルプが割り込んでカーソルの画面位置が数行ぶん揺れるため。float が隠す行数はバッファ末尾の pad で確保し、カーソルが float の下に入る場合は表示（topline）だけをずらす。
+
 stage/restore/reset 等で全ての変更が解消されると（unstaged・staged・conflicts がすべて空）、CodeDiff タブは自動的に閉じる。revision 比較・ファイル履歴では発動しない。
 
 ### レビューモード（2コミット間 diff）
