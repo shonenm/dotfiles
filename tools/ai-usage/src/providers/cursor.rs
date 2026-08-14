@@ -137,7 +137,7 @@ impl Provider for Cursor {
     }
 
     fn labels(&self) -> (&'static str, &'static str) {
-        ("total", "auto")
+        ("cursor", "other")
     }
 
     fn cache_path(&self) -> PathBuf {
@@ -180,7 +180,7 @@ impl Provider for Cursor {
     }
 
     fn to_cache(&self, u: &Usage) -> String {
-        // bash: "{total}|{auto}|{billing_end}" — reset は両 window 共有、a_reset を正とする
+        // "{cursor}|{other}|{billing_end}" — reset は両 window 共有、a_reset を正とする
         format!("{}|{}|{}", u.a_pct, u.b_pct, u.a_reset.to_field())
     }
 
@@ -211,24 +211,27 @@ fn parse_reset(s: &str) -> Reset {
     }
 }
 
+/// 生の割合を整数 % へ。0 でない消費が 0% に丸められると「未使用」に見えるため 1% を
+/// 下限にする (Cursor ダッシュボードと同じ挙動: 0.42% → 1%)。
+fn round_pct(v: f64) -> i64 {
+    if v <= 0.0 {
+        0
+    } else {
+        (v.round() as i64).max(1)
+    }
+}
+
 fn parse_usage(v: &Value) -> Option<Usage> {
     let pu = &v["planUsage"];
     if pu.is_object() && !pu.as_object().unwrap().is_empty() {
-        let limit = pu["limit"].as_f64().unwrap_or(0.0);
-        let spend = pu["includedSpend"]
-            .as_f64()
-            .or_else(|| pu["totalSpend"].as_f64())
-            .unwrap_or(0.0);
-        let s = if limit > 0.0 {
-            (spend * 100.0 / limit).round() as i64
-        } else {
-            pu["totalPercentUsed"].as_f64().unwrap_or(0.0).round() as i64
-        };
-        let w = pu["autoPercentUsed"]
-            .as_f64()
-            .or_else(|| pu["apiPercentUsed"].as_f64())
-            .unwrap_or(0.0)
-            .round() as i64;
+        // Pro+ 以降、枠は 2 プールに分かれる:
+        //   Cursor Models (Composer/Grok/Vega) = autoPercentUsed
+        //   Other Models  (Claude/GPT/Gemini)  = apiPercentUsed ($70 の API 枠)
+        // 旧 includedSpend/limit は単一プール時代の名残で、分子が両プール合計の消費額・
+        // 分母が Other Models だけの $70 と噛み合わず、実消費 4%/1% が 48% に化ける。
+        // 使用を止めるゲートはプールごとの割合なので、そちらを直接読む。
+        let s = round_pct(pu["autoPercentUsed"].as_f64().unwrap_or(0.0));
+        let w = round_pct(pu["apiPercentUsed"].as_f64().unwrap_or(0.0));
         let reset = match v["billingCycleEnd"].as_str() {
             Some(x) if !x.is_empty() => parse_reset(x),
             _ => match v["billingCycleEnd"].as_i64() {
@@ -279,14 +282,28 @@ mod tests {
     #[test]
     fn parse_plan_usage() {
         let v: Value = serde_json::from_str(
-            r#"{"planUsage":{"limit":100,"includedSpend":42,"autoPercentUsed":10},
+            r#"{"planUsage":{"limit":100,"includedSpend":42,
+                "autoPercentUsed":10.4,"apiPercentUsed":3.6},
                 "billingCycleEnd":1893456000000}"#,
         )
         .unwrap();
         let u = parse_usage(&v).unwrap();
-        assert_eq!(u.a_pct, 42);
-        assert_eq!(u.b_pct, 10);
+        assert_eq!(u.a_pct, 10); // Cursor Models — includedSpend/limit の 42% は使わない
+        assert_eq!(u.b_pct, 4); // Other Models
         assert_eq!(u.a_reset, Reset::Unix(1893456000)); // ms→s
+    }
+
+    // 実データ回帰: 実消費 4%/1% が旧式 (3344/7000) の 48% に化けていた。
+    #[test]
+    fn plan_usage_ignores_legacy_spend_ratio() {
+        let v: Value = serde_json::from_str(
+            r#"{"planUsage":{"limit":7000,"includedSpend":3344,"totalSpend":3344,
+                "autoPercentUsed":4.1225,"apiPercentUsed":0.41818}}"#,
+        )
+        .unwrap();
+        let u = parse_usage(&v).unwrap();
+        assert_eq!(u.a_pct, 4);
+        assert_eq!(u.b_pct, 1); // 0.42% → 0 ではなく 1 (ダッシュボード表記に一致)
     }
 
     #[test]
