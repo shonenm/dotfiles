@@ -16,6 +16,10 @@ hunkdiff@0.18.0
 # Claude Code token optimizer (auto-config hooks via global install)
 @ooples/token-optimizer-mcp@5.6.1
 
+# MCP servers (global install to avoid npx wrapper process per Claude session)
+@notionhq/notion-mcp-server@2.5.1
+tmux-mcp@0.2.2
+
 # Neovim dependencies
 @mermaid-js/mermaid-cli@11.16.0
 @softwaretechnik/dbml-renderer@1.0.31
