@@ -216,8 +216,12 @@ function M.setup(opts)
       os.rename(tmp, reviewed_marks_path)
     end
 
-    local function review_key(git_root, base_rev, target_rev, path)
-      return table.concat({ git_root or "", base_rev, target_rev, path }, "\0")
+    -- target_rev is deliberately excluded: it moves with every commit, so
+    -- including it orphans every mark as soon as one is made — even for files
+    -- the commit never touched. The stored fingerprint already clears a mark
+    -- when that file's own diff changes, matching GitHub's reviewed state.
+    local function review_key(git_root, base_rev, _target_rev, path)
+      return table.concat({ git_root or "", base_rev, path }, "\0")
     end
 
     local function review_diff_fingerprint(git_root, base_rev, target_rev, path)
@@ -236,10 +240,16 @@ function M.setup(opts)
       local key = review_key(git_root, base_rev, target_rev, path)
       local expected = reviewed_marks[key]
       if not expected then return false end
-      local current = review_fingerprints[key]
-      if current == nil then
+      -- The cache is tagged with the revision it was computed against, because
+      -- the key no longer is: a commit must force a recompute so a file whose
+      -- diff actually changed still loses its mark.
+      local cached = review_fingerprints[key]
+      local current
+      if cached ~= nil and cached.rev == target_rev then
+        current = cached.value
+      else
         current = review_diff_fingerprint(git_root, base_rev, target_rev, path)
-        review_fingerprints[key] = current or false
+        review_fingerprints[key] = { rev = target_rev, value = current or false }
       end
       if current == false then return true end -- preserve marks on transient git errors
       if current ~= expected then
@@ -257,7 +267,7 @@ function M.setup(opts)
       local fingerprint = review_diff_fingerprint(git_root, base_rev, target_rev, path)
       if not fingerprint then return end
       reviewed_marks[key] = fingerprint
-      review_fingerprints[key] = fingerprint
+      review_fingerprints[key] = { rev = target_rev, value = fingerprint }
       save_reviewed_marks()
     end
 
@@ -275,7 +285,7 @@ function M.setup(opts)
           local fingerprint = review_diff_fingerprint(git_root, base_rev, target_rev, path)
           if fingerprint then
             reviewed_marks[key] = fingerprint
-            review_fingerprints[key] = fingerprint
+            review_fingerprints[key] = { rev = target_rev, value = fingerprint }
           end
         else
           reviewed_marks[key] = nil
