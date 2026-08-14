@@ -40,16 +40,16 @@ no-sudo モードでは **pixi 経由で導入** される (`config/pixi-package
 
 ### tmux (source build)
 
-`install_tmux_source` (`scripts/linux.sh`) は **PATH 上の tmux が 3.6a 未満なら** source build して `~/.local/bin/tmux` に入れる。no-sudo 専用ではなく、sudo がある環境でも distro の tmux が古ければ動く。pixi には含めない。理由:
+`install_tmux_source` (`scripts/linux.sh`) は **`~/.local/bin/tmux` が 3.7b 未満なら** source build して入れる（PATH 先頭の pixi tmux では判定しない）。no-sudo 専用ではなく、sudo がある環境でも distro の tmux が古ければ動く。pixi には含めない。理由:
 
 - **system tmux (3.2a on Ubuntu 22.04)** は `allow-passthrough` / `pane-border-indicators` 等 3.3+ の option を解釈できず、TUI への bracketed paste 転送が崩れる (claude login の auth code paste などが壊れる)
 - **distro の tmux 3.4〜3.5a** (Debian trixie = 3.5a) はコマンド出力を vis エスケープするため、`-F` の `0x1f` 区切りが `\037` に化けて agent index が壊れる。詳細は [agent stop notification](../specs/agent-stop-notification.md)
 - **pixi の conda-forge tmux 3.6** は特定環境で attach 時に crash する (xterm-ghostty + real PTY の組み合わせで "server exited unexpectedly" が再現)
-- **source build の 3.6a** は system libevent / libncurses にリンクされ、これらの問題を回避できる
+- **source build の 3.7b** は system libevent / libncurses にリンクし、Mac (Homebrew tmux 3.7b) と同じ系譜に揃える。3.6a からの主な DX 差（`break-pane` 修正、message/paste、floating panes など）を SSH 先でも使えるようにする
 
 build requirements: `gcc make wget tar bison libevent-dev libncurses-dev`。sudo 環境ではパッケージリスト (`config/packages.linux.apt.txt` / `.alpine.txt`) に含めてある。足りなければ step は skip される (host 管理者にインストール依頼)。
 
-ビルド済みの binary は `~/.local/bin/tmux`。PATH 上 `/usr/bin` より前なので新規 tmux server は 3.6a で起動するが、**既存 server は再起動するまで古い版のまま**動く。
+ビルド済みの binary は `~/.local/bin/tmux`。`.zshenv` で `.local/bin` を `.pixi/bin` より前に置くので、新規 `tmux` 起動は 3.7b になる。**既存 server は再起動するまで古い版のまま**動く。
 
 ### Neovim
 

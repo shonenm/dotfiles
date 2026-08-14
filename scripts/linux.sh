@@ -553,7 +553,7 @@ install_fancy_cat() {
   log_success "fancy-cat installed to ~/.local/bin"
 }
 
-# Build tmux 3.6a from source when the available tmux is older.
+# Build tmux 3.7b from source when ~/.local/bin/tmux (or PATH tmux) is older.
 # Rationale (no-sudo): sudoless hosts lose apt's tmux 3.2+, and pixi's
 # conda-forge tmux 3.6 crashes on attach in this environment (xterm-ghostty +
 # real PTY combination). The system tmux 3.2a is too old to forward bracketed
@@ -561,14 +561,21 @@ install_fancy_cat() {
 # Rationale (sudo あり): distro が 3.4〜3.5a を配る間 (Debian trixie = 3.5a)、
 # tmux はコマンド出力を vis エスケープし `-F` の 0x1f 区切りが `\037` に化ける。
 # agent index 側は agent_unvis で復号しているが、根本解消は 3.6 以降を使うこと。
-# どちらの経路でも upstream 3.6a を system libevent/ncurses に対してビルドする。
+# どちらの経路でも upstream 3.7b を system libevent/ncurses に対してビルドする。
+# Mac (Homebrew) の stable と同じ系譜に揃え、擬似 zoom の break-pane 修正や
+# message/paste まわりの DX 差を減らす。
 install_tmux_source() {
-  local target_version="3.6a"
+  local target_version="3.7b"
   local current_bin="$HOME/.local/bin/tmux"
 
-  # PATH 上の tmux が target 以上なら何もしない (idempotent)
-  local have
-  have=$(tmux -V 2>/dev/null | awk '{print $2}')
+  # ~/.local/bin の版を正とする。PATH 先頭の pixi tmux を見て「足りている」と
+  # 誤判定し、source build をスキップしないようにする。
+  local have=""
+  if [[ -x "$current_bin" ]]; then
+    have=$("$current_bin" -V 2>/dev/null | awk '{print $2}')
+  else
+    have=$(command -v tmux >/dev/null && tmux -V 2>/dev/null | awk '{print $2}' || true)
+  fi
   if [[ -n "$have" && "$(printf '%s\n%s\n' "$target_version" "$have" | sort -V | head -1)" == "$target_version" ]]; then
     log_success "tmux $have already satisfies >= $target_version"
     return 0
