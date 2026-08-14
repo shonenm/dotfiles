@@ -4,7 +4,7 @@ pkg-config
 libssl-dev
 zsh
 tmux
-# tmux 3.6a の source build 用 (install_tmux_source)
+# tmux 3.7b の source build 用 (install_tmux_source)
 libevent-dev
 libncurses-dev
 bison
