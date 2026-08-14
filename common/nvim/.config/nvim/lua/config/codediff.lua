@@ -1992,6 +1992,51 @@ function M.setup(opts)
       )
     end
 
+    -- revision のバッファ（codediff:// virtual buffer、inline のスクラッチ）には
+    -- LSP が attach しないため `gd` が解決できない。ワーキングツリーの実ファイルを
+    -- 別タブで開き、同じシンボル上で LSP に定義解決させる。
+    local function real_file_path(session)
+      local ref = session and (session.modified or session.original)
+      local path = ref and ref.absolute
+      return path ~= "" and path or nil
+    end
+
+    local function goto_definition_in_working_tree(real_path)
+      if vim.fn.filereadable(real_path) == 0 then
+        vim.notify(vim.fn.fnamemodify(real_path, ":t") .. " is not in the working tree", vim.log.levels.WARN)
+        return
+      end
+
+      local word = vim.fn.expand("<cword>")
+      if word == "" or not word:match("^[%w_]") then
+        vim.notify("No identifier under cursor", vim.log.levels.WARN)
+        return
+      end
+      local line = vim.api.nvim_win_get_cursor(0)[1]
+
+      vim.cmd("tabedit " .. vim.fn.fnameescape(real_path))
+      local buf = vim.api.nvim_get_current_buf()
+      pcall(vim.api.nvim_win_set_cursor, 0, { math.min(line, vim.api.nvim_buf_line_count(buf)), 0 })
+      -- 同じ行の同名シンボルへ。ワーキングツリー側で行がずれていれば折り返して最寄りを探す
+      if vim.fn.search("\\<" .. vim.fn.escape(word, "\\/") .. "\\>", "cw") == 0 then
+        vim.notify(word .. " is not in the working tree copy", vim.log.levels.WARN)
+        return
+      end
+
+      -- LSP の attach はファイルを開いた後に非同期で走る
+      local function request(retries)
+        if vim.api.nvim_get_current_buf() ~= buf then return end
+        if #vim.lsp.get_clients({ bufnr = buf, method = "textDocument/definition" }) > 0 then
+          vim.lsp.buf.definition()
+        elseif retries > 0 then
+          vim.defer_fn(function() request(retries - 1) end, 100)
+        else
+          vim.notify("No LSP definition provider for " .. vim.fn.fnamemodify(real_path, ":t"), vim.log.levels.WARN)
+        end
+      end
+      request(100) -- 10s: 大きなリポジトリでは LSP の起動に時間がかかる
+    end
+
     -- diffviewバッファ用のキーマップ
     local diffview_initialized = {}
     vim.api.nvim_create_autocmd("BufEnter", {
@@ -2041,6 +2086,17 @@ function M.setup(opts)
         vim.keymap.set({ "n", "v" }, "gu", function()
           unstage_hunk()
         end, vim.tbl_extend("force", map_opts, { desc = "Unstage hunk" }))
+
+        -- 実ファイルバッファ（LSP が attach する）以外でのみ gd を肩代わりする。
+        -- inline のスクラッチバッファはファイルを切り替えても使い回されるため、
+        -- 対象パスはキー押下時に session から取り直す。
+        if vim.api.nvim_buf_get_name(ev.buf) ~= (real_file_path(session) or "") then
+          vim.keymap.set("n", "gd", function()
+            local current = session_mod.get_active_diffs()[vim.api.nvim_get_current_tabpage()]
+            local real_path = real_file_path(current)
+            if real_path then goto_definition_in_working_tree(real_path) end
+          end, vim.tbl_extend("force", map_opts, { desc = "Goto definition (working tree)" }))
+        end
 
         vim.keymap.set("n", "]r", function()
           if goto_next_repo_tab then goto_next_repo_tab() end
