@@ -467,7 +467,8 @@ AI エージェント状態監視（自前スクリプト）:
 - `scripts/tmux-agent-status.sh`は全agentのread-only previewとpane jumpを提供する。実paneのswapは行わない
 - `scripts/tmux-agent-sidebar.sh`は同じindexからセッショングループ別の状態を常時表示する
 - event heartbeat対応providerではTUI spinnerを無視し、120秒進捗がなければhang表示する
-- サイドバー下部に Claude / Codex / Gemini / Cursor / Grok の使用量を表示。Codex は `~/.codex/auth.json` の OAuth token を自動 refresh するが、refresh token invalidated の場合は `codex login` が必要。Grok は `~/.grok/auth.json` の session token を使い、切れたら `grok login`
+- サイドバー下部に Claude / Codex / Gemini / Cursor / Grok の使用量を表示。Codex / Grok は OAuth token を自前で refresh する（refresh token 自体が invalidated の場合のみ `codex login` / `grok login` が必要）。行のラベルは provider 既定だが、Codex は plan により枠構成が変わる（Plus は 5h + 7d、free は 30d のみ）ため API の window 長からラベルを決め、存在しない枠は行を出さない
+- Codex は `~/.codex/auth.json`、Grok は `~/.grok/auth.json` を `${XDG_CACHE_HOME:-~/.cache}/tmux/*_usage.refresh.lock` の排他下で atomic に更新する。Grok の session token は寿命 6h しかないため、CLI を起動していない間も表示を維持するには ai-usage 側の refresh が必要
 - サイドバーがある window では `prefix z` / `prefix Z` が native zoom ではなく擬似 zoom になる。layout を保存したうえで対象以外の pane を session 内 `_pzoom` ウィンドウへ `break-pane` 退避し、サイドバーを残したまま対象を最大化する。以前の resize 潰しは sibling の cursor-agent 等が 1 列になり再描画を連打して外側端末全体がスクロールし続けるため廃止。`prefix C-z` は常に native zoom（サイドバーごと全画面）
 - 退避は pane ごとに別 `_pzoom` ウィンドウへ分ける。1 つに集めると後続の退避が先に退避した pane を分割してリサイズし、その TUI が再描画する。復元は退避時の方向・寸法・前後関係（`@pzoom_hidden` に `pane_id:dir:len:before` で保存）で `join-pane` するため、`select-layout` による再配分が不要になり、退避 pane が受ける SIGWINCH は退避時と復帰時の 1 回ずつに収まる。長い履歴を持つ TUI は 1 回のリサイズで全体を折り返し直すため、この回数が体感 CPU に直結する
 - `scripts/test-tmux-zoom.sh` が専用 socket 上で往復を検証する（配置・layout 文字列の一致と SIGWINCH 回数）。tmux が無い CI では `scripts/check` がスキップする
