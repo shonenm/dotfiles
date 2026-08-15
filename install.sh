@@ -358,6 +358,65 @@ link_codex_skills() {
   link_runtime_skills "$1" "$2" "Codex"
 }
 
+# cursor-agent reads cli-config.json from CURSOR_CONFIG_DIR, else
+# $XDG_CONFIG_HOME/cursor, else ~/.cursor. mcp.json / hooks.json / rules stay
+# on the data dir (~/.cursor) and are not affected.
+cursor_config_dir() {
+  if [[ -n "${CURSOR_CONFIG_DIR:-}" ]]; then
+    printf '%s\n' "$CURSOR_CONFIG_DIR"
+  elif [[ -n "${XDG_CONFIG_HOME:-}" ]]; then
+    printf '%s\n' "$XDG_CONFIG_HOME/cursor"
+  else
+    printf '%s\n' "$HOME/.cursor"
+  fi
+}
+
+# Merge template keys into cli-config.json. The CLI owns the same file for
+# runtime state (auth, model selection, caches), so unknown keys are preserved.
+# Returns 1 when dest is already current.
+write_cursor_cli_config() {
+  local src="$1" dest="$2" tmp
+  [[ -f "$src" ]] || return 0
+  mkdir -p "$(dirname "$dest")"
+  tmp=$(mktemp)
+  if ! python3 - "$src" "$dest" "$HOME" >"$tmp" <<'PY'
+import json, sys
+from pathlib import Path
+
+src, dest, home = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+managed = json.loads(src.read_text().replace("__HOME__", home))
+
+live = {}
+if dest.exists():
+    try:
+        live = json.loads(dest.read_text())
+    except (OSError, ValueError):
+        live = {}
+
+def merge(base, over):
+    out = dict(base)
+    for key, value in over.items():
+        if isinstance(value, dict) and isinstance(out.get(key), dict):
+            out[key] = merge(out[key], value)
+        else:
+            out[key] = value
+    return out
+
+json.dump(merge(live, managed), sys.stdout, indent=2, ensure_ascii=False)
+sys.stdout.write("\n")
+PY
+  then
+    rm -f "$tmp"
+    return 1
+  fi
+  if [[ -f "$dest" ]] && cmp -s "$tmp" "$dest"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mv "$tmp" "$dest"
+  chmod 600 "$dest"
+}
+
 # Upsert enabled servers from shared agent mcp.json into ~/.cursor/mcp.json.
 # Extra user servers are kept. Returns 1 when dest is already current.
 write_cursor_mcp() {
@@ -845,10 +904,12 @@ for name, config in servers.items():
 
   # Cursor CLI
   if [[ -f "$templates_dir/cursor-cli-config.json" ]]; then
-    if render_home_template "$templates_dir/cursor-cli-config.json" "$HOME/.cursor/cli-config.json"; then
-      log_success "  Generated ~/.cursor/cli-config.json"
+    local cursor_cli_config
+    cursor_cli_config="$(cursor_config_dir)/cli-config.json"
+    if write_cursor_cli_config "$templates_dir/cursor-cli-config.json" "$cursor_cli_config"; then
+      log_success "  Generated ${cursor_cli_config/#$HOME/~}"
     else
-      log_success "  ~/.cursor/cli-config.json already current"
+      log_success "  ${cursor_cli_config/#$HOME/~} already current"
     fi
   fi
 
