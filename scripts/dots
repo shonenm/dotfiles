@@ -13,13 +13,15 @@ commit_mise_lock() {
 
 case "$command" in
   apply)
-    exec "$root/install.sh" "$@"
+    # Do not exec: the interactive zsh `dots` wrapper must return so it can
+    # re-run `mise hook-env` and pick up newly installed tool paths.
+    "$root/install.sh" "$@"
     ;;
   update)
     git -C "$root" pull --ff-only
     "$root/scripts/update-mise-lock"
     commit_mise_lock
-    exec "$root/install.sh" --update "$@"
+    "$root/install.sh" --update "$@"
     ;;
   check)
     exec "$root/scripts/check" "$@"

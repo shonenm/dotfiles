@@ -94,10 +94,12 @@ if command -v mise &>/dev/null; then
   # ディレクトリのまま固まる。ツールを更新しても同じディレクトリに居る限り古い実体を
   # 掴み続けるため、更新経路である dots の後だけ環境を貼り直す。更新していない他の
   # シェルは次の cd (chpwd hook) で追従する。
+  # scripts/dots の apply/update は意図的に exec しない（戻ってこないと本ラッパーが死ぬ）。
   dots() {
     command dots "$@"
     local ret=$?
     eval "$(mise hook-env -s zsh)"
+    rehash
     return $ret
   }
 fi
