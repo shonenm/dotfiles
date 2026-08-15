@@ -120,7 +120,6 @@ elif command -v eza &>/dev/null; then
   alias ll="eza --icons --git -l"
   alias la="eza --icons --git -la"
 fi
-alias l='ls -CF'
 
 # Modern replacements
 command -v rg &>/dev/null && alias grep="rg"
@@ -140,26 +139,11 @@ command -v doggo &>/dev/null && alias dig="doggo"
 command -v xh &>/dev/null && alias http="xh"
 
 # --- hunk (review-first diff viewer / agent レビュー) ---
-# delta は通常の git pager として温存。hunk はここの alias で限定的に使う。
-if command -v hunk &>/dev/null; then
-  alias hd='hunk diff'                      # 作業ツリーをインタラクティブレビュー
-  alias hs='hunk show'                      # コミットをレビュー
-  alias hdw='hunk diff --watch'             # 編集に追従して自動リロード
-  # default branch との3点diff target を返す
-  _hunk_default_ref() {
-    printf '%s...' "$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d/ -f2-)"
-  }
-  alias hdd='hunk diff "$(_hunk_default_ref)"'          # default branch と3点diff
-  alias hddw='hunk diff "$(_hunk_default_ref)" --watch' # それに --watch
-fi
-
-# --- Global Aliases (pipe modifiers) ---
-# Usage: git log L → git log | bat
-alias -g L='| bat'
-alias -g G='| rg'
-alias -g C='| pbcopy'
-alias -g H='| head'
-alias -g T='| tail'
+# delta は通常の git pager として温存。hunk の起動は zsh-abbr の hd/hs/hdw/hdd/hddw から。
+# default branch との3点diff target を返す（hdd/hddw の展開先が参照する）
+_hunk_default_ref() {
+  printf '%s...' "$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d/ -f2-)"
+}
 
 # --- Suffix Aliases (open by extension) ---
 alias -s {md,txt,yaml,yml,toml,json}=nvim
@@ -394,8 +378,7 @@ dexec() {
 codereview-branch() {
   nvim -c "CodeReviewBranch $*"
 }
-alias cr='codereview'
-alias crb='codereview-branch'
+# cr / crb は zsh-abbr（common/zsh-abbr）で定義する
 
 # リモートSSH接続 (CLAUDE_CONTEXT 自動設定)
 # Usage: rssh [ssh-options] <host> [command]
