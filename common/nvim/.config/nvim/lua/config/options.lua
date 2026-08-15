@@ -5,6 +5,12 @@
 -- Root detection: git root優先（LSP rootだとモノレポでサブディレクトリに限定される）
 vim.g.root_spec = { ".git", "lsp", "cwd" }
 
+-- TypeScript LSP: tsgo (TypeScript 7 native)。LazyVim の typescript extra は
+-- この変数で選ばれた 1 つ以外の TS サーバを enabled=false にするため、
+-- servers テーブルで vtsls=false / tsgo={} を手書きすると extra と衝突して
+-- 両方無効化される（gd が graphql-lsp に落ちて No results になる）。
+vim.g.lazyvim_ts_lsp = "tsgo"
+
 -- Clipboard
 vim.opt.clipboard = "unnamedplus"
 
