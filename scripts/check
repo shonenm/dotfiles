@@ -28,6 +28,7 @@ scripts/test-harness-entrypoints.sh
 scripts/test-codex-config.sh
 scripts/test-cursor-config.sh
 scripts/test-pi-permission-gate.sh
+python3 scripts/test-tmux-layout.py
 [[ -z "$(command -v tmux)" ]] || scripts/test-tmux-zoom.sh
 scripts/test-statusline-render.sh
 python3 scripts/test_check_markdown_links.py
