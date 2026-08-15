@@ -523,7 +523,7 @@ statusline に現在選択中ファイルのリポジトリ相対パスを表示
 | `codereview uncheck BASE TARGET PATH...` | shell | ファイルまたはディレクトリ配下を未チェックへ戻す |
 | `codereview-branch [base]` | shell function | `:CodeReviewBranch` を nvim で起動 |
 
-`codereview` の実体は `scripts/codereview`。エイリアス `cr` = `codereview`、`crb` = `codereview-branch`。一覧はパスだけを標準出力するため、そのままコピーしたりLLMへの指示に貼り付けられる。
+`codereview` の実体は `scripts/codereview`。略語（zsh-abbr）は `cr` = `codereview`、`crb` = `codereview-branch`。一覧はパスだけを標準出力するため、そのままコピーしたりLLMへの指示に貼り付けられる。
 
 `:CodeReviewBranch` は3点diff（`merge-base..HEAD`、このブランチ独自のコミットのみ）で開く。`base` 省略時はデフォルトブランチを自動検出する（`origin/HEAD` → なければ `main`/`master`）。ロジックは nvim コマンド側に集約し、シェルコマンドは `nvim -c "..."` で起動するだけ。
 
