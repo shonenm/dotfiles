@@ -16,6 +16,14 @@ fn env_nonempty(key: &str) -> Option<String> {
     std::env::var(key).ok().filter(|s| !s.is_empty())
 }
 
+fn home() -> String {
+    std::env::var("HOME").unwrap_or_default()
+}
+
+fn config_dir() -> String {
+    env_nonempty("XDG_CONFIG_HOME").unwrap_or_else(|| format!("{}/.config", home()))
+}
+
 impl Cursor {
     fn token(&self) -> Result<String> {
         if let Some(t) = env_nonempty("CURSOR_AUTH_TOKEN").or_else(|| env_nonempty("CURSOR_API_KEY"))
@@ -60,18 +68,29 @@ impl Cursor {
             }
         }
 
+        if let Some(t) = self.token_from_cli_file() {
+            return Ok(t);
+        }
         if let Some(t) = self.token_from_sqlite() {
             return Ok(t);
         }
         Err(anyhow!("no cursor token"))
     }
 
+    /// cursor-agent CLI の認証ファイル。keyring も Cursor IDE も無いリモート/コンテナでは
+    /// ここが唯一の取得元になる。
+    fn token_from_cli_file(&self) -> Option<String> {
+        let raw = std::fs::read_to_string(format!("{}/cursor/auth.json", config_dir())).ok()?;
+        extract_token(raw.trim())
+    }
+
     fn token_from_sqlite(&self) -> Option<String> {
-        let home = std::env::var("HOME").unwrap_or_default();
-        let config = std::env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| format!("{home}/.config"));
         let dbs = [
-            format!("{home}/Library/Application Support/Cursor/User/globalStorage/state.vscdb"),
-            format!("{config}/Cursor/User/globalStorage/state.vscdb"),
+            format!(
+                "{}/Library/Application Support/Cursor/User/globalStorage/state.vscdb",
+                home()
+            ),
+            format!("{}/Cursor/User/globalStorage/state.vscdb", config_dir()),
         ];
         let keys = [
             "cursorAuth/accessToken",
@@ -197,6 +216,7 @@ impl Provider for Cursor {
             a_reset: reset.clone(),
             b_pct,
             b_reset: reset,
+            ..Usage::default()
         })
     }
 }
@@ -244,6 +264,7 @@ fn parse_usage(v: &Value) -> Option<Usage> {
             a_reset: reset.clone(),
             b_pct: clamp_pct(w),
             b_reset: reset,
+            ..Usage::default()
         });
     }
 
@@ -272,6 +293,7 @@ fn parse_usage(v: &Value) -> Option<Usage> {
         a_reset: Reset::None,
         b_pct: u,
         b_reset: Reset::None,
+        ..Usage::default()
     })
 }
 
