@@ -56,13 +56,17 @@
   "editor": {
     "defaultBehavior": "agent"
   },
-  "approvalMode": "allowlist",
+  "approvalMode": "unrestricted",
   "statusLine": {
     "type": "command",
     "command": "__HOME__/.cursor/statusline-command.sh",
     "padding": 0,
-    "updateIntervalMs": 300,
+    "updateIntervalMs": 1000,
     "timeoutMs": 2000
+  },
+  "rewind": true,
+  "display": {
+    "showStatusLineRunningTime": true
   },
   "attribution": {
     "attributeCommitsToAgent": true,

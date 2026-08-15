@@ -20,7 +20,7 @@ for pattern in (
     "Shell(git push --force**)",
 ):
     assert pattern in deny, pattern
-assert cli["approvalMode"] == "allowlist"
+assert cli["approvalMode"] == "unrestricted"
 assert cli["statusLine"]["command"].endswith("/.cursor/statusline-command.sh")
 
 assert hooks["version"] == 1
@@ -63,6 +63,40 @@ link_runtime_skills "$src" "$dest" "Cursor"
 [[ "$(readlink "$dest/managed")" == "$src/managed" ]]
 [[ "$(readlink "$dest/external")" == "/external/skills/external" ]]
 [[ -d "$dest/plain" && ! -L "$dest/plain" ]]
+
+[[ "$(CURSOR_CONFIG_DIR= XDG_CONFIG_HOME= ; cursor_config_dir)" == "$HOME/.cursor" ]]
+[[ "$(XDG_CONFIG_HOME=/x ; cursor_config_dir)" == "/x/cursor" ]]
+[[ "$(CURSOR_CONFIG_DIR=/c XDG_CONFIG_HOME=/x ; cursor_config_dir)" == "/c" ]]
+
+mkdir -p "$tmp/cli"
+cat > "$tmp/cli/template.json" <<'EOF'
+{
+  "approvalMode": "allowlist",
+  "statusLine": {"command": "__HOME__/.cursor/statusline-command.sh"},
+  "display": {"showStatusLineRunningTime": true}
+}
+EOF
+cat > "$tmp/cli/live.json" <<'EOF'
+{
+  "authInfo": {"email": "keep@example.com"},
+  "approvalMode": "unrestricted",
+  "display": {"mode": "zen", "showStatusLineRunningTime": false}
+}
+EOF
+write_cursor_cli_config "$tmp/cli/template.json" "$tmp/cli/live.json"
+python3 - "$tmp/cli/live.json" "$HOME" <<'PY'
+import json, sys
+data = json.loads(open(sys.argv[1]).read())
+assert data["authInfo"]["email"] == "keep@example.com"
+assert data["approvalMode"] == "allowlist"
+assert data["display"]["mode"] == "zen"
+assert data["display"]["showStatusLineRunningTime"] is True
+assert data["statusLine"]["command"] == f"{sys.argv[2]}/.cursor/statusline-command.sh"
+PY
+if write_cursor_cli_config "$tmp/cli/template.json" "$tmp/cli/live.json"; then
+  echo "unchanged cursor cli-config was rewritten" >&2
+  exit 1
+fi
 
 mkdir -p "$tmp/mcp"
 cat > "$tmp/mcp/agent.json" <<'EOF'
