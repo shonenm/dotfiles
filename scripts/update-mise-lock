@@ -67,5 +67,13 @@ for path, required in configs:
         missing = required - platforms
         assert not missing, f"mise lockfile is missing {name} platforms: {', '.join(sorted(missing))}"
 PY
+# mise records `provenance_verified` only for the host running `mise lock`, so
+# it flips between macOS and Linux on every run and causes ping-pong commits.
+# Drop it here; per-host cryptographic verification is enforced at install time
+# via `locked_verify_provenance` instead. The stable `provenance = ...` lines
+# (from registry metadata, identical across hosts) still guard downgrades.
+sed '/^provenance_verified = /d' "$tmp/mise/mise.lock" > "$tmp/mise/mise.lock.stable"
+mv "$tmp/mise/mise.lock.stable" "$tmp/mise/mise.lock"
+
 cp "$tmp/mise/mise.lock" "$root/common/mise/.config/mise/mise.lock"
 echo "Updated common/mise/.config/mise/mise.lock"

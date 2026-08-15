@@ -23,6 +23,8 @@ dots apply --no-sudo
 
 mise toolは`common/mise/.config/mise/mise.lock`の固定version・URL・checksumから導入する。追加後は`dots lock`を実行する。Linuxで廃止済みの独自 `github_release` 処理は使用せず、prebuilt releaseはmiseへ登録する。
 
+lockfileはhost非依存に保つ。`mise lock`は実行hostの現在platformにだけ`provenance_verified`を書き込むため、macOSとLinuxで交互にコミットが発生する。`scripts/update-mise-lock`はこの行を除去し、代わりに`locked_verify_provenance = true`で各hostのinstall時にprovenanceを暗号学的に再検証する。host共通の`provenance = ...`行はダウングレード検知に残す。
+
 ## Zsh alias
 
 `common/zsh/.zshrc.common` は、コマンドが存在する場合だけaliasを定義する。同名置換はインストール有無で切り替える必要があるためaliasに残し、コマンドの短縮形はzsh-abbrへ寄せている。
