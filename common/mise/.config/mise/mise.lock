@@ -77,31 +77,31 @@ url = "https://github.com/casey/just/releases/download/1.58.0/just-1.58.0-x86_64
 url_api = "https://api.github.com/repos/casey/just/releases/assets/500510084"
 
 [[tools."aqua:charmbracelet/glow"]]
-version = "2.1.2"
+version = "3.0.0"
 backend = "aqua:charmbracelet/glow"
 
 [tools."aqua:charmbracelet/glow"."platforms.linux-arm64"]
-checksum = "sha256:cf63abebcb50b72909db965d78290e7cecbf17a900e84705dc84addbb6952099"
-url = "https://github.com/charmbracelet/glow/releases/download/v2.1.2/glow_2.1.2_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/charmbracelet/glow/releases/assets/392672283"
+checksum = "sha256:810c39f4691feb75e675a5f5f54b9fa091354e7599d9cf9c9fc9b97e47a99759"
+url = "https://github.com/charmbracelet/glow/releases/download/v3.0.0/glow_3.0.0_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/charmbracelet/glow/releases/assets/510466976"
 provenance = "cosign"
 
 [tools."aqua:charmbracelet/glow"."platforms.linux-x64"]
-checksum = "sha256:6063d4f2af8a82a5f4bba0831e165de9381660aa8b41df4816d0106a265b07d5"
-url = "https://github.com/charmbracelet/glow/releases/download/v2.1.2/glow_2.1.2_Linux_x86_64.tar.gz"
-url_api = "https://api.github.com/repos/charmbracelet/glow/releases/assets/392672271"
+checksum = "sha256:13e05e4b2acc18d2aee44291aefe6325b077ec321b631a0cfa780e8e3bc33f78"
+url = "https://github.com/charmbracelet/glow/releases/download/v3.0.0/glow_3.0.0_Linux_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/charmbracelet/glow/releases/assets/510466923"
 provenance = "cosign"
 
 [tools."aqua:charmbracelet/glow"."platforms.macos-arm64"]
-checksum = "sha256:6f7abfb47de69fbf7b0e67d2fa019cc554916e8b6694f9877212be89fc7ebb8c"
-url = "https://github.com/charmbracelet/glow/releases/download/v2.1.2/glow_2.1.2_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/charmbracelet/glow/releases/assets/392672279"
+checksum = "sha256:4b8a9a32412c0525e4c239e65171706fc5beb6d423608d99fe16788d47b345d3"
+url = "https://github.com/charmbracelet/glow/releases/download/v3.0.0/glow_3.0.0_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/charmbracelet/glow/releases/assets/510466964"
 provenance = "cosign"
 
 [tools."aqua:charmbracelet/glow"."platforms.macos-x64"]
-checksum = "sha256:8cbc78a4947c68e804edf34d36070153fcc5d424873152da83ad6be14fa88ed3"
-url = "https://github.com/charmbracelet/glow/releases/download/v2.1.2/glow_2.1.2_Darwin_x86_64.tar.gz"
-url_api = "https://api.github.com/repos/charmbracelet/glow/releases/assets/392672278"
+checksum = "sha256:b911b90622e686d44bc072112898584a601ed8353276b735835d8cdbcc27f660"
+url = "https://github.com/charmbracelet/glow/releases/download/v3.0.0/glow_3.0.0_Darwin_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/charmbracelet/glow/releases/assets/510466986"
 provenance = "cosign"
 
 [[tools."aqua:charmbracelet/gum"]]
@@ -818,13 +818,13 @@ checksum = "sha256:b515aac953cf37d85d81a563eba37e4fee7b0960994f008cfad2e9fa1a09b
 url = "https://github.com/ouch-org/ouch/releases/download/0.8.1/ouch-x86_64-unknown-linux-gnu.tar.gz"
 url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471619"
 provenance = "github-attestations"
-provenance_verified = true
 
 [tools."github:ouch-org/ouch"."platforms.macos-arm64"]
 checksum = "sha256:ae4b406486c6105913ff86477938a4984636422de2c4766d3c444c580e8bf989"
 url = "https://github.com/ouch-org/ouch/releases/download/0.8.1/ouch-aarch64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471617"
 provenance = "github-attestations"
+provenance_verified = true
 
 [tools."github:ouch-org/ouch"."platforms.macos-x64"]
 checksum = "sha256:5f27ea43b4f6a73609c94a0e5c2b6fb6b69a2f842bdecf040183303a6dda6378"
@@ -833,28 +833,28 @@ url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471616"
 provenance = "github-attestations"
 
 [[tools."github:shonenm/live-pr"]]
-version = "0.5.3"
+version = "0.5.5"
 backend = "github:shonenm/live-pr"
 
 [tools."github:shonenm/live-pr"."platforms.linux-arm64"]
-checksum = "sha256:d85b4cfdb13457e30cc902b9feed7373a5eee692358143ea8310e0529d4393b0"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.5.3/live-pr_0.5.3_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/514529337"
+checksum = "sha256:7d9de3798f27fbbebf121ba80c1c9b041d5c8928d891b6748ab62fe4a00c32ce"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.5.5/live-pr_0.5.5_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515543695"
 
 [tools."github:shonenm/live-pr"."platforms.linux-x64"]
-checksum = "sha256:b77c895968d4885329b43b905d35ca4b129908d82ae8ce587222cc3b6cb330a1"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.5.3/live-pr_0.5.3_Linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/514529347"
+checksum = "sha256:4e0a77c23b31dc6a99236d478485bab087ca74a178bd5306fcfa684982ea2cc7"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.5.5/live-pr_0.5.5_Linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515543691"
 
 [tools."github:shonenm/live-pr"."platforms.macos-arm64"]
-checksum = "sha256:1dad2e3ff4b4c331aedbec228a2cbe651f9d4144ad0f65b768e46b7d9c346438"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.5.3/live-pr_0.5.3_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/514529340"
+checksum = "sha256:dbec16f9980e611c96d68e18c9794153465ed3c428ee6da2f15c2eea0ad246da"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.5.5/live-pr_0.5.5_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515543693"
 
 [tools."github:shonenm/live-pr"."platforms.macos-x64"]
-checksum = "sha256:784f782c54ea7cc884ed894948510f70b6913be1577ee759f7ebb26bff7e4c37"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.5.3/live-pr_0.5.3_Darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/514529338"
+checksum = "sha256:f8fbb8ed63ddcd638e31d912d463181e524d2ef117fde60e02a64197cfbb0c27"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.5.5/live-pr_0.5.5_Darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515543705"
 
 [[tools.go]]
 version = "1.26.5"
@@ -897,7 +897,7 @@ checksum = "sha256:d1b5e999db158c62fe8f7267a4476b035d8bd93b1a605bac24a3f0dd166e3
 url = "https://nodejs.org/dist/v24.19.0/node-v24.19.0-darwin-x64.tar.gz"
 
 [[tools."npm:@xai-official/grok"]]
-version = "1.0.1"
+version = "1.0.3"
 backend = "npm:@xai-official/grok"
 
 [[tools."npm:cspell"]]
@@ -913,21 +913,21 @@ version = "3.14.7"
 backend = "core:python"
 
 [tools.python."platforms.linux-arm64"]
-checksum = "sha256:4dba8d7e06199f841a9d6b54e4eb58d446a5c20c65085a916190dd0162c6e93b"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.14.7+20260807-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
+checksum = "sha256:86dfb106b303fa6a1991f7da42ced3e11576f777be299b3162e06617b6d22542"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260814/cpython-3.14.7+20260814-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.linux-x64"]
-checksum = "sha256:a2478d654ed51d443bae21ec20ad927f116b4f5aae4094ab74918a6aa38f0575"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.14.7+20260807-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+checksum = "sha256:cefba034445d2875408d1fd4d5700ae6731563aeb54dcb39fd8164ab5c457533"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260814/cpython-3.14.7+20260814-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.macos-arm64"]
-checksum = "sha256:532645be202d3df8510ab318ca5faed92060a694c8327144e14fa81f31af0f6d"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.14.7+20260807-aarch64-apple-darwin-install_only_stripped.tar.gz"
+checksum = "sha256:423717c485b9ee7822590b9d973c1b5fb2cda0fe43448ab82a3d44f823bd329c"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260814/cpython-3.14.7+20260814-aarch64-apple-darwin-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.macos-x64"]
-checksum = "sha256:9964e2d618ebea03be8ea3e65ab0ecc0f2b030ce203345b8f92654641fd4de66"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.14.7+20260807-x86_64-apple-darwin-install_only_stripped.tar.gz"
+checksum = "sha256:e085b44e21d9c60acd866680747e1f82800cf9a1630a369da1723976d87bead1"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260814/cpython-3.14.7+20260814-x86_64-apple-darwin-install_only_stripped.tar.gz"
 provenance = "github-attestations"
