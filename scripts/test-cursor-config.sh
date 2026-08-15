@@ -64,7 +64,7 @@ link_runtime_skills "$src" "$dest" "Cursor"
 [[ "$(readlink "$dest/external")" == "/external/skills/external" ]]
 [[ -d "$dest/plain" && ! -L "$dest/plain" ]]
 
-[[ "$(CURSOR_CONFIG_DIR= XDG_CONFIG_HOME= ; cursor_config_dir)" == "$HOME/.cursor" ]]
+[[ "$(CURSOR_CONFIG_DIR='' XDG_CONFIG_HOME='' ; cursor_config_dir)" == "$HOME/.cursor" ]]
 [[ "$(XDG_CONFIG_HOME=/x ; cursor_config_dir)" == "/x/cursor" ]]
 [[ "$(CURSOR_CONFIG_DIR=/c XDG_CONFIG_HOME=/x ; cursor_config_dir)" == "/c" ]]
 
