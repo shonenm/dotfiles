@@ -14,12 +14,14 @@ if ! command -v fzf >/dev/null 2>&1; then
   exit 1
 fi
 
+AUTO_TAG="APPLY_AUTO"
 SAVE_TAG="<save current layout as...>"
 
 while true; do
   CURRENT_SIG="$("$TMUX_LAYOUT" _current-sig 2>/dev/null || echo "?")"
 
   lines=()
+  lines+=("$(printf '>\t%s\t%s' "$AUTO_TAG" "$CURRENT_SIG")")
   lines+=("$(printf '+\t%s\t%s' "$SAVE_TAG" "$CURRENT_SIG")")
   while IFS=$'\t' read -r name sig; do
     if [ "$sig" = "$CURRENT_SIG" ]; then
@@ -34,9 +36,10 @@ while true; do
     printf '%s\n' "${lines[@]}" |
       fzf \
         --prompt='layout> ' \
-        --header='enter=apply/save   ctrl-d=delete   esc=close   * matches current   + save' \
+        --header='enter=apply/auto/save   ctrl-d=delete   esc=close   * matches current   + save' \
         --delimiter=$'\t' \
         --with-nth=1,2,3 \
+        --bind='load:first' \
         --expect=ctrl-d
   )" || exit 0
 
@@ -49,13 +52,22 @@ while true; do
   picked_name="$(printf '%s' "$row" | awk -F '\t' '{print $2}')"
 
   if [ "$key" = "ctrl-d" ]; then
-    if [ "$picked_name" = "$SAVE_TAG" ]; then
+    if [ "$picked_name" = "$AUTO_TAG" ] || [ "$picked_name" = "$SAVE_TAG" ]; then
       continue
     fi
     if gum confirm --default=false "delete preset $picked_name?"; then
       "$TMUX_LAYOUT" delete "$picked_name" || true
     fi
     continue
+  fi
+
+  if [ "$picked_name" = "$AUTO_TAG" ]; then
+    if "$TMUX_LAYOUT" apply-auto; then
+      exit 0
+    fi
+    echo
+    read -rp "Press Enter to close..." _
+    exit 1
   fi
 
   if [ "$picked_name" = "$SAVE_TAG" ]; then

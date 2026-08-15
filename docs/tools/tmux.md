@@ -253,7 +253,7 @@ Neovim 側にも `christoomey/vim-tmux-navigator` プラグインが必要。
 
 ウィンドウの pane 構成（分割構造 + サイズ比）を名前付きで保存し、pane を生成/破棄せず resize だけで復元する。`scripts/tmux-layout`（Python）が実体。
 
-- 保存/適用は `prefix + l` の fzf popup から（`<save current layout as...>` で保存、選択で適用）
+- 保存/適用は `prefix + l` の fzf popup から。初期選択の`APPLY_AUTO`は現在のtopologyに合うpresetを適用する（記録済みの`@layout-preset`を優先、なければ名前順の先頭）。`<save current layout as...>`で保存、preset選択で個別適用
 - マッチングは topology 署名（分割構造）で行うため、ウィンドウサイズが違っても同一構造なら適用可能
 - `tmux-layout save`の保存先は`~/.local/share/tmux-layout/*.layout`。同期するpresetだけ`common/tmux/.local/share/tmux-layout/`へ追加してcommitする
 - 自動適用hookは使用しない。ドリフトした場合は`prefix + l`またはCLIから明示的に再適用する
@@ -262,6 +262,7 @@ Neovim 側にも `christoomey/vim-tmux-navigator` プラグインが必要。
 tmux-layout list            # プリセット一覧（topology 署名付き）
 tmux-layout save <name>     # 現ウィンドウ構成を保存
 tmux-layout apply <name>    # 適用 + @layout-preset 記録
+tmux-layout apply-auto      # 現在のtopologyに合うpresetを自動選択して適用
 ```
 
 ## Session テンプレート (`prefix + N` / smug)
