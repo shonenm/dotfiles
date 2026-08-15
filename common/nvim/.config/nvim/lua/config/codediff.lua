@@ -188,7 +188,15 @@ function M.setup(opts)
     local reviewed_marks = {}
     local review_fingerprints = {}
     local review_marks_changed = false
-    local reviewed_marks_path = vim.fn.stdpath("state") .. "/codediff/reviewed.json"
+    -- live-pr embeds this reviewer with LIVE_PR_REVIEWED_FILE pointing at the
+    -- current PR's reviewed-marks JSON (path → fingerprint). Using it makes
+    -- marks per-PR — stacked PRs stop sharing progress — and keeps live-pr's
+    -- built-in explorer and CodeDiff looking at the same state. Standalone
+    -- CodeDiff keeps the global file.
+    local livepr_reviewed_file = vim.env.LIVE_PR_REVIEWED_FILE
+    if livepr_reviewed_file == "" then livepr_reviewed_file = nil end
+    local reviewed_marks_path = livepr_reviewed_file
+      or (vim.fn.stdpath("state") .. "/codediff/reviewed.json")
 
     local function load_reviewed_marks()
       local file = io.open(reviewed_marks_path, "r")
@@ -222,6 +230,12 @@ function M.setup(opts)
     -- change never touched. The stored fingerprint already clears a mark when
     -- that file's own diff changes, matching GitHub's reviewed state.
     local function review_key(git_root, path)
+      -- live-pr's per-PR file is already scoped to one repository and one PR,
+      -- and live-pr itself writes bare-path keys; matching that format lets
+      -- both tools read each other's marks.
+      if livepr_reviewed_file then
+        return path
+      end
       return table.concat({ git_root or "", path }, "\0")
     end
 
