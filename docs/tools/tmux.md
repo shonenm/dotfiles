@@ -92,7 +92,7 @@ prefix 不要のグループ移動キー（root table）:
 
 - `-E` フラグにより、コマンド終了時に popup 自動クローズ
 - `P` のpgcliは `$DATABASE_URL` があれば使用し、なければ `postgresql://postgres:postgres@localhost:5432/postgres` にフォールバック
-- `G` の live-pr は 85% サイズ（列が多いため lazygit より少し大きめ）。Conversation の Mermaid は optional の `termaid`（`uv tool install`、installer が投入）が PATH にあれば ASCII 図に描画する
+- `G` の live-pr は 85% サイズ（列が多いため lazygit より少し大きめ）。Conversation の Mermaid は optional の `termaid`（`uv tool install`、installer が投入）が PATH にあれば ASCII 図に描画する。シェルから直接起動する場合の略語（zsh-abbr）は `lp` = `live-pr`
 - `j` のScratchpadは永続セッション (`scratch`) を使用。再度 `prefix + j` でトグル（セッション状態を維持）
 - `f` はデフォルトの `find-window` を上書き
 - `F` はプロジェクト名でセッションを作成（既存なら切り替え）。プロジェクトルートに `.tmux` ファイルがあれば新規セッション時に自動実行
