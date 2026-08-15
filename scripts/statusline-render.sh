@@ -27,7 +27,7 @@ printf '%s' "$input" > "$__state_dir/statusline-input.json" 2>/dev/null || true
 US=$'\x1f'
 IFS="$US" read -r cwd model param_summary max_mode used_pct render_width \
   vim_mode worktree agent cost duration_ms lines_added lines_removed \
-  session_name autorun version < <(
+  session_name autorun < <(
   printf '%s' "$input" | jq -r --arg us "$US" '
     [
       ((.workspace.current_dir // .cwd // "") | tostring),
@@ -44,8 +44,7 @@ IFS="$US" read -r cwd model param_summary max_mode used_pct render_width \
       ((.cost.total_lines_added // "") | tostring),
       ((.cost.total_lines_removed // "") | tostring),
       ((.session_name // "") | tostring),
-      (if .autorun == true then "1" else "" end),
-      ((.version // "") | tostring)
+      (if .autorun == true then "1" else "" end)
     ] | join($us)
   '
 )
