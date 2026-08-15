@@ -144,7 +144,10 @@ Pro+ 以降、プラン枠は 2 プールに分かれる。サイドバーはこ
 1. `CURSOR_AUTH_TOKEN` / `CURSOR_API_KEY` 環境変数
 2. macOS Keychain (`cursor-access-token`, cursor-agent login 時)
 3. Linux secret-service (同名)
-4. Cursor IDE の `state.vscdb` (IDE インストール時)
+4. cursor-agent CLI の `${XDG_CONFIG_HOME:-~/.config}/cursor/auth.json` (`accessToken`)
+5. Cursor IDE の `state.vscdb` (IDE インストール時)
+
+keyring も Cursor IDE も無いリモート/コンテナでは 4 が唯一の取得元になる。
 
 手動確認:
 

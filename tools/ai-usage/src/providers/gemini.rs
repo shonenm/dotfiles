@@ -150,6 +150,7 @@ fn parse_quota(v: &Value) -> Option<Usage> {
         a_reset: r1,
         b_pct: w,
         b_reset: r2,
+        ..Usage::default()
     })
 }
 
