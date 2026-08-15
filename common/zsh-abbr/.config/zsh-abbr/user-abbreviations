@@ -72,6 +72,16 @@ abbr gpr="gh pr create"
 abbr gpv="gh pr view --web"
 abbr gic="gh issue create"
 
+# Review (live-pr / codereview / hunk)
+abbr lp="live-pr"
+abbr cr="codereview"
+abbr crb="codereview-branch"
+abbr hd="hunk diff"
+abbr hs="hunk show"
+abbr hdw="hunk diff --watch"
+abbr hdd='hunk diff "$(_hunk_default_ref)"'
+abbr hddw='hunk diff "$(_hunk_default_ref)" --watch'
+
 # Docker Compose
 abbr dc="docker compose"
 abbr dcu="docker compose up -d"
@@ -103,3 +113,13 @@ abbr rc="rcon"
 
 # Mac
 abbr o="open"
+
+# Listing
+abbr l="ls -CF"
+
+# Global（行内どこでも展開。例: git log L）
+abbr -g L="| bat"
+abbr -g G="| rg"
+abbr -g C="| pbcopy"
+abbr -g H="| head"
+abbr -g T="| tail"

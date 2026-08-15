@@ -25,7 +25,7 @@ mise toolは`common/mise/.config/mise/mise.lock`の固定version・URL・checksu
 
 ## Zsh alias
 
-`common/zsh/.zshrc.common` は、コマンドが存在する場合だけaliasを定義する。
+`common/zsh/.zshrc.common` は、コマンドが存在する場合だけaliasを定義する。同名置換はインストール有無で切り替える必要があるためaliasに残し、コマンドの短縮形はzsh-abbrへ寄せている。
 
 | 入力 | 実行されるtool |
 |---|---|
@@ -45,9 +45,11 @@ mise toolは`common/mise/.config/mise/mise.lock`の固定version・URL・checksu
 
 `rip` の削除先は `$GRAVEYARD=~/.local/share/graveyard`。30日を超えた項目は、必要なときに`graveyard-purge`で削除する。Zsh起動時にはgraveyardを走査しない。
 
-## グローバルalias
+## グローバルabbreviation
 
-| Alias | 展開 |
+行内のどこでも展開する。正本は `common/zsh-abbr/.config/zsh-abbr/user-abbreviations`（`abbr -g`）。
+
+| 略語 | 展開 |
 |---|---|
 | `L` | `| bat` |
 | `G` | `| rg` |
