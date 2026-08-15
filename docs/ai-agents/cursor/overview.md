@@ -10,8 +10,8 @@
 | --- | --- | --- |
 | cursor-agent CLI | ヘッドレス Agent | `scripts/mac.sh` / `config/tools.linux.bash` (curl install) |
 | rules | グローバル振る舞いルール | `common/cursor/.cursor/rules/` → `~/.cursor/rules/` |
-| cli-config.json | CLI 権限・承認モード | `templates/cursor-cli-config.json` → `~/.cursor/cli-config.json` |
-| statusline | CLI フッター (ctx/model/git) | `common/cursor/.cursor/statusline-command.sh` (Claude と共有) |
+| cli-config.json | CLI 権限・承認モード | `templates/cursor-cli-config.json` → `$XDG_CONFIG_HOME/cursor/cli-config.json` |
+| statusline | CLI フッター (ctx/model/git/plan) | `common/cursor/.cursor/statusline-command.sh` → `scripts/statusline-render.sh`（Claude と同実装） |
 | hooks.json | tmux状態・完了通知・`/tmp` deny | `templates/cursor-hooks.json` → `~/.cursor/hooks.json` |
 | mcp.json | 共有 MCP | `common/agent/.config/agent/mcp.json` → `~/.cursor/mcp.json` |
 | 共有 skills | ツール横断スキル | `common/agent/.config/agent/skills/` → `~/.cursor/skills/` |
@@ -31,7 +31,7 @@ cd ~/dotfiles
 
 1. `cursor-agent` CLI をインストール (未インストール時)
 2. `stow` で `common/cursor/` をリンク (`~/.cursor/rules/`)
-3. `~/.cursor/cli-config.json` と `~/.cursor/hooks.json` をテンプレートから生成
+3. `cli-config.json`（config dir）と `~/.cursor/hooks.json` をテンプレートから生成
 4. 共有 skill を `~/.cursor/skills/` へ symlink、有効な MCP を `~/.cursor/mcp.json` へ生成
 5. 1Password から Cursor Webhook をキャッシュ (エントリがある場合)
 
@@ -40,7 +40,7 @@ cd ~/dotfiles
 ```bash
 cursor-agent --version
 ls -la ~/.cursor/rules/communication.mdc   # dotfiles へのシンボリックリンク
-test -f ~/.cursor/cli-config.json && echo "cli-config ok"
+test -f "${XDG_CONFIG_HOME:-$HOME/.config}/cursor/cli-config.json" && echo "cli-config ok"
 test -f ~/.cursor/hooks.json && echo "hooks ok"
 test -f ~/.cursor/mcp.json && echo "mcp ok"
 ls ~/.cursor/skills/
@@ -111,15 +111,39 @@ cursor-agent --mode ask "explain how auth middleware works"
 
 ## Statusline (CLI フッター)
 
-Claude Code と同じ `statusLine.command` 形式。`install.sh` で `~/.cursor/cli-config.json` に設定が入り、`~/.cursor/statusline-command.sh` が stow される。
+Claude Code と同じ `statusLine.command` 形式。`install.sh` で cli-config.json に設定が入り、`~/.cursor/statusline-command.sh` が stow される。実装は `scripts/statusline-render.sh`（Claude と共有）。
 
-表示内容 (Claude と同等):
+表示内容:
 
-- cwd / git branch / model
-- context 使用率ゲージ (`ctx:████░░░░ 34%`)
-- cost / duration / diff lines (API が返す場合)
+- cwd / git branch / model（`param_summary`・`MAX`・`auto` を含む）
+- context 使用率ゲージ（50% 黄・80% 赤）
+- Cursor プラン枠（`~/.cache/tmux/cursor_usage` = `ai-usage cursor` と同じキャッシュ。`cursor N% · other M%`）
+- worktree / vim / session_name（幅に余裕があるとき）
+- cost / duration / diff lines（Claude 側 API が返す場合）
 
-Cursor CLI 内でフッターが見えない場合は `cursor-agent` を再起動する。
+幅（`render_width_chars`）で縮退する: ≥100 detailed、≥70 balanced、<70 minimal（model + ctx + plan）。
+
+状態ダンプは `~/.local/state/cursor/statusline-input.json`（Claude は `…/claude/…`）。更新間隔は 1000ms。
+
+Cursor CLI 内でフッターが見えない場合は `cursor-agent` を再起動する。テンプレート変更後は `dots apply`（または `install.sh` の AI config 生成）で `cli-config.json` を更新する。
+
+### cli-config.json のパス
+
+`cursor-agent` は `CURSOR_CONFIG_DIR` → `$XDG_CONFIG_HOME/cursor` → `~/.cursor` の順で config dir を解決する。dotfiles は `XDG_CONFIG_HOME=~/.config` を設定しているため、正本は `~/.config/cursor/cli-config.json`。`~/.cursor` は data dir 側で、`hooks.json` / `mcp.json` / `rules/` / `skills/` はそのまま。
+
+このファイルは CLI 自身も認証情報・モデル選択・キャッシュの保存に使うため、`install.sh` は上書きせずテンプレートのキーだけをマージする（`write_cursor_cli_config`）。
+
+### CLI UX でできること / できないこと
+
+| 欲しいもの | Cursor CLI | 備考 |
+|---|---|---|
+| message stash | 不可 | Claude Code 機能。本体に無い |
+| C-r 履歴検索 | 不可 | `Ctrl+R` は差分レビュー（`/changes`） |
+| `/goal` | 限定 | changelog 上は gated。公式 slash 一覧には未掲載 |
+| `/workflow` | 不可 | pi（`pi-dynamic-workflows`）専用 |
+| 入力欄の視覚行 ↑↓ | 不可 | 設定項目なし。`↑` は履歴／論理行。`/vim` で hjkl は可 |
+| `/rewind` | 可 | テンプレートで `rewind: true` |
+| `/setup-terminal` | 可 | Shift+Enter 等の端末キー設定 |
 
 ## tmux 使用量表示
 
@@ -202,7 +226,7 @@ Cursor CLI をそのままバックエンドにする薄いラッパ。導入は
 | 項目 | Claude Code | Cursor |
 | --- | --- | --- |
 | インストール | npm global | curl (`cursor.com/install`) |
-| グローバル設定 | `~/.claude/settings.json` (生成) | `~/.cursor/cli-config.json` (生成) |
+| グローバル設定 | `~/.claude/settings.json` (生成) | `~/.config/cursor/cli-config.json` (マージ) |
 | ルール形式 | `.claude/rules/*.md` | `.cursor/rules/*.mdc` |
 | 共有 skill | `~/.claude/skills/` (stow) | `~/.cursor/skills/` (install.sh link) + Claude 互換 |
 | MCP | `claude mcp add-json` | `~/.cursor/mcp.json` (共有 mcp.json から生成) |
