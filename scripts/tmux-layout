@@ -304,6 +304,21 @@ def cmd_apply(args: argparse.Namespace) -> int:
     return apply_preset(args.name, current_window_id(args.pane))
 
 
+def cmd_apply_auto(args: argparse.Namespace) -> int:
+    """Apply the remembered or first preset matching the current topology."""
+    ensure_dir()
+    win = current_window_id(args.pane)
+    current_tree = parse_layout(strip_checksum(tmux_get("#{window_layout}", win)))
+    matches = find_siblings(topology(current_tree))
+    if not matches:
+        print("no preset matches current topology", file=sys.stderr)
+        return 2
+
+    remembered = tmux_get("#{@layout-preset}", win)
+    name = remembered if remembered in matches else matches[0]
+    return apply_preset(name, win)
+
+
 def cmd_autoapply(args: argparse.Namespace) -> int:
     """Hook entry: re-snap the focused window to its remembered preset, if any.
 
@@ -366,6 +381,11 @@ def build_parser() -> argparse.ArgumentParser:
     a = sub.add_parser("apply", help="apply preset <name> to current window")
     a.add_argument("name")
     a.set_defaults(func=cmd_apply)
+
+    sub.add_parser(
+        "apply-auto",
+        help="apply the remembered or first preset matching the current topology",
+    ).set_defaults(func=cmd_apply_auto)
 
     sub.add_parser(
         "autoapply",
