@@ -1,6 +1,9 @@
 [settings]
 lockfile = true
 minimum_release_age = "3d"
+# Re-verify provenance per host at install time. The lockfile intentionally omits
+# the host-specific `provenance_verified` flag (see scripts/update-mise-lock).
+locked_verify_provenance = true
 
 [tools]
 node = "lts"
