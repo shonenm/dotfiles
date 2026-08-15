@@ -818,13 +818,13 @@ checksum = "sha256:b515aac953cf37d85d81a563eba37e4fee7b0960994f008cfad2e9fa1a09b
 url = "https://github.com/ouch-org/ouch/releases/download/0.8.1/ouch-x86_64-unknown-linux-gnu.tar.gz"
 url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471619"
 provenance = "github-attestations"
-provenance_verified = true
 
 [tools."github:ouch-org/ouch"."platforms.macos-arm64"]
 checksum = "sha256:ae4b406486c6105913ff86477938a4984636422de2c4766d3c444c580e8bf989"
 url = "https://github.com/ouch-org/ouch/releases/download/0.8.1/ouch-aarch64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471617"
 provenance = "github-attestations"
+provenance_verified = true
 
 [tools."github:ouch-org/ouch"."platforms.macos-x64"]
 checksum = "sha256:5f27ea43b4f6a73609c94a0e5c2b6fb6b69a2f842bdecf040183303a6dda6378"
@@ -833,28 +833,28 @@ url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471616"
 provenance = "github-attestations"
 
 [[tools."github:shonenm/live-pr"]]
-version = "0.5.5"
+version = "0.6.0"
 backend = "github:shonenm/live-pr"
 
 [tools."github:shonenm/live-pr"."platforms.linux-arm64"]
-checksum = "sha256:7d9de3798f27fbbebf121ba80c1c9b041d5c8928d891b6748ab62fe4a00c32ce"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.5.5/live-pr_0.5.5_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515543695"
+checksum = "sha256:34be4330c782a322c7143266ea1074990949148c417e99217c540afeee89cf2b"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.0/live-pr_0.6.0_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515720868"
 
 [tools."github:shonenm/live-pr"."platforms.linux-x64"]
-checksum = "sha256:4e0a77c23b31dc6a99236d478485bab087ca74a178bd5306fcfa684982ea2cc7"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.5.5/live-pr_0.5.5_Linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515543691"
+checksum = "sha256:6a21a172bc9614fe2fc564a18144a78b32b3791a88fe4e557067f7c14811f7ed"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.0/live-pr_0.6.0_Linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515720876"
 
 [tools."github:shonenm/live-pr"."platforms.macos-arm64"]
-checksum = "sha256:dbec16f9980e611c96d68e18c9794153465ed3c428ee6da2f15c2eea0ad246da"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.5.5/live-pr_0.5.5_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515543693"
+checksum = "sha256:5e2215924ef993c6dfc235a8f40dc9c778b115ac6e47adb117d118edd5c6359f"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.0/live-pr_0.6.0_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515720869"
 
 [tools."github:shonenm/live-pr"."platforms.macos-x64"]
-checksum = "sha256:f8fbb8ed63ddcd638e31d912d463181e524d2ef117fde60e02a64197cfbb0c27"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.5.5/live-pr_0.5.5_Darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515543705"
+checksum = "sha256:f0dc0bb96f87509348c59c398dd2bc2242cfa1b3bccfa9a57fe58ddbabb364a8"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.0/live-pr_0.6.0_Darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/515720867"
 
 [[tools.go]]
 version = "1.26.5"
