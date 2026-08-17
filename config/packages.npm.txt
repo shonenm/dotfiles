@@ -1,7 +1,7 @@
 # NPM packages to install globally (shared across all platforms)
 
 # AI CLI tools
-@anthropic-ai/claude-code@2.1.226
+@anthropic-ai/claude-code@2.1.232
 @openai/codex@0.147.0
 @google/gemini-cli@0.54.4
 @earendil-works/pi-coding-agent@0.84.1
