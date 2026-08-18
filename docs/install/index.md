@@ -95,7 +95,7 @@ dots lock              # maintainer向け: mise lockfileを更新
 - GitHub Actions: commit SHAを固定
 - 更新: `dots update`はfast-forward後にmise.lockを更新し、変わった場合はmise.lockだけをcommitする（pushしない）。`dots lock`はlock更新のみ。週次workflowもlockfileを更新する。原則3日以上経過したreleaseだけを対象とし、自作toolはtool単位で待機期間を無効化する
 - 適用: `dots apply`はコミット済みlockfileを各環境へ反映する。`dots update`はlock更新後に同じapplyを行う
-- apply/updateは`exec`しない。interactive zshの`dots`ラッパーが戻り値の後に`mise hook-env`と`rehash`を走らせ、更新したtool（例: live-pr）のPATHをその場で切り替える。`exec`するとラッパーに戻らず、`exec zsh`するまで古い実体を掴み続ける
+- apply/updateは`exec`しない。interactive zshの`dots`ラッパーが戻り値の後に`mise hook-env --force`と`rehash`を走らせ、更新したtool（例: live-pr）のPATHをその場で切り替える。`exec`するとラッパーに戻らず、`exec zsh`するまで古い実体を掴み続ける
 
 ## CI
 

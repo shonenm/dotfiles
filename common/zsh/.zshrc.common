@@ -87,18 +87,20 @@ export FORGIT_STASH_FZF_OPTS='
 if command -v mise &>/dev/null; then
   eval "$(mise activate zsh)"
   # ponytail: chpwd still switches project environments; run
-  # `eval "$(mise hook-env -s zsh)"` after editing mise config without changing directories.
+  # `eval "$(mise hook-env -s zsh --force)"` after editing mise config without changing directories.
   add-zsh-hook -d precmd _mise_hook_precmd
 
   # precmd を外したぶん、PATH に入るのは activate 時点のバージョン固定の install
   # ディレクトリのまま固まる。ツールを更新しても同じディレクトリに居る限り古い実体を
   # 掴み続けるため、更新経路である dots の後だけ環境を貼り直す。更新していない他の
   # シェルは次の cd (chpwd hook) で追従する。
+  # --force が必須: tool を install しただけでは watch 対象ファイルが変わらないため、
+  # hook-env は early exit して何も出力せず、PATH が古い install ディレクトリに残る。
   # scripts/dots の apply/update は意図的に exec しない（戻ってこないと本ラッパーが死ぬ）。
   dots() {
     command dots "$@"
     local ret=$?
-    eval "$(mise hook-env -s zsh)"
+    eval "$(mise hook-env -s zsh --force)"
     rehash
     return $ret
   }

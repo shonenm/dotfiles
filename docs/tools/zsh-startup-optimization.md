@@ -59,11 +59,13 @@ eval "$(mise activate zsh)"
 add-zsh-hook -d precmd _mise_hook_precmd
 ```
 
-同じdirectory内でmise設定を書き換えた場合は、directoryを移動するか次を実行する。
+同じdirectory内でmise設定を書き換えた場合、またはtoolを更新した場合は、directoryを移動するか次を実行する。
 
 ```bash
-eval "$(mise hook-env -s zsh)"
+eval "$(mise hook-env -s zsh --force)"
 ```
+
+`--force`が必要な理由: `mise hook-env`はwatch対象ファイル（mise設定）が変わっていないと early exit して何も出力しない。`mise install`でtoolのversionが増えただけでは設定は変わらないため、`--force`なしではPATHが古い install directoryを指したままになる（`dots`ラッパーも同じ理由で`--force`付きで呼ぶ）。
 
 `mise activate --shims`はtool実行ごとにshim解決コストを移すため使用しない。
 
