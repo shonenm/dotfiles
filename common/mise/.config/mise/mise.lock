@@ -572,28 +572,28 @@ version = "1.7.3"
 backend = "cargo:tealdeer"
 
 [[tools.cloudflared]]
-version = "2026.8.1"
+version = "2026.8.2"
 backend = "aqua:cloudflare/cloudflared"
 
 [tools.cloudflared."platforms.linux-arm64"]
-checksum = "sha256:6d517efc10dfce17440177bd7011909166eab44bae0f6998182183df717c7dba"
-url = "https://github.com/cloudflare/cloudflared/releases/download/2026.8.1/cloudflared-linux-arm64"
-url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/513178896"
+checksum = "sha256:7747d94570fb390cf47dcb4f9555c193c6355cda9793f0d878d9049e5d6a7790"
+url = "https://github.com/cloudflare/cloudflared/releases/download/2026.8.2/cloudflared-linux-arm64"
+url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/514390092"
 
 [tools.cloudflared."platforms.linux-x64"]
-checksum = "sha256:98d8eadbfdf8c7ec994e08260599c9be991e7833c746f98692b18bdf71c9b9dc"
-url = "https://github.com/cloudflare/cloudflared/releases/download/2026.8.1/cloudflared-linux-amd64"
-url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/513178674"
+checksum = "sha256:fcfb02b575a52ca1af2e3267af4e1517bcdeb30ac48c834c69abaed3c0576ad2"
+url = "https://github.com/cloudflare/cloudflared/releases/download/2026.8.2/cloudflared-linux-amd64"
+url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/514389937"
 
 [tools.cloudflared."platforms.macos-arm64"]
-checksum = "sha256:2d42cd4448f95a5383f0c5c9777d0c29ff70c275d024945862502bee4db174b4"
-url = "https://github.com/cloudflare/cloudflared/releases/download/2026.8.1/cloudflared-darwin-arm64.tgz"
-url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/513177980"
+checksum = "sha256:9042c2c5d8b2de78e60f313d5fb31b6c5c1cebde787a3caf1f2c9588084ac442"
+url = "https://github.com/cloudflare/cloudflared/releases/download/2026.8.2/cloudflared-darwin-arm64.tgz"
+url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/514389484"
 
 [tools.cloudflared."platforms.macos-x64"]
-checksum = "sha256:5a36a4d8acce7f32bbf2779b54bf5004fa6ae25a44b1e6831fc056d52c201043"
-url = "https://github.com/cloudflare/cloudflared/releases/download/2026.8.1/cloudflared-darwin-amd64.tgz"
-url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/513178612"
+checksum = "sha256:f1727723c586500e2092368ae21871b3df7ddfd2cb097f22d81bee4a9c458bb4"
+url = "https://github.com/cloudflare/cloudflared/releases/download/2026.8.2/cloudflared-darwin-amd64.tgz"
+url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/514389917"
 
 [[tools.deno]]
 version = "2.9.5"
@@ -832,28 +832,28 @@ url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471616"
 provenance = "github-attestations"
 
 [[tools."github:shonenm/live-pr"]]
-version = "0.6.4"
+version = "0.6.6"
 backend = "github:shonenm/live-pr"
 
 [tools."github:shonenm/live-pr"."platforms.linux-arm64"]
-checksum = "sha256:dd305c9de41c61e9ba78f439bffb0a0c0e0a57cb9c0fcc96216d190767c1003d"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.6.4/live-pr_0.6.4_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/517840017"
+checksum = "sha256:4b4086b0054792380bb306244ebe186f238614fd2e7740c3d4762a97e79267e5"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.6/live-pr_0.6.6_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/519041890"
 
 [tools."github:shonenm/live-pr"."platforms.linux-x64"]
-checksum = "sha256:92266b514f02390b082dc45329deaafb2bbaacc6e95653d11f6bc2dd750b0116"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.6.4/live-pr_0.6.4_Linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/517840019"
+checksum = "sha256:1302aaedb46637b4e4f37bbb5f55ef6d15aa84acfcc27bce32fb4921e80e3d75"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.6/live-pr_0.6.6_Linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/519041888"
 
 [tools."github:shonenm/live-pr"."platforms.macos-arm64"]
-checksum = "sha256:a58ce6a8adea9ef767366a62ab6e41bc07caa33505ef751a1e5df33fe6962051"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.6.4/live-pr_0.6.4_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/517840018"
+checksum = "sha256:f289800f814287683d03e581df8091736bb2daa198c420228c75a9eca9be5fea"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.6/live-pr_0.6.6_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/519041891"
 
 [tools."github:shonenm/live-pr"."platforms.macos-x64"]
-checksum = "sha256:f31c31b9fc25f870871c8ff17b5c5ea40af2c169a3306e69a0ed5014a7baee8a"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.6.4/live-pr_0.6.4_Darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/517840016"
+checksum = "sha256:a8e94c4fefeb522bc75e96d7a363a1b395d6c08bccbb6e2d0900543788f78c34"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.6/live-pr_0.6.6_Darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/519041889"
 
 [[tools.go]]
 version = "1.26.6"
