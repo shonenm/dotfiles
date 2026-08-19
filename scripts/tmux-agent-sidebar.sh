@@ -10,9 +10,14 @@
 #   ──────────────
 #   ▸ work
 #     ▶ main  󰌆 󰔟 ●
+#       |- feat/x
 #       api   ●
+#       |- main
 #   ▾ ungrouped
 #       scratch
+#
+# ブランチはセッション行の下に "|- <branch>" として1行足す。session_path、
+# それが非repoなら最初の git pane の cwd を使う。detached / 非repo は行ごと省略。
 #
 # Usage:
 #   tmux-agent-sidebar.sh run      # サイドバー pane 内ループ(自動更新・非フリッカー)
@@ -125,6 +130,34 @@ session_glyphs() {
   printf '%s\n' "$rows" | awk -F "$TAB" -v s="$sess" '$1 == s { printf "%s ", $3 }'
 }
 
+session_branch() {
+  local sess="$1"
+  printf '%s\n' "$SB_BRANCHES" | awk -F "$TAB" -v s="$sess" '$1 == s { print $2; exit }'
+}
+
+# session → branch。session_path を優先し、非repoならその session の pane cwd を順に試す。
+collect_session_branches() {
+  local sess path branch psess ppath pane_paths
+  pane_paths=$(agent_index_panes | awk -F "$US" -v OFS='\t' '
+    $1 != "" && $1 != $11 && $7 != "" { print $2, $7 }
+  ')
+  while IFS="$US" read -r sess _g _a path; do
+    [[ -z "$sess" ]] && continue
+    branch=""
+    if [[ -n "$path" ]]; then
+      branch=$(git -C "$path" -c gc.auto=0 branch --show-current 2>/dev/null || true)
+    fi
+    if [[ -z "$branch" && -n "$pane_paths" ]]; then
+      while IFS=$'\t' read -r psess ppath; do
+        [[ "$psess" == "$sess" && -n "$ppath" ]] || continue
+        branch=$(git -C "$ppath" -c gc.auto=0 branch --show-current 2>/dev/null || true)
+        [[ -n "$branch" ]] && break
+      done <<< "$pane_paths"
+    fi
+    [[ -n "$branch" ]] && printf '%s\t%s\n' "$sess" "$branch"
+  done < <(agent_index_sessions)
+}
+
 # 各 AI の使用量(セッションリミット)を2行で出力(1行目: アイコン+残り時間 / 2行目: ゲージ+%)
 # usage スクリプト出力 "ICON GAUGE PCT/PCT REMAINING"(失敗時 "ICON --")をパースして整形。
 # 各 usage を毎 render 走らせると重いので結果を30秒キャッシュする。
@@ -177,13 +210,14 @@ usage_section() {
 }
 
 # 全サイドバー共通の素材。pane ごとに違うのは現在 session / group と pane 寸法だけなので、
-# 収集(index 読み・jq・usage)は 1 tick に 1 回で済む。
-SB_ROWS=""; SB_TOTAL=0; SB_SESSIONS=""; SB_SESSION_COUNT=0; SB_USAGE=""
+# 収集(index 読み・jq・usage・branch)は 1 tick に 1 回で済む。
+SB_ROWS=""; SB_TOTAL=0; SB_SESSIONS=""; SB_SESSION_COUNT=0; SB_BRANCHES=""; SB_USAGE=""
 collect_frame_inputs() {
   SB_ROWS=$(collect_agents | sort -t$'\t' -k1,1 -k2,2n)
   SB_TOTAL=$(printf '%s' "$SB_ROWS" | grep -c . 2>/dev/null)
   SB_SESSIONS=$(agent_index_sessions | awk -F "$US" -v tab="$TAB" '{print $1 tab $2}' | sort)
   SB_SESSION_COUNT=$(printf '%s' "$SB_SESSIONS" | grep -c . 2>/dev/null)
+  SB_BRANCHES=$(collect_session_branches)
   SB_USAGE=$(usage_section)
 }
 
@@ -208,7 +242,7 @@ build_frame() {
   if [[ -z "$sessions" ]]; then
     top+=("$(printf '%s(セッションなし)%s' "$C_DIM" "$C_RST")")
   else
-    local groups=() g s label marker name icons line
+    local groups=() g s label marker name icons line br
     while IFS= read -r g; do [[ -n "$g" ]] && groups+=("$g"); done < <(printf '%s\n' "$sessions" | awk -F "$TAB" '$2 != "" { print $2 }' | sort -u)
     if printf '%s\n' "$sessions" | awk -F "$TAB" '$2 == "" { found = 1 } END { exit !found }'; then groups+=(""); fi
     for g in "${groups[@]}"; do
@@ -231,6 +265,8 @@ build_frame() {
         else
           top+=("$line")
         fi
+        br=$(session_branch "$s")
+        [[ -n "$br" ]] && top+=("$(printf '%s    |- %s%s' "$C_DIM" "$(trunc_w "$br" $(( WIDTH - 7 )))" "$C_RST")")
       done < <(printf '%s\n' "$sessions" | awk -F "$TAB" -v g="$g" '$2 == g { print $1 }')
     done
   fi
@@ -265,8 +301,10 @@ build_frame() {
     fi
   done
   # \033[?2026h/l = 同期更新の開始/終了(tmux 3.3+/Ghostty 対応。非対応端末では無視され無害)。
+  # \033[?7l = auto-wrap 無効。pane 幅を超えた行が折り返すと以降の行がずれて
+  # ブランチ行が消えたように見える。端で切り落とす。
   # 間に ホーム移動 → フレーム → 残行消去 をまとめ、端末が完成フレームのみ表示する。
-  printf '\033[?2026h\033[H%s\033[J\033[?2026l' "$frame"
+  printf '\033[?2026h\033[?7l\033[H%s\033[J\033[?2026l' "$frame"
 }
 
 DAEMON_PID_FILE="$(agent_runtime_dir)/sidebar-daemon.pid"

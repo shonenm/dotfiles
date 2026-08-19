@@ -63,7 +63,7 @@ refresh_unlocked() {
     rm -f "$panes_tmp" "$sessions_tmp" "$updated_tmp"
     return 1
   }
-  tmux list-sessions -F "#{session_name}${US}#{@group}${US}#{session_attached}" | agent_unvis >"$sessions_tmp" || {
+  tmux list-sessions -F "#{session_name}${US}#{@group}${US}#{session_attached}${US}#{session_path}" | agent_unvis >"$sessions_tmp" || {
     rm -f "$panes_tmp" "$sessions_tmp" "$updated_tmp"
     return 1
   }

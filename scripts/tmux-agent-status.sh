@@ -19,7 +19,7 @@ agent_index_panes() {
 
 agent_index_sessions() {
   "$SCRIPT_DIR/tmux-agent-index.sh" sessions 2>/dev/null || tmux list-sessions -F \
-    "#{session_name}${US}#{@group}${US}#{session_attached}" | agent_unvis
+    "#{session_name}${US}#{@group}${US}#{session_attached}${US}#{session_path}" | agent_unvis
 }
 
 C_RED=$'\e[38;5;203m'; C_AMBER=$'\e[38;5;214m'; C_DIM=$'\e[2m'; C_BOLD=$'\e[1m'; C_RST=$'\e[0m'
