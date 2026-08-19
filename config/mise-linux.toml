@@ -18,13 +18,12 @@
 #                 install.shではrustのpost_installでcargoがPATHに乗る。
 
 [tools]
-# --- aqua registry (24) ---
+# --- aqua registry (23) ---
 "aqua:junegunn/fzf" = "latest"
 "aqua:fastfetch-cli/fastfetch" = "latest"
 "aqua:dandavison/delta" = "latest"
 "aqua:x-motemen/ghq" = "latest"
 "aqua:neovim/neovim" = "latest"
-"aqua:tree-sitter/tree-sitter" = "latest"  # nvim-treesitter (main) のパーサー generate/build に必須
 "aqua:chmln/sd" = "latest"
 "aqua:bootandy/dust" = "latest"
 "aqua:ClementTsang/bottom" = "latest"
@@ -55,3 +54,11 @@
 # --- cargo ---
 "cargo:grex" = "latest"
 "cargo:tealdeer" = "latest"
+# nvim-treesitter (main) のパーサー generate/build に必須。GitHub Release バイナリは
+# 新しい glibc (2.39) を要求しホストで動かないことがあるため、ソースビルドする。
+"cargo:tree-sitter-cli" = "latest"
+
+[settings]
+# cargo-binstall は GitHub Release のビルド済みバイナリを落とすため、glibc 非互換を
+# 避けられない。cargo backend は常にソースビルドさせる。
+cargo.binstall = false
