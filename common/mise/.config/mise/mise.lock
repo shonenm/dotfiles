@@ -412,28 +412,28 @@ url = "https://github.com/sharkdp/hyperfine/releases/download/v1.20.0/hyperfine-
 url_api = "https://api.github.com/repos/sharkdp/hyperfine/releases/assets/317832526"
 
 [[tools."aqua:sxyazi/yazi"]]
-version = "26.5.6"
+version = "26.8.15"
 backend = "aqua:sxyazi/yazi"
 
 [tools."aqua:sxyazi/yazi"."platforms.linux-arm64"]
-checksum = "sha256:dff4a6774069bdde616c3cd145275b462a5887229cd9bf6341e78063da37e84f"
-url = "https://github.com/sxyazi/yazi/releases/download/v26.5.6/yazi-aarch64-unknown-linux-musl.zip"
-url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/412871963"
+checksum = "sha256:dfaafadd3a80a18ccbd24c32be4888178202ea96f784a9b1021d526c908cab4b"
+url = "https://github.com/sxyazi/yazi/releases/download/v26.8.15/yazi-aarch64-unknown-linux-musl.zip"
+url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/515472937"
 
 [tools."aqua:sxyazi/yazi"."platforms.linux-x64"]
-checksum = "sha256:1031a02560d053301537195a6661d227c15cb4ce5c30481050b31e2b88681bff"
-url = "https://github.com/sxyazi/yazi/releases/download/v26.5.6/yazi-x86_64-unknown-linux-musl.zip"
-url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/412871954"
+checksum = "sha256:a6702034790afcdbb546b73b288c9b184a751fa3f2f17f0ad4d26fc302fb8d45"
+url = "https://github.com/sxyazi/yazi/releases/download/v26.8.15/yazi-x86_64-unknown-linux-musl.zip"
+url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/515472939"
 
 [tools."aqua:sxyazi/yazi"."platforms.macos-arm64"]
-checksum = "sha256:7abd71725e2fe27bed036becbf6ce79fa17964eb68491d34190011c94b8c7ca8"
-url = "https://github.com/sxyazi/yazi/releases/download/v26.5.6/yazi-aarch64-apple-darwin.zip"
-url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/412871956"
+checksum = "sha256:3f54907ea08abe96506f4b22239340ed8923a6aeaeae78f33d59bce57daca4cd"
+url = "https://github.com/sxyazi/yazi/releases/download/v26.8.15/yazi-aarch64-apple-darwin.zip"
+url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/515472942"
 
 [tools."aqua:sxyazi/yazi"."platforms.macos-x64"]
-checksum = "sha256:6846066f992c1688d8ec77431a3ab53f5ef268019fcef86e5649b8c27010868d"
-url = "https://github.com/sxyazi/yazi/releases/download/v26.5.6/yazi-x86_64-apple-darwin.zip"
-url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/412871953"
+checksum = "sha256:70bb2bcf57d8af862a54e2d12f2fddceefb9aa4ba3783e9a4dcbf2a8e64aacb3"
+url = "https://github.com/sxyazi/yazi/releases/download/v26.8.15/yazi-x86_64-apple-darwin.zip"
+url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/515472934"
 
 [[tools."aqua:topgrade-rs/topgrade"]]
 version = "17.9.0"
@@ -832,28 +832,28 @@ url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471616"
 provenance = "github-attestations"
 
 [[tools."github:shonenm/live-pr"]]
-version = "0.6.6"
+version = "0.6.7"
 backend = "github:shonenm/live-pr"
 
 [tools."github:shonenm/live-pr"."platforms.linux-arm64"]
-checksum = "sha256:4b4086b0054792380bb306244ebe186f238614fd2e7740c3d4762a97e79267e5"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.6.6/live-pr_0.6.6_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/519041890"
+checksum = "sha256:70f63af83dbd219feeb0a4e11202e563c73ddec7199dee2ace43338c09cc7a56"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.7/live-pr_0.6.7_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/520329725"
 
 [tools."github:shonenm/live-pr"."platforms.linux-x64"]
-checksum = "sha256:1302aaedb46637b4e4f37bbb5f55ef6d15aa84acfcc27bce32fb4921e80e3d75"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.6.6/live-pr_0.6.6_Linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/519041888"
+checksum = "sha256:220bbb25de908bf33a73cfec632b4fb0ec3eafc2cb2da9677af8b4fd7d337726"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.7/live-pr_0.6.7_Linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/520329727"
 
 [tools."github:shonenm/live-pr"."platforms.macos-arm64"]
-checksum = "sha256:f289800f814287683d03e581df8091736bb2daa198c420228c75a9eca9be5fea"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.6.6/live-pr_0.6.6_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/519041891"
+checksum = "sha256:622b87d6510c3f3f0d674b3fdaea925341fa696bfef3a5053e694dd3830bff24"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.7/live-pr_0.6.7_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/520329726"
 
 [tools."github:shonenm/live-pr"."platforms.macos-x64"]
-checksum = "sha256:a8e94c4fefeb522bc75e96d7a363a1b395d6c08bccbb6e2d0900543788f78c34"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.6.6/live-pr_0.6.6_Darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/519041889"
+checksum = "sha256:3b9be1f691f8c89fb4aee05c0a5f8f559b2cdcd2ff8df78c6358dc50b9670af8"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.6.7/live-pr_0.6.7_Darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/520329729"
 
 [[tools.go]]
 version = "1.26.6"
@@ -896,7 +896,7 @@ checksum = "sha256:d1b5e999db158c62fe8f7267a4476b035d8bd93b1a605bac24a3f0dd166e3
 url = "https://nodejs.org/dist/v24.19.0/node-v24.19.0-darwin-x64.tar.gz"
 
 [[tools."npm:@xai-official/grok"]]
-version = "1.0.4"
+version = "1.0.5"
 backend = "npm:@xai-official/grok"
 
 [[tools."npm:cspell"]]
@@ -904,7 +904,7 @@ version = "10.0.1"
 backend = "npm:cspell"
 
 [[tools."npm:pnpm"]]
-version = "11.21.0"
+version = "11.22.0"
 backend = "npm:pnpm"
 
 [[tools.python]]
