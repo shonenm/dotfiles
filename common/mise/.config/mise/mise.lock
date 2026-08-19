@@ -463,34 +463,6 @@ url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.9.0/topgrad
 url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/492902946"
 provenance = "github-attestations"
 
-[[tools."aqua:tree-sitter/tree-sitter"]]
-version = "0.26.12"
-backend = "aqua:tree-sitter/tree-sitter"
-
-[tools."aqua:tree-sitter/tree-sitter"."platforms.linux-arm64"]
-checksum = "sha256:cfbf3d9aad8e326878ab1846885a9c2b782a0333273591616f34bf556d525586"
-url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.12/tree-sitter-linux-arm64.gz"
-url_api = "https://api.github.com/repos/tree-sitter/tree-sitter/releases/assets/506408041"
-provenance = "github-attestations"
-
-[tools."aqua:tree-sitter/tree-sitter"."platforms.linux-x64"]
-checksum = "sha256:d00ac0daefc4bf8c4b57842a5c0509927232faad1d83157b64fbad4e2e8d9a8b"
-url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.12/tree-sitter-linux-x64.gz"
-url_api = "https://api.github.com/repos/tree-sitter/tree-sitter/releases/assets/506408040"
-provenance = "github-attestations"
-
-[tools."aqua:tree-sitter/tree-sitter"."platforms.macos-arm64"]
-checksum = "sha256:a7ddeff2507391ebdfd0b8fa0dfe91babed291ea00d86426cb0e6cfade891697"
-url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.12/tree-sitter-macos-arm64.gz"
-url_api = "https://api.github.com/repos/tree-sitter/tree-sitter/releases/assets/506408052"
-provenance = "github-attestations"
-
-[tools."aqua:tree-sitter/tree-sitter"."platforms.macos-x64"]
-checksum = "sha256:6827b218bce4d5403cb76ae3c269bc836d3124b75bb3477197ee9a8c8f6e79dc"
-url = "https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.12/tree-sitter-macos-x64.gz"
-url_api = "https://api.github.com/repos/tree-sitter/tree-sitter/releases/assets/506408053"
-provenance = "github-attestations"
-
 [[tools."aqua:typst/typst"]]
 version = "0.15.1"
 backend = "aqua:typst/typst"
@@ -570,6 +542,10 @@ backend = "cargo:grex"
 [[tools."cargo:tealdeer"]]
 version = "1.7.3"
 backend = "cargo:tealdeer"
+
+[[tools."cargo:tree-sitter-cli"]]
+version = "0.26.12"
+backend = "cargo:tree-sitter-cli"
 
 [[tools.cloudflared]]
 version = "2026.8.2"
