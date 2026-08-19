@@ -797,6 +797,145 @@ function M.setup(opts)
       return line
     end
 
+    -- Monkey-patch: deterministic tree flatten.
+    -- Upstream の flatten_tree は pairs() で走査中のテーブルにキーを追加・削除する
+    -- (Lua では未定義動作)。エントリがスキップされると single-child チェーンが
+    -- flatten されたりされなかったりし、再構築のたびに表示形が変わって
+    -- カーソル位置がズレる。キーを先に配列へ集めてから処理することで決定化する。
+    -- See: docs/tools/neovim/patches/codediff-tree-flatten.md
+    local Tree = require("codediff.ui.lib.tree")
+    local line_stats_mod = require("codediff.ui.explorer.line_stats")
+    local STATUS_SYMBOLS = {
+      M = { symbol = "M", color = "CodeDiffStatusModified" },
+      A = { symbol = "A", color = "CodeDiffStatusAdded" },
+      D = { symbol = "D", color = "CodeDiffStatusDeleted" },
+      ["??"] = { symbol = "??", color = "CodeDiffStatusUntracked" },
+      ["!"] = { symbol = "!", color = "CodeDiffStatusConflict" },
+    }
+
+    nodes_mod.create_tree_file_nodes = function(files, git_root, group)
+      local dir_tree = {}
+
+      for _, file in ipairs(files) do
+        local parts = {}
+        for part in file.path:gmatch("[^/]+") do
+          parts[#parts + 1] = part
+        end
+
+        local current = dir_tree
+        for i = 1, #parts - 1 do
+          local dir_name = parts[i]
+          if not current[dir_name] then
+            current[dir_name] = { _is_dir = true, _children = {}, _files = {} }
+          end
+          current[dir_name]._files[#current[dir_name]._files + 1] = file
+          current = current[dir_name]._children
+        end
+
+        current[parts[#parts]] = { _is_dir = false, _file = file }
+      end
+
+      -- Upstream との差分: pairs() 走査前にキーを配列へスナップショットする
+      local function flatten_tree(subtree)
+        local keys = {}
+        for key in pairs(subtree) do
+          keys[#keys + 1] = key
+        end
+        for _, key in ipairs(keys) do
+          local item = subtree[key]
+          if item and item._is_dir then
+            flatten_tree(item._children)
+            local children_keys = {}
+            for k in pairs(item._children) do
+              children_keys[#children_keys + 1] = k
+            end
+            if #children_keys == 1 and item._children[children_keys[1]]._is_dir then
+              local child_key = children_keys[1]
+              subtree[key .. "/" .. child_key] = item._children[child_key]
+              subtree[key] = nil
+            end
+          end
+        end
+      end
+
+      local explorer_config = config_mod.options.explorer or {}
+      if explorer_config.flatten_dirs ~= false then
+        flatten_tree(dir_tree)
+      end
+
+      local function build_nodes(subtree, parent_path, indent_state)
+        local nodes = {}
+        local sorted_keys = {}
+
+        for key in pairs(subtree) do
+          sorted_keys[#sorted_keys + 1] = key
+        end
+        table.sort(sorted_keys, function(a, b)
+          local a_is_dir = subtree[a]._is_dir
+          local b_is_dir = subtree[b]._is_dir
+          if a_is_dir ~= b_is_dir then
+            return a_is_dir
+          end
+          return a < b
+        end)
+
+        local total = #sorted_keys
+        for idx, key in ipairs(sorted_keys) do
+          local item = subtree[key]
+          local full_path = parent_path ~= "" and (parent_path .. "/" .. key) or key
+          local is_last = (idx == total)
+
+          local node_indent_state = {}
+          for i, v in ipairs(indent_state) do
+            node_indent_state[i] = v
+          end
+          node_indent_state[#node_indent_state + 1] = is_last
+
+          if item._is_dir then
+            local children = build_nodes(item._children, full_path, node_indent_state)
+            nodes[#nodes + 1] = Tree.Node({
+              text = key,
+              data = {
+                type = "directory",
+                name = key,
+                dir_path = full_path,
+                group = group,
+                indent_state = node_indent_state,
+                file_count = #item._files,
+                stats = line_stats_mod.sum(item._files),
+                files = item._files,
+              },
+            }, children)
+          else
+            local file = item._file
+            local icon, icon_color = nodes_mod.get_file_icon(file.path)
+            local status_info = STATUS_SYMBOLS[file.status] or { symbol = file.status, color = "Normal" }
+
+            nodes[#nodes + 1] = Tree.Node({
+              text = key,
+              data = {
+                path = file.path,
+                status = file.status,
+                old_path = file.old_path,
+                icon = icon,
+                icon_color = icon_color,
+                status_symbol = status_info.symbol,
+                status_color = status_info.color,
+                git_root = git_root,
+                group = group,
+                indent_state = node_indent_state,
+                line_stats = file.line_stats,
+              },
+            })
+          end
+        end
+
+        return nodes
+      end
+
+      return build_nodes(dir_tree, "", {})
+    end
+
     -- Fixed collect_collapsed_state (uses dir_path for unique key)
     local function collect_collapsed_state(tree)
       local collapsed = {}
@@ -1080,6 +1219,13 @@ function M.setup(opts)
         vim.schedule(function()
           if err then
             vim.notify("Failed to refresh: " .. err, vim.log.levels.ERROR)
+            return
+          end
+
+          -- Upstream 同等の early-return: 状態が前回と同一なら再構築しない。
+          -- auto-refresh のたびに tree を作り直すと render 揺れとカーソルズレの
+          -- 抽選機会が増えるだけで得るものがない。
+          if vim.deep_equal(status_result, explorer.status_result) then
             return
           end
 
