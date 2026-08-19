@@ -16,6 +16,7 @@ upstream で修正され次第、該当パッチを削除する。
 | codediff.nvim | Conflict view 3-way ↔ inline toggle | active | 2026-02-23 | [詳細](./codediff-conflict-inline-toggle.md) |
 | codediff.nvim + snacks.nvim | snacks explorer レイアウト複製 | active | 2026-03-10 | [詳細](./codediff-snacks-explorer-layout.md) |
 | codediff.nvim | Virtual buffer シンタックスハイライト修復 | active | 2026-03-16 | [詳細](./codediff-virtual-buffer-highlight.md) |
+| codediff.nvim | ディレクトリ flatten の非決定性 | active | 2026-08-19 | [詳細](./codediff-tree-flatten.md) |
 
 ## パッチ追加時のテンプレート
 
