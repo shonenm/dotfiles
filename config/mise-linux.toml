@@ -56,7 +56,8 @@
 "cargo:tealdeer" = "latest"
 # nvim-treesitter (main) のパーサー generate/build に必須。GitHub Release バイナリは
 # 新しい glibc (2.39) を要求しホストで動かないことがあるため、ソースビルドする。
-"cargo:tree-sitter-cli" = "latest"
+# 0.26+ は rquickjs-sys が clang の stdbool.h 欠如でビルド不能。0.25 系に固定。
+"cargo:tree-sitter-cli" = "0.25.10"
 
 [settings]
 # cargo-binstall は GitHub Release のビルド済みバイナリを落とすため、glibc 非互換を
