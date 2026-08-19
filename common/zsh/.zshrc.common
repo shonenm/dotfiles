@@ -50,6 +50,13 @@ export DENO_INSTALL="$HOME/.deno"
 # User bin
 [[ -d "$HOME/bin" ]] && export PATH="$PATH:$HOME/bin"
 
+# Mise (shims 方式)
+# activate + precmd hook は fork コストが高く外していたが、PATH にバージョン固定の
+# install ディレクトリが焼き込まれ、ツール更新が既存シェルに反映されない問題があった。
+# shim は実行時に現在バージョンを解決するため、precmd ゼロコストで更新が即反映される。
+# トレードオフ: mise config の [env] セクションは効かない（env 注入は direnv を使う）。
+[[ -d "$HOME/.local/share/mise/shims" ]] && export PATH="$HOME/.local/share/mise/shims:$PATH"
+
 # --- fzf (TokyoNight theme) ---
 export FZF_DEFAULT_OPTS="
   --height=80%
@@ -82,29 +89,6 @@ export FORGIT_STASH_FZF_OPTS='
 # (aliases, completions, prompts, hooks)
 # =====================================================
 [[ -o interactive ]] || return
-
-# --- Mise (interactive shell hooks) ---
-if command -v mise &>/dev/null; then
-  eval "$(mise activate zsh)"
-  # ponytail: chpwd still switches project environments; run
-  # `eval "$(mise hook-env -s zsh --force)"` after editing mise config without changing directories.
-  add-zsh-hook -d precmd _mise_hook_precmd
-
-  # precmd を外したぶん、PATH に入るのは activate 時点のバージョン固定の install
-  # ディレクトリのまま固まる。ツールを更新しても同じディレクトリに居る限り古い実体を
-  # 掴み続けるため、更新経路である dots の後だけ環境を貼り直す。更新していない他の
-  # シェルは次の cd (chpwd hook) で追従する。
-  # --force が必須: tool を install しただけでは watch 対象ファイルが変わらないため、
-  # hook-env は early exit して何も出力せず、PATH が古い install ディレクトリに残る。
-  # scripts/dots の apply/update は意図的に exec しない（戻ってこないと本ラッパーが死ぬ）。
-  dots() {
-    command dots "$@"
-    local ret=$?
-    eval "$(mise hook-env -s zsh --force)"
-    rehash
-    return $ret
-  }
-fi
 
 # --- Direnv (interactive shell hooks) ---
 command -v direnv &>/dev/null && eval "$(direnv hook zsh)"

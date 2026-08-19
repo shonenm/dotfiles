@@ -52,22 +52,15 @@ Sheldonが次を管理する。
 
 ### mise
 
-`mise activate zsh`の`chpwd` hookは残し、projectごとのtool切替を維持する。一方、全promptで外部processを起動する`precmd` hookは解除する。
+`mise activate zsh`は使わず、shims directoryをPATHに追加するshims方式を採用する。
 
 ```zsh
-eval "$(mise activate zsh)"
-add-zsh-hook -d precmd _mise_hook_precmd
+[[ -d "$HOME/.local/share/mise/shims" ]] && export PATH="$HOME/.local/share/mise/shims:$PATH"
 ```
 
-同じdirectory内でmise設定を書き換えた場合、またはtoolを更新した場合は、directoryを移動するか次を実行する。
+理由: activate方式（hook-env）はPATHにバージョン固定のinstall directoryを焼き込むため、tool更新が既存シェルに反映されない。反映にはpromptごとの`precmd` hook（外部process起動でfork コストが高い）か、更新経路ごとのラッパー（`dots`のみラップしていたため`mise up`直接実行で漏れた）が必要だった。shimは実行時に現在バージョンを解決するため、precmdゼロコストで更新が即反映され、projectごとのtool切替もexec時に効く。
 
-```bash
-eval "$(mise hook-env -s zsh --force)"
-```
-
-`--force`が必要な理由: `mise hook-env`はwatch対象ファイル（mise設定）が変わっていないと early exit して何も出力しない。`mise install`でtoolのversionが増えただけでは設定は変わらないため、`--force`なしではPATHが古い install directoryを指したままになる（`dots`ラッパーも同じ理由で`--force`付きで呼ぶ）。
-
-`mise activate --shims`はtool実行ごとにshim解決コストを移すため使用しない。
+トレードオフ: mise configの`[env]`セクションによる環境変数注入は効かない（env注入はdirenvで行う）。tool実行ごとにshim経由の小さな解決コストが乗る。
 
 ### Starship
 
