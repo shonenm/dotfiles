@@ -292,28 +292,28 @@ url = "https://github.com/jesseduffield/lazygit/releases/download/v0.64.1/lazygi
 url_api = "https://api.github.com/repos/jesseduffield/lazygit/releases/assets/511894192"
 
 [[tools."aqua:junegunn/fzf"]]
-version = "0.74.2"
+version = "0.74.3"
 backend = "aqua:junegunn/fzf"
 
 [tools."aqua:junegunn/fzf"."platforms.linux-arm64"]
-checksum = "sha256:1373e3f5ed3c468179d4529942ddd96c234bcad1bcacaf238916e26a5234b5b2"
-url = "https://github.com/junegunn/fzf/releases/download/v0.74.2/fzf-0.74.2-linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/junegunn/fzf/releases/assets/497342620"
+checksum = "sha256:4a17a17b46bd0c4873e995533de508995c11572c0be0664a5dbcf13f60463046"
+url = "https://github.com/junegunn/fzf/releases/download/v0.74.3/fzf-0.74.3-linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/junegunn/fzf/releases/assets/517537065"
 
 [tools."aqua:junegunn/fzf"."platforms.linux-x64"]
-checksum = "sha256:b3648f48675612b69ee35371cf6dc99ca96d767e89b912d079080916ac8ba8bd"
-url = "https://github.com/junegunn/fzf/releases/download/v0.74.2/fzf-0.74.2-linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/junegunn/fzf/releases/assets/497342478"
+checksum = "sha256:3501a595e4b5c40a6b047340a0e8f805c46fd4e61ef95ef8a136ba8c61cf6f22"
+url = "https://github.com/junegunn/fzf/releases/download/v0.74.3/fzf-0.74.3-linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/junegunn/fzf/releases/assets/517537066"
 
 [tools."aqua:junegunn/fzf"."platforms.macos-arm64"]
-checksum = "sha256:d60ddb36356566ac69bae7c3504e888916cf747c9ad2132141c09229b1e28dee"
-url = "https://github.com/junegunn/fzf/releases/download/v0.74.2/fzf-0.74.2-darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/junegunn/fzf/releases/assets/497342630"
+checksum = "sha256:1f8501cea4f9c0c2d6110d0ff75d0ec9451cd9d7524d9a26244a154ea89f3bd5"
+url = "https://github.com/junegunn/fzf/releases/download/v0.74.3/fzf-0.74.3-darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/junegunn/fzf/releases/assets/517537091"
 
 [tools."aqua:junegunn/fzf"."platforms.macos-x64"]
-checksum = "sha256:b019ae8bcca33945a2ffbbbf8369705405cd1406fc4d74267e712797010e3676"
-url = "https://github.com/junegunn/fzf/releases/download/v0.74.2/fzf-0.74.2-darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/junegunn/fzf/releases/assets/497342631"
+checksum = "sha256:b8a231250eedec244539ade3dc437bcd60e545a099c6cc0c8a11bdbd8574b9bc"
+url = "https://github.com/junegunn/fzf/releases/download/v0.74.3/fzf-0.74.3-darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/junegunn/fzf/releases/assets/517537094"
 
 [[tools."aqua:lsd-rs/lsd"]]
 version = "1.2.0"
@@ -808,28 +808,28 @@ url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/461471616"
 provenance = "github-attestations"
 
 [[tools."github:shonenm/live-pr"]]
-version = "0.7.1"
+version = "0.8.0"
 backend = "github:shonenm/live-pr"
 
 [tools."github:shonenm/live-pr"."platforms.linux-arm64"]
-checksum = "sha256:d951298af5c520d42be91a22cde0abe541d7ee5e46ffcd10bba9cbdc7d90e301"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.7.1/live-pr_0.7.1_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/521558288"
+checksum = "sha256:bdc3b708abe5e696b6f1b0512d8c0649678d9c92989f081dae2e955c58f0a75d"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.8.0/live-pr_0.8.0_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/521870291"
 
 [tools."github:shonenm/live-pr"."platforms.linux-x64"]
-checksum = "sha256:2c1f9f9dd6a4976b54ec8d7cee30ce3ca15385d3ff020848ce597ffa3d779a9a"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.7.1/live-pr_0.7.1_Linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/521558285"
+checksum = "sha256:96613e8fb067c92d57021ff813c3689c2b6dea9438469a163a47a7e98fb15f9c"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.8.0/live-pr_0.8.0_Linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/521870347"
 
 [tools."github:shonenm/live-pr"."platforms.macos-arm64"]
-checksum = "sha256:f4c2daad9c8197d683721ec1c3b668092ad06f3182cca9e9e3865da74b235165"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.7.1/live-pr_0.7.1_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/521558286"
+checksum = "sha256:3cad5d83eded4d6ffc47115d0da89c8de5849dc1770085c3b1c748723d3a498f"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.8.0/live-pr_0.8.0_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/521870297"
 
 [tools."github:shonenm/live-pr"."platforms.macos-x64"]
-checksum = "sha256:28dc57d1fd3d2cf6904341f8029b0bb1944e6ba2281508cf89e62f8fa5aedddf"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.7.1/live-pr_0.7.1_Darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/521558284"
+checksum = "sha256:f8532a564f7826d05849bf69fce8ad38427fa65e5cd6e287254adf96e194b6e2"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.8.0/live-pr_0.8.0_Darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/521870293"
 
 [[tools.go]]
 version = "1.26.6"
