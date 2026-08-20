@@ -5,15 +5,15 @@ version = "0.14.8"
 backend = "aqua:ClementTsang/bottom"
 
 [tools."aqua:ClementTsang/bottom"."platforms.linux-arm64"]
-checksum = "sha256:cc6ad0527598fb45eff929ac168e0c93eb7c3cd604723876b9df9b487ac10a47"
-url = "https://github.com/ClementTsang/bottom/releases/download/0.14.8/bottom_aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/ClementTsang/bottom/releases/assets/513309994"
+checksum = "sha256:b53846cead73625ddba566717fb22ad509a50371956afca987f26445121c94e0"
+url = "https://github.com/ClementTsang/bottom/releases/download/0.14.8/bottom_aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/ClementTsang/bottom/releases/assets/513310006"
 provenance = "github-attestations"
 
 [tools."aqua:ClementTsang/bottom"."platforms.linux-x64"]
-checksum = "sha256:9d071c11a5b5bf266f05aa6519a43ad353330155d3d5627a750572d85ed19f54"
-url = "https://github.com/ClementTsang/bottom/releases/download/0.14.8/bottom_x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/ClementTsang/bottom/releases/assets/513309984"
+checksum = "sha256:1e29fb2b0230c8285665d107fc370493e61369433d9e0b9398f6bec19624fa50"
+url = "https://github.com/ClementTsang/bottom/releases/download/0.14.8/bottom_x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/ClementTsang/bottom/releases/assets/513309986"
 provenance = "github-attestations"
 
 [tools."aqua:ClementTsang/bottom"."platforms.macos-arm64"]
@@ -33,14 +33,14 @@ version = "1.2.4"
 backend = "aqua:bootandy/dust"
 
 [tools."aqua:bootandy/dust"."platforms.linux-arm64"]
-checksum = "sha256:e09b0d24b5da0fa06aecf1561849c13ae41ef055c1ce7077e35e9a46744b16af"
-url = "https://github.com/bootandy/dust/releases/download/v1.2.4/dust-v1.2.4-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/bootandy/dust/releases/assets/338101084"
+checksum = "sha256:1903296e662a80a504b132525c9360b503de3b900970e1245268605fc65e366d"
+url = "https://github.com/bootandy/dust/releases/download/v1.2.4/dust-v1.2.4-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/bootandy/dust/releases/assets/338100648"
 
 [tools."aqua:bootandy/dust"."platforms.linux-x64"]
-checksum = "sha256:4e313f9f854017e58a2ada4c0d1774677b8cf53d63ab55a991d5871d5f504452"
-url = "https://github.com/bootandy/dust/releases/download/v1.2.4/dust-v1.2.4-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/bootandy/dust/releases/assets/338099991"
+checksum = "sha256:707cfdbfb9d2dc536f8c3853815bbe98a01012f2772463835edae06816551160"
+url = "https://github.com/bootandy/dust/releases/download/v1.2.4/dust-v1.2.4-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/bootandy/dust/releases/assets/338099299"
 
 [tools."aqua:bootandy/dust"."platforms.macos-arm64"]
 checksum = "sha256:bf84d3ff7f58e325d3eb5bb7696df6b22ef1e01fec80c2d8f7c9d3e611be66f4"
@@ -138,9 +138,9 @@ url = "https://github.com/chmln/sd/releases/download/v1.1.0/sd-v1.1.0-aarch64-un
 url_api = "https://api.github.com/repos/chmln/sd/releases/assets/362325535"
 
 [tools."aqua:chmln/sd"."platforms.linux-x64"]
-checksum = "sha256:02f00f4777d43e8e95b7b8d49e1a0d6e502fed4b8e79c1c8b8063857a30caa2e"
-url = "https://github.com/chmln/sd/releases/download/v1.1.0/sd-v1.1.0-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/chmln/sd/releases/assets/362325321"
+checksum = "sha256:3613eca74cd686739bb5a6d68319aa56c747e7315274d02323a2ca2b1c5d82d2"
+url = "https://github.com/chmln/sd/releases/download/v1.1.0/sd-v1.1.0-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/chmln/sd/releases/assets/362325296"
 
 [tools."aqua:chmln/sd"."platforms.macos-arm64"]
 checksum = "sha256:4bd3c09226376ca0a1d69589c91e86276fae36c5fbaaee669afce583f6682030"
@@ -162,9 +162,9 @@ url = "https://github.com/dandavison/delta/releases/download/0.19.2/delta-0.19.2
 url_api = "https://api.github.com/repos/dandavison/delta/releases/assets/383662337"
 
 [tools."aqua:dandavison/delta"."platforms.linux-x64"]
-checksum = "sha256:f1ea01ca7728ce3462debc359f39dfc7cbbc1a63224b71fefabf92042864aa1b"
-url = "https://github.com/dandavison/delta/releases/download/0.19.2/delta-0.19.2-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/dandavison/delta/releases/assets/383662298"
+checksum = "sha256:8e695c5f586a8c53d6c3b01be0b4a422ed218bfed2a56191caebe373a1c18ab2"
+url = "https://github.com/dandavison/delta/releases/download/0.19.2/delta-0.19.2-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/dandavison/delta/releases/assets/383662069"
 
 [tools."aqua:dandavison/delta"."platforms.macos-arm64"]
 checksum = "sha256:9be36612a5a13e9e386dc498fb8e50dc87c72ee42b63db0ea05b32f99a72a69a"
@@ -320,14 +320,14 @@ version = "1.2.0"
 backend = "aqua:lsd-rs/lsd"
 
 [tools."aqua:lsd-rs/lsd"."platforms.linux-arm64"]
-checksum = "sha256:642ecb1a763b9f790a99c83a1445c117a6813ed4edb5d498d4420423c6353eb8"
-url = "https://github.com/lsd-rs/lsd/releases/download/v1.2.0/lsd-v1.2.0-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/lsd-rs/lsd/releases/assets/303319949"
+checksum = "sha256:48c069cf73a8ed0851f366afeac86e3a9b7db416133f45d033d31d123f819f26"
+url = "https://github.com/lsd-rs/lsd/releases/download/v1.2.0/lsd-v1.2.0-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/lsd-rs/lsd/releases/assets/303319672"
 
 [tools."aqua:lsd-rs/lsd"."platforms.linux-x64"]
-checksum = "sha256:77849da1210336534258551a581401ba19ae6b8d7b66a2a1feff148ad41e3814"
-url = "https://github.com/lsd-rs/lsd/releases/download/v1.2.0/lsd-v1.2.0-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/lsd-rs/lsd/releases/assets/303319745"
+checksum = "sha256:57d3b5859254adcfb8374ce98159cca97a14959997d2ae1176d2cff59556d829"
+url = "https://github.com/lsd-rs/lsd/releases/download/v1.2.0/lsd-v1.2.0-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/lsd-rs/lsd/releases/assets/303319829"
 
 [tools."aqua:lsd-rs/lsd"."platforms.macos-arm64"]
 checksum = "sha256:9e34a5d392ff913302098aad0543dafa1883c531eaf229b82f086c3fca675e3e"
@@ -397,9 +397,9 @@ url = "https://github.com/sharkdp/hyperfine/releases/download/v1.20.0/hyperfine-
 url_api = "https://api.github.com/repos/sharkdp/hyperfine/releases/assets/317832112"
 
 [tools."aqua:sharkdp/hyperfine"."platforms.linux-x64"]
-checksum = "sha256:3285ec7959285288137043dd81dce0dde056227018a8277532d9a364b4f03c2b"
-url = "https://github.com/sharkdp/hyperfine/releases/download/v1.20.0/hyperfine-v1.20.0-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/sharkdp/hyperfine/releases/assets/317832008"
+checksum = "sha256:63ad53934062118f5b0be11785e0bb1603d4b91667d1921f2fd8df9a8712040a"
+url = "https://github.com/sharkdp/hyperfine/releases/download/v1.20.0/hyperfine-v1.20.0-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/sharkdp/hyperfine/releases/assets/317831911"
 
 [tools."aqua:sharkdp/hyperfine"."platforms.macos-arm64"]
 checksum = "sha256:f58d0b90993fadfa122a351428c469ce24afef3865f027f0e6e86f0830d088f1"
@@ -416,14 +416,14 @@ version = "26.8.15"
 backend = "aqua:sxyazi/yazi"
 
 [tools."aqua:sxyazi/yazi"."platforms.linux-arm64"]
-checksum = "sha256:dfaafadd3a80a18ccbd24c32be4888178202ea96f784a9b1021d526c908cab4b"
-url = "https://github.com/sxyazi/yazi/releases/download/v26.8.15/yazi-aarch64-unknown-linux-musl.zip"
-url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/515472937"
+checksum = "sha256:f5a85771f06bb0e8c488136ae0aedaec8d341a7cee995549df391d7d852fe8d1"
+url = "https://github.com/sxyazi/yazi/releases/download/v26.8.15/yazi-aarch64-unknown-linux-gnu.zip"
+url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/515472941"
 
 [tools."aqua:sxyazi/yazi"."platforms.linux-x64"]
-checksum = "sha256:a6702034790afcdbb546b73b288c9b184a751fa3f2f17f0ad4d26fc302fb8d45"
-url = "https://github.com/sxyazi/yazi/releases/download/v26.8.15/yazi-x86_64-unknown-linux-musl.zip"
-url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/515472939"
+checksum = "sha256:cc67eb7991550c2f9407cda52d3f5af0937627aa6884e7de99a04fcf059807e0"
+url = "https://github.com/sxyazi/yazi/releases/download/v26.8.15/yazi-x86_64-unknown-linux-gnu.zip"
+url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/515472936"
 
 [tools."aqua:sxyazi/yazi"."platforms.macos-arm64"]
 checksum = "sha256:3f54907ea08abe96506f4b22239340ed8923a6aeaeae78f33d59bce57daca4cd"
@@ -440,15 +440,15 @@ version = "17.9.0"
 backend = "aqua:topgrade-rs/topgrade"
 
 [tools."aqua:topgrade-rs/topgrade"."platforms.linux-arm64"]
-checksum = "sha256:4d0e0b4acdb80c7ad99b54f6bcaf4df6ca9c8352637bd7f17791f13dd50bb003"
-url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.9.0/topgrade-v17.9.0-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/492895796"
+checksum = "sha256:f408e860edada66bdb8b6c6808e0343d9351978b62a8aa7d1466cc79e8e2c7d7"
+url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.9.0/topgrade-v17.9.0-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/492898372"
 provenance = "github-attestations"
 
 [tools."aqua:topgrade-rs/topgrade"."platforms.linux-x64"]
-checksum = "sha256:21a3e62f6c6e1f150d27e8b8a52530aaf2d87296f3624fa23bafcf6946dff73f"
-url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.9.0/topgrade-v17.9.0-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/492894553"
+checksum = "sha256:608bde3b699a7971c54cad52f5ced4d7ceea485150026a4ea84b69eec02d8998"
+url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.9.0/topgrade-v17.9.0-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/492895326"
 provenance = "github-attestations"
 
 [tools."aqua:topgrade-rs/topgrade"."platforms.macos-arm64"]
@@ -492,14 +492,14 @@ version = "2.5.1"
 backend = "aqua:watchexec/watchexec"
 
 [tools."aqua:watchexec/watchexec"."platforms.linux-arm64"]
-checksum = "sha256:c073887583d502fa0b393a8b847bb4460a111b3b0a199d1f70dafd5d89e71a2f"
-url = "https://github.com/watchexec/watchexec/releases/download/v2.5.1/watchexec-2.5.1-aarch64-unknown-linux-musl.tar.xz"
-url_api = "https://api.github.com/repos/watchexec/watchexec/releases/assets/384489962"
+checksum = "sha256:217e564946fec9911279c455e174e938d497480792a342c28712e50346cc0140"
+url = "https://github.com/watchexec/watchexec/releases/download/v2.5.1/watchexec-2.5.1-aarch64-unknown-linux-gnu.tar.xz"
+url_api = "https://api.github.com/repos/watchexec/watchexec/releases/assets/384489957"
 
 [tools."aqua:watchexec/watchexec"."platforms.linux-x64"]
-checksum = "sha256:9efabd08de720c1ee7e57b487fe11904f0966828e76146e2b5ea5deee90626be"
-url = "https://github.com/watchexec/watchexec/releases/download/v2.5.1/watchexec-2.5.1-x86_64-unknown-linux-musl.tar.xz"
-url_api = "https://api.github.com/repos/watchexec/watchexec/releases/assets/384489936"
+checksum = "sha256:cafc381f74e95f8e93e796ef590c7cbbf3409dda6d56cf3dee6109c10e5188ee"
+url = "https://github.com/watchexec/watchexec/releases/download/v2.5.1/watchexec-2.5.1-x86_64-unknown-linux-gnu.tar.xz"
+url_api = "https://api.github.com/repos/watchexec/watchexec/releases/assets/384489923"
 
 [tools."aqua:watchexec/watchexec"."platforms.macos-arm64"]
 checksum = "sha256:c5e405dd1109940b2510398d2182990c1be59063b94e11d7ace9c7b435cb1df1"
