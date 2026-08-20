@@ -2423,7 +2423,10 @@ function M.setup(opts)
           if goto_prev_repo_tab then goto_prev_repo_tab() end
         end, vim.tbl_extend("force", map_opts, { desc = "Prev repo tab" }))
         vim.keymap.set("n", "h", function()
-          if vim.v.count == 0 and vim.fn.virtcol(".") == 1 then
+          -- col() を使う: virtcol() は inline virtual text (render-markdown の
+          -- 見出しアイコンや indent ガイド) を数えるため、markdown の装飾行では
+          -- 行頭でも 1 にならず explorer へ戻れない。
+          if vim.v.count == 0 and vim.fn.col(".") == 1 then
             local expl = session.explorer
             if expl and expl.winid and vim.api.nvim_win_is_valid(expl.winid) then
               vim.api.nvim_set_current_win(expl.winid)
