@@ -6,3 +6,7 @@
 split_ratio = 20
 # Floor for either pane so the narrow conversation column stays usable.
 min_pane_width = 60
+
+[list]
+# PR list (left) : preview (right) = half and half.
+split_ratio = 50
