@@ -75,25 +75,16 @@ function M.setup(opts)
     local refresh_mod = require("codediff.ui.explorer.refresh")
     local config_mod = require("codediff.config")
 
-    -- Monkey-patch: Fix conflict file auto-load causing unexpected horizontal split
-    -- When the first file in the status list is a conflict, codediff tries to load
-    -- a 3-way merge view which creates an unwanted horizontal split. Instead,
-    -- redirect the initial auto-load to the first non-conflict file.
+    -- Monkey-patch: suppress the initial first-file auto-load.
+    -- upstream は explorer 作成直後に先頭ファイルを無条件で on_file_select する
+    -- (設定フラグなし)。明示的に focus_file が指定された場合 (CodeDiff history %
+    -- や live-pr のファイル指定) のみ初回オープンを通す。conflict が先頭のとき
+    -- 3-way view が水平分割を作る問題も、初回オープン自体の抑制で解消される。
     local render_mod = require("codediff.ui.explorer.render")
     local orig_render_create = render_mod.create
     render_mod.create = function(status_result, git_root, tabpage, width, base_revision, target_revision, opts)
       local explorer = orig_render_create(status_result, git_root, tabpage, width, base_revision, target_revision, opts)
       if not explorer then return explorer end
-
-      -- Determine the best non-conflict file to auto-load
-      local autoload_file, autoload_group
-      if status_result then
-        if status_result.unstaged and #status_result.unstaged > 0 then
-          autoload_file, autoload_group = status_result.unstaged[1], "unstaged"
-        elseif status_result.staged and #status_result.staged > 0 then
-          autoload_file, autoload_group = status_result.staged[1], "staged"
-        end
-      end
 
       -- Wrap on_file_select to intercept conflict files
       -- Display conflict files as inline diff (working tree with conflict markers)
@@ -106,15 +97,8 @@ function M.setup(opts)
 
         if not initial_done then
           initial_done = true
-          if file_data and file_data.group == "conflicts" and autoload_file then
+          if not (opts and opts.focus_file) then
             explorer._in_conflict = false
-            orig_on_file_select({
-              path = autoload_file.path,
-              old_path = autoload_file.old_path,
-              status = autoload_file.status,
-              git_root = git_root,
-              group = autoload_group,
-            })
             return
           end
         end
