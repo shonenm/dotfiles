@@ -58,7 +58,7 @@ record間のfield区切りは`0x1f`(US)を使う。tmux 3.4〜3.5aはコマン�
   - `@agent-sidebar-usage-pace`: gauge/%/残り時間テキストをペース色で塗る
   - 色は `pct × window長 ÷ 経過時間` の最終予測で判定する: 100%=青(使い切り)、予測95%以上=緑、80〜94%=黄、50〜79%=橙、未満=赤(勿体無い)。window長はlabelから推定(current=5h / weekly=7d / monthly=30d / `Nd`表記)。未知label(cursor等)・rem空・window前半5%は判定しない。option変更は最長30秒(usage cache TTL)後に反映。
   - デバッグ: `tmux-agent-sidebar.sh usage`(1回出力) / `test`(`sb_pace_color` 自己チェック)。
-  - 行の除外は `usage_section` 内の case 文でハードコード (現状: claude current=5h枠、grok extra)。
+  - 行の除外ではなくペース表示(丸/色)の対象外指定が `usage_section` 内の case 文でハードコード (現状: claude current=5h枠、grok extra)。行自体は表示される。
 - `prefix+R`: 現tmux serverのwatcher再起動、hang scan、index refresh。
 
 runtime namespaceは`${TMUX%%,*}`のchecksumを用いるため、複数tmux server間でcache/PIDを共有しない。
