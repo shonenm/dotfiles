@@ -72,8 +72,8 @@ pi
   - `gpt-5.6-sol`, `gpt-5.4-mini`, `gpt-5.3-codex-spark` 等
 - **Cursor Pro/Team** — pi ハーネス内で Composer / Claude / GPT 等を使う場合
   - `/model cursor-agent/composer-2-fast` 等 (`enabledModels`: `cursor-agent/*`)
-- **xAI / Grok** — デフォルトは `xai/grok-4.6` (`enabledModels`: `xai/*`)
-- **opencode go** — Kimi / GLM / MiniMax / Qwen / DeepSeek 等のオープンモデル (`enabledModels`: `opencode-go/*`)
+- **xAI / Grok** — `xai/grok-4.6` 等 (`enabledModels`: `xai/*`)
+- **opencode go** — デフォルトは `opencode-go/ox-alpha-free`。Kimi / GLM / MiniMax / Qwen / DeepSeek 等のオープンモデル (`enabledModels`: `opencode-go/*`)
 - Claude Pro/Max は pi 経由だと利用規約上 extra usage 課金になるため非推奨
 
 ### Cursor Provider (pi-cursor-agent)
