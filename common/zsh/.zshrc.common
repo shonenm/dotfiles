@@ -113,7 +113,8 @@ fi
 command -v rg &>/dev/null && alias grep="rg"
 command -v fd &>/dev/null && alias find="fd"
 command -v tldr &>/dev/null && alias man="tldr"
-command -v sd &>/dev/null && alias sed="sd"
+# sd は GNU sed 非互換 (s/// 構文が pattern/replace と解釈されサイレントに失敗する) ので
+# sed の別名にはしない。使うなら固有名の `sd` で。
 command -v dust &>/dev/null && alias du="dust"
 command -v btm &>/dev/null && alias top="btm"
 # rip のゴミ箱を /tmp から永続領域へ移す。30日超の項目は graveyard-purge で削除する。
