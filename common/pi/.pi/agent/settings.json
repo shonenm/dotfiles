@@ -1,7 +1,7 @@
 {
-  "defaultProvider": "xai",
-  "defaultModel": "grok-4.6",
-  "defaultThinkingLevel": "medium",
+  "defaultProvider": "opencode-go",
+  "defaultModel": "ox-alpha-free",
+  "defaultThinkingLevel": "high",
   "subagents": {
     "defaultModel": "openai-codex/gpt-5.4-mini",
     "defaultThinking": "medium",
@@ -134,5 +134,5 @@
       ]
     }
   ],
-  "lastChangelogVersion": "0.84.1"
+  "lastChangelogVersion": "0.84.2"
 }
