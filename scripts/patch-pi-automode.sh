@@ -62,10 +62,15 @@ const resolveReplacement = `function parseClassifierModelSpecs(configured?: stri
     : [];
 }
 
-function isClassifierInfraFailure(decision: ClassificationDecision): boolean {
-  if (decision.decision !== "block" || decision.tier !== "none") return false;
-  return /token is expired|API key|unauthorized|\\b401\\b|\\b403\\b|\\b429\\b|rate limit|quota|credit|authentication|error response|No classifier model/i
-    .test(decision.reason);
+function isClassifierInfraFailure(
+  decision: ClassificationDecision,
+  attempts: ClassifierIoAttempt[],
+): boolean {
+  // block + tier "none" is also a legitimate model verdict, so the tier alone
+  // cannot discriminate. A real verdict is always echoed as a parsed attempt;
+  // auth/quota/abort failures never produce one.
+  if (decision.decision !== "block") return false;
+  return !attempts.some((attempt) => attempt.parsed);
 }
 
 async function resolveClassifierCandidates(
@@ -210,6 +215,7 @@ const actionReplacement = `  const candidates = await resolveClassifierCandidate
   let decision: ClassificationDecision | undefined;
   for (const candidate of candidates) {
     last = candidate;
+    const attemptsBefore = attempts.length;
     decision = await classifyInStages(
       candidate.completionPlan.completeFn,
       candidate.classifier,
@@ -222,8 +228,7 @@ const actionReplacement = `  const candidates = await resolveClassifierCandidate
         onAttempt: (attempt) => attempts.push(attempt),
       },
     );
-    if (decision.decision === "allow" || !isClassifierInfraFailure(decision)) {
-      last = candidate;
+    if (!isClassifierInfraFailure(decision, attempts.slice(attemptsBefore))) {
       break;
     }
   }
