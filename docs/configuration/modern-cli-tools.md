@@ -74,6 +74,16 @@ lockfileはhost非依存に保つ。`mise lock`は実行hostの現在platformに
 - fdのglobal ignore: `common/fd/.config/fd/ignore`
 - bat: `common/bat/.config/bat/config`
 - Atuin: `common/atuin/.config/atuin/config.toml`
+- Atuin daemon (systemd user unit): `common/atuin/.config/systemd/user/atuin-daemon.service`
+- Atuin daemon (macOS launchd): `templates/com.user.atuin-daemon.plist` (`scripts/mac.sh` の `start_atuin_daemon` で登録)
 - mise: `common/mise/.config/mise/config.toml`
 
 新しいtoolの登録方法は[新環境セットアップ](../install/setup-new-environment.md#新ツール追加時の登録先)を参照する。
+
+## Atuin daemon
+
+`config.toml` で `enabled = true` のため、各ホストで atuin daemon が稼働している必要がある
+(daemon が無いと zsh-autosuggestions の検索が socket 接続待ちでハングする)。
+
+- Linux: stow 後に `systemctl --user enable --now atuin-daemon`
+- macOS: `scripts/mac.sh` を実行するか、手動で plist を bootstrap
