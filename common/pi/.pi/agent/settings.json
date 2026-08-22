@@ -15,6 +15,7 @@
   "enabledModels": [
     "openai-codex/*",
     "cursor-agent/*",
+    "opencode-go/*",
     "xai/*"
   ],
   "hideThinkingBlock": true,
