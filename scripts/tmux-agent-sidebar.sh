@@ -228,8 +228,8 @@ usage_section() {
 # 収集(index 読み・jq・usage・branch)は 1 tick に 1 回で済む。
 # リミット消化ペースの推定色。
 #   青   = 使い切った (100%)
-#   緑   = いい感じ (リセットまでに ~85% 以上使い切るペース)
-#   橙   = 怪しい (55〜85%) / 赤 = 勿体無い (<55%、使い切れなさそう)
+#   緑   = いい感じ (リセットまでに ~95% 以上使い切るペース)
+#   黄   = 80〜94% / 橙 = 50〜79% / 赤 = 勿体無い (<50%、使い切れなさそう)
 # 予測は pct * window / elapsed。window 長は label から推定し、未知 label や
 # rem 空(リセット時刻無し)では推定不能として空を返す(何も色変えしない)。
 sb_pace_color() {
@@ -252,8 +252,9 @@ sb_pace_color() {
   (( elapsed * 20 < win )) && return 0    # window 前半 5% は予測が当てにならない
   local proj=$(( pct_num * win / elapsed ))
   (( pct_num >= 100 )) && printf '\033[38;5;39m'  && return 0
-  (( proj >= 85 ))    && printf '\033[38;5;114m' && return 0
-  (( proj >= 55 ))    && printf '\033[38;5;214m' && return 0
+  (( proj >= 95 ))    && printf '\033[38;5;114m' && return 0
+  (( proj >= 80 ))    && printf '\033[38;5;220m' && return 0
+  (( proj >= 50 ))    && printf '\033[38;5;208m' && return 0
   printf '\033[38;5;203m'
 }
 
@@ -541,10 +542,11 @@ case "${1:-toggle}" in
     fail=0
     chk() { [[ "$(sb_pace_color "$1" "$2" "$3")" == "$4" ]] || { echo "NG: pace($1 $2 $3) got $(sb_pace_color "$1" "$2" "$3" | cat -v)"; fail=1; }; }
     chk '100%' current '2h00m' $'\033[38;5;39m'   # 使い切った → 青
-    chk '90%'  current '2h30m' $'\033[38;5;114m'  # proj=180 ≥85 → 緑
-    chk '40%'  current '2h30m' $'\033[38;5;214m'  # proj=80 → 橙
+    chk '90%'  current '2h30m' $'\033[38;5;114m'  # proj=180 ≥95 → 緑
+    chk '40%'  current '2h30m' $'\033[38;5;220m'  # proj=80 → 黄(境界値)
+    chk '35%'  current '2h30m' $'\033[38;5;208m'  # proj=70 → 橙
     chk '20%'  current '2h30m' $'\033[38;5;203m'  # proj=40 → 赤
-    chk '50%'  weekly  '3d0h'  $'\033[38;5;114m'  # proj=87 → 緑
+    chk '50%'  weekly  '2d0h'  $'\033[38;5;208m'  # proj≈58 → 橙
     chk '50%'  other   '1h00m' ''                  # 未知 label → 判定なし
     chk '50%'  current ''      ''                  # rem 空 → 判定なし
     chk '99%'  current '4h55m' ''                  # window 5% 未満経過 → 判定なし
