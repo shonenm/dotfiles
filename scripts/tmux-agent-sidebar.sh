@@ -201,9 +201,10 @@ usage_section() {
       local first=1
       while IFS=$'\x1f' read -r icon label gauge pct rem; do
         [[ -z "$icon" ]] && continue
-        # 表示が不要な行を除外 (claude 5h は通知が煩わしい、grok extra は常時余裕)
+        # ペース表示(丸/色)を対象外にする行 (claude 5h は通知が煩わしい、grok extra は常時余裕)。行自体は表示する
+        local no_pace=0
         case "$sc $label" in
-          "claude current" | "grok extra") continue ;;
+          "claude current" | "grok extra") no_pace=1 ;;
         esac
         local head
         if (( first )); then head="$col$icon$C_RST "; first=0; else head="  "; fi
@@ -211,7 +212,7 @@ usage_section() {
           printf '%s%s--%s\n' "$head" "$C_DIM" "$C_RST"
         else
           local pace=""
-          if (( SB_USAGE_DOT || SB_USAGE_PACE )); then pace=$(sb_pace_color "$pct" "$label" "$rem"); fi
+          if (( (SB_USAGE_DOT || SB_USAGE_PACE) && ! no_pace )); then pace=$(sb_pace_color "$pct" "$label" "$rem"); fi
           local rem_col=$C_DIM
           (( SB_USAGE_PACE )) && [[ -n "$pace" ]] && rem_col="$pace"
           local line="  $col$gauge $pct$C_RST  $rem_col$rem$C_RST"
