@@ -161,6 +161,11 @@ collect_session_branches() {
 # 各 AI の使用量(セッションリミット)を2行で出力(1行目: アイコン+残り時間 / 2行目: ゲージ+%)
 # usage スクリプト出力 "ICON GAUGE PCT/PCT REMAINING"(失敗時 "ICON --")をパースして整形。
 # 各 usage を毎 render 走らせると重いので結果を30秒キャッシュする。
+# 表示のオンオフは tmux global option で制御(poke で即反映、option 変更から最長30秒遅延):
+#   @agent-sidebar-usage-dot  = 1/0  「% 残り」の右の色付き丸
+#   @agent-sidebar-usage-pace = 1/0  gauge/%/rem テキストのペース色
+# 丸・テキストとも色は sb_pace_color の判定に従う(青/緑/橙/赤)。
+SB_USAGE_DOT=1; SB_USAGE_PACE=1
 USAGE_CACHE="$RUNTIME_BASE/claude/sidebar-usage"
 usage_section() {
   local now mt age
@@ -196,13 +201,23 @@ usage_section() {
       local first=1
       while IFS=$'\x1f' read -r icon label gauge pct rem; do
         [[ -z "$icon" ]] && continue
+        # 表示が不要な行を除外 (claude 5h は通知が煩わしい、grok extra は常時余裕)
+        case "$sc $label" in
+          "claude current" | "grok extra") continue ;;
+        esac
         local head
         if (( first )); then head="$col$icon$C_RST "; first=0; else head="  "; fi
         if [[ "$label" == "--" ]]; then
           printf '%s%s--%s\n' "$head" "$C_DIM" "$C_RST"
         else
+          local pace=""
+          if (( SB_USAGE_DOT || SB_USAGE_PACE )); then pace=$(sb_pace_color "$pct" "$label" "$rem"); fi
+          local rem_col=$C_DIM
+          (( SB_USAGE_PACE )) && [[ -n "$pace" ]] && rem_col="$pace"
+          local line="  $col$gauge $pct$C_RST  $rem_col$rem$C_RST"
+          (( SB_USAGE_DOT )) && [[ -n "$pace" ]] && line+=" ${pace}●${C_RST}"
           printf '%s%s%s%s\n' "$head" "$C_DIM" "$label" "$C_RST"
-          printf '  %s%s %s%s%s  %s%s\n' "$col" "$gauge" "$pct" "$C_RST" "$C_DIM" "$rem" "$C_RST"
+          printf '%s\n' "$line"
         fi
       done <<< "$out"
     done
@@ -211,6 +226,37 @@ usage_section() {
 
 # 全サイドバー共通の素材。pane ごとに違うのは現在 session / group と pane 寸法だけなので、
 # 収集(index 読み・jq・usage・branch)は 1 tick に 1 回で済む。
+# リミット消化ペースの推定色。
+#   青   = 使い切った (100%)
+#   緑   = いい感じ (リセットまでに ~85% 以上使い切るペース)
+#   橙   = 怪しい (55〜85%) / 赤 = 勿体無い (<55%、使い切れなさそう)
+# 予測は pct * window / elapsed。window 長は label から推定し、未知 label や
+# rem 空(リセット時刻無し)では推定不能として空を返す(何も色変えしない)。
+sb_pace_color() {
+  local pct_num="${1%%%}" label="$2" rem="$3"
+  local win rem_s d h m
+  case "$label" in
+    current) win=18000 ;;     # 5h
+    weekly)  win=604800 ;;
+    monthly) win=2592000 ;;
+    *d)      win=$(( ${label%d} * 86400 )) ;;   # codex の未知枠 "3d" 表記
+    *)       return 0 ;;
+  esac
+  d=0; h=0; m=0
+  [[ "$rem" =~ ([0-9]+)d ]] && d=${BASH_REMATCH[1]}
+  [[ "$rem" =~ ([0-9]+)h ]] && h=${BASH_REMATCH[1]}
+  [[ "$rem" =~ ([0-9]+)m ]] && m=${BASH_REMATCH[1]}
+  rem_s=$(( d*86400 + h*3600 + m*60 ))
+  (( rem_s <= 0 )) && return 0            # リセット直後/残り無しは判定しない
+  local elapsed=$(( win - rem_s ))
+  (( elapsed * 20 < win )) && return 0    # window 前半 5% は予測が当てにならない
+  local proj=$(( pct_num * win / elapsed ))
+  (( pct_num >= 100 )) && printf '\033[38;5;39m'  && return 0
+  (( proj >= 85 ))    && printf '\033[38;5;114m' && return 0
+  (( proj >= 55 ))    && printf '\033[38;5;214m' && return 0
+  printf '\033[38;5;203m'
+}
+
 SB_ROWS=""; SB_TOTAL=0; SB_SESSIONS=""; SB_SESSION_COUNT=0; SB_BRANCHES=""; SB_USAGE=""
 collect_frame_inputs() {
   SB_ROWS=$(collect_agents | sort -t$'\t' -k1,1 -k2,2n)
@@ -218,6 +264,11 @@ collect_frame_inputs() {
   SB_SESSIONS=$(agent_index_sessions | awk -F "$US" -v tab="$TAB" '{print $1 tab $2}' | sort)
   SB_SESSION_COUNT=$(printf '%s' "$SB_SESSIONS" | grep -c . 2>/dev/null)
   SB_BRANCHES=$(collect_session_branches)
+  local opt
+  opt=$(tmux show-options -gv @agent-sidebar-usage-dot 2>/dev/null) && SB_USAGE_DOT=$opt
+  [[ "$SB_USAGE_DOT" != "0" ]] && SB_USAGE_DOT=1
+  opt=$(tmux show-options -gv @agent-sidebar-usage-pace 2>/dev/null) && SB_USAGE_PACE=$opt
+  [[ "$SB_USAGE_PACE" != "0" ]] && SB_USAGE_PACE=1
   SB_USAGE=$(usage_section)
 }
 
@@ -484,6 +535,26 @@ case "${1:-toggle}" in
     pid=$(cat "$DAEMON_PID_FILE" 2>/dev/null || true)
     [[ -n "$pid" ]] && kill -USR1 "$pid" 2>/dev/null
     exit 0
+    ;;
+  test)
+    # sb_pace_color の自己チェック(最小限)
+    fail=0
+    chk() { [[ "$(sb_pace_color "$1" "$2" "$3")" == "$4" ]] || { echo "NG: pace($1 $2 $3) got $(sb_pace_color "$1" "$2" "$3" | cat -v)"; fail=1; }; }
+    chk '100%' current '2h00m' $'\033[38;5;39m'   # 使い切った → 青
+    chk '90%'  current '2h30m' $'\033[38;5;114m'  # proj=180 ≥85 → 緑
+    chk '40%'  current '2h30m' $'\033[38;5;214m'  # proj=80 → 橙
+    chk '20%'  current '2h30m' $'\033[38;5;203m'  # proj=40 → 赤
+    chk '50%'  weekly  '3d0h'  $'\033[38;5;114m'  # proj=87 → 緑
+    chk '50%'  other   '1h00m' ''                  # 未知 label → 判定なし
+    chk '50%'  current ''      ''                  # rem 空 → 判定なし
+    chk '99%'  current '4h55m' ''                  # window 5% 未満経過 → 判定なし
+    (( fail )) && exit 1
+    echo ok
+    ;;
+  usage)
+    # デバッグ用: USAGE セクション(ペース色/丸含む)を stdout へ1回出す
+    collect_frame_inputs
+    printf '%s' "$SB_USAGE"
     ;;
   once)
     # デバッグ用: 現在の pane 向けフレームを stdout に1回出す
