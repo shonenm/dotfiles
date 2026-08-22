@@ -247,8 +247,12 @@ records = true
 # strategy = "auto"
 
 [daemon]
-## Enables using the daemon to sync. Requires the daemon to be running in the background. Start it with `atuin daemon`
-# enabled = false
+## Enables using the daemon to sync. Requires the daemon to be running in the background.
+## zsh-autosuggestions の atuin 戦略 (atuin init が注入) はキー入力ごとに `atuin search`
+## を fork/exec するため、負荷スパイク時に打鍵レイテンシが劣化する。daemon 経由の
+## unix socket 通信にすることで spawn をなくす。常駐は systemd user unit
+## (common/atuin/.config/systemd/user/atuin-daemon.service) で `systemctl --user enable --now atuin-daemon`。
+enabled = true
 
 ## How often the daemon should sync in seconds
 # sync_frequency = 300
