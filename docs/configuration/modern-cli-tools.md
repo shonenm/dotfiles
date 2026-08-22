@@ -87,3 +87,4 @@ lockfileはhost非依存に保つ。`mise lock`は実行hostの現在platformに
 
 - Linux: stow 後に `systemctl --user enable --now atuin-daemon`
 - macOS: `scripts/mac.sh` を実行するか、手動で plist を bootstrap
+- daemon の socket は `XDG_RUNTIME_DIR` 配下 (例: `/run/user/<uid>/atuin.sock`)。
