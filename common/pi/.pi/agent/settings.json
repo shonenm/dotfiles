@@ -1,14 +1,14 @@
 {
-  "defaultProvider": "opencode-go",
-  "defaultModel": "ox-alpha-free",
-  "defaultThinkingLevel": "high",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-sol",
+  "defaultThinkingLevel": "low",
   "subagents": {
-    "defaultModel": "openai-codex/gpt-5.4-mini",
+    "defaultModel": "ox-alpha-free",
     "defaultThinking": "medium",
     "modelScope": {
       "enforce": true,
       "allow": [
-        "openai-codex/gpt-5.4-mini"
+        "ox-alpha-free"
       ]
     }
   },
@@ -16,7 +16,8 @@
     "openai-codex/*",
     "cursor-agent/*",
     "opencode-go/*",
-    "xai/*"
+    "xai/*",
+    "ox-alpha-free"
   ],
   "hideThinkingBlock": true,
   "theme": "tokyonight-high-contrast",
