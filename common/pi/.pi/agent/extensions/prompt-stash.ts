@@ -1,15 +1,15 @@
 // Prompt Stash Extension for pi
 //
-// Claude Code-like prompt stash: Ctrl+S saves the current editor draft,
+// Claude Code-like prompt stash: Ctrl+Shift+S saves the current editor draft,
 // handles an interruption, then auto-restores when the agent settles.
 //
 // Flow:
-//   1. Ctrl+S  → stash current draft + clear editor
+//   1. Ctrl+Shift+S  → stash current draft + clear editor
 //   2. Send a different prompt (handle interruption)
 //   3. Agent settles → draft auto-restores into editor
 //   4. Continue where you left off
 //
-// Single-slot stash. Ctrl+S on empty editor toggles restore.
+// Single-slot stash. Ctrl+Shift+S on empty editor toggles restore.
 // /stash-clear to discard without restoring. /stash to show status.
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -18,9 +18,9 @@ export default function (pi: ExtensionAPI) {
   let stashed: string | null = null;
 
   // -----------------------------------------------------------------------
-  // Ctrl+S: stash or restore
+  // Ctrl+Shift+S: stash or restore
   // -----------------------------------------------------------------------
-  pi.registerShortcut("ctrl+s", {
+  pi.registerShortcut("ctrl+shift+s", {
     description: "Stash or restore prompt draft",
     handler: async (ctx) => {
       const current = ctx.ui.getEditorText();
@@ -68,7 +68,7 @@ export default function (pi: ExtensionAPI) {
           : stashed;
         ctx.ui.notify(`📝 Stashed (${stashed.length} chars):\n${preview}`, "info");
       } else {
-        ctx.ui.notify("No stashed draft. Ctrl+S to stash your current input.", "info");
+        ctx.ui.notify("No stashed draft. Ctrl+Shift+S to stash your current input.", "info");
       }
     },
   });
