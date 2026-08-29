@@ -174,7 +174,7 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 | `pi-beautiful-tui` | install維持、UI entrypointはfilter |
 | `pi-agent-extensions` | footer、workflow、周期的にworking messageを書き換えるwhimsicalをfilter。session / todo / prompt history等は有効 |
 | `pi-system-theme` | Tokyo Night固定と競合するためentrypointをfilter |
-| `git:github.com/tomsej/pi-ext` | custom footerと重複permissionをfilter、tool pillsとleader palette等は有効 |
+| `git:github.com/tomsej/pi-ext` | custom footer、重複permission、`protected-paths.ts`と役割が重なるpi-cloakをfilter。tool pillsとleader palette等は有効 |
 
 ### 表示を簡潔にする
 

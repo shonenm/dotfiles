@@ -131,7 +131,8 @@
       "source": "git:github.com/tomsej/pi-ext",
       "extensions": [
         "!extensions/custom-footer/custom-footer.ts",
-        "!extensions/permissions/permissions.ts"
+        "!extensions/permissions/permissions.ts",
+        "!extensions/pi-cloak/index.ts"
       ]
     }
   ],
