@@ -56,6 +56,7 @@ brew "postgresql@17" # psqlクライアント + pg_dump/pg_restore（Docker内�
 
 # --- Security ---
 brew "gitleaks"
+brew "cosign" # verify Sigstore/cosign-signed release artifacts
 
 # --- Modern CLI tools ---
 brew "eza"
