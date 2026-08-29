@@ -192,7 +192,7 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 
 `permission-system.json`の`yoloMode`と`settings.json`の`hideThinkingBlock`は有効のままにする。対話の承認境界はwrite permissionではなく、明示的な実装指示と`/plan`で管理するため、実装開始後の通常操作は止めない。
 
-`@czottmann/pi-automode`はagentのtool callを実行前に分類する。`automode.json`で`allowInsideWorkingDirectory: true`にし、working tree内の通常file操作はclassifierなしで許可する。bash、MCP、外部path、protected pathは`anthropic/claude-haiku-4-5` → `openai-codex/gpt-5.4-mini` → `xai/grok-4.3`の順で判定する。認証切れやquota障害だけ次候補へ倒し、policy blockはそのまま fail-closed する。`/automode status`で状態確認、`/automode off`でsession中だけ無効化できる。dotfiles自身のpermission・auto-mode設定を変更する作業ではhard-denyと衝突するため、明示的にoffにしてから行う。
+`@czottmann/pi-automode`はagentのtool callを実行前に分類するが、通常作業をclassifier障害で停止させないようデフォルトはOFFにする。必要なsessionだけ`/automode on`で有効化する。`allowInsideWorkingDirectory: true`によりworking tree内の通常file操作はclassifierなしで許可し、bash、MCP、外部path、protected pathは`anthropic/claude-haiku-4-5` → `openai-codex/gpt-5.4-mini` → `xai/grok-4.3`の順で判定する。認証切れやquota障害だけ次候補へ倒し、policy blockはそのまま fail-closed する。`/automode status`で状態を確認できる。
 
 `common/pi/.pi/agent/extensions/permission-gate.ts`はautomodeとは独立してdangerous shell commandを実行前に確認する。agentはセッション開始時のmain repositoryまたは既存worktreeで実装し、利用者の明示なしに別worktreeへ移動しない。worktree capacity追加は確認対象ではなくhard denyし、`git worktree add`と`pnpm wt provision`は実行しない。利用者が明示した既存pooled slotのclaim/listは許可する。capacity追加が必要な場合は利用者がpi外のterminalから実行する。
 
