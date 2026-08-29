@@ -14,6 +14,7 @@
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
 | pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
+| pi-hermes-memory | scope付きlong-term memory、session検索、background review、consolidation | `settings.json` の `packages` + `hermes-memory-config.json` |
 | pi-automode | Claude Code-styleの実行前classifier guardrail | `settings.json` の `packages` + `automode.json` |
 | pi-automode classifier fallback patch | classifier認証切れ時にHaiku / GPT mini / Grokへ倒す | `scripts/patch-pi-automode.sh` (Local patch) |
 | UI比較package | header / footer / editor / theme / browser workspaceを実機比較 | `settings.json` の `packages`（下記参照） |
@@ -155,7 +156,7 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 
 - compact header: model、作業directory、Pi version
 - state composer: `ASK` / `RUN` / `TOOL`、thinking level、context、`/status`導線
-- responsive footer: Goal、extension status、branch、model、context、tokens、cost、Cursor上限、agents、Web、MCP
+- responsive footer: extension status、branch、model、context、tokens、cost、Cursor上限、agents、Web、MCP
 - `/status`: 常時表示から省いた情報も含むsession telemetry overlay
 - terminal tab: `READY` / `RUN` / tool名 / dirty状態
 - working indicator: Tokyo Nightのaccentに合わせたPi orbit
@@ -184,7 +185,7 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 - `Esc` を2回: `/tree` を開く。tree 内の `Ctrl+T` でツール結果を表示/非表示
 - 実行中は現在のtoolと`Esc/Enter`をフッターに表示（`Esc`は停止、`Enter`はsteer）
 - `/statusline minimal`: Cursor のプラン上限を含む優先度ベースの1行表示へ切り替え（取得元は `ai-usage cursor`）
-- `/status`: Goal、usage、agents、Web、MCP、extension statusをoverlayで一覧表示
+- `/status`: usage、agents、Web、MCP、extension statusをoverlayで一覧表示
 - 入力中の既知 skill 名はアクセント色でハイライトされる（`/reload` または再起動で skill 一覧を再読込）。
 
 ### Permission gate / Auto Mode

@@ -1,100 +1,107 @@
 # pi Memory Layer
 
-> **由来:** **Upstream** pi extension API / **Configuration** memory運用ルール / **Custom** memory拡張（[区分](../../provenance.md#区分)）
+> **由来:** **Upstream** pi session / compaction / skills / **Plugin** pi-hermes-memory / **Configuration** memory運用ルール（[区分](../../provenance.md#区分)）
 
-セッション間知識継承のための永続化層。pi-memory 互換の Markdown フォーマットを採用。
+Piの記憶は、用途の異なる正本を分離する。
 
-## Architecture
+| 種類 | 正本 | 用途 |
+|---|---|---|
+| 現在の会話・tool履歴 | Pi session JSONL | session内のepisodic history、branch、resume |
+| 継続用要約 | Pi標準compaction | Goal、進捗、判断、次の作業、変更ファイルを次のcontextへ渡す |
+| 長い作業の進捗 | `TODO.md` / `docs/agent-plan.md` | objective、acceptance criteria、progress、current、next |
+| repository知識 | code / tests / `docs/` | 現在の仕様と挙動の最終的な正本 |
+| セッション横断知識 | pi-hermes-memory | 好み、訂正、失敗、規約、tool quirksを検索・統合 |
+| 再利用手順 | Pi skills | 検証可能な手順を必要時に読み込む |
 
+## 基本原則
+
+- Memory is context, not instruction. repository、tool、testの現在の証拠を優先する。
+- 現在のTODO、未実行plan、raw tool output、repositoryから容易に読める事実はlong-term memoryへ保存しない。
+- 全memoryを毎turnへ注入しない。短いmemory policyだけを注入し、詳細は`memory_search`で取得する。
+- 長いmulti-step実装はrepository内のplanへ状態を外部化し、節目とcompaction前に更新する。
+- 小変更ではplan fileを作らず、Pi標準sessionとcompactionを使う。
+
+## pi-hermes-memory
+
+`settings.json`から`npm:pi-hermes-memory`を導入する。設定は`~/.pi/agent/hermes-memory-config.json`（正本: `common/pi/.pi/agent/hermes-memory-config.json`）。
+
+```json
+{
+  "memoryMode": "policy-only",
+  "memoryPolicyStyle": "compact",
+  "llmModelOverride": "openai-codex/gpt-5.4-mini",
+  "llmThinkingOverride": "low",
+  "reviewEnabled": true,
+  "memoryOverflowStrategy": "auto-consolidate",
+  "correctionDetection": true,
+  "flushOnCompact": true,
+  "flushOnShutdown": true
+}
 ```
-セッション開始
-  ├─ /pin-goal の pinned note を inject
-  ├─ SCRATCHPAD.md の未完了項目を inject
-  ├─ 今日・前日の daily log 末尾を inject
-  └─ MEMORY.md を inject（middle-truncate）
-  → 合計最大 8K chars
 
-セッション中
-  memory_write  → MEMORY.md または daily log に追記
-  memory_read   → 任意のメモリファイルを読み取り
-  memory_search → 全ファイルをキーワード検索
-  scratchpad    → SCRATCHPAD.md のチェックリストを操作
+主な機能:
 
-セッション終了 / compaction
-  → 未完了 scratchpad 項目を daily log に handoff 記録
+- global / project scopeの分離
+- SQLite FTS5によるmemory・session検索
+- failure / correction / insight / preference / convention / tool-quirk分類
+- turn・tool数に応じたbackground review
+- compaction・shutdown前のflush
+- memory上限到達時のconsolidation
+- secret・prompt injection検査
+- reusable procedureのPi skill化
+
+### Tools
+
+| Tool | 用途 |
+|---|---|
+| `memory` | 再利用可能なmemoryの追加・置換・削除 |
+| `memory_search` | long-term memoryを必要時に検索 |
+| `session_search` | 過去sessionの根拠を検索 |
+| `skill_manage` | 再利用手順をPi skillとして管理 |
+
+### Commands
+
+| Command | 用途 |
+|---|---|
+| `/memory-index-sessions` | 過去のPi sessionを初回index |
+| `/memory-sync-markdown` | Markdown memoryをSQLiteへbackfill |
+| `/memory-insights` | 保存内容を確認 |
+| `/memory-preview-context` | 注入中のmemory policyを確認 |
+| `/memory-consolidate` | 手動consolidation |
+| `/memory-skills` | 保存済みskillを管理 |
+
+## 既存memoryからの移行
+
+pi-hermes-memoryは初回起動時に旧`~/.pi/agent/memory`を`~/.pi/agent/pi-hermes-memory`へ自動移行する。移行後に次を一度実行する。
+
+```text
+/memory-sync-markdown
+/memory-index-sessions
 ```
 
-## Files
+旧custom extensionの`memory_write`、`memory_read`、`scratchpad`、`/pin-goal`は廃止する。現在作業の進捗はlong-term memoryへ移さず、長い作業だけ`TODO.md`または`docs/agent-plan.md`へ記録する。
 
-```
-~/.pi/agent/memory/
-├── MEMORY.md              # 長期記憶: 事実・決定・設定・教訓
-├── SCRATCHPAD.md           # チェックリスト: やるべきこと・覚えておくこと
-└── daily/                  # 日次ログ
-    ├── 2026-05-23.md       # 作業メモ・handoff 記録
-    └── 2026-05-24.md
-```
-
-全ファイルがプレーン Markdown のため、手動編集・git 管理が可能。
-
-## Tools
-
-| Tool | 用途 | ターゲット |
-|------|------|-----------|
-| `memory_write` | メモリに書き込み | `long_term` (MEMORY.md) / `daily` (今日のログ) |
-| `memory_read` | メモリを読み取り | `mem` / `daily` / `list` (日次一覧) |
-| `memory_search` | キーワード検索 | 全ファイルを部分一致検索 |
-| `scratchpad` | チェックリスト操作 | `add` / `done` / `undo` / `clear` / `list` |
-
-## Context Injection
-
-セッション開始時に以下の優先順位で注入（合計 ~8K chars）：
-
-| Priority | Source | Budget |
-|:--------:|--------|:------:|
-| 0 | `/pin-goal` の pinned note | 1K |
-| 1 | 未完了 scratchpad 項目 | 2K |
-| 2 | 今日の daily log (末尾) | 3K |
-| 2b | 前日の daily log (末尾) | 1.5K |
-| 3 | MEMORY.md (middle-truncate) | 4K |
-
-注入は `pi.sendMessage()` で行い、会話履歴には表示されない（`display: false`）。`/goal` は `pi-goal` package の autonomous goal mode 用に予約し、軽量な固定コンテキストは `/pin-goal` を使う。
-
-## Handoff
-
-セッション終了時・compaction 時に、未完了 scratchpad 項目を daily log に自動記録する。同一内容が直前の handoff と一致する場合は重複記録しない：
+## 長い作業のplan形式
 
 ```markdown
-<!-- HANDOFF 2026-05-24T15:30:00.000Z -->
-## Session Handoff (2026-05-24T15:30)
-**Open scratchpad items:**
-- [ ] Fix auth bug
-- [ ] Review PR #42
+# Task
+
+## Objective
+
+## Acceptance Criteria
+- [ ] ...
+
+## Progress
+- [x] ...
+
+## Current Work
+
+## Next Step
+
+## Decisions
+- Decision — reason
+
+## Verification
 ```
 
-## qmd (Optional)
-
-`qmd` をインストールすると semantic/vector 検索が利用可能になる：
-
-```bash
-bun install -g https://github.com/tobi/qmd
-```
-
-qmd がある場合、`memory_search` が BM25 + ベクトル + ハイブリッドの3モードに対応する（`pi-memory` パッケージと同様の挙動）。
-
-## Extension
-
-| Extension | 役割 |
-|-----------|------|
-| `memory.ts` | 全メモリツール + 自動 inject/handoff |
-
-## 他の Memory 実装との比較
-
-| | pi-memory (community) | Codex Native | 本実装 |
-|---|---|---|---|
-| **形式** | Markdown | Markdown | Markdown |
-| **検索** | qmd (BM25/vector/hybrid) | なし（要約を注入） | 部分一致 + qmd optional |
-| **注入** | 毎ターン（snapshot方式） | セッション開始時 | セッション開始時 |
-| **要約** | handoff 自動記録 | LLM バッチ要約 | handoff 自動記録 |
-| **ファイル** | MEMORY.md + daily/ + SCRATCHPAD.md | MEMORY.md + memory_summary.md | 同左（pi-memory互換） |
-| **依存** | qmd + Bun (optional) | gpt-5.4-mini | ゼロ依存 |
+一時planは作業完了時に削除する。将来も参照する設計判断や仕様は、適切な`docs/`へ移してversion管理する。
