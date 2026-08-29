@@ -163,7 +163,7 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 
 `/statusline detailed|balanced|minimal|legacy|off`で表示密度を切り替える。`detailed`は幅が狭いと自動的にbalanced表示へ縮退し、`legacy`は従来の3段情報量を確認する比較用profileとして残す。
 
-比較用packageはinstall状態を維持するが、surface ownershipが競合する`pi-open-tui`、`pi-beautiful-tui`、`pi-system-theme`のextension entrypointはfilterする。theme collection、Pi Studio、extmgr、leader palette、tool pills、session／todo機能など、統合shellと重複しない機能は引き続き読み込む。
+比較用packageはinstall状態を維持するが、surface ownershipが競合する`pi-open-tui`、`pi-beautiful-tui`、`pi-system-theme`のextension entrypointはfilterする。theme collection、Pi Studio、extmgr、tool pills、session／todo機能など、統合shellと重複しない機能は引き続き読み込む。
 
 | Package | 状態・利用箇所 |
 | --- | --- |
@@ -174,7 +174,7 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 | `pi-beautiful-tui` | install維持、UI entrypointはfilter |
 | `pi-agent-extensions` | footer、workflow、周期的にworking messageを書き換えるwhimsicalをfilter。session / todo / prompt history等は有効 |
 | `pi-system-theme` | Tokyo Night固定と競合するためentrypointをfilter |
-| `git:github.com/tomsej/pi-ext` | custom footer、重複permission、`protected-paths.ts`と役割が重なるpi-cloakをfilter。tool pillsとleader palette等は有効 |
+| `git:github.com/tomsej/pi-ext` | custom footer、重複permission、pi-cloak、built-in `ctrl+x`と競合するleader-keyをfilter。tool pills等は有効 |
 
 ### 表示を簡潔にする
 
