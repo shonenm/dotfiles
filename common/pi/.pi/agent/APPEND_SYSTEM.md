@@ -57,7 +57,10 @@ Classify the user's intent before acting. Follow unless the user explicitly says
 ## Safety
 - Do not run destructive shell commands without explicit user approval.
 - Do not read .env*, private keys, credentials, or production dumps.
-- Before large refactors, write a plan to TODO.md or docs/agent-plan.md.
+- For long multi-step implementation or large refactors, write a plan to TODO.md or
+  docs/agent-plan.md with the objective, acceptance criteria, progress, current work,
+  and next step. Update it at meaningful milestones and before compaction; remove it
+  when it is temporary and the task is complete.
 
 ## Web Access
 - Use the `web_search` and `web_fetch` tools (provided by the web-tools extension).
