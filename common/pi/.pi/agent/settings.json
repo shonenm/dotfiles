@@ -92,6 +92,7 @@
     "npm:@quintinshaw/pi-dynamic-workflows",
     "npm:@trevonistrevon/pi-loop",
     "npm:@narumitw/pi-goal",
+    "npm:pi-hermes-memory",
     "npm:pi-remote-control",
     "npm:pi-cursor-agent",
     "npm:pi-permission-system",

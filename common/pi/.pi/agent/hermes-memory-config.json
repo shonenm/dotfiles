@@ -1,0 +1,14 @@
+{
+  "memoryMode": "policy-only",
+  "memoryPolicyStyle": "compact",
+  "sessionSearch": {
+    "variant": "legacy"
+  },
+  "llmModelOverride": "openai-codex/gpt-5.4-mini",
+  "llmThinkingOverride": "low",
+  "reviewEnabled": true,
+  "memoryOverflowStrategy": "auto-consolidate",
+  "correctionDetection": true,
+  "flushOnCompact": true,
+  "flushOnShutdown": true
+}

@@ -25,7 +25,6 @@ type EditorFactory = NonNullable<ReturnType<ExtensionContext["ui"]["getEditorCom
 type ShellEditorFactory = EditorFactory & { __piUiShell?: true };
 
 const MODE_FILE = join(homedir(), ".pi", "agent", "statusline-mode");
-const GOAL_FILE = join(homedir(), ".pi", "agent", "goal");
 const DIRTY_CHECK_INTERVAL_MS = 5000;
 const STATS_CACHE_TTL = 10_000;
 
@@ -46,7 +45,6 @@ function saveMode(value: DisplayMode): void {
 let mode = loadMode();
 let dirtyState = false;
 let lastDirtyCheck = 0;
-let goalCache = "";
 let currentTool = "";
 let running = false;
 let latestStatuses: string[] = [];
@@ -85,10 +83,6 @@ function checkGitDirty(): boolean {
       stdio: ["pipe", "pipe", "ignore"],
     }).trim().length > 0;
   } catch { return false; }
-}
-
-function refreshGoal(): void {
-  try { goalCache = readFileSync(GOAL_FILE, "utf-8").trim(); } catch { goalCache = ""; }
 }
 
 function refreshStats(): StatsSnapshot {
@@ -150,7 +144,6 @@ function refreshAgents(): void {
 
 function refreshSnapshot(ctx: ExtensionContext, includeRemote = false): void {
   recomputeTokens(ctx.sessionManager.getBranch());
-  refreshGoal();
   refreshAgents();
   refreshStats();
   if (includeRemote) refreshCursorLimits();
@@ -348,7 +341,6 @@ export default function (pi: ExtensionAPI) {
           ["AGENTS", `running ${agentStatus.running} · queued ${agentStatus.queued}`],
           ["WEB", `search ${stats.webSearch} · fetch ${stats.webFetch} · cache ${stats.webCache}`],
           ["MCP", `calls ${stats.mcpCalls} · errors ${stats.mcpErrors}`],
-          ["GOAL", goalCache],
           ["STATUS", latestStatuses.join(" · ")],
         ], () => done()),
         { overlay: true },
@@ -436,7 +428,6 @@ function installFooter(ctx: ExtensionContext): void {
         const statuses = [...footerData.getExtensionStatuses().values()].map(cleanStatus).filter(Boolean);
         latestStatuses = statuses;
         const statusText = statuses.slice(0, 5).map((status) => theme.fg(/error|fail|blocked/i.test(status) ? "error" : /run|work|pending/i.test(status) ? "warning" : "muted", truncateToWidth(status, 32, "…"))).join(minor);
-        const goal = goalCache ? `${theme.fg("accent", "▌")} ${label("Goal:")} ${theme.fg("text", goalCache)}` : "";
         const branch = footerData.getGitBranch();
         const branchText = branch ? theme.fg(dirtyState ? "warning" : "border", `${branch}${dirtyState ? "*" : ""}`) : "";
         const model = theme.fg("customMessageLabel", ctx.model?.id ?? "no-model");
@@ -464,8 +455,7 @@ function installFooter(ctx: ExtensionContext): void {
         if (mode === "compact" || mode === "balanced" || (mode === "detailed" && width < 64)) {
           const focus = prioritizedLine([
             { text: activity, priority: 0 },
-            { text: goal, priority: 1 },
-            { text: statusText, priority: 2 },
+            { text: statusText, priority: 1 },
           ], width, minor);
           const telemetry = prioritizedLine([
             { text: branchText, priority: 2 },
@@ -479,7 +469,7 @@ function installFooter(ctx: ExtensionContext): void {
         }
 
         const lines: string[] = [];
-        if (goal || statusText || activity) lines.push(balanceLine(goal || activity, [goal && activity ? activity : "", statusText].filter(Boolean).join(minor), width));
+        if (statusText || activity) lines.push(balanceLine(activity, statusText, width));
         lines.push(balanceLine([path, branchText, model].filter(Boolean).join(minor), gauge, width));
         lines.push(...wrapGroups([tokens, cost, limits, agents, web, mcp], width, major));
 
