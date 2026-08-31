@@ -1197,7 +1197,6 @@ with open('$settings_file') as f:
   if [[ "$package_failed" == "false" ]]; then
     record_install_state pi-packages "$packages_fp"
   fi
-  "$DOTFILES_DIR/scripts/patch-pi-automode.sh" || log_warn "pi-automode classifier fallback patch skipped"
 }
 
 # --- 4.6. Disable Serena MCP dashboard auto-open ---

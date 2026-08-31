@@ -97,7 +97,6 @@
     "npm:pi-remote-control",
     "npm:pi-cursor-agent",
     "npm:pi-permission-system",
-    "npm:@czottmann/pi-automode",
     "git:github.com/DietrichGebert/ponytail",
     {
       "source": "npm:pi-open-tui",

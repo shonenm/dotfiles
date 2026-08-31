@@ -14,9 +14,9 @@ const execFileAsync = promisify(execFile);
 
 // Defense-in-depth only. This is a denylist and is inherently bypassable
 // (e.g. `rm -r -f`, base64-encoded commands, obscure flag spellings); it is not
-// a security boundary. In manual mode it catches obvious footguns; YOLO mode
-// delegates them to pi-automode while keeping HARD_DENY_PATTERNS unconditional.
-// Capacity creation must originate outside the agent, so these commands do not
+// a security boundary. It catches obvious footguns while keeping
+// HARD_DENY_PATTERNS unconditional. Capacity creation must originate outside the agent,
+// so these commands do not
 // offer the confirmation escape hatch used by the general denylist.
 const HARD_DENY_PATTERNS = [
   {
