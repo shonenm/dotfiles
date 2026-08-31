@@ -1,0 +1,4 @@
+# mise writes host-only provenance_verified into the lockfile.
+# Keep the git copy canonical; install.sh copies it to ~/.config/mise/mise.lock.
+
+mise\.lock
