@@ -30,6 +30,7 @@ abbr ..5="builtin cd ../../../../.."
 abbr h="cd ~"
 
 # General
+abbr p="pi"
 abbr cl="clear"
 abbr mkd="mkdir"
 abbr c="code"
