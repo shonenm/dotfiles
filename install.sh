@@ -1054,6 +1054,7 @@ main() {
   echo
 
   # 0. Install Homebrew first on a clean Mac; 1Password CLI uses brew.
+  materialize_mise_lock
   install_homebrew
 
   # 1. Install/check 1Password CLI. An unsigned session only skips secrets.
@@ -1145,6 +1146,18 @@ main() {
 
   [[ "$SETUP_FAILED" == "true" ]] && exit 1
   return 0
+}
+
+# mise.lock is not stowed. mise writes host-only provenance_verified into it.
+materialize_mise_lock() {
+  local src="$DOTFILES_DIR/common/mise/.config/mise/mise.lock"
+  local dest="$HOME/.config/mise/mise.lock"
+  [[ -f "$src" ]] || return 0
+  mkdir -p "$(dirname "$dest")"
+  if [[ -L "$dest" ]]; then
+    rm -f "$dest"
+  fi
+  cp "$src" "$dest"
 }
 
 # --- 3.9. Install pi packages from stowed settings.json ---

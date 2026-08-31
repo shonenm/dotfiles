@@ -52,6 +52,9 @@ for line in (root / "config/packages.npm.txt").read_text().splitlines():
     line = line.strip()
     if line and not line.startswith("#"):
         assert line.count("@") >= (2 if line.startswith("@") else 1), line
+install = (root / "install.sh").read_text()
+assert "materialize_mise_lock" in install
+assert r"mise\.lock" in (root / "common/mise/.stow-local-ignore").read_text()
 PY
 
 echo "harness entrypoint tests: OK"
