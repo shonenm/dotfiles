@@ -80,6 +80,7 @@ prefix 不要のグループ移動キー（root table）:
 | キー | 動作 | サイズ |
 |------|------|--------|
 | `g` | lazygit（カレントパスで起動） | 80% × 80% |
+| `k` | Neovim（カレントパスで `nvim .`） | 90% × 90% |
 | `Q` | quay（TUI ポートマネージャー） | 80% × 80% |
 | `G` | live-pr（Pull Request Dashboard） | 85% × 85% |
 | `P` | pgcli（PostgreSQL クライアント） | 80% × 80% |
@@ -166,6 +167,7 @@ Prefix (`Ctrl+Space`) 押下時、ステータスバー右側全体がキーバ�
 | `\|` | 水平分割 |
 | `g` | lazygit popup |
 | `G` | live-pr popup |
+| `k` | Neovim popup（カレントパスで `nvim .`） |
 | `j` | Scratchpadシェル |
 | `f` | セッション切り替え |
 | `F` | ghq プロジェクト切り替え |
