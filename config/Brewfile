@@ -30,7 +30,6 @@ brew "tree-sitter-cli"  # nvim-treesitter (main branch) がパーサーの gener
 brew "typst"
 brew "fancy-cat"    # ターミナル内PDFビューア（Kitty graphics protocol）
 brew "git-delta"
-brew "trasta298/tap/keifu"
 brew "lazydocker"
 brew "gh"
 brew "ghq"

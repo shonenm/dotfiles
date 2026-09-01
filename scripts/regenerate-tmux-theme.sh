@@ -164,7 +164,7 @@ EC='#,'
 # --- Status Right Components ---
 
 # ヘルプ表示（prefix押下時）- カンマなしなのでエスケープ不要
-HELP="#[fg=${COLOR_WARNING} bg=default]${LEFT}#[fg=${BG_DARK} bg=${COLOR_WARNING} bold] ${KEY_ICON} #[fg=${COLOR_WARNING} bg=default]${RIGHT} -| split  g git  G live-pr  k keifu  l scratch  f sess  F proj  v copy  r reload  ? keys  Space menu"
+HELP="#[fg=${COLOR_WARNING} bg=default]${LEFT}#[fg=${BG_DARK} bg=${COLOR_WARNING} bold] ${KEY_ICON} #[fg=${COLOR_WARNING} bg=default]${RIGHT} -| split  g git  G live-pr  l scratch  f sess  F proj  v copy  r reload  ? keys  Space menu"
 
 # 通常表示の各パーツ
 # スタイル指定 #[...] 内のカンマを #, でエスケープ（ネストされた #{?...} のカンマはそのまま）
