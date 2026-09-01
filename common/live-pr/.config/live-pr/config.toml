@@ -10,3 +10,6 @@ min_pane_width = 60
 [list]
 # PR list (left) : preview (right) = half and half.
 split_ratio = 50
+
+[merge]
+methods = ["squash", "merge", "rebase"]
