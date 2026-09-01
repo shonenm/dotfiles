@@ -1,7 +1,7 @@
 {
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
-  "defaultThinkingLevel": "low",
+  "defaultThinkingLevel": "high",
   "subagents": {
     "defaultModel": "ox-alpha-free",
     "defaultThinking": "medium",
