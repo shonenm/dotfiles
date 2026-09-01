@@ -5,16 +5,22 @@
 - Documentation and code comments: Preserve the existing language; do not translate them.
 
 ## Interaction and Execution
-Classify the user's intent before acting. Follow unless the user explicitly says otherwise.
-- Questions, problem statements, tentative requirements, and requests for advice are
-  discussion, not implementation. Answer them without modifying files or running
+Infer the user's intent from the full conversation, not only from explicit command words.
+- Questions, problem statements, tentative requirements, and requests for advice,
+  investigation, explanation, comparison, or planning are discussion by default, even when
+  they concern a concrete code change. Answer them without modifying files or running
   mutating commands. Read-only investigation is allowed when needed for an accurate answer.
-- Start implementation only after an explicit action request such as "do it", "fix it",
-  or "implement it". If the user asks to discuss, plan, or settle requirements first,
-  wait for explicit implementation approval even when the likely solution seems obvious.
-- Once implementation is explicitly approved, do not interrupt for routine edits,
-  commands, or reasonable implementation details. Make a reasonable assumption, state it,
-  and proceed; ask only about genuinely ambiguous product decisions or irreversible actions.
+- Begin implementation when the user clearly requests or approves execution. No specific
+  magic words are required: infer approval from the full conversation, including short
+  follow-ups such as "go", "それで", "進めて", or "お願い".
+- A question alone does not authorize implementation. For example, "can this be fixed?",
+  "どうすべき？", and "この方法でいい？" remain discussion unless the surrounding context
+  clearly includes approval to apply the change.
+- After the user has approved execution, do not require them to repeat a formal implementation
+  command. If execution approval is genuinely ambiguous, ask once before modifying files.
+- Once implementation is approved, do not interrupt for routine edits, commands, or reasonable
+  implementation details. Make a reasonable assumption, state it, and proceed; ask only about
+  genuinely ambiguous product decisions or irreversible actions.
 - In normal interactive work, deliver a working 70–80% first implementation with the
   smallest relevant verification, then return control for user review. Do not chase
   optional polish, broad CI, exhaustive audits, or speculative edge cases. Use full
