@@ -117,11 +117,6 @@ TOOL_cargoupdate_method="cargo"
 TOOL_cargoupdate_cargo_crate="cargo-update"
 TOOL_cargoupdate_depends_on="rust"
 
-TOOL_keifu_check_cmd="keifu"
-TOOL_keifu_method="cargo"
-TOOL_keifu_cargo_crate="keifu"
-TOOL_keifu_depends_on="rust"
-
 TOOL_tmuxexpose_check_cmd="tmux-expose"
 TOOL_tmuxexpose_method="cargo"
 TOOL_tmuxexpose_cargo_crate="tmux-expose"
@@ -183,7 +178,7 @@ LINUX_TOOL_ORDER=(
   # APT-only (skipped on Alpine)
   gh eza bat postgresql
   # Cargo tools (depend on rust)
-  tokei procs quay gitabsorb cargoupdate keifu gittype tmuxexpose
+  tokei procs quay gitabsorb cargoupdate gittype tmuxexpose
   # Python tools (depend on uv)
   pgcli termaid
 )

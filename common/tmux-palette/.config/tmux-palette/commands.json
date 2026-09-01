@@ -6,12 +6,6 @@
     "action": { "popup": "~/dotfiles/scripts/tmux-popup-in-container lazygit" }
   },
   {
-    "title": "Keifu",
-    "description": "keifu TUI",
-    "aliases": ["kf"],
-    "action": { "popup": "~/dotfiles/scripts/tmux-popup-in-container zsh -lc keifu" }
-  },
-  {
     "title": "pgcli",
     "description": "PostgreSQL client",
     "aliases": ["psql", "db", "postgres"],
