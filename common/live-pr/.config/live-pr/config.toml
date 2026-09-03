@@ -13,3 +13,8 @@ split_ratio = 50
 
 [merge]
 methods = ["squash", "merge", "rebase"]
+
+[ci]
+server = "https://ci.syntopic.dev"
+cli_command = ["mise", "exec", "--", "woodpecker-cli"]
+token_command = ["woodpecker-token"]

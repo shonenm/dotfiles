@@ -69,3 +69,9 @@ trust_level = "trusted"
 
 [projects."/Users/matsushimakouta/dotfiles"]
 trust_level = "trusted"
+
+[projects."/home/matsushima/.cache/tmp/tmp.gM8k0hVOAQ/task"]
+trust_level = "trusted"
+
+[projects."/home/matsushima/.cache/tmp/tmp.QdTWHC7Bq4/task"]
+trust_level = "trusted"

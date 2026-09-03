@@ -13,6 +13,7 @@ deno = "latest"
 "npm:cspell" = "latest"
 "npm:@xai-official/grok" = "latest"
 "aqua:jesseduffield/lazygit" = "latest"
+"aqua:woodpecker-ci/woodpecker/woodpecker-cli" = "latest"
 go = "latest"
 cloudflared = "latest"
 "github:babashka/babashka" = { version = "latest", exe = "bb" }

@@ -15,6 +15,18 @@
     "woodpecker-ci": {
       "type": "stdio", "command": "woodpecker-mcp", "args": ["serve"],
       "description": ""
+    },
+    "syntopic-beta": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/home/matsushima/syntopic-platform/packages/mcp/dist/index.js"],
+      "env": {
+        "SYNTOPIC_API_URL": "https://beta.syntopic.io/bff",
+        "SYNTOPIC_WEB_URL": "https://beta.syntopic.io"
+      },
+      "description": "SynTopic beta via PAT",
+      "enabled": true,
+      "maxResultSize": 10000
     }
   }
 }
