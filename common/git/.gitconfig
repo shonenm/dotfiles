@@ -108,3 +108,14 @@
 	deltaCacheSize = 128m
 [user]
 	email = 131980874+shonenm@users.noreply.github.com
+[safe]
+	directory = .
+	directory = .
+	directory = .
+	directory = .
+	directory = .
+	directory = .
+	directory = .
+	directory = .
+	directory = .
+	directory = .

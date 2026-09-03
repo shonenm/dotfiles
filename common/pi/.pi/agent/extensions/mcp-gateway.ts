@@ -355,31 +355,9 @@ class MCPManager {
       const serverCfg = this.config.mcpServers[server];
       const desc = serverCfg?.description ?? server;
 
-      // Build TypeBox schema from JSON schema. Keys listed in the MCP tool's
-      // `required` array are registered as non-optional so the LLM is forced to
-      // supply them (otherwise every param was Optional → frequent tool errors).
-      const props: Record<string, unknown> = {};
-      const requiredSet = new Set<string>(tool.inputSchema?.required ?? []);
-
-      if (tool.inputSchema?.properties) {
-        for (const [key, val] of Object.entries(tool.inputSchema.properties)) {
-          const v = val as Record<string, unknown>;
-          const jtype = v.type as string | undefined;
-          const description = (v.description as string) ?? "";
-          let base;
-          if (jtype === "number" || jtype === "integer") {
-            base = Type.Number({ description });
-          } else if (jtype === "boolean") {
-            base = Type.Boolean({ description });
-          } else {
-            // string, plus default for complex/unknown types
-            base = Type.String({ description });
-          }
-          props[key] = requiredSet.has(key) ? base : Type.Optional(base);
-        }
-      }
-
-      const schema = Type.Object(props as any);
+      // MCP input schemas are already JSON Schema. Rebuilding them from only
+      // primitive `type` fields loses objects, arrays, refs, and constraints.
+      const schema = Type.Unsafe<Record<string, unknown>>(tool.inputSchema);
 
       pi.registerTool({
         name: tname,
