@@ -188,21 +188,6 @@ install_cursor_cli() {
   log_success "Cursor CLI installed"
 }
 
-start_atuin_daemon() {
-  # atuin config (enabled = true) の daemon 経由検索に必要。daemon が無いと
-  # zsh-autosuggestions の atuin 戦略が socket 接続待ちで Enter がハングする。
-  [[ -x "$HOME/.atuin/bin/atuin" ]] || return 0
-  local plist_src="$DOTFILES_DIR/templates/com.user.atuin-daemon.plist"
-  local plist_dst="$HOME/Library/LaunchAgents/com.user.atuin-daemon.plist"
-  if [[ -f "$plist_src" ]]; then
-    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.local/state/atuin"
-    sed "s|__HOME__|$HOME|g" "$plist_src" > "$plist_dst"
-    launchctl bootout "gui/$(id -u)/com.user.atuin-daemon" 2>/dev/null || true
-    launchctl bootstrap "gui/$(id -u)" "$plist_dst"
-    log_success "atuin daemon launched via launchd (com.user.atuin-daemon)"
-  fi
-}
-
 # --- Main Execution ---
 run_step install_brew_bundle
 run_step install_mise_tools
@@ -220,7 +205,6 @@ run_step install_quay
 run_step install_tmux_expose
 run_step install_cargo_update
 run_step install_lemonade
-run_step start_atuin_daemon
 run_step install_gh_extensions
 run_step install_compiled_tools
 run_step link_ai_scripts

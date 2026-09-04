@@ -3,8 +3,9 @@
 <plist version="1.0"><dict>
   <key>Label</key><string>com.user.atuin-daemon</string>
   <key>ProgramArguments</key><array>
-    <string>/opt/homebrew/bin/atuin</string>
+    <string>__ATUIN__</string>
     <string>daemon</string>
+    <string>start</string>
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
