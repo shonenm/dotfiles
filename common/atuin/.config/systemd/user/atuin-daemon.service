@@ -2,7 +2,7 @@
 Description=Atuin history daemon
 
 [Service]
-ExecStart=%h/.atuin/bin/atuin daemon
+ExecStart=%h/.atuin/bin/atuin daemon start
 Restart=on-failure
 RestartSec=3
 

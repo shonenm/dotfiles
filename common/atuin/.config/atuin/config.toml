@@ -247,20 +247,13 @@ records = true
 # strategy = "auto"
 
 [daemon]
-## Enables using the daemon to sync. Requires the daemon to be running in the background.
-## zsh-autosuggestions の atuin 戦略 (atuin init が注入) はキー入力ごとに `atuin search`
-## を fork/exec するため、負荷スパイク時に打鍵レイテンシが劣化する。daemon 経由の
-## unix socket 通信にすることで spawn をなくす。常駐は systemd user unit
-## (common/atuin/.config/systemd/user/atuin-daemon.service) で `systemctl --user enable --now atuin-daemon`。
+## zsh は TMPDIR を ~/.cache/tmp に固定する一方、launchd は macOS 標準 TMPDIR を使う。
+## client と daemon が同じ socket を参照するよう、TMPDIR 非依存のパスに固定する。
 enabled = true
+socket_path = "~/.local/share/atuin/atuin.sock"
 
 ## How often the daemon should sync in seconds
 # sync_frequency = 300
-
-## The path to the unix socket used by the daemon (on unix systems)
-## linux/mac: ~/.local/share/atuin/atuin.sock
-## windows: Not Supported
-# socket_path = "~/.local/share/atuin/atuin.sock"
 
 ## Use systemd socket activation rather than opening the given path (the path must still be correct for the client)
 ## linux: false
