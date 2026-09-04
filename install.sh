@@ -535,15 +535,26 @@ verify_stow() {
   fi
 }
 
-# Fixup bind-mounted config files that stow couldn't replace
+# Remove the legacy stow link so `git config --global` cannot modify the repo.
+prepare_git_config_target() {
+  local target="$HOME/.gitconfig"
+  local source="$DOTFILES_DIR/common/git/.gitconfig"
+  if [[ -L "$target" && "$(realpath "$target" 2>/dev/null)" == "$(realpath "$source" 2>/dev/null)" ]]; then
+    unlink "$target"
+    log_info "  Replaced tracked ~/.gitconfig symlink with a local config"
+  fi
+}
+
+# Fixup writable or bind-mounted config files that stow does not manage directly.
 fixup_bind_mounts() {
   # .gitconfig: inject [include] to pull in dotfiles gitconfig
   local dotfiles_gitconfig="$DOTFILES_DIR/common/git/.gitconfig"
+  [[ -e "$HOME/.gitconfig" || -L "$HOME/.gitconfig" ]] || touch "$HOME/.gitconfig"
   if [[ -f "$HOME/.gitconfig" && ! -L "$HOME/.gitconfig" && -f "$dotfiles_gitconfig" ]]; then
     if ! grep -qF "path = $dotfiles_gitconfig" "$HOME/.gitconfig" 2>/dev/null; then
       if [[ -w "$HOME/.gitconfig" ]]; then
         printf '\n[include]\n    path = %s\n' "$dotfiles_gitconfig" >> "$HOME/.gitconfig"
-        log_info "  Injected [include] into bind-mounted .gitconfig"
+        log_info "  Injected dotfiles [include] into local .gitconfig"
       else
         # Fallback: Git reads both ~/.gitconfig and $XDG_CONFIG_HOME/git/config
         local xdg_git_config="${XDG_CONFIG_HOME:-$HOME/.config}/git/config"
@@ -611,6 +622,7 @@ link_dotfiles() {
   mkdir -p "$HOME/.config"
   cleanup_broken_skill_links
   normalize_dotfiles_symlinks
+  prepare_git_config_target
 
   # Stow common packages
   if [[ -d "$DOTFILES_DIR/common" ]]; then
@@ -638,7 +650,7 @@ link_dotfiles() {
     fi
   fi
 
-  # Fixup bind-mounted config files (Docker/devcontainer)
+  # Fixup configs intentionally kept writable or supplied as bind mounts.
   fixup_bind_mounts
 
   # Restore dotfiles after adopt (adopted files may have overwritten our dotfiles)
