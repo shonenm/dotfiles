@@ -6,19 +6,20 @@ How Git configuration is managed and shared in dotfiles.
 
 ## Overview
 
-Git configuration is split into two files:
+Git configuration is split into three files:
 
 | File | Management | Contents |
 |------|------------|----------|
-| `~/.gitconfig` | dotfiles (shared) | delta, merge settings, and other common settings |
+| `~/.gitconfig` | Local only | Writable entry point for `git config --global` |
+| `dotfiles/common/git/.gitconfig` | dotfiles (shared) | delta, merge settings, and other common settings |
 | `~/.gitconfig.local` | Local only | user.name, user.email, etc. |
 
 ## Architecture
 
 ```
-dotfiles/common/git/.gitconfig
-        ↓ stow (symbolic link)
-~/.gitconfig
+~/.gitconfig (local, writable)
+        ↓ [include] directive
+dotfiles/common/git/.gitconfig (shared)
         ↓ [include] directive
 ~/.gitconfig.local (machine-specific, not managed by dotfiles)
 ```
@@ -26,10 +27,10 @@ dotfiles/common/git/.gitconfig
 ### Why Separate?
 
 - **Problem**: `git config --global` writes to `~/.gitconfig`
-- **Problem**: `~/.gitconfig` is symlinked by dotfiles
-- **Result**: Running `git pull` on dotfiles overwrites user settings
+- **Problem**: symlinking that path to dotfiles lets external tools modify the repository
+- **Result**: repeated global writes create unintentional tracked changes
 
-**Solution**: Use `[include]` to load a separate file, isolating machine-specific settings
+**Solution**: Keep `~/.gitconfig` local and writable, and use `[include]` to load the shared dotfiles config.
 
 ## Setup
 
@@ -40,7 +41,7 @@ dotfiles/common/git/.gitconfig
 ```
 
 What happens:
-- Creates symbolic link `~/.gitconfig` → `dotfiles/common/git/.gitconfig`
+- Creates local writable `~/.gitconfig` with an include for `dotfiles/common/git/.gitconfig`
 - Creates empty `~/.gitconfig.local` (if it doesn't exist)
 
 ### 2. Git User Configuration
@@ -121,7 +122,7 @@ git-rm-submodule.sh vendor/library
 
 ## File Structure
 
-### ~/.gitconfig (managed by dotfiles)
+### dotfiles/common/git/.gitconfig (managed by dotfiles)
 
 ```gitconfig
 # Git configuration
@@ -229,7 +230,7 @@ git-rm-submodule.sh vendor/library
 
 ```
 1. Run ./install.sh
-   └─ ~/.gitconfig is symlinked
+   └─ local ~/.gitconfig includes the shared dotfiles config
    └─ ~/.gitconfig.local is created empty
 
 2. Run setup_git_from_op
@@ -245,8 +246,8 @@ git-rm-submodule.sh vendor/library
 
 ```
 1. git pull (dotfiles repository)
-   └─ ~/.gitconfig (common settings) is updated
-   └─ ~/.gitconfig.local is not affected ✓
+   └─ dotfiles/common/git/.gitconfig (common settings) is updated
+   └─ ~/.gitconfig and ~/.gitconfig.local are not affected ✓
 
 2. User settings are preserved
 ```
@@ -261,7 +262,7 @@ Machine A                        Machine B
     email = personal@example.com     email = work@example.com
         ↑ Personal                       ↑ Work
 
-~/.gitconfig (common)            ~/.gitconfig (common)
+dotfiles/common/git/.gitconfig   dotfiles/common/git/.gitconfig
 [include]                        [include]
     path = ~/.gitconfig.local        path = ~/.gitconfig.local
 [core]                           [core]
@@ -303,12 +304,12 @@ EOF
 Or:
 
 ```bash
-# Configure with git config (writes to .gitconfig)
+# Configure with git config (writes to the local ~/.gitconfig)
 git config --global user.name "Your Name"
 git config --global user.email "your@email.com"
 ```
 
-**Note**: `git config --global` writes to `~/.gitconfig`, which may be overwritten by dotfiles updates. Direct writing to `~/.gitconfig.local` is recommended.
+**Note**: `setup_git_from_op` writes identity settings to `~/.gitconfig.local`; ordinary `git config --global` writes remain local in `~/.gitconfig`.
 
 ### Reset Configuration
 

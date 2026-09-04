@@ -1,0 +1,3 @@
+# Keep ~/.gitconfig writable for `git config --global` and include this package's
+# shared config from install.sh instead of symlinking the tracked file.
+^\.gitconfig$
