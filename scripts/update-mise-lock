@@ -32,9 +32,10 @@ echo "Locking $tool_count tools for ${platforms//,/, }"
 
 # ponytail: keep clx progress (stderr TTY). --quiet would also kill it.
 # Drop mise's one-line tool dump / tmp lock path; hide info! provenance downloads.
+# ponytail: serialize shared cache writes; restore parallelism when mise isolates them per job.
 MISE_LOG_LEVEL="${MISE_LOG_LEVEL:-warn}" \
 XDG_CONFIG_HOME="$tmp" XDG_CACHE_HOME="$tmp/cache" \
-  mise lock -g -y --bump --platform "$platforms" \
+  mise lock -g -y --bump --jobs 1 --platform "$platforms" \
   > >(python3 -c '
 import re, sys
 pat = re.compile(r"Targeting .*platform|Processing .*tool|Lockfile written to")
