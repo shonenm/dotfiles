@@ -75,7 +75,7 @@ lockfileはhost非依存に保つ。`mise lock` / `mise install`は実行hostの
 - bat: `common/bat/.config/bat/config`
 - Atuin: `common/atuin/.config/atuin/config.toml`
 - Atuin daemon (systemd user unit): `common/atuin/.config/systemd/user/atuin-daemon.service`
-- Atuin daemon (macOS launchd): `templates/com.user.atuin-daemon.plist` (`scripts/mac.sh` の `start_atuin_daemon` で登録)
+- Atuin daemon (macOS launchd): `templates/com.user.atuin-daemon.plist`（`install.sh` がstow後に登録）
 - mise: `common/mise/.config/mise/config.toml`
 
 新しいtoolの登録方法は[新環境セットアップ](../install/setup-new-environment.md#新ツール追加時の登録先)を参照する。
@@ -83,8 +83,8 @@ lockfileはhost非依存に保つ。`mise lock` / `mise install`は実行hostの
 ## Atuin daemon
 
 `config.toml` で `enabled = true` のため、各ホストで atuin daemon が稼働している必要がある
-(daemon が無いと zsh-autosuggestions の検索が socket 接続待ちでハングする)。
+(daemon が無いと zsh-autosuggestions の検索が失敗する)。
 
-- Linux: stow 後に `systemctl --user enable --now atuin-daemon`
-- macOS: `scripts/mac.sh` を実行するか、手動で plist を bootstrap
-- daemon の socket は `XDG_RUNTIME_DIR` 配下 (例: `/run/user/<uid>/atuin.sock`)。
+- `install.sh` がstow後にmacOSではLaunchAgentを再登録し、Linuxではsystemd user unitをenable・再起動する。
+- zsh とservice managerでは `TMPDIR` が異なるため、socketは `~/.local/share/atuin/atuin.sock` に固定する。
+- Linuxでsystemd user sessionが利用できない場合は、daemonを永続化できないためinstallを失敗扱いにする。

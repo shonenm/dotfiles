@@ -1043,6 +1043,65 @@ for name, config in servers.items():
   fi
 }
 
+# Atuin の config と user service を stow 後に同時反映する。
+# 先に service を起動すると、初回 install で daemon だけが既定 socket を使い、
+# 後から固定 socket を読む client と分断される。
+start_atuin_daemon() {
+  local atuin_bin
+  if command_exists atuin; then
+    atuin_bin=$(command -v atuin)
+  elif [[ -x "$HOME/.atuin/bin/atuin" ]]; then
+    atuin_bin="$HOME/.atuin/bin/atuin"
+  else
+    return 0
+  fi
+
+  case "$(detect_os)" in
+    mac)
+      local plist_src plist_dst domain old_pid socket
+      plist_src="$DOTFILES_DIR/templates/com.user.atuin-daemon.plist"
+      plist_dst="$HOME/Library/LaunchAgents/com.user.atuin-daemon.plist"
+      domain="gui/$(id -u)"
+      socket="$HOME/.local/share/atuin/atuin.sock"
+      old_pid=""
+      [[ -f "$HOME/.local/share/atuin/atuin-daemon.pid" ]] && IFS= read -r old_pid < "$HOME/.local/share/atuin/atuin-daemon.pid"
+      mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.local/state/atuin"
+      sed -e "s|__HOME__|$HOME|g" -e "s|__ATUIN__|$atuin_bin|g" "$plist_src" > "$plist_dst"
+      launchctl bootout "$domain/com.user.atuin-daemon" 2>/dev/null || true
+      for _ in {1..25}; do
+        if { [[ -z "$old_pid" ]] || ! kill -0 "$old_pid" 2>/dev/null; } && [[ ! -S "$socket" ]]; then
+          break
+        fi
+        sleep 0.2
+      done
+      if { [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; } || [[ -S "$socket" ]]; then
+        log_warn "Previous Atuin daemon did not stop cleanly"
+        return 1
+      fi
+      launchctl bootstrap "$domain" "$plist_dst"
+      ;;
+    linux)
+      if ! command_exists systemctl || ! systemctl --user show-environment >/dev/null 2>&1; then
+        log_warn "systemd user session unavailable; Atuin daemon was not started"
+        return 1
+      fi
+      systemctl --user daemon-reload
+      systemctl --user enable atuin-daemon >/dev/null
+      systemctl --user restart atuin-daemon
+      ;;
+  esac
+
+  for _ in {1..25}; do
+    if "$atuin_bin" daemon status 2>/dev/null | grep -q 'Healthy:.*true'; then
+      log_success "Atuin daemon started"
+      return 0
+    fi
+    sleep 0.2
+  done
+  log_warn "Atuin daemon did not become ready"
+  return 1
+}
+
 # --- Main ---
 main() {
   log_info "=== Dotfiles Installation Start ==="
@@ -1080,6 +1139,11 @@ main() {
 
   # 3. Link dotfiles (stow)
   link_dotfiles
+
+  # 3.1. Start Atuin only after config and user-service definitions are linked.
+  if ! start_atuin_daemon; then
+    SETUP_FAILED=true
+  fi
 
   # 3.5. Install sheldon plugins
   if command_exists sheldon; then
