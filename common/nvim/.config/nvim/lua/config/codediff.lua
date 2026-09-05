@@ -1176,27 +1176,94 @@ function M.setup(opts)
     explorer_init.unstage_all = actions_mod_wrap.unstage_all
     explorer_init.toggle_stage_file = actions_mod_wrap.toggle_stage_file
 
-    -- Keep local hunk counts without replacing upstream's refresh scheduler.
-    -- v3.1.1 propagates forced watcher refreshes to the selected file, which is
-    -- required to redraw diff buffers after an external commit.
+    -- Watcher notifications invalidate inputs, not necessarily the displayed diff.
+    -- Keep the upstream scheduler/status check, but force only changed inputs.
     local orig_refresh_once = refresh_mod._refresh_once
     refresh_mod._refresh_once = function(explorer, done, force)
-      orig_refresh_once(explorer, function()
-        if explorer.git_root and not explorer.base_revision then
-          fetch_hunk_counts(explorer.git_root, function(counts)
-            vim.schedule(function()
-              hunk_cache.unstaged = counts.unstaged
-              hunk_cache.staged = counts.staged
-              if vim.api.nvim_win_is_valid(explorer.winid) then
-                explorer.tree:render()
-              end
-              if done then done() end
+      invalidate_mutable_cache()
+      invalidate_resolve_cache()
+      local function refresh(changed)
+        orig_refresh_once(explorer, function()
+          if explorer.git_root and not explorer.base_revision then
+            fetch_hunk_counts(explorer.git_root, function(counts)
+              vim.schedule(function()
+                local counts_changed = not vim.deep_equal(hunk_cache, counts)
+                hunk_cache.unstaged = counts.unstaged
+                hunk_cache.staged = counts.staged
+                if counts_changed and vim.api.nvim_win_is_valid(explorer.winid) then
+                  explorer.tree:render()
+                end
+                if done then done() end
+              end)
             end)
-          end)
-          return
+            return
+          end
+          if done then done() end
+        end, changed)
+      end
+
+      local lifecycle = require("codediff.ui.lifecycle")
+      local session = lifecycle.get_session(explorer.tabpage)
+      if not session or explorer.is_hidden or not explorer.git_root then
+        return refresh(force)
+      end
+      local pending, changed = 1, false
+      local function complete(different)
+        changed = changed or different
+        pending = pending - 1
+        if pending == 0 then
+          refresh(lifecycle.get_session(explorer.tabpage) == session and changed)
         end
-        if done then done() end
-      end, force)
+      end
+      for _, side in ipairs({ "original", "modified" }) do
+        local buf = session[side .. "_bufnr"]
+        local revision = session[side .. "_revision"]
+        local ref = session[side]
+        if buf and vim.api.nvim_buf_is_valid(buf) and ref and ref.relative and ref.relative ~= "" then
+          if not revision or revision == "WORKING" then
+            -- Scoped checktime preserves unsaved edits and ignores timestamp-only changes.
+            local tick = vim.api.nvim_buf_get_changedtick(buf)
+            local autoread = vim.bo[buf].autoread
+            vim.bo[buf].autoread = true
+            if not vim.bo[buf].modified then
+              pcall(vim.cmd, "silent! checktime " .. buf)
+            end
+            vim.bo[buf].autoread = autoread
+            changed = changed or tick ~= vim.api.nvim_buf_get_changedtick(buf)
+          else
+            pending = pending + 1
+            local mutable = revision:match("^:[0-3]$")
+            local expected = mutable and revision
+              or (side == "original" and (explorer.base_revision or "HEAD") or explorer.target_revision)
+              or revision
+            local function check_content(resolved)
+              git_mod.get_file_content(resolved, explorer.git_root, ref.relative, function(err, lines)
+                vim.schedule(function()
+                  complete(err ~= nil or not vim.api.nvim_buf_is_valid(buf)
+                    or not vim.deep_equal(lines, vim.api.nvim_buf_get_lines(buf, 0, -1, false)))
+                end)
+              end)
+            end
+            local pinned = (#revision == 40 or #revision == 64) and revision:match("^%x+$")
+            if mutable then
+              check_content(expected)
+            elseif pinned and expected == revision then
+              complete(false)
+            else
+              git_mod.resolve_revision(expected, explorer.git_root, function(err, resolved)
+                vim.schedule(function()
+                  if err or pinned then
+                    complete(err ~= nil or resolved ~= revision)
+                  else
+                    check_content(resolved)
+                  end
+                end)
+              end)
+            end
+          end
+        end
+      end
+      complete(false)
     end
 
     -- ヘルプライン用の namespace と定義
@@ -1666,6 +1733,10 @@ function M.setup(opts)
       local focus_restore_gen = 0
       local focus_target = nil -- nil = restore to explorer, "diff" = navigate to diff view
       explorer.on_file_select = function(file_data, select_opts)
+        -- Background refresh must not install the user-selection focus timers.
+        if select_opts and select_opts.no_jump then
+          return orig_on_file_select(file_data, select_opts)
+        end
         -- Large file warning (>1500 lines)
         if file_data and file_data.path and not large_file_warned[file_data.path] then
           local full_path = explorer.git_root and (explorer.git_root .. "/" .. file_data.path) or file_data.path

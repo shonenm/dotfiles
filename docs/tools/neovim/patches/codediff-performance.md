@@ -29,9 +29,13 @@
    - ファイルパス + リビジョン + changedtickをキーにLRUキャッシュ（最大20エントリ）
    - 同じファイルに戻った際に再計算をスキップ
 
-3. **hunk count更新の統合**
-   - upstreamの `_refresh_once` 完了後にhunk countだけを更新
-   - `refresh` 自体は置き換えず、v3.1.1のnative watcher・force再描画・直列schedulerを維持
+3. **変更通知と再描画の分離**
+   - v3.1.1はnative watcherの全通知を `force=true` に変換するため、コミット間比較でも無関係なworktree/indexの変更で再描画される
+   - localの `_refresh_once` wrapperで表示中の入力を確認し、比較SHA・WORKING buffer・index内容が変わったときだけforceする。upstreamのstatus比較・直列schedulerは維持
+   - WORKINGは表示中bufferへの `checktime`、indexは内容比較で確認する。ファイル一覧や追加・削除行数が同じ変更も検出する
+   - review中のglobal `autoread` 設定は維持し、確認時だけ対象bufferのlocal値を有効化して元に戻す。未保存bufferは再読込しない
+   - 自動更新の `no_jump=true` はlocalのフォーカス復元タイマーを通さず、操作位置を維持する
+   - hunk count更新後の追加描画は、カウントが変わったときだけ行う
 
 ### Phase 3: git操作キャッシュ
 
@@ -40,11 +44,11 @@
 1. **mutable revision の generation-based キャッシュ** (Patch 1)
    - `git.get_file_content` をラップし、`:0` 等のmutable revisionにもキャッシュを適用
    - `mutable_generation` カウンタで無効化を制御
-   - staging操作 (`gs`/`gr`/`gu`/`-`/`S`/`U`/`X`) 時のみインクリメント
+   - staging操作 (`gs`/`gr`/`gu`/`-`/`S`/`U`/`X`) とrefresh開始時にインクリメントし、外部のindex変更も反映する
 
 2. **resolve_revision の結果キャッシュ** (Patch 2)
    - `git.resolve_revision` をラップし、`git rev-parse --verify HEAD` の結果をキャッシュ
-   - `cc`/`ca` (commit) 時のみ無効化
+   - `cc`/`ca` (commit) とrefresh開始時に無効化し、外部commit後もHEADを再解決する
 
 3. **gs/gr のタイミング修正** (Patch 3)
    - `vim.cmd("Gitsigns stage_hunk")` → `require("gitsigns").stage_hunk(range, {}, callback)` に変更
@@ -109,7 +113,15 @@
 | hunk_counts fallback | グループ移動直後のハンクカウント表示消失防止 |
 | optimistic stage/unstage | Explorer の stage/unstage 操作で即座に UI 更新 |
 | toggle_stage_file patch | diff view の `-` キーでも optimistic 更新 + diff refresh |
-| upstream refresh維持 | 外部commit後も選択中ファイルのdiff bufferをforce再描画 |
+| upstream refresh維持 | 実際の入力変更だけforce再描画し、無関係な通知では操作位置を維持 |
+
+## 検証
+
+```bash
+python3 scripts/test-codediff-refresh.py
+```
+
+インストール済みのNeovim・codediff.nvim・nui.nvimを使い、一時Git repoでコミット間比較、WORKING、staged、外部commitを検証する。無変更通知・pollingで追加描画しないこと、同じ行数の内容変更を反映すること、フォーカス・カーソル・未保存編集を維持することを確認する。Lazy.nvimは起動せずlockfileを変更しない。
 
 ## 削除条件
 
