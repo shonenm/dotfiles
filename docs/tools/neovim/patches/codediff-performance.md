@@ -2,7 +2,7 @@
 
 > **由来:** **Plugin** codediff.nvim / **Local patch** performance override（[区分](../../../provenance.md#区分)）
 
-- **ファイル**: `common/nvim/.config/nvim/lua/plugins/codediff.lua`
+- **ファイル**: `common/nvim/.config/nvim/lua/config/codediff.lua`
 - **対象**: `esmuellert/codediff.nvim`
 - **症状**: 大きなファイルや連続操作時に差分計算が遅延し、UIがもたつく
 - **原因**: Lua側の処理が律速（UTF-16変換、extmark適用、auto_refreshの頻繁な発火）
@@ -28,6 +28,10 @@
    - `render.compute_and_render`をラップ
    - ファイルパス + リビジョン + changedtickをキーにLRUキャッシュ（最大20エントリ）
    - 同じファイルに戻った際に再計算をスキップ
+
+3. **hunk count更新の統合**
+   - upstreamの `_refresh_once` 完了後にhunk countだけを更新
+   - `refresh` 自体は置き換えず、v3.1.1のnative watcher・force再描画・直列schedulerを維持
 
 ### Phase 3: git操作キャッシュ
 
@@ -91,11 +95,6 @@
    - `explorer.current_file_group` を更新して状態整合
    - `refresh_diff_view` で diff ビューも更新
 
-5. **二重レンダリング抑制**（optimistic guard）
-   - optimistic update 後 800ms 間は auto-refresh の tree rebuild/render をスキップ
-   - `status_result` のみ更新して実データとの整合は維持
-   - optimistic update で即座に tree 再構築した直後に fs_event トリガーの auto-refresh で同じ結果の再構築が走る問題を解消
-
 ## 効果
 
 | 最適化項目 | 効果 |
@@ -110,7 +109,7 @@
 | hunk_counts fallback | グループ移動直後のハンクカウント表示消失防止 |
 | optimistic stage/unstage | Explorer の stage/unstage 操作で即座に UI 更新 |
 | toggle_stage_file patch | diff view の `-` キーでも optimistic 更新 + diff refresh |
-| optimistic guard | optimistic 更新後の auto-refresh による二重レンダリング抑制 |
+| upstream refresh維持 | 外部commit後も選択中ファイルのdiff bufferをforce再描画 |
 
 ## 削除条件
 
