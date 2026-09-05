@@ -13,14 +13,6 @@ function M.setup(opts)
       mutable_generation = mutable_generation + 1
     end
 
-    -- Optimistic guard: suppress redundant tree rebuild from auto-refresh
-    -- after an optimistic update has already rebuilt the tree.
-    local optimistic_guard_until = 0
-
-    local function set_optimistic_guard()
-      optimistic_guard_until = vim.uv.hrtime() / 1e6 + 800
-    end
-
     -- Patch 1: mutable revision (:0 etc.) の generation-based キャッシュ
     local git_mod = require("codediff.core.git")
     local orig_get_file_content = git_mod.get_file_content
@@ -91,7 +83,7 @@ function M.setup(opts)
       -- so that git-conflict.nvim can detect markers and set up keymaps (co/ct/cb/c0)
       local orig_on_file_select = explorer.on_file_select
       local initial_done = false
-      explorer.on_file_select = function(file_data)
+      explorer.on_file_select = function(file_data, select_opts)
         -- Track conflict state for help display
         explorer._in_conflict = file_data and file_data.group == "conflicts" or false
 
@@ -103,10 +95,10 @@ function M.setup(opts)
           end
         end
         if file_data and file_data.group == "conflicts" then
-          orig_on_file_select(vim.tbl_extend("force", file_data, { group = "unstaged" }))
+          orig_on_file_select(vim.tbl_extend("force", file_data, { group = "unstaged" }), select_opts)
           return
         end
-        orig_on_file_select(file_data)
+        orig_on_file_select(file_data, select_opts)
       end
 
       return explorer
@@ -295,7 +287,7 @@ function M.setup(opts)
       callback = function()
         load_reviewed_marks()
         local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
-        local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
+        local explorer = ok and lifecycle.get_panel_view and lifecycle.get_panel_view(vim.api.nvim_get_current_tabpage()) or nil
         if explorer and explorer.tree then explorer.tree:render() end
       end,
     })
@@ -322,7 +314,7 @@ function M.setup(opts)
       if not ok then return end
       tabpage = tabpage or vim.api.nvim_get_current_tabpage()
       local session = lifecycle.get_session and lifecycle.get_session(tabpage)
-      local explorer = lifecycle.get_explorer and lifecycle.get_explorer(tabpage)
+      local explorer = lifecycle.get_panel_view and lifecycle.get_panel_view(tabpage)
       if not session or not explorer or not explorer.base_revision or not is_codereview_target(explorer.target_revision) then
         return
       end
@@ -363,8 +355,8 @@ function M.setup(opts)
     -- also reviews WORKING so uncommitted changes stay in the review range.
     local function codereview_ctx()
       local ok, lc = pcall(require, "codediff.ui.lifecycle")
-      if not ok or not lc.get_explorer then return nil end
-      local expl = lc.get_explorer(vim.api.nvim_get_current_tabpage())
+      if not ok or not lc.get_panel_view then return nil end
+      local expl = lc.get_panel_view(vim.api.nvim_get_current_tabpage())
       if not expl then return nil end
       local b, t = expl.base_revision, expl.target_revision
       if b and is_codereview_target(t) then
@@ -1094,7 +1086,6 @@ function M.setup(opts)
         end
         if expl.status_result then
           optimistic_move_directory(expl.status_result, dir_path, group, target_group)
-          set_optimistic_guard()
           rebuild_tree_from_status(expl)
         end
       else
@@ -1111,7 +1102,6 @@ function M.setup(opts)
         end
         if expl.status_result then
           optimistic_move_file(expl.status_result, path, group, target_group)
-          set_optimistic_guard()
           rebuild_tree_from_status(expl)
         end
       end
@@ -1125,7 +1115,6 @@ function M.setup(opts)
       end)
       if expl.status_result then
         optimistic_stage_all(expl.status_result)
-        set_optimistic_guard()
         rebuild_tree_from_status(expl)
       end
     end
@@ -1138,7 +1127,6 @@ function M.setup(opts)
       end)
       if expl.status_result then
         optimistic_unstage_all(expl.status_result)
-        set_optimistic_guard()
         rebuild_tree_from_status(expl)
       end
     end
@@ -1171,7 +1159,6 @@ function M.setup(opts)
         if explorer.status_result then
           optimistic_move_file(explorer.status_result, file_path, group, target_group)
           explorer.current_file_group = target_group
-          set_optimistic_guard()
           rebuild_tree_from_status(explorer)
         end
       end
@@ -1189,112 +1176,27 @@ function M.setup(opts)
     explorer_init.unstage_all = actions_mod_wrap.unstage_all
     explorer_init.toggle_stage_file = actions_mod_wrap.toggle_stage_file
 
-    -- Replace M.refresh with fixed version (captures fixed local functions)
-    refresh_mod.refresh = function(explorer)
-      local git = require("codediff.core.git")
-
-      if explorer.is_hidden then return end
-      if not vim.api.nvim_win_is_valid(explorer.winid) then return end
-
-      local current_node = explorer.tree:get_node()
-      local current_path = current_node and current_node.data and current_node.data.path
-
-      local function process_result(err, status_result)
-        vim.schedule(function()
-          if err then
-            vim.notify("Failed to refresh: " .. err, vim.log.levels.ERROR)
-            return
-          end
-
-          -- Upstream 同等の early-return: 状態が前回と同一なら再構築しない。
-          -- auto-refresh のたびに tree を作り直すと render 揺れとカーソルズレの
-          -- 抽選機会が増えるだけで得るものがない。
-          if vim.deep_equal(status_result, explorer.status_result) then
-            return
-          end
-
-          -- During optimistic guard period, only update status_result
-          -- and skip tree rebuild/render to avoid double-rendering flicker.
-          if vim.uv.hrtime() / 1e6 < optimistic_guard_until then
-            explorer.status_result = status_result
-            return
-          end
-
-          local tree_module = require("codediff.ui.explorer.tree")
-          local root_nodes = tree_module.create_tree_data(status_result, explorer.git_root, explorer.base_revision, not explorer.git_root)
-
-          for _, node in ipairs(root_nodes) do
-            node:expand()
-          end
-
-          -- Collect collapsed state from current tree right before replacing nodes.
-          -- Must be inside vim.schedule to capture user's latest expand/collapse changes
-          -- that occurred during the async git status fetch.
-          local collapsed_state = collect_collapsed_state(explorer.tree)
-
-          explorer.tree:set_nodes(root_nodes)
-
-          local explorer_config = config_mod.options.explorer or {}
-          if explorer_config.view_mode == "tree" then
-            local function expand_all_dirs(parent_node)
-              if not parent_node:has_children() then return end
-              for _, child_id in ipairs(parent_node:get_child_ids()) do
-                local child = explorer.tree:get_node(child_id)
-                if child and child.data and child.data.type == "directory" then
-                  child:expand()
-                  expand_all_dirs(child)
-                end
-              end
-            end
-            for _, node in ipairs(root_nodes) do
-              expand_all_dirs(node)
-            end
-          end
-
-          restore_collapsed_state(explorer.tree, collapsed_state, root_nodes)
-          explorer.tree:render()
-          explorer.status_result = status_result
-
-          if current_path then
-            local nodes = explorer.tree:get_nodes()
-            for _, node in ipairs(nodes) do
-              if node.data and node.data.path == current_path then
-                explorer.tree:set_node(node:get_id())
-                break
-              end
-            end
-          end
-        end)
-      end
-
-      -- Fetch hunk counts in parallel with status
-      local function fetch_and_render()
+    -- Keep local hunk counts without replacing upstream's refresh scheduler.
+    -- v3.1.1 propagates forced watcher refreshes to the selected file, which is
+    -- required to redraw diff buffers after an external commit.
+    local orig_refresh_once = refresh_mod._refresh_once
+    refresh_mod._refresh_once = function(explorer, done, force)
+      orig_refresh_once(explorer, function()
         if explorer.git_root and not explorer.base_revision then
           fetch_hunk_counts(explorer.git_root, function(counts)
             vim.schedule(function()
               hunk_cache.unstaged = counts.unstaged
               hunk_cache.staged = counts.staged
-              -- Re-render to show hunk counts
               if vim.api.nvim_win_is_valid(explorer.winid) then
                 explorer.tree:render()
               end
+              if done then done() end
             end)
           end)
+          return
         end
-      end
-
-      if not explorer.git_root then
-        local dir_mod = require("codediff.core.dir")
-        local diff = dir_mod.diff_directories(explorer.dir1, explorer.dir2)
-        process_result(nil, diff.status_result)
-      elseif explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
-        git.get_diff_revisions(explorer.base_revision, explorer.target_revision, explorer.git_root, process_result)
-      elseif explorer.base_revision then
-        git.get_diff_revision(explorer.base_revision, explorer.git_root, process_result)
-      else
-        git.get_status(explorer.git_root, process_result)
-        fetch_and_render()
-      end
+        if done then done() end
+      end, force)
     end
 
     -- ヘルプライン用の namespace と定義
@@ -1386,7 +1288,7 @@ function M.setup(opts)
       local ok_lc, lifecycle = pcall(require, "codediff.ui.lifecycle")
       for tab, _ in pairs(codediff_tabs) do
         if vim.api.nvim_tabpage_is_valid(tab) then
-          local explorer = ok_lc and lifecycle.get_explorer and lifecycle.get_explorer(tab)
+          local explorer = ok_lc and lifecycle.get_panel_view and lifecycle.get_panel_view(tab)
           if explorer and explorer.base_revision and is_codereview_target(explorer.target_revision) then
             review_open = true
             break
@@ -1763,7 +1665,7 @@ function M.setup(opts)
       -- explicitly navigates (l/Tab/CR). focus_target controls post-load navigation.
       local focus_restore_gen = 0
       local focus_target = nil -- nil = restore to explorer, "diff" = navigate to diff view
-      explorer.on_file_select = function(file_data)
+      explorer.on_file_select = function(file_data, select_opts)
         -- Large file warning (>1500 lines)
         if file_data and file_data.path and not large_file_warned[file_data.path] then
           local full_path = explorer.git_root and (explorer.git_root .. "/" .. file_data.path) or file_data.path
@@ -1808,7 +1710,7 @@ function M.setup(opts)
           end
         end, 200)
 
-        orig_on_file_select(file_data)
+        orig_on_file_select(file_data, select_opts)
       end
 
       -- ヘルプは float で描画する。virt_lines をビューポート基準の行に貼ると
@@ -2758,7 +2660,7 @@ function M.setup(opts)
     vim.api.nvim_create_user_command("CodeReviewCopyPath", function()
       local git_root, _, _ = codereview_ctx()
       local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
-      local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
+      local explorer = ok and lifecycle.get_panel_view and lifecycle.get_panel_view(vim.api.nvim_get_current_tabpage()) or nil
       local path = explorer and explorer.current_file_path or nil
       if not git_root or not path then
         vim.notify("No CodeReview file selected", vim.log.levels.WARN)
