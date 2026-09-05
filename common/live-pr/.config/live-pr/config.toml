@@ -17,4 +17,4 @@ methods = ["squash", "merge", "rebase"]
 [ci]
 server = "https://ci.syntopic.dev"
 cli_command = ["mise", "exec", "--", "woodpecker-cli"]
-token_command = ["woodpecker-token"]
+token_command = ["sh", "-c", "awk '$1 == \"token:\" { print $2; exit }' \"${XDG_CONFIG_HOME:-$HOME/.config}/woodpecker-mcp/config.yaml\""]
