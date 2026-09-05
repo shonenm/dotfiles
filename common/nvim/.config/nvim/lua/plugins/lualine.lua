@@ -93,12 +93,12 @@ return {
       {
         function()
           local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
-          local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
+          local explorer = ok and lifecycle.get_panel_view and lifecycle.get_panel_view(vim.api.nvim_get_current_tabpage()) or nil
           return explorer and explorer.current_file_path or ""
         end,
         cond = function()
           local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
-          local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
+          local explorer = ok and lifecycle.get_panel_view and lifecycle.get_panel_view(vim.api.nvim_get_current_tabpage()) or nil
           local target = explorer and explorer.target_revision
           return explorer
             and explorer.base_revision
@@ -113,7 +113,7 @@ return {
         "filename",
         cond = function()
           local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
-          local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
+          local explorer = ok and lifecycle.get_panel_view and lifecycle.get_panel_view(vim.api.nvim_get_current_tabpage()) or nil
           local target = explorer and explorer.target_revision
           return not (
             explorer
