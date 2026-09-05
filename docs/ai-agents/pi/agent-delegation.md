@@ -41,12 +41,14 @@
 
 | ロール | 用途 | 推奨難易度 | モデル |
 |--------|------|:--:|--------|
-| `reviewer` | コードレビュー、セキュリティ監査、品質チェック | high | gpt-5.4-mini:medium |
-| `scout` | コードベース探索、read-only調査、依存関係分析 | medium | gpt-5.4-mini:medium |
-| `worker` | 承認済み計画からの実装 | medium | gpt-5.4-mini:medium |
-| `oracle` | セカンドオピニオン、設計レビュー、前提検証 | high | gpt-5.4-mini:medium |
+| `reviewer` | コードレビュー、セキュリティ監査、品質チェック | high | `subagents.defaultModel` |
+| `scout` | コードベース探索、read-only調査、依存関係分析 | medium | `subagents.defaultModel` |
+| `worker` | 承認済み計画からの実装 | medium | `subagents.defaultModel` |
+| `oracle` | セカンドオピニオン、設計レビュー、前提検証 | high | `subagents.defaultModel` |
 
-`pi-subagents` は `settings.json` の `subagents.defaultModel` / `defaultThinking` で固定し、`modelScope` で呼び出し時の別モデル指定を拒否する。`pi-dynamic-workflows` は `~/.pi/workflows/model-tiers.json` の全tierを同じモデルへ割り当てる。変更時は両方を同時に更新する。
+`pi-subagents` の既定値は `settings.json` の `subagents.defaultModel` / `defaultThinking` を参照する。`modelScope.allow` は `ox-alpha-free`、`openai-codex/gpt-5.6-sol`、`openai-codex/gpt-6-astra` を許可し、利用者が指定した場合は呼び出し時にモデルを上書きできる。許可リストへの追加だけでは既定モデルやthinkingは変更しない。指定モデルが現在のregistryに存在することも必要となる。
+
+`pi-dynamic-workflows` のモデル割り当ては別設定の `~/.pi/workflows/model-tiers.json` で管理する。`pi-subagents` の許可リスト変更では更新しない。
 
 ## Model Auto-Selection
 
