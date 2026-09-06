@@ -46,9 +46,11 @@ tmux -L bench kill-server
 ## 復元の土台: resurrect / continuum
 
 continuum が 15 分毎に session/window/pane 構成 + レイアウト + cwd を
-`~/.local/share/tmux/resurrect/` に自動保存している(`@continuum-restore on`)。
-再起動時のレイアウト復元はこれで自動。ただし **復元されるのは shell だけ**で、
-agent(Claude/Pi/Codex)は whitelist 外のため、復旧ラッパーが別途再開する。
+`~/.tmux/resurrect/` に自動保存している(`@continuum-restore on`)。
+テーマは `status-right` を上書きするため、`scripts/tmux-continuum-autosave.sh` が
+continuum の保存 interpolation を差し戻す。再起動時のレイアウト復元はこれで自動。
+ただし **resurrect が戻すプロセスは whitelist のみ**で、agent(Claude/Pi/Codex)は
+whitelist 外のため、復旧ラッパーが別途再開する。
 
 ## 再起動 & 復元手順
 

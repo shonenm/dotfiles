@@ -18,4 +18,5 @@ mkdir -p "$state_dir"
 
 tmux source-file "$HOME/.config/tmux/${name}.tmux"
 echo "$name" >"$state_dir/current-theme"
+~/dotfiles/scripts/tmux-continuum-autosave.sh
 tmux display-message "theme: $name"

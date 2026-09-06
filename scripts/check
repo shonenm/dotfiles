@@ -30,6 +30,7 @@ scripts/test-pi-permission-gate.sh
 python3 scripts/test-dots-mise-return.py
 python3 scripts/test-tmux-layout.py
 [[ -z "$(command -v tmux)" ]] || scripts/test-tmux-zoom.sh
+[[ -z "$(command -v tmux)" ]] || scripts/test-tmux-continuum-autosave.sh
 scripts/test-statusline-render.sh
 python3 scripts/test_check_markdown_links.py
 scripts/check-markdown-links.py
