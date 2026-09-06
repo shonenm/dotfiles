@@ -49,8 +49,10 @@ continuum が 15 分毎に session/window/pane 構成 + レイアウト + cwd �
 `~/.tmux/resurrect/` に自動保存している(`@continuum-restore on`)。
 テーマは `status-right` を上書きするため、`scripts/tmux-continuum-autosave.sh` が
 continuum の保存 interpolation を差し戻す。再起動時のレイアウト復元はこれで自動。
-ただし **resurrect が戻すプロセスは whitelist のみ**で、agent(Claude/Pi/Codex)は
-whitelist 外のため、復旧ラッパーが別途再開する。
+ただし **resurrect が戻すプロセスは whitelist のみ**。agent(Claude/Pi/Codex)と
+rcon / sidebar は `scripts/tmux-restore-extras.sh` が resurrect の save/restore
+hook で保存し、shell の pane へ resume コマンドを送る。`tmux-server-restart` も
+同じ extras を使う。
 
 ## 再起動 & 復元手順
 

@@ -420,6 +420,8 @@ scripts/
 ├── tmux-layout              # pane レイアウトプリセット管理（save/apply/menu）
 ├── tmux-layout-menu.sh       # レイアウトプリセット fzf popup（prefix + l）
 ├── tmux-smug-menu.sh         # smug session テンプレート起動 popup（prefix + N）
+├── tmux-continuum-autosave.sh # テーマ上書き後も continuum の自動保存 interpolation を差し戻す
+├── tmux-restore-extras.sh    # rcon / agent resume / sidebar の保存・復元
 └── tmux-thumbs-wrapper.sh    # tmux-thumbs カスタムラッパー（Rust ラッパー問題回避）
 ```
 
@@ -436,6 +438,8 @@ scripts/
 Resurrect 設定:
 - `@resurrect-capture-pane-contents off` — pane内容は保存せず、常駐プロセスとlayoutを復元
 - Neovim セッション復元は resession.nvim が担当（tmux-resurrect の `@resurrect-strategy-nvim` は使用しない）
+- テーマが `status-right` を上書きしても `scripts/tmux-continuum-autosave.sh` が continuum の 15 分保存 hook を差し戻す
+- `scripts/tmux-restore-extras.sh` が resurrect の save/restore hook で rcon / agent resume / sidebar を保存・再開する。`tmux-server-restart` も同じ実装を使う
 
 tmux-thumbs 設定:
 - `prefix + e` でヒント表示
