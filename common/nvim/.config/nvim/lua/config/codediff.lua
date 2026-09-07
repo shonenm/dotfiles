@@ -1212,9 +1212,6 @@ function M.setup(opts)
       if explorer.is_hidden then return end
       if not vim.api.nvim_win_is_valid(explorer.winid) then return end
 
-      -- External commits move HEAD; keep the file-click cache, drop the pin.
-      invalidate_resolve_cache()
-
       local current_node = explorer.tree:get_node()
       local current_path = current_node and current_node.data and current_node.data.path
 
@@ -1273,7 +1270,7 @@ function M.setup(opts)
         local function check(key, rev)
           if not rev or rev == "WORKING" or tostring(rev):match("^:[0-3]$") then return end
           pending = pending + 1
-          git_mod.resolve_revision(rev, explorer.git_root, function(err, hash)
+          orig_resolve_revision(rev, explorer.git_root, function(err, hash)
             vim.schedule(function()
               if not err and hash then
                 local prev = explorer._resolved_revs[key]
@@ -1281,14 +1278,20 @@ function M.setup(opts)
                 explorer._resolved_revs[key] = hash
               end
               pending = pending - 1
-              if pending == 0 and moved then reselect_current(true) end
+              if pending == 0 and moved then
+                invalidate_resolve_cache()
+                reselect_current(true)
+              end
             end)
           end)
         end
         check("base", explorer.base_revision)
         check("target", explorer.target_revision)
         pending = pending - 1
-        if pending == 0 and moved then reselect_current(true) end
+        if pending == 0 and moved then
+          invalidate_resolve_cache()
+          reselect_current(true)
+        end
       end
 
       local function process_result(err, status_result)
@@ -1360,7 +1363,10 @@ function M.setup(opts)
               end
             end
           end
-          reselect_current(true)
+          -- Rebuilding the file list must not rebuild the open diff. That is
+          -- what made auto-refresh look like a 500ms UI reset.
+          refresh_open_diff_if_revision_moved()
+          refresh_working_buffer()
         end)
       end
 
@@ -1369,9 +1375,9 @@ function M.setup(opts)
         if explorer.git_root and not explorer.base_revision then
           fetch_hunk_counts(explorer.git_root, function(counts)
             vim.schedule(function()
+              if vim.deep_equal(hunk_cache, counts) then return end
               hunk_cache.unstaged = counts.unstaged
               hunk_cache.staged = counts.staged
-              -- Re-render to show hunk counts
               if vim.api.nvim_win_is_valid(explorer.winid) then
                 explorer.tree:render()
               end
