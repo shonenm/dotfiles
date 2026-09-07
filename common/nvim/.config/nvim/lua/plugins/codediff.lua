@@ -15,6 +15,9 @@ return {
   },
   {
     "esmuellert/codediff.nvim",
+    -- e08a35a: v3+/v4 remove APIs used by config/codediff.lua.
+    -- pin=true is required; lazy-lock.json is overwritten by :Lazy update.
+    pin = true,
     dependencies = { "MunifTanjim/nui.nvim" },
     cmd = { "CodeDiff", "CodeReview", "CodeReviewBranch" },
     keys = {
