@@ -99,8 +99,10 @@
 6. **外部commit後のopen diff更新**
    - local `refresh` はファイル一覧だけ作り直し、選択中ファイルの `on_file_select` を呼ばなかった
    - 一覧が同じ（blob idを持たない）と early-return するため、HEAD が動いても diff buffer が初回内容のまま残る
-   - refresh開始時に `resolve_revision` cache を捨て、base/target の解決SHAが変わったときだけ `no_jump` + `force` で再選択する
+   - base/target の解決SHAが変わったとき、または WORKING 実ファイルの内容が変わったときだけ open diff を更新する。ファイル一覧の再構築では diff を force 再選択しない（500ms poll のちらつきになる）
+   - SHA確認は cache を通さず、実際に動いたときだけ `resolve_revision` cache を捨てる
    - 自動更新ではlocalのフォーカス復元タイマーを通さない
+   - hunk count の追加描画は値が変わったときだけ行う
    - `prepare_buffer` は HEAD 等のsymbolic revisionをimmutable扱いするため、side-by-sideではsymbolic URLも再読込する
 
 ## 効果
