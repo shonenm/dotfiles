@@ -15,7 +15,6 @@ return {
   },
   {
     "esmuellert/codediff.nvim",
-    version = "v3.1.1",
     dependencies = { "MunifTanjim/nui.nvim" },
     cmd = { "CodeDiff", "CodeReview", "CodeReviewBranch" },
     keys = {
