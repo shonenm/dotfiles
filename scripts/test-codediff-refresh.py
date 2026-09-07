@@ -62,10 +62,27 @@ local function test()
   assert(vim.api.nvim_get_current_win() == win, "idle refresh stole focus")
   assert(vim.deep_equal(vim.api.nvim_win_get_cursor(win), {3, 0}), "idle refresh moved cursor")
 
+  local Tree = require("codediff.ui.lib.tree")
+  local renders, orig_render = 0, Tree.render
+  Tree.render = function(self, ...)
+    renders = renders + 1
+    return orig_render(self, ...)
+  end
+  local selects = 0
+  local orig_select = explorer.on_file_select
+  explorer.on_file_select = function(file, opts)
+    selects = selects + 1
+    return orig_select(file, opts)
+  end
   vim.fn.writefile({"noise"}, "unrelated.log")
   refresh()
+  refresh()
+  assert(renders == 0, "idle refresh re-rendered the tree")
+  assert(selects == 0, "idle refresh re-selected the open file")
   assert(first_line(lc.get_session(tab).modified_bufnr) == "first", "unrelated write changed the open diff")
   assert(vim.api.nvim_get_current_win() == win, "unrelated write stole focus")
+  explorer.on_file_select = orig_select
+  Tree.render = orig_render
 
   vim.fn.writefile({"second", "line2", "line3", "line4", "line5"}, "file.txt")
   git("add", "file.txt")
