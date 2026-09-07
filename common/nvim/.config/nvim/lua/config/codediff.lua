@@ -13,6 +13,14 @@ function M.setup(opts)
       mutable_generation = mutable_generation + 1
     end
 
+    -- Optimistic guard: suppress redundant tree rebuild from auto-refresh
+    -- after an optimistic update has already rebuilt the tree.
+    local optimistic_guard_until = 0
+
+    local function set_optimistic_guard()
+      optimistic_guard_until = vim.uv.hrtime() / 1e6 + 800
+    end
+
     -- Patch 1: mutable revision (:0 etc.) の generation-based キャッシュ
     local git_mod = require("codediff.core.git")
     local orig_get_file_content = git_mod.get_file_content
@@ -56,6 +64,22 @@ function M.setup(opts)
         end
         callback(err, commit_hash)
       end)
+    end
+
+    -- HEAD/branch names are stored in codediff:// URLs as-is. prepare_buffer
+    -- treats anything that is not :0-:3 as immutable, so the first HEAD buffer
+    -- is reused after later commits. Force a reload for symbolic revisions.
+    local helpers_mod = require("codediff.ui.view.helpers")
+    local orig_prepare_buffer = helpers_mod.prepare_buffer
+    helpers_mod.prepare_buffer = function(is_virtual, git_root, revision, ref)
+      local info = orig_prepare_buffer(is_virtual, git_root, revision, ref)
+      if is_virtual and revision and not revision:match("^%x+$") and not revision:match("^:[0-3]$") then
+        info.needs_edit = true
+        if not info.target and ref and ref.relative then
+          info.target = require("codediff.core.virtual_file").create_url(git_root, revision, ref.relative)
+        end
+      end
+      return info
     end
 
     -- Optimistic stage/unstage wrappers (defined after helper functions below)
@@ -287,7 +311,7 @@ function M.setup(opts)
       callback = function()
         load_reviewed_marks()
         local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
-        local explorer = ok and lifecycle.get_panel_view and lifecycle.get_panel_view(vim.api.nvim_get_current_tabpage()) or nil
+        local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
         if explorer and explorer.tree then explorer.tree:render() end
       end,
     })
@@ -314,7 +338,7 @@ function M.setup(opts)
       if not ok then return end
       tabpage = tabpage or vim.api.nvim_get_current_tabpage()
       local session = lifecycle.get_session and lifecycle.get_session(tabpage)
-      local explorer = lifecycle.get_panel_view and lifecycle.get_panel_view(tabpage)
+      local explorer = lifecycle.get_explorer and lifecycle.get_explorer(tabpage)
       if not session or not explorer or not explorer.base_revision or not is_codereview_target(explorer.target_revision) then
         return
       end
@@ -355,8 +379,8 @@ function M.setup(opts)
     -- also reviews WORKING so uncommitted changes stay in the review range.
     local function codereview_ctx()
       local ok, lc = pcall(require, "codediff.ui.lifecycle")
-      if not ok or not lc.get_panel_view then return nil end
-      local expl = lc.get_panel_view(vim.api.nvim_get_current_tabpage())
+      if not ok or not lc.get_explorer then return nil end
+      local expl = lc.get_explorer(vim.api.nvim_get_current_tabpage())
       if not expl then return nil end
       local b, t = expl.base_revision, expl.target_revision
       if b and is_codereview_target(t) then
@@ -1086,6 +1110,7 @@ function M.setup(opts)
         end
         if expl.status_result then
           optimistic_move_directory(expl.status_result, dir_path, group, target_group)
+          set_optimistic_guard()
           rebuild_tree_from_status(expl)
         end
       else
@@ -1102,6 +1127,7 @@ function M.setup(opts)
         end
         if expl.status_result then
           optimistic_move_file(expl.status_result, path, group, target_group)
+          set_optimistic_guard()
           rebuild_tree_from_status(expl)
         end
       end
@@ -1115,6 +1141,7 @@ function M.setup(opts)
       end)
       if expl.status_result then
         optimistic_stage_all(expl.status_result)
+        set_optimistic_guard()
         rebuild_tree_from_status(expl)
       end
     end
@@ -1127,6 +1154,7 @@ function M.setup(opts)
       end)
       if expl.status_result then
         optimistic_unstage_all(expl.status_result)
+        set_optimistic_guard()
         rebuild_tree_from_status(expl)
       end
     end
@@ -1159,6 +1187,7 @@ function M.setup(opts)
         if explorer.status_result then
           optimistic_move_file(explorer.status_result, file_path, group, target_group)
           explorer.current_file_group = target_group
+          set_optimistic_guard()
           rebuild_tree_from_status(explorer)
         end
       end
@@ -1176,94 +1205,193 @@ function M.setup(opts)
     explorer_init.unstage_all = actions_mod_wrap.unstage_all
     explorer_init.toggle_stage_file = actions_mod_wrap.toggle_stage_file
 
-    -- Watcher notifications invalidate inputs, not necessarily the displayed diff.
-    -- Keep the upstream scheduler/status check, but force only changed inputs.
-    local orig_refresh_once = refresh_mod._refresh_once
-    refresh_mod._refresh_once = function(explorer, done, force)
-      invalidate_mutable_cache()
+    -- Replace M.refresh with fixed version (captures fixed local functions)
+    refresh_mod.refresh = function(explorer)
+      local git = require("codediff.core.git")
+
+      if explorer.is_hidden then return end
+      if not vim.api.nvim_win_is_valid(explorer.winid) then return end
+
+      -- External commits move HEAD; keep the file-click cache, drop the pin.
       invalidate_resolve_cache()
-      local function refresh(changed)
-        orig_refresh_once(explorer, function()
-          if explorer.git_root and not explorer.base_revision then
-            fetch_hunk_counts(explorer.git_root, function(counts)
-              vim.schedule(function()
-                local counts_changed = not vim.deep_equal(hunk_cache, counts)
-                hunk_cache.unstaged = counts.unstaged
-                hunk_cache.staged = counts.staged
-                if counts_changed and vim.api.nvim_win_is_valid(explorer.winid) then
-                  explorer.tree:render()
+
+      local current_node = explorer.tree:get_node()
+      local current_path = current_node and current_node.data and current_node.data.path
+
+      local function reselect_current(force)
+        local path = explorer.current_file_path
+        if not path or not explorer.on_file_select then return end
+        local group = explorer.current_file_group
+        local file = explorer.current_selection
+        if not file or file.path ~= path then
+          file = nil
+          for _, name in ipairs({ group, "unstaged", "staged", "conflicts" }) do
+            if name then
+              for _, entry in ipairs((explorer.status_result or {})[name] or {}) do
+                if entry.path == path then
+                  file, group = entry, name
+                  break
                 end
-                if done then done() end
-              end)
-            end)
-            return
+              end
+            end
+            if file then break end
           end
-          if done then done() end
-        end, changed)
+        end
+        if not file then return end
+        explorer.on_file_select({
+          path = file.path,
+          old_path = file.old_path,
+          status = file.status,
+          git_root = explorer.git_root,
+          group = group or file.group or "unstaged",
+        }, { no_jump = true, force = force })
       end
 
-      local lifecycle = require("codediff.ui.lifecycle")
-      local session = lifecycle.get_session(explorer.tabpage)
-      if not session or explorer.is_hidden or not explorer.git_root then
-        return refresh(force)
-      end
-      local pending, changed = 1, false
-      local function complete(different)
-        changed = changed or different
-        pending = pending - 1
-        if pending == 0 then
-          refresh(lifecycle.get_session(explorer.tabpage) == session and changed)
+      local function refresh_working_buffer()
+        local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
+        local session = ok and lifecycle.get_session and lifecycle.get_session(explorer.tabpage)
+        if not session then return end
+        if session.modified_revision and session.modified_revision ~= "WORKING" then return end
+        local buf = session.modified_bufnr
+        if not buf or not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].buftype ~= "" or vim.bo[buf].modified then
+          return
+        end
+        local tick = vim.api.nvim_buf_get_changedtick(buf)
+        local autoread = vim.bo[buf].autoread
+        vim.bo[buf].autoread = true
+        pcall(vim.cmd, "silent! checktime " .. buf)
+        vim.bo[buf].autoread = autoread
+        if tick ~= vim.api.nvim_buf_get_changedtick(buf) then
+          pcall(require("codediff.ui.auto_refresh").trigger, buf)
         end
       end
-      for _, side in ipairs({ "original", "modified" }) do
-        local buf = session[side .. "_bufnr"]
-        local revision = session[side .. "_revision"]
-        local ref = session[side]
-        if buf and vim.api.nvim_buf_is_valid(buf) and ref and ref.relative and ref.relative ~= "" then
-          if not revision or revision == "WORKING" then
-            -- Scoped checktime preserves unsaved edits and ignores timestamp-only changes.
-            local tick = vim.api.nvim_buf_get_changedtick(buf)
-            local autoread = vim.bo[buf].autoread
-            vim.bo[buf].autoread = true
-            if not vim.bo[buf].modified then
-              pcall(vim.cmd, "silent! checktime " .. buf)
+
+      local function refresh_open_diff_if_revision_moved()
+        if not explorer.base_revision then return end
+        explorer._resolved_revs = explorer._resolved_revs or {}
+        local pending, moved = 1, false
+        local function check(key, rev)
+          if not rev or rev == "WORKING" or tostring(rev):match("^:[0-3]$") then return end
+          pending = pending + 1
+          git_mod.resolve_revision(rev, explorer.git_root, function(err, hash)
+            vim.schedule(function()
+              if not err and hash then
+                local prev = explorer._resolved_revs[key]
+                if prev and prev ~= hash then moved = true end
+                explorer._resolved_revs[key] = hash
+              end
+              pending = pending - 1
+              if pending == 0 and moved then reselect_current(true) end
+            end)
+          end)
+        end
+        check("base", explorer.base_revision)
+        check("target", explorer.target_revision)
+        pending = pending - 1
+        if pending == 0 and moved then reselect_current(true) end
+      end
+
+      local function process_result(err, status_result)
+        vim.schedule(function()
+          if err then
+            vim.notify("Failed to refresh: " .. err, vim.log.levels.ERROR)
+            return
+          end
+
+          -- Upstream 同等の early-return: 状態が前回と同一なら再構築しない。
+          -- auto-refresh のたびに tree を作り直すと render 揺れとカーソルズレの
+          -- 抽選機会が増えるだけで得るものがない。
+          -- File lists omit blob ids, so a new commit of the same paths still
+          -- looks unchanged; reload the open diff if HEAD/base actually moved.
+          if vim.deep_equal(status_result, explorer.status_result) then
+            refresh_open_diff_if_revision_moved()
+            refresh_working_buffer()
+            return
+          end
+
+          -- During optimistic guard period, only update status_result
+          -- and skip tree rebuild/render to avoid double-rendering flicker.
+          if vim.uv.hrtime() / 1e6 < optimistic_guard_until then
+            explorer.status_result = status_result
+            return
+          end
+
+          local tree_module = require("codediff.ui.explorer.tree")
+          local root_nodes = tree_module.create_tree_data(status_result, explorer.git_root, explorer.base_revision, not explorer.git_root)
+
+          for _, node in ipairs(root_nodes) do
+            node:expand()
+          end
+
+          -- Collect collapsed state from current tree right before replacing nodes.
+          -- Must be inside vim.schedule to capture user's latest expand/collapse changes
+          -- that occurred during the async git status fetch.
+          local collapsed_state = collect_collapsed_state(explorer.tree)
+
+          explorer.tree:set_nodes(root_nodes)
+
+          local explorer_config = config_mod.options.explorer or {}
+          if explorer_config.view_mode == "tree" then
+            local function expand_all_dirs(parent_node)
+              if not parent_node:has_children() then return end
+              for _, child_id in ipairs(parent_node:get_child_ids()) do
+                local child = explorer.tree:get_node(child_id)
+                if child and child.data and child.data.type == "directory" then
+                  child:expand()
+                  expand_all_dirs(child)
+                end
+              end
             end
-            vim.bo[buf].autoread = autoread
-            changed = changed or tick ~= vim.api.nvim_buf_get_changedtick(buf)
-          else
-            pending = pending + 1
-            local mutable = revision:match("^:[0-3]$")
-            local expected = mutable and revision
-              or (side == "original" and (explorer.base_revision or "HEAD") or explorer.target_revision)
-              or revision
-            local function check_content(resolved)
-              git_mod.get_file_content(resolved, explorer.git_root, ref.relative, function(err, lines)
-                vim.schedule(function()
-                  complete(err ~= nil or not vim.api.nvim_buf_is_valid(buf)
-                    or not vim.deep_equal(lines, vim.api.nvim_buf_get_lines(buf, 0, -1, false)))
-                end)
-              end)
-            end
-            local pinned = (#revision == 40 or #revision == 64) and revision:match("^%x+$")
-            if mutable then
-              check_content(expected)
-            elseif pinned and expected == revision then
-              complete(false)
-            else
-              git_mod.resolve_revision(expected, explorer.git_root, function(err, resolved)
-                vim.schedule(function()
-                  if err or pinned then
-                    complete(err ~= nil or resolved ~= revision)
-                  else
-                    check_content(resolved)
-                  end
-                end)
-              end)
+            for _, node in ipairs(root_nodes) do
+              expand_all_dirs(node)
             end
           end
+
+          restore_collapsed_state(explorer.tree, collapsed_state, root_nodes)
+          explorer.tree:render()
+          explorer.status_result = status_result
+
+          if current_path then
+            local nodes = explorer.tree:get_nodes()
+            for _, node in ipairs(nodes) do
+              if node.data and node.data.path == current_path then
+                explorer.tree:set_node(node:get_id())
+                break
+              end
+            end
+          end
+          reselect_current(true)
+        end)
+      end
+
+      -- Fetch hunk counts in parallel with status
+      local function fetch_and_render()
+        if explorer.git_root and not explorer.base_revision then
+          fetch_hunk_counts(explorer.git_root, function(counts)
+            vim.schedule(function()
+              hunk_cache.unstaged = counts.unstaged
+              hunk_cache.staged = counts.staged
+              -- Re-render to show hunk counts
+              if vim.api.nvim_win_is_valid(explorer.winid) then
+                explorer.tree:render()
+              end
+            end)
+          end)
         end
       end
-      complete(false)
+
+      if not explorer.git_root then
+        local dir_mod = require("codediff.core.dir")
+        local diff = dir_mod.diff_directories(explorer.dir1, explorer.dir2)
+        process_result(nil, diff.status_result)
+      elseif explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
+        git.get_diff_revisions(explorer.base_revision, explorer.target_revision, explorer.git_root, process_result)
+      elseif explorer.base_revision then
+        git.get_diff_revision(explorer.base_revision, explorer.git_root, process_result)
+      else
+        git.get_status(explorer.git_root, process_result)
+        fetch_and_render()
+      end
     end
 
     -- ヘルプライン用の namespace と定義
@@ -1355,7 +1483,7 @@ function M.setup(opts)
       local ok_lc, lifecycle = pcall(require, "codediff.ui.lifecycle")
       for tab, _ in pairs(codediff_tabs) do
         if vim.api.nvim_tabpage_is_valid(tab) then
-          local explorer = ok_lc and lifecycle.get_panel_view and lifecycle.get_panel_view(tab)
+          local explorer = ok_lc and lifecycle.get_explorer and lifecycle.get_explorer(tab)
           if explorer and explorer.base_revision and is_codereview_target(explorer.target_revision) then
             review_open = true
             break
@@ -2731,7 +2859,7 @@ function M.setup(opts)
     vim.api.nvim_create_user_command("CodeReviewCopyPath", function()
       local git_root, _, _ = codereview_ctx()
       local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
-      local explorer = ok and lifecycle.get_panel_view and lifecycle.get_panel_view(vim.api.nvim_get_current_tabpage()) or nil
+      local explorer = ok and lifecycle.get_explorer and lifecycle.get_explorer(vim.api.nvim_get_current_tabpage()) or nil
       local path = explorer and explorer.current_file_path or nil
       if not git_root or not path then
         vim.notify("No CodeReview file selected", vim.log.levels.WARN)
