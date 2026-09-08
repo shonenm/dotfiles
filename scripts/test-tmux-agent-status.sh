@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=/dev/null
+source "$ROOT/scripts/tmux-agent-lib.sh"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/tmux-agent-test.XXXXXX")"
 SOCK_A="$TMP/a.sock"
 SOCK_B="$TMP/b.sock"
@@ -30,6 +32,45 @@ use_server() {
 }
 
 option() { tmux show-options -pv -t "$TMUX_PANE" "$1" 2>/dev/null || true; }
+
+wait_for_file() {
+  local file="$1"
+  for _ in {1..100}; do
+    [[ -f "$file" ]] && return 0
+    sleep 0.02
+  done
+  return 1
+}
+
+start_lock_holder() {
+  local lock_file="$1" ready="$2" release="$3"
+  bash -c '
+    set -euo pipefail
+    lock_file="$1"
+    ready="$2"
+    release="$3"
+    kind=""
+    cleanup() {
+      if [[ "$kind" == shlock && "$(cat "$lock_file" 2>/dev/null || true)" == "$$" ]]; then
+        rm -f "$lock_file"
+      fi
+    }
+    trap cleanup EXIT
+    if command -v flock >/dev/null 2>&1; then
+      exec 9>"$lock_file"
+      flock 9
+      kind=flock
+    elif command -v shlock >/dev/null 2>&1; then
+      until shlock -f "$lock_file" -p "$$"; do sleep 0.05; done
+      kind=shlock
+    else
+      exit 127
+    fi
+    touch "$ready"
+    while [[ ! -f "$release" ]]; do sleep 0.02; done
+  ' bash "$lock_file" "$ready" "$release" &
+  LOCK_HOLDER_PID=$!
+}
 
 export XDG_RUNTIME_DIR="$TMP/runtime"
 export AGENT_STATUS_DIR="$TMP/status"
@@ -78,15 +119,36 @@ wait "$scan_pid"
 assert_eq "$(option @agent_status)" running concurrent-heartbeat-wins
 
 # lock待ち時間を古いheartbeat timestampとして保存しないこと。
-lock_channel="agent-state-${TMUX_PANE#%}"
-tmux wait-for -L "$lock_channel"
+lock_dir=$(agent_runtime_dir)
+mkdir -p "$lock_dir"
+lock_file="${lock_dir}/pane-${TMUX_PANE#%}.lock"
+ready="$TMP/lock-ready"
+release="$TMP/lock-release"
+start_lock_holder "$lock_file" "$ready" "$release"
+wait_for_file "$ready" || fail "lock holder did not start"
 "$PANE" heartbeat pi event & heartbeat_pid=$!
 sleep 1.1
 released=$(date +%s)
-tmux wait-for -U "$lock_channel"
+touch "$release"
+wait "$LOCK_HOLDER_PID"
 wait "$heartbeat_pid"
 stored=$(option @agent_heartbeat)
 (( stored >= released )) || fail "heartbeat timestamp was sampled before pane lock"
+
+# hookがSIGKILLされても、次のhookがpane lockを取得できること。
+rm -f "$ready" "$release"
+start_lock_holder "$lock_file" "$ready" "$release"
+wait_for_file "$ready" || fail "kill-test lock holder did not start"
+done_file="$TMP/lock-recovered"
+("$PANE" heartbeat pi event && touch "$done_file") & recovery_pid=$!
+sleep 0.1
+kill -KILL "$LOCK_HOLDER_PID"
+wait "$LOCK_HOLDER_PID" 2>/dev/null || true
+if ! wait_for_file "$done_file"; then
+  kill "$recovery_pid" 2>/dev/null || true
+  fail "pane lock remained after holder was killed"
+fi
+wait "$recovery_pid"
 
 "$INDEX" refresh
 "$PANE" set idle pi
