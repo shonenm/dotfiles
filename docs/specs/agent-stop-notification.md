@@ -31,7 +31,7 @@ Claude Code、pi、Codex、Gemini CLI、Cursor Agent、Command Code、Grok Build
 | Command Code | 最初の`PreToolUse` | `PreToolUse`、`PostToolUse` | `Stop` | prompt開始eventがないためtext-only turnのrunningは取得不可 |
 | Grok Build | `UserPromptSubmit` | `PreToolUse`、`PostToolUse`、`PostToolUseFailure` | `Notification`(permission_prompt)、`Stop` | `StopFailure`、`SessionEnd` |
 
-Provider hookはpane state更新を同期完了してから戻る。pi extensionはPromise queueで更新順を保証する。Codexは初回起動時にhook trust確認が表示されるため、内容を確認して許可する。
+Provider hookはpane state更新を同期完了してから戻る。pane単位の更新はLinuxでは`flock`、macOSでは`shlock`で直列化し、hookが強制終了しても次回取得時にlockを解放または回収する。pi extensionはPromise queueで更新順を保証する。Codexは初回起動時にhook trust確認が表示されるため、内容を確認して許可する。
 
 ## Hang判定
 
