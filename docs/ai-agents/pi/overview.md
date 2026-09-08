@@ -154,12 +154,14 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 
 - compact header: model、作業directory、Pi version
 - state composer: `ASK` / `RUN` / `TOOL`、thinking level、context、`/status`導線
-- responsive footer: extension status、branch、model、context、tokens、cost、Cursor上限、agents、Web、MCP
-- `/status`: 常時表示から省いた情報も含むsession telemetry overlay
+- footer: 作業directory、branch、model、context使用率、実行状態と操作案内、stash等の状態。幅が狭い場合も項目を省かず折り返す。contextの`CTX`ラベルは付けず、footerはゲージと割合、composerは割合のみ表示
+- `/status`: project、model / thinking、context、background agents、表示対象のextension statusを確認するoverlay
 - terminal tab: `READY` / `RUN` / tool名 / dirty状態
 - working indicator: Tokyo Nightのaccentに合わせたPi orbit
 
-`/statusline detailed|balanced|minimal|legacy|off`で表示密度を切り替える。`detailed`は幅が狭いと自動的にbalanced表示へ縮退し、`legacy`は従来の3段情報量を確認する比較用profileとして残す。
+`/statusline on|off`でfooterを表示・非表示にする。引数なしはtoggle。旧profile名（`detailed`、`balanced`、`minimal`、`compact`、`legacy`）と保存済み設定は`on`として扱い、幅によるprofile切り替えや行数上限は設けない。
+
+Cursor上限、YOLO / Ponytail（FULL）、package数 / auto-update、TOK / COST / WEB / MCPはfooterにも`/status`にも表示しない。Cursor上限の問い合わせとtoken / cost / research統計の読み取りもstatuslineから削除している。permission、Ponytail、package管理、Web / MCPの機能自体は変更しない。
 
 比較用packageはinstall状態を維持するが、surface ownershipが競合する`pi-open-tui`、`pi-beautiful-tui`、`pi-system-theme`のextension entrypointはfilterする。theme collection、Pi Studio、extmgr、tool pills、session／todo機能など、統合shellと重複しない機能は引き続き読み込む。
 
@@ -180,11 +182,15 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 
 - `Ctrl+T`: 思考ブロックを展開/折り畳み
 - `Ctrl+O`: ツール出力を展開/折り畳み
+- `Ctrl+S`: 入力中の下書きを退避。入力欄が空の状態で再度押すと復元し、割り込み対応が終わってagentが停止した際も空欄なら自動復元する
+- `Ctrl+R`: 現在の会話ブランチのプロンプト履歴を検索。文字入力で絞り込み、`↑↓`で選択、`Enter`で入力欄へ復元（自動送信しない）。`Esc`で下書きを変えずに戻る。改行は復元時に保持し、同じ入力は最新の1件にまとめる
 - `Esc` を2回: `/tree` を開く。tree 内の `Ctrl+T` でツール結果を表示/非表示
 - 実行中は現在のtoolと`Esc/Enter`をフッターに表示（`Esc`は停止、`Enter`はsteer）
-- `/statusline minimal`: Cursor のプラン上限を含む優先度ベースの1行表示へ切り替え（取得元は `ai-usage cursor`）
-- `/status`: usage、agents、Web、MCP、extension statusをoverlayで一覧表示
+- `/statusline off`: footerを非表示（`on`で再表示）
+- `/status`: project、model / thinking、context、background agents、表示対象のextension statusをoverlayで一覧表示
 - 入力中の既知 skill 名はアクセント色でハイライトされる（`/reload` または再起動で skill 一覧を再読込）。
+
+`Ctrl+S` / `Ctrl+R`はcustom extensionの`prompt-stash.ts` / `prompt-history.ts`が担当する。built-in shortcutとの競合警告を避けるため、選択画面内のモデル選択保存・セッション並べ替えは`Alt+S`、セッション名変更は`Alt+R`へ`keybindings.json`で変更している。変更は`/reload`で反映される。
 
 ### Permission gate
 

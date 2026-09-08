@@ -7,21 +7,22 @@ pi_package=$(cd "$(dirname "$pi_bin")/.." && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-mkdir -p "$tmp/home/.pi/research" "$tmp/home/.pi/agent" "$tmp/bin"
-ln -s "$pi_package/node_modules" "$tmp/node_modules"
-ln -s "$root/common/pi/.pi/agent/extensions/statusline.ts" "$tmp/statusline.ts"
-printf '%s' '{"searchCount":3,"fetchCount":5,"cacheHits":2}' >"$tmp/home/.pi/research/stats.json"
-printf '%s' '{"demo":{"calls":8,"errors":1}}' >"$tmp/home/.pi/research/mcp-stats.json"
-printf '%s' 'Refine the pi statusline' >"$tmp/home/.pi/agent/goal"
+mkdir -p "$tmp/home/.pi/agent" "$tmp/bin" "$tmp/node_modules/@earendil-works"
+ln -s "$pi_package" "$tmp/node_modules/@earendil-works/pi-coding-agent"
+ln -s "$pi_package/node_modules/@earendil-works/pi-tui" "$tmp/node_modules/@earendil-works/pi-tui"
+cp "$root/common/pi/.pi/agent/extensions/statusline.ts" "$tmp/statusline.ts"
+printf '%s' 'detailed' >"$tmp/home/.pi/agent/statusline-mode"
 printf '%s\n' '#!/bin/sh' \
   'printf '\''%s'\'' '\''{"tasks":{"1":{"label":"pi-delegate","status":"Running"},"2":{"label":"pi-delegate","status":"Queued"}}}'\''' \
   >"$tmp/bin/pueue"
-printf '%s\n' '#!/bin/sh' 'exit 1' >"$tmp/bin/ai-usage"
+printf '%s\n' '#!/bin/sh' 'touch "$HOME/ai-usage-called"; exit 1' >"$tmp/bin/ai-usage"
 chmod +x "$tmp/bin/pueue" "$tmp/bin/ai-usage"
 
 cd "$tmp"
-HOME="$tmp/home" PATH="$tmp/bin:$PATH" node --experimental-strip-types --preserve-symlinks --input-type=module - "$tmp" <<'JS'
+HOME="$tmp/home" PATH="$tmp/bin:$PATH" node --experimental-transform-types --input-type=module - "$tmp" <<'JS'
 import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
+import { stripVTControlCharacters } from "node:util";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
 const tmp = process.argv[2];
@@ -29,12 +30,28 @@ const { default: registerStatusline } = await import(`file://${tmp}/statusline.t
 const handlers = new Map();
 const commands = new Map();
 let footerFactory;
+let headerFactory;
+let editorFactory = () => ({ render: () => ["border", "draft", "border"] });
+let overlay;
 let contextPercent = 42;
-let reloaded = false;
-const statuses = new Map([["stash", "📝 STASHED"]]);
+let branch = "main";
+const statuses = new Map([
+  ["pi-permission-system", "yolo"],
+  ["ponytail", "🐴 ponytail: ⚡ FULL"],
+  ["extmgr", "32 pkgs • auto-update off"],
+  ["stash", "📝 STASHED"],
+  ...Array.from({ length: 6 }, (_, i) => [`notice-${i}`, `notice-${i}`]),
+]);
+const ansi = { success: 32, warning: 33, error: 31, muted: 37, dim: 90 };
+const theme = {
+  fg: (color, text) => `\x1b[${ansi[color] ?? 36}m${text}\x1b[0m`,
+  bg: (_color, text) => text,
+  bold: (text) => text,
+};
 
 registerStatusline({
   registerCommand: (name, options) => commands.set(name, options),
+  getThinkingLevel: () => "high",
   on(event, handler) {
     const list = handlers.get(event) ?? [];
     list.push(handler);
@@ -43,74 +60,96 @@ registerStatusline({
 });
 
 const ctx = {
-  sessionManager: {
-    getBranch: () => [{
-      type: "message",
-      message: {
-        role: "assistant",
-        usage: { input: 12400, output: 3100, cost: { total: 0.38 } },
-      },
-    }],
-  },
-  getContextUsage: () => ({ tokens: contextPercent === null ? null : 42000, contextWindow: 100000, percent: contextPercent }),
-  model: { id: "gpt-5.6-sol", contextWindow: 100000 },
+  hasUI: true,
+  cwd: `${tmp}/home/dotfiles`,
+  sessionManager: { getBranch: () => assert.fail("Token history must not be collected") },
+  getContextUsage: () => ({ tokens: 42000, contextWindow: 100000, percent: contextPercent }),
+  model: { provider: "openai-codex", id: "gpt-5.6-sol", contextWindow: 100000 },
   ui: {
+    theme,
     setFooter: (factory) => { footerFactory = factory; },
+    setHeader: (factory) => { headerFactory = factory; },
+    getEditorComponent: () => editorFactory,
+    setEditorComponent: (factory) => { editorFactory = factory; },
+    setWorkingIndicator: () => {},
+    setTitle: () => {},
     setStatus: (key, value) => value === undefined ? statuses.delete(key) : statuses.set(key, value),
+    custom: async (factory) => { overlay = factory({}, theme, {}, () => {}); },
     notify: () => {},
   },
-  reload: async () => { reloaded = true; },
 };
-
-for (const handler of handlers.get("session_start")) await handler({}, ctx);
-for (const handler of handlers.get("agent_start")) await handler({}, ctx);
-for (const handler of handlers.get("tool_execution_start")) await handler({ toolName: "bash" }, ctx);
-
-const ansi = { success: 32, warning: 33, error: 31, muted: 37, dim: 90 };
-const theme = {
-  fg: (color, text) => `\x1b[${ansi[color] ?? 36}m${text}\x1b[0m`,
-  bg: (_color, text) => text,
+const emit = async (event, data = {}) => {
+  for (const handler of handlers.get(event) ?? []) await handler(data, ctx);
 };
 const footerData = {
-  getGitBranch: () => "main",
+  getGitBranch: () => branch,
   getExtensionStatuses: () => statuses,
   onBranchChange: () => () => {},
 };
-const component = footerFactory({ requestRender() {} }, theme, footerData);
+const footer = () => footerFactory({ requestRender() {} }, theme, footerData);
+const text = (lines) => stripVTControlCharacters(lines.join("\n")).replace(/\s+/g, " ");
+const compactText = (lines) => text(lines).replace(/\s/g, "");
+const removed = /\b(?:CURSOR|yolo|ponytail|FULL|pkgs|auto-update|TOK|TOKENS|COST|WEB|MCP|CTX)\b/i;
 
-for (const [width, maxLines] of [[100, 3], [80, 3], [60, 4], [40, 5]]) {
+await emit("session_start");
+await emit("agent_start");
+await emit("tool_execution_start", { toolName: "bash" });
+const component = footer();
+const baseline = compactText(component.render(160));
+for (const width of [160, 100, 90, 89, 80, 64, 63, 60, 40]) {
   const lines = component.render(width);
-  assert(lines.length <= maxLines, `${width} columns rendered ${lines.length} lines`);
   assert(lines.every((line) => visibleWidth(line) <= width), `${width} column render overflowed`);
-  const text = lines.join("\n");
-  for (const expected of ["Goal:", "STASHED", "main", "gpt-5.6-sol", "CTX", "TOK", "COST", "AGT", "WEB", "MCP"]) {
-    assert(text.includes(expected), `${width} column render omitted ${expected}`);
+  assert.equal(compactText(lines), baseline, `${width} columns changed displayed information`);
+  assert(!removed.test(text(lines)), `${width} columns show removed telemetry`);
+  for (const expected of ["~/dotfiles", "STASHED", "notice-5", "main", "gpt-5.6-sol", "42%", "bash", "Esc stop", "Enter steer"]) {
+    assert(text(lines).includes(expected), `${width} columns omitted ${expected}`);
   }
 }
+assert.equal(headerFactory({}, theme).render(40).length, 2);
+const editorText = text(editorFactory({}, {}, {}).render(80));
+assert(editorText.includes("THINK high"));
+assert(editorText.includes("42%"));
+assert(!editorText.includes("CTX"));
 
-assert(component.render(100).join("\n").includes("bash · Esc/Ent"));
-for (const handler of handlers.get("agent_settled")) await handler({}, ctx);
-assert(!component.render(100).join("\n").includes("Esc/Ent"));
+branch = "feature/日本語の長いブランチ名-".repeat(4);
+const longBaseline = compactText(component.render(200));
+for (const width of [40, 64, 100]) {
+  assert.equal(compactText(component.render(width)), longBaseline);
+}
+for (const width of [0, 1, 2, 10]) {
+  assert(component.render(width).every((line) => visibleWidth(line) <= width));
+}
+branch = "main";
 
-assert(component.render(80).join("\n").includes("\x1b[32m42%\x1b[0m"));
-contextPercent = 75;
-assert(component.render(80).join("\n").includes("\x1b[33m75%\x1b[0m"));
-contextPercent = 90;
-assert(component.render(80).join("\n").includes("\x1b[31m90%\x1b[0m"));
+await emit("tool_execution_end");
+assert(text(component.render(80)).includes("RUN"));
+await emit("agent_settled");
+assert(!text(component.render(80)).includes("Esc stop"));
+for (const [percent, color] of [[42, 32], [75, 33], [90, 31]]) {
+  contextPercent = percent;
+  assert(component.render(80).join("\n").includes(`\x1b[${color}m${percent}%\x1b[0m`));
+}
 contextPercent = null;
-assert(component.render(80).join("\n").includes("?"));
+assert(text(component.render(80)).includes("?"));
 
-await commands.get("statusline").handler("compact", ctx);
-const compact = component.render(60);
-assert.equal(compact.length, 1);
-assert(visibleWidth(compact[0]) <= 60);
-assert(compact[0].includes("STASHED"));
-assert(compact[0].includes("CTX"));
+await commands.get("status").handler("", ctx);
+overlay.invalidate();
+assert(!removed.test(text(overlay.render())));
+assert(text(overlay.render()).includes("running 1 · queued 1"));
+assert.equal(statuses.get("pi-permission-system"), "yolo", "Hiding badges must not change extension state");
+assert(statuses.has("ponytail") && statuses.has("extmgr"));
 
+for (const mode of ["minimal", "compact", "balanced", "detailed", "legacy", "on"]) {
+  await commands.get("statusline").handler(mode, ctx);
+  assert.equal(compactText(footer().render(40)), compactText(component.render(160)));
+}
 await commands.get("statusline").handler("off", ctx);
-assert.equal(footerFactory, undefined);
-await commands.get("statusline").handler("detailed", ctx);
-assert(reloaded);
+assert.deepEqual(footer().render(80), [], "Off must hide the footer, not restore built-in telemetry");
+assert.equal(readFileSync(`${tmp}/home/.pi/agent/statusline-mode`, "utf8"), "off");
+await commands.get("statusline").handler("", ctx);
+assert(footer().render(80).length > 0);
+await emit("turn_end");
+assert(!existsSync(`${tmp}/home/ai-usage-called`), "Cursor usage must not be queried");
 
-console.log("OK: statusline fits 100/80/60/40 columns, shows run controls, and colors context usage thresholds");
+console.log("OK: statusline preserves information across widths, hides unwanted telemetry, and keeps run controls/context colors");
 JS
