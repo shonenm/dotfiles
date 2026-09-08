@@ -30,15 +30,43 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/tmux-agent-lib.sh"
 
-LOCK_CHANNEL=""
+LOCK_FILE=""
+LOCK_FD=""
+LOCK_KIND=""
 lock_pane() {
-  LOCK_CHANNEL="agent-state-${1#%}"
-  tmux wait-for -L "$LOCK_CHANNEL"
+  local pane="$1" lock_dir
+  lock_dir="$(agent_runtime_dir)"
+  mkdir -p "$lock_dir"
+  LOCK_FILE="${lock_dir}/pane-${pane#%}.lock"
+
+  if command -v flock >/dev/null 2>&1; then
+    exec {LOCK_FD}>"$LOCK_FILE"
+    flock "$LOCK_FD"
+    LOCK_KIND="flock"
+  elif command -v shlock >/dev/null 2>&1; then
+    until shlock -f "$LOCK_FILE" -p "$$"; do sleep 0.05; done
+    LOCK_KIND="shlock"
+  else
+    echo "tmux agent state locking requires flock or shlock" >&2
+    return 1
+  fi
 }
 unlock_pane() {
-  local channel="$LOCK_CHANNEL"
-  LOCK_CHANNEL=""
-  [[ -n "$channel" ]] && tmux wait-for -U "$channel" 2>/dev/null || true
+  local fd owner
+  case "$LOCK_KIND" in
+    flock)
+      fd="$LOCK_FD"
+      LOCK_KIND=""
+      LOCK_FD=""
+      exec {fd}>&-
+      ;;
+    shlock)
+      owner=$(cat "$LOCK_FILE" 2>/dev/null || true)
+      [[ "$owner" == "$$" ]] && rm -f "$LOCK_FILE"
+      LOCK_KIND=""
+      ;;
+  esac
+  LOCK_FILE=""
 }
 trap unlock_pane EXIT
 
