@@ -1,7 +1,6 @@
 // Pi UI shell: one owner for header, composer, footer, working indicator, and tab title.
-// Keeps the original rich telemetry while adding responsive profiles and /status.
+// Shows the same essential session information at every terminal width.
 
-import type { AssistantMessage } from "@earendil-works/pi-ai";
 import {
   CustomEditor,
   VERSION,
@@ -13,29 +12,26 @@ import {
   matchesKey,
   truncateToWidth,
   visibleWidth,
+  wrapTextWithAnsi,
   type Focusable,
 } from "@earendil-works/pi-tui";
-import { execFileSync, execSync } from "node:child_process";
+import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 
-type DisplayMode = "off" | "minimal" | "compact" | "balanced" | "detailed" | "legacy";
+type DisplayMode = "off" | "on";
 type EditorFactory = NonNullable<ReturnType<ExtensionContext["ui"]["getEditorComponent"]>>;
 type ShellEditorFactory = EditorFactory & { __piUiShell?: true };
 
 const MODE_FILE = join(homedir(), ".pi", "agent", "statusline-mode");
 const DIRTY_CHECK_INTERVAL_MS = 5000;
-const STATS_CACHE_TTL = 10_000;
+const HIDDEN_STATUSES = new Set(["pi-permission-system", "ponytail", "extmgr"]);
 
 function loadMode(): DisplayMode {
   try {
-    const value = readFileSync(MODE_FILE, "utf-8").trim();
-    if (["off", "minimal", "compact", "balanced", "detailed", "legacy"].includes(value)) {
-      return value as DisplayMode;
-    }
-  } catch { /* default below */ }
-  return "detailed";
+    return readFileSync(MODE_FILE, "utf-8").trim() === "off" ? "off" : "on";
+  } catch { return "on"; }
 }
 
 function saveMode(value: DisplayMode): void {
@@ -48,32 +44,7 @@ let lastDirtyCheck = 0;
 let currentTool = "";
 let running = false;
 let latestStatuses: string[] = [];
-let tokCache = { input: 0, output: 0, cost: 0 };
 let agentStatus = { running: 0, queued: 0 };
-let cursorLimits = "";
-
-interface StatsSnapshot {
-  webSearch: number;
-  webFetch: number;
-  webCache: number;
-  mcpCalls: number;
-  mcpErrors: number;
-}
-
-let cachedStats: StatsSnapshot | null = null;
-let statsCacheMs = 0;
-
-function recomputeTokens(branch: Iterable<{ type: string; message?: { role: string } }>): void {
-  let input = 0, output = 0, cost = 0;
-  for (const entry of branch) {
-    if (entry.type !== "message" || entry.message?.role !== "assistant") continue;
-    const message = entry.message as unknown as AssistantMessage;
-    input += message.usage.input;
-    output += message.usage.output;
-    cost += message.usage.cost.total;
-  }
-  tokCache = { input, output, cost };
-}
 
 function checkGitDirty(): boolean {
   try {
@@ -83,44 +54,6 @@ function checkGitDirty(): boolean {
       stdio: ["pipe", "pipe", "ignore"],
     }).trim().length > 0;
   } catch { return false; }
-}
-
-function refreshStats(): StatsSnapshot {
-  const now = Date.now();
-  if (cachedStats && now - statsCacheMs < STATS_CACHE_TTL) return cachedStats;
-
-  const stats: StatsSnapshot = { webSearch: 0, webFetch: 0, webCache: 0, mcpCalls: 0, mcpErrors: 0 };
-  const dir = join(homedir(), ".pi", "research");
-  try {
-    const web = JSON.parse(readFileSync(join(dir, "stats.json"), "utf-8"));
-    stats.webSearch = web.searchCount ?? 0;
-    stats.webFetch = web.fetchCount ?? 0;
-    stats.webCache = web.cacheHits ?? 0;
-  } catch { /* absent or invalid */ }
-  try {
-    const mcp = JSON.parse(readFileSync(join(dir, "mcp-stats.json"), "utf-8"));
-    for (const value of Object.values(mcp) as Array<{ calls?: number; errors?: number }>) {
-      stats.mcpCalls += value.calls ?? 0;
-      stats.mcpErrors += value.errors ?? 0;
-    }
-  } catch { /* absent or invalid */ }
-  cachedStats = stats;
-  statsCacheMs = now;
-  return stats;
-}
-
-function refreshCursorLimits(): void {
-  try {
-    const rows = execFileSync("ai-usage", ["cursor"], {
-      encoding: "utf-8",
-      timeout: 6000,
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim().split("\n");
-    cursorLimits = rows.map((row) => {
-      const [, label, , pct, remaining] = row.split("\x1f");
-      return label && label !== "--" ? `${label} ${pct}${remaining ? ` ${remaining}` : ""}` : "";
-    }).filter(Boolean).join(" · ");
-  } catch { cursorLimits = ""; }
 }
 
 function refreshAgents(): void {
@@ -142,11 +75,8 @@ function refreshAgents(): void {
   agentStatus = { running: active, queued };
 }
 
-function refreshSnapshot(ctx: ExtensionContext, includeRemote = false): void {
-  recomputeTokens(ctx.sessionManager.getBranch());
+function refreshSnapshot(): void {
   refreshAgents();
-  refreshStats();
-  if (includeRemote) refreshCursorLimits();
   const now = Date.now();
   if (now - lastDirtyCheck > DIRTY_CHECK_INTERVAL_MS) {
     dirtyState = checkGitDirty();
@@ -178,31 +108,6 @@ function balanceLine(left: string, right: string, width: number): string {
   return truncateToWidth(fittedLeft + " ".repeat(Math.max(3, width - visibleWidth(fittedLeft) - rightWidth)) + right, width);
 }
 
-function wrapGroups(groups: string[], width: number, separator: string): string[] {
-  const lines: string[] = [];
-  let line = "";
-  for (const group of groups.filter(Boolean)) {
-    const candidate = line ? line + separator + group : group;
-    if (line && visibleWidth(candidate) > width) {
-      lines.push(truncateToWidth(line, width));
-      line = group;
-    } else {
-      line = candidate;
-    }
-  }
-  if (line) lines.push(truncateToWidth(line, width));
-  return lines;
-}
-
-function prioritizedLine(groups: Array<{ text: string; priority: number }>, width: number, separator: string): string {
-  const selected: typeof groups = [];
-  for (const group of [...groups].filter(({ text }) => text).sort((a, b) => a.priority - b.priority)) {
-    const candidate = [...selected, group].sort((a, b) => groups.indexOf(a) - groups.indexOf(b));
-    if (visibleWidth(candidate.map(({ text }) => text).join(separator)) <= width) selected.push(group);
-  }
-  return truncateToWidth(selected.sort((a, b) => groups.indexOf(a) - groups.indexOf(b)).map(({ text }) => text).join(separator), width);
-}
-
 function fitBorder(left: string, right: string, width: number, paint: (text: string) => string): string {
   if (width <= 1) return paint("─".repeat(Math.max(0, width)));
   let lhs = left, rhs = right;
@@ -217,7 +122,7 @@ function fitBorder(left: string, right: string, width: number, paint: (text: str
 
 function contextLabel(ctx: ExtensionContext): string {
   const usage = ctx.getContextUsage();
-  return usage?.percent === null || usage?.percent === undefined ? "CTX ?" : `CTX ${Math.round(usage.percent)}%`;
+  return usage?.percent === null || usage?.percent === undefined ? "?" : `${Math.round(usage.percent)}%`;
 }
 
 function setTabTitle(ctx: ExtensionContext, state: string): void {
@@ -231,7 +136,7 @@ function installHeader(ctx: ExtensionContext): void {
       const title = theme.bold(theme.fg("text", "CODING SHELL"));
       const meta = theme.fg("muted", `${ctx.model?.id ?? "no-model"} · ${formatCwd(ctx.cwd)}`);
       const first = balanceLine(` ${mark}  ${title}`, theme.fg("dim", `v${VERSION}`), width);
-      return width < 48 ? [first] : [first, truncateToWidth(` ${theme.fg("dim", "╰─")} ${meta}`, width)];
+      return [first, truncateToWidth(` ${theme.fg("dim", "╰─")} ${meta}`, width)];
     },
     invalidate() {},
   }));
@@ -280,6 +185,8 @@ class StatusOverlay implements Focusable {
     if (matchesKey(data, "escape") || matchesKey(data, "return") || data === "q") this.done();
   }
 
+  invalidate(): void {}
+
   render(): string[] {
     const inner = this.width - 2;
     const border = (text: string) => this.theme.fg("border", text);
@@ -289,7 +196,7 @@ class StatusOverlay implements Focusable {
     };
     const output = [
       border(`╭${"─".repeat(inner)}╮`),
-      row(`${this.theme.bold(this.theme.fg("accent", "π  SESSION STATUS"))}  ${this.theme.fg("dim", `profile: ${mode}`)}`),
+      row(`${this.theme.bold(this.theme.fg("accent", "π  SESSION STATUS"))}  ${this.theme.fg("dim", `footer: ${mode}`)}`),
       row(),
     ];
     for (const [label, value] of this.lines) {
@@ -302,45 +209,37 @@ class StatusOverlay implements Focusable {
 
 export default function (pi: ExtensionAPI) {
   pi.registerCommand("statusline", {
-    description: "Set UI profile: detailed, balanced, minimal, legacy, or off",
+    description: "Show or hide the session footer: on, off",
     getArgumentCompletions: () => [
-      { value: "detailed", label: "Rich responsive telemetry" },
-      { value: "balanced", label: "Two compact rails" },
-      { value: "minimal", label: "One priority-driven rail" },
-      { value: "legacy", label: "Original three-rail layout" },
-      { value: "off", label: "Disable the footer" },
+      { value: "on", label: "Show session information" },
+      { value: "off", label: "Hide the footer" },
     ],
     handler: async (args, ctx) => {
-      const requested = args.trim() === "compact" ? "balanced" : args.trim();
-      if (["off", "minimal", "balanced", "detailed", "legacy"].includes(requested)) {
-        mode = requested as DisplayMode;
-      } else {
-        const cycle: DisplayMode[] = ["detailed", "balanced", "minimal", "off"];
-        mode = cycle[(cycle.indexOf(mode) + 1) % cycle.length]!;
+      const requested = args.trim();
+      if (requested === "on" || requested === "off") mode = requested;
+      else if (["minimal", "compact", "balanced", "detailed", "legacy"].includes(requested)) mode = "on";
+      else if (!requested) mode = mode === "off" ? "on" : "off";
+      else {
+        ctx.ui.notify("Usage: /statusline on|off", "warning");
+        return;
       }
       saveMode(mode);
-      if (mode === "off") ctx.ui.setFooter(undefined);
-      else installFooter(ctx);
-      ctx.ui.notify(`UI profile: ${mode}`, "info");
+      installFooter(ctx);
+      ctx.ui.notify(`Statusline: ${mode}`, "info");
     },
   });
 
   pi.registerCommand("status", {
-    description: "Show full Pi session telemetry",
+    description: "Show Pi session information",
     handler: async (_args, ctx) => {
-      refreshSnapshot(ctx, true);
-      const stats = refreshStats();
+      refreshSnapshot();
       const usage = ctx.getContextUsage();
       await ctx.ui.custom<void>(
         (_tui, theme, _keybindings, done) => new StatusOverlay(theme, [
           ["PROJECT", `${formatCwd(ctx.cwd)}${dirtyState ? "  *dirty" : ""}`],
           ["MODEL", `${ctx.model?.provider ?? "—"}/${ctx.model?.id ?? "—"} · THINK ${pi.getThinkingLevel()}`],
           ["CONTEXT", usage?.percent == null ? "unknown" : `${usage.percent.toFixed(1)}% / ${formatTokens(usage.contextWindow ?? 0)}`],
-          ["TOKENS", `↑${formatTokens(tokCache.input)}  ↓${formatTokens(tokCache.output)}  $${tokCache.cost.toFixed(3)}`],
-          ["CURSOR", cursorLimits],
           ["AGENTS", `running ${agentStatus.running} · queued ${agentStatus.queued}`],
-          ["WEB", `search ${stats.webSearch} · fetch ${stats.webFetch} · cache ${stats.webCache}`],
-          ["MCP", `calls ${stats.mcpCalls} · errors ${stats.mcpErrors}`],
           ["STATUS", latestStatuses.join(" · ")],
         ], () => done()),
         { overlay: true },
@@ -349,7 +248,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async (_event, ctx) => {
-    refreshSnapshot(ctx, true);
+    refreshSnapshot();
     installShell(pi, ctx);
     setTabTitle(ctx, dirtyState ? "●" : "READY");
   });
@@ -389,7 +288,7 @@ export default function (pi: ExtensionAPI) {
     setTabTitle(ctx, dirtyState ? "●" : "✓");
   });
 
-  pi.on("turn_end", async (_event, ctx) => refreshSnapshot(ctx, true));
+  pi.on("turn_end", async () => refreshSnapshot());
 }
 
 function installShell(pi: ExtensionAPI, ctx: ExtensionContext): void {
@@ -404,77 +303,34 @@ function installShell(pi: ExtensionAPI, ctx: ExtensionContext): void {
 }
 
 function installFooter(ctx: ExtensionContext): void {
-  if (mode === "off") {
-    ctx.ui.setFooter(undefined);
-    return;
-  }
-
   ctx.ui.setFooter((tui, theme, footerData) => {
     const unsubscribe = footerData.onBranchChange(() => tui.requestRender());
     return {
       dispose: unsubscribe,
       invalidate() {},
       render(width: number): string[] {
+        latestStatuses = [...footerData.getExtensionStatuses()]
+          .filter(([key]) => !HIDDEN_STATUSES.has(key))
+          .map(([, value]) => cleanStatus(value)).filter(Boolean);
+        if (mode === "off" || width <= 0) return [];
+
         const usage = ctx.getContextUsage();
         const usedPct = usage?.percent == null ? null : Math.max(0, Math.min(100, usage.percent));
-        const gaugeWidth = width >= 100 ? 10 : width >= 70 ? 8 : 6;
+        const gaugeWidth = 8;
         const gaugeColor = usedPct == null ? "muted" : usedPct >= 85 ? "error" : usedPct >= 70 ? "warning" : "success";
         const filled = usedPct == null ? 0 : Math.round(usedPct / 100 * gaugeWidth);
         const minor = theme.fg("dim", " · ");
-        const major = theme.fg("dim", " │ ");
-        const label = (text: string) => theme.fg("muted", text);
-        const gauge = `${label("CTX")} ${theme.fg(gaugeColor, "█".repeat(filled))}${theme.fg("dim", "░".repeat(gaugeWidth - filled))} ${theme.fg(gaugeColor, usedPct == null ? "?" : `${Math.round(usedPct)}%`)}`;
+        const gauge = `${theme.fg(gaugeColor, "█".repeat(filled))}${theme.fg("dim", "░".repeat(gaugeWidth - filled))} ${theme.fg(gaugeColor, usedPct == null ? "?" : `${Math.round(usedPct)}%`)}`;
 
-        const statuses = [...footerData.getExtensionStatuses().values()].map(cleanStatus).filter(Boolean);
-        latestStatuses = statuses;
-        const statusText = statuses.slice(0, 5).map((status) => theme.fg(/error|fail|blocked/i.test(status) ? "error" : /run|work|pending/i.test(status) ? "warning" : "muted", truncateToWidth(status, 32, "…"))).join(minor);
+        const statusText = latestStatuses.map((status) => theme.fg(/error|fail|blocked/i.test(status) ? "error" : /run|work|pending/i.test(status) ? "warning" : "muted", status)).join(minor);
         const branch = footerData.getGitBranch();
         const branchText = branch ? theme.fg(dirtyState ? "warning" : "border", `${branch}${dirtyState ? "*" : ""}`) : "";
         const model = theme.fg("customMessageLabel", ctx.model?.id ?? "no-model");
         const path = theme.fg("dim", formatCwd(ctx.cwd));
-        const tokens = `${label("TOK")} ${theme.fg("text", `↑${formatTokens(tokCache.input)}`)}${minor}${theme.fg("accent", `↓${formatTokens(tokCache.output)}`)}`;
-        const cost = `${label("COST")} ${theme.fg("syntaxNumber", `$${tokCache.cost.toFixed(3)}`)}`;
-        const limits = cursorLimits ? `${label("CURSOR")} ${theme.fg("text", cursorLimits)}` : "";
-        const agents = agentStatus.running || agentStatus.queued ? `${label("AGT")} ${theme.fg("customMessageLabel", `R${agentStatus.running}`)}${minor}${theme.fg("customMessageLabel", `Q${agentStatus.queued}`)}` : "";
-        const stats = cachedStats ?? { webSearch: 0, webFetch: 0, webCache: 0, mcpCalls: 0, mcpErrors: 0 };
-        const web = stats.webSearch || stats.webFetch ? `${label("WEB")} ${theme.fg("syntaxType", `S${stats.webSearch}`)}${minor}${theme.fg("syntaxType", `F${stats.webFetch}`)}${minor}${theme.fg("syntaxType", `C${stats.webCache}`)}` : "";
-        const mcp = stats.mcpCalls || stats.mcpErrors ? `${label("MCP")} ${theme.fg("border", `Q${stats.mcpCalls}`)}${stats.mcpErrors ? minor + theme.fg("error", `E${stats.mcpErrors}`) : ""}` : "";
-        const activity = currentTool ? theme.fg("warning", `◆ ${currentTool}`) : running ? theme.fg("accent", "◆ RUN") : "";
-
-        if (mode === "minimal") {
-          return [prioritizedLine([
-            { text: activity, priority: 0 },
-            { text: gauge, priority: 1 },
-            { text: branchText, priority: 2 },
-            { text: model, priority: 3 },
-            { text: limits, priority: 4 },
-            { text: tokens, priority: 5 },
-          ], width, minor)];
-        }
-
-        if (mode === "compact" || mode === "balanced" || (mode === "detailed" && width < 64)) {
-          const focus = prioritizedLine([
-            { text: activity, priority: 0 },
-            { text: statusText, priority: 1 },
-          ], width, minor);
-          const telemetry = prioritizedLine([
-            { text: branchText, priority: 2 },
-            { text: model, priority: 3 },
-            { text: gauge, priority: 0 },
-            { text: limits, priority: 1 },
-            { text: tokens, priority: 4 },
-            { text: cost, priority: 5 },
-          ], width, major);
-          return [focus, telemetry].filter(Boolean);
-        }
-
-        const lines: string[] = [];
-        if (statusText || activity) lines.push(balanceLine(activity, statusText, width));
-        lines.push(balanceLine([path, branchText, model].filter(Boolean).join(minor), gauge, width));
-        lines.push(...wrapGroups([tokens, cost, limits, agents, web, mcp], width, major));
-
-        if (mode === "legacy") return lines;
-        return lines.slice(0, width >= 90 ? 4 : 3);
+        return [statusText, [path, branchText, model, gauge].filter(Boolean).join(minor)]
+          .filter(Boolean)
+          .flatMap((line) => wrapTextWithAnsi(line, width))
+          .map((line) => truncateToWidth(line, width, ""));
       },
     };
   });
