@@ -72,7 +72,7 @@ pi
 - **Cursor Pro/Team** — pi ハーネス内で Composer / Claude / GPT 等を使う場合
   - `/model cursor-agent/composer-2-fast` 等 (`enabledModels`: `cursor-agent/*`)
 - **xAI / Grok** — `xai/grok-4.6` 等 (`enabledModels`: `xai/*`)
-- **opencode go** — デフォルトは `opencode-go/ox-alpha-free`。Kimi / GLM / MiniMax / Qwen / DeepSeek 等のオープンモデル (`enabledModels`: `opencode-go/*`)
+- **opencode go** — Kimi / GLM / MiniMax / Qwen / DeepSeek 等のオープンモデル (`enabledModels`: `opencode-go/*`)。利用するモデルは現在の `/model` 一覧から選ぶ。
 - Claude Pro/Max は pi 経由だと利用規約上 extra usage 課金になるため非推奨
 
 ### Cursor Provider (pi-cursor-agent)
@@ -140,7 +140,7 @@ dotfiles の拡張により Web Research Layer が利用可能。通常はSearXN
 
 ### モデル選択を変更する
 
-`subagent` の固定モデルは `common/pi/.pi/agent/settings.json` の `subagents.defaultModel` / `defaultThinking` / `modelScope.allow`、`workflow` は `common/pi/.pi/workflows/model-tiers.json` の全tierで管理する。両方を同じモデルへ変更してpiを再起動する。
+`subagent` の既定モデルは `common/pi/.pi/agent/settings.json` の `subagents.defaultModel` / `defaultThinking` / `modelScope.allow`、`workflow` は `common/pi/.pi/workflows/model-tiers.json` の全tierで管理する。両方の既定モデルは `openai-codex/gpt-5.4-mini` で、通常の呼び出しでは `model` を指定しない。変更する場合は現在のregistryに存在する `provider/model` を設定し、piを再起動する。許可リストへの追加だけではモデルは登録されない。
 
 pueue用の `delegate_agent` だけは独立しているため、必要なら `common/pi/.pi/agent/extensions/agent-delegation.ts` の `MODEL_TIERS` を編集する。runtimeの利用方針は `AGENTS.md` に記載する。
 
