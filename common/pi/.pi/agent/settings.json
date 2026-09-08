@@ -3,12 +3,12 @@
   "defaultModel": "gpt-6-astra",
   "defaultThinkingLevel": "high",
   "subagents": {
-    "defaultModel": "ox-alpha-free",
+    "defaultModel": "openai-codex/gpt-5.4-mini",
     "defaultThinking": "medium",
     "modelScope": {
       "enforce": true,
       "allow": [
-        "ox-alpha-free",
+        "openai-codex/gpt-5.4-mini",
         "openai-codex/gpt-5.6-sol",
         "openai-codex/gpt-6-astra"
       ]
@@ -18,8 +18,7 @@
     "openai-codex/*",
     "cursor-agent/*",
     "opencode-go/*",
-    "xai/*",
-    "ox-alpha-free"
+    "xai/*"
   ],
   "hideThinkingBlock": true,
   "theme": "tokyonight-high-contrast",
