@@ -11,18 +11,15 @@ const PROTECTED_PATTERNS = [
   /(^|\/)\.env($|\.|\/)/,
   /(^|\/)\.git\//,
   /(^|\/)node_modules\//,
-  /(^|\/)dist\//,
-  /(^|\/)coverage\//,
   /(^|\/)\.next\//,
   /(^|\/)\.terraform\//,
-  /id_rsa/,
-  /id_ed25519/,
+  /(^|\/)id_rsa$/,
+  /(^|\/)id_ed25519$/,
   /\.pem$/,
   /\.key$/,
   /\.p12$/,
   /\.pfx$/,
-  /(^|\/)secrets?\.[^/]*$/i,
-  /(^|\/)credentials?\.[^/]*$/i,
+  /(^|\/)(secrets?|credentials?)(\.(json|ya?ml|toml|ini|conf|config|env|txt))?$/i,
   /(^|\/)\.ssh\//,
   /(^|\/)\.aws\//,
   /(^|\/)\.docker\//,
@@ -53,7 +50,7 @@ export default function (pi: ExtensionAPI) {
       if (matched) {
         return {
           block: true,
-          reason: `Protected path "${path}" (matched ${matched.source}). Ask the user explicitly before editing secrets, generated files, or dependency directories.`,
+          reason: `Protected path "${path}" (matched ${matched.source}). This extension blocks the edit unconditionally; conversational approval does not unlock it. Do not bypass the guard.`,
         };
       }
     }
