@@ -52,7 +52,7 @@
 ## pi-specific extensions
 
 - `permission-gate.ts` — dangerous shell commandの確認
-- `protected-paths.ts` — secret / generated path保護
+- `protected-paths.ts` — secret / generated path保護。`dist/`・`coverage/`という名前だけでは禁止しない。秘密鍵・認証設定・Git内部・依存物は保護し、会話中の承認では解除しない。
 - `web-tools.ts` — SearXNG + Jina、cache、citation、SSRF guard
 - `mcp-gateway.ts` — stdio MCP bridge。認可はpi-permission-system
 - `pi-hermes-memory` — scoped durable memory, session search, and consolidation
