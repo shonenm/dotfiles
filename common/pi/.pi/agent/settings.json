@@ -3,12 +3,12 @@
   "defaultModel": "gpt-6-astra",
   "defaultThinkingLevel": "high",
   "subagents": {
-    "defaultModel": "openai-codex/gpt-5.4-mini",
+    "defaultModel": "openai-codex/gpt-5.6-luna",
     "defaultThinking": "medium",
     "modelScope": {
       "enforce": true,
       "allow": [
-        "openai-codex/gpt-5.4-mini",
+        "openai-codex/gpt-5.6-luna",
         "openai-codex/gpt-5.6-sol",
         "openai-codex/gpt-6-astra"
       ]
