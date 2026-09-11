@@ -68,7 +68,7 @@ pi
 サブスクリプションのおすすめ組合せ:
 
 - **Codex ($20 or $100/月)** をメイン
-  - `gpt-5.6-sol`, `gpt-5.4-mini`, `gpt-5.3-codex-spark` 等
+  - `gpt-5.6-sol`, `gpt-5.6-luna`, `gpt-5.3-codex-spark` 等
 - **Cursor Pro/Team** — pi ハーネス内で Composer / Claude / GPT 等を使う場合
   - `/model cursor-agent/composer-2-fast` 等 (`enabledModels`: `cursor-agent/*`)
 - **xAI / Grok** — `xai/grok-4.6` 等 (`enabledModels`: `xai/*`)
@@ -114,14 +114,14 @@ subagent / workflowは利用者がdelegation、並列調査、multi-agent review
 
 ```bash
 pi --model 'openai-codex/gpt-5.6-sol:high' \
-   --fallback-models 'openai-codex/gpt-5.4-mini:medium' \
+   --fallback-models 'openai-codex/gpt-5.6-luna:medium' \
    -p '<instructions>'
 ```
 
 ### 並列 delegation (pueue)
 
 ```bash
-pueue add -i --print-task-id -- "pi --model 'openai-codex/gpt-5.4-mini:medium' -p '<instruction>' < /dev/null"
+pueue add -i --print-task-id -- "pi --model 'openai-codex/gpt-5.6-luna:medium' -p '<instruction>' < /dev/null"
 pueue wait <task-id>
 pueue log <task-id>
 ```
@@ -140,7 +140,7 @@ dotfiles の拡張により Web Research Layer が利用可能。通常はSearXN
 
 ### モデル選択を変更する
 
-`subagent` の既定モデルは `common/pi/.pi/agent/settings.json` の `subagents.defaultModel` / `defaultThinking` / `modelScope.allow`、`workflow` は `common/pi/.pi/workflows/model-tiers.json` の全tierで管理する。両方の既定モデルは `openai-codex/gpt-5.4-mini` で、通常の呼び出しでは `model` を指定しない。変更する場合は現在のregistryに存在する `provider/model` を設定し、piを再起動する。許可リストへの追加だけではモデルは登録されない。
+`subagent` の既定モデルは `common/pi/.pi/agent/settings.json` の `subagents.defaultModel` / `defaultThinking` / `modelScope.allow`、`workflow` は `common/pi/.pi/workflows/model-tiers.json` の全tierで管理する。両方の既定モデルは `openai-codex/gpt-5.6-luna` で、通常の呼び出しでは `model` を指定しない。変更する場合は現在のregistryに存在する `provider/model` を設定し、piを再起動する。許可リストへの追加だけではモデルは登録されず、registryへの登録も現在の認証での利用を保証しない。モデル指定なしの子起動で応答まで検証する。
 
 pueue用の `delegate_agent` だけは独立しているため、必要なら `common/pi/.pi/agent/extensions/agent-delegation.ts` の `MODEL_TIERS` を編集する。runtimeの利用方針は `AGENTS.md` に記載する。
 

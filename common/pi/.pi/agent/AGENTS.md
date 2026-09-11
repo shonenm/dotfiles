@@ -38,7 +38,7 @@
 ## Delegation
 
 - 利用者がdelegation、subagent、workflow、並列調査、またはmulti-agent reviewを明示した場合だけ委譲する。品質向上だけを理由に自動委譲しない。
-- advisory / explorationは `subagent`（pi-subagents）。`subagent` と `workflow` の子モデルは設定済みの gpt-5.4-mini:medium を使い、呼び出し時に `model` を指定しない。
+- advisory / explorationは `subagent`（pi-subagents）。`subagent` と `workflow` の子モデルは設定済みの gpt-5.6-luna:medium を使い、呼び出し時に `model` を指定しない。
 - pueue backgroundとdifficulty tierが必要な場合だけ `delegate_agent`。
 - `delegate_agent` のtierは `high`: gpt-5.6-sol、`medium`: gpt-5.4-mini、`low`: gpt-5.3-codex-spark。
 - reviewは原則1 passとし、reviewerの提案を新しい要件として扱わない。再reviewは利用者が明示した場合だけ行う。
