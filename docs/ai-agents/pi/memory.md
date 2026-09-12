@@ -29,7 +29,6 @@ Piの記憶は、用途の異なる正本を分離する。
 {
   "memoryMode": "policy-only",
   "memoryPolicyStyle": "compact",
-  "llmModelOverride": "openai-codex/gpt-5.4-mini",
   "llmThinkingOverride": "low",
   "reviewEnabled": true,
   "memoryOverflowStrategy": "auto-consolidate",
@@ -38,6 +37,8 @@ Piの記憶は、用途の異なる正本を分離する。
   "flushOnShutdown": true
 }
 ```
+
+`llmModelOverride`は指定せず、Memory処理は現在のセッションのモデルを継承する。ChatGPT認証で利用できないモデルへの固定を避けるため。`llmThinkingOverride: "low"`とbackground review等の機能は維持する。設定変更は`/reload`で反映する。
 
 主な機能:
 
