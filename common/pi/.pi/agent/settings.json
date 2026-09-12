@@ -134,7 +134,8 @@
         "!extensions/custom-footer/custom-footer.ts",
         "!extensions/leader-key/index.ts",
         "!extensions/permissions/permissions.ts",
-        "!extensions/pi-cloak/index.ts"
+        "!extensions/pi-cloak/index.ts",
+        "!extensions/tool-pills/index.ts"
       ]
     }
   ],
