@@ -163,7 +163,7 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 
 Cursor上限、YOLO / Ponytail（FULL）、package数 / auto-update、TOK / COST / WEB / MCPはfooterにも`/status`にも表示しない。Cursor上限の問い合わせとtoken / cost / research統計の読み取りもstatuslineから削除している。permission、Ponytail、package管理、Web / MCPの機能自体は変更しない。
 
-比較用packageはinstall状態を維持するが、surface ownershipが競合する`pi-open-tui`、`pi-beautiful-tui`、`pi-system-theme`のextension entrypointはfilterする。theme collection、Pi Studio、extmgr、tool pills、session／todo機能など、統合shellと重複しない機能は引き続き読み込む。
+比較用packageはinstall状態を維持するが、surface ownershipが競合する`pi-open-tui`、`pi-beautiful-tui`、`pi-system-theme`のextension entrypointはfilterする。theme collection、Pi Studio、extmgr、session／todo機能など、統合shellと重複しない機能は引き続き読み込む。tool pillsは標準ツールを再登録し、pi-subagents 0.67.0のbuiltin判定から`bash`・`edit`・`write`を除外させるため読み込まない。標準のツール表示を使い、編集権限や安全チェックは変更しない。設定変更は`/reload`または再起動で反映する。
 
 | Package | 状態・利用箇所 |
 | --- | --- |
@@ -174,7 +174,7 @@ Cursor上限、YOLO / Ponytail（FULL）、package数 / auto-update、TOK / COST
 | `pi-beautiful-tui` | install維持、UI entrypointはfilter |
 | `pi-agent-extensions` | footer、workflow、周期的にworking messageを書き換えるwhimsicalをfilter。session / todo / prompt history等は有効 |
 | `pi-system-theme` | Tokyo Night固定と競合するためentrypointをfilter |
-| `git:github.com/tomsej/pi-ext` | custom footer、重複permission、pi-cloak、built-in `ctrl+x`と競合するleader-keyをfilter。tool pills等は有効 |
+| `git:github.com/tomsej/pi-ext` | custom footer、重複permission、pi-cloak、built-in `ctrl+x`と競合するleader-key、subagentのツール判定と競合するtool pillsをfilter |
 
 ### 表示を簡潔にする
 
