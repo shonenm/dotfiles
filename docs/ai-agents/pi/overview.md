@@ -11,6 +11,7 @@
 | pi CLI | エージェント本体 | `config/packages.npm.txt` の `@earendil-works/pi-coding-agent` (npm global) |
 | pi-tui narrow terminal patch | tmux focus zoomで1列/1行になった間は描画を停止し、Piの終了とscrollを防止 | `scripts/patch-pi-tui.sh` (Local patch) |
 | pi-cursor-agent | Cursor サブスク → pi プロバイダ | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
+| pi-codex-multi | 複数のCodex OAuthアカウントとrate limit時のfailover | `settings.json` の `packages` → `pi install npm:pi-codex-multi` |
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
 | pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
@@ -64,6 +65,8 @@ pi
 ```
 
 認証情報は `~/.pi/credentials.json` に保存される (gitignore 済み、stow 対象外)。
+
+複数のCodexアカウントを使う場合は、piを再起動してから`/subs add`、`/subs login`で追加する。`/pool create`では、prompt cacheを維持しやすいよう通常時のアカウントを固定し、rate limit時だけ残量の多いアカウントへ切り替える`quota-first`を選ぶ。
 
 サブスクリプションのおすすめ組合せ:
 
