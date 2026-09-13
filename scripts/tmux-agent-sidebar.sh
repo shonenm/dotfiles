@@ -239,7 +239,7 @@ sb_pace_color() {
   case "$label" in
     current) win=18000 ;;     # 5h
     weekly)  win=604800 ;;
-    monthly) win=2592000 ;;
+    monthly|cursor|other) win=2592000 ;;  # Cursor の2プールも月次billing cycle
     *d)      win=$(( ${label%d} * 86400 )) ;;   # codex の未知枠 "3d" 表記
     *)       return 0 ;;
   esac
@@ -547,9 +547,11 @@ case "${1:-toggle}" in
     chk '40%'  current '2h30m' $'\033[38;5;220m'  # proj=80 → 黄(境界値)
     chk '35%'  current '2h30m' $'\033[38;5;208m'  # proj=70 → 橙
     chk '20%'  current '2h30m' $'\033[38;5;203m'  # proj=40 → 赤
-    chk '50%'  weekly  '2d0h'  $'\033[38;5;208m'  # proj≈58 → 橙
-    chk '50%'  other   '1h00m' ''                  # 未知 label → 判定なし
-    chk '50%'  current ''      ''                  # rem 空 → 判定なし
+    chk '50%'  weekly  '2d0h'   $'\033[38;5;208m'  # proj≈58 → 橙
+    chk '50%'  cursor  '15d0h'  $'\033[38;5;114m'  # 月次枠 proj=100 → 緑
+    chk '40%'  other   '15d0h'  $'\033[38;5;220m'  # 月次枠 proj=80 → 黄
+    chk '50%'  unknown '1h00m'  ''                  # 未知 label → 判定なし
+    chk '50%'  current ''       ''                  # rem 空 → 判定なし
     chk '99%'  current '4h55m' ''                  # window 5% 未満経過 → 判定なし
     (( fail )) && exit 1
     echo ok
