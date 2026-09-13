@@ -137,7 +137,8 @@
         "!extensions/pi-cloak/index.ts",
         "!extensions/tool-pills/index.ts"
       ]
-    }
+    },
+    "npm:pi-codex-multi"
   ],
   "lastChangelogVersion": "0.85.0"
 }
