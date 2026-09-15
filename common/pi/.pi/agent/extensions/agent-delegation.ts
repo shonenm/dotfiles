@@ -67,6 +67,18 @@ function resolveModel(difficulty: string, model?: string): string {
   return model || MODEL_TIERS[difficulty] || MODEL_TIERS.medium;
 }
 
+function queueDelegation(model: string, task: string): string {
+  return execFileSync(
+    "pueue",
+    ["add", "--escape", "--immediate", "--print-task-id", "--label", DELEGATE_LABEL, "--", "pi", "--model", model, "-p", task],
+    { encoding: "utf-8", timeout: 30_000, stdio: ["ignore", "pipe", "pipe"] }
+  ).trim();
+}
+
+function isTimeoutError(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ETIMEDOUT";
+}
+
 // ---------------------------------------------------------------------------
 // Extension
 // ---------------------------------------------------------------------------
@@ -104,67 +116,66 @@ export default function (pi: ExtensionAPI) {
       const mode = params.mode || "async";
       const m = resolveModel(difficulty, params.model);
 
-      if (mode === "sync") {
-        onUpdate?.({ content: [{ type: "text", text: `🔄 Spawning sub-agent (${difficulty}, sync)...` }] });
-        try {
-          // Arg array (no shell) — task/model are passed literally, no injection
-          // or word-splitting. stdin ignored to replace `< /dev/null`.
-          const result = execFileSync("pi", ["--model", m, "-p", params.task], {
-            encoding: "utf-8",
-            timeout: 600_000, // 10 min
-            maxBuffer: 50 * 1024 * 1024,
-            stdio: ["ignore", "pipe", "pipe"],
-          });
-          logDelegation(difficulty, params.task);
-          return {
-            content: [{
-              type: "text",
-              text: `## Sub-agent Result (${difficulty}, sync)\n\n${result.slice(0, 15000)}`,
-            }],
-            details: { difficulty, mode: "sync", model: m },
-          };
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          return {
-            content: [{ type: "text", text: `❌ Sub-agent failed: ${msg.slice(0, 500)}` }],
-            details: { difficulty, mode: "sync", error: msg.slice(0, 200) },
-          };
-        }
-      }
-
-      // Async mode: pueue
-      onUpdate?.({ content: [{ type: "text", text: `📋 Queuing sub-agent (${difficulty}, async)...` }] });
+      onUpdate?.({ content: [{ type: "text", text: `📋 Queuing sub-agent (${difficulty}, ${mode})...` }] });
+      let taskId: string;
       try {
-        // --escape makes pueue treat each arg literally (pueue runs the command
-        // through a shell internally); arg array prevents word-splitting here.
-        const pueueResult = execFileSync(
-          "pueue",
-          // --label pi-delegate marks these tasks so the statusline can count
-          // active sub-agents separately from the user's other pueue jobs.
-          ["add", "--escape", "--immediate", "--print-task-id", "--label", DELEGATE_LABEL, "--", "pi", "--model", m, "-p", params.task],
-          { encoding: "utf-8", timeout: 30_000, stdio: ["ignore", "pipe", "pipe"] }
-        );
-        const taskId = pueueResult.trim();
+        taskId = queueDelegation(m, params.task);
         logDelegation(difficulty, params.task, taskId);
-
-        return {
-          content: [{
-            type: "text",
-            text: `## Sub-agent Queued (${difficulty}, async)\n\n` +
-              `**Pueue task ID**: ${taskId}\n\n` +
-              `Check status: \`pueue status\`\n` +
-              `View log: \`pueue log ${taskId}\`\n` +
-              `Wait for completion: \`pueue wait ${taskId}\``,
-          }],
-          details: { difficulty, mode: "async", pueueTaskId: taskId, model: m },
-        };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         return {
           content: [{ type: "text", text: `❌ Failed to queue task: ${msg}. Is pueue daemon running? (\`pueued -d\`)` }],
-          details: { difficulty, mode: "async", error: msg.slice(0, 200) },
+          details: { difficulty, mode, error: msg.slice(0, 200) },
         };
       }
+
+      if (mode === "sync") {
+        onUpdate?.({ content: [{ type: "text", text: `⏳ Waiting for task ${taskId}...` }] });
+        try {
+          execFileSync("pueue", ["wait", taskId], {
+            encoding: "utf-8", timeout: 600_000,
+            stdio: ["ignore", "pipe", "pipe"],
+          });
+          const result = execFileSync("pueue", ["log", taskId], {
+            encoding: "utf-8", timeout: 5000,
+            stdio: ["ignore", "pipe", "pipe"],
+          });
+          return {
+            content: [{
+              type: "text",
+              text: `## Sub-agent Result (${difficulty}, sync)\n\n${result.slice(-15000)}`,
+            }],
+            details: { difficulty, mode: "sync", model: m, pueueTaskId: taskId, completed: true },
+          };
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (isTimeoutError(err)) {
+            return {
+              content: [{
+                type: "text",
+                text: `⏳ Task ${taskId} is still running after the sync wait timed out. Resume with wait_delegation; do not launch a replacement writer.`,
+              }],
+              details: { difficulty, mode: "sync", model: m, pueueTaskId: taskId, completed: false, timedOut: true },
+            };
+          }
+          return {
+            content: [{ type: "text", text: `❌ Task ${taskId} wait failed: ${msg.slice(0, 500)}` }],
+            details: { difficulty, mode: "sync", model: m, pueueTaskId: taskId, completed: false, error: msg.slice(0, 200) },
+          };
+        }
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: `## Sub-agent Queued (${difficulty}, async)\n\n` +
+            `**Pueue task ID**: ${taskId}\n\n` +
+            `Check status: \`pueue status\`\n` +
+            `View log: \`pueue log ${taskId}\`\n` +
+            `Wait for completion: \`pueue wait ${taskId}\``,
+        }],
+        details: { difficulty, mode: "async", pueueTaskId: taskId, model: m },
+      };
     },
   });
 
@@ -241,9 +252,15 @@ export default function (pi: ExtensionAPI) {
         };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
+        if (isTimeoutError(err)) {
+          return {
+            content: [{ type: "text", text: `⏳ Task ${params.taskId} is still running. Call wait_delegation again with the same task ID.` }],
+            details: { taskId: params.taskId, completed: false, timedOut: true },
+          };
+        }
         return {
-          content: [{ type: "text", text: `❌ Task ${params.taskId} failed or timed out: ${msg.slice(0, 500)}` }],
-          details: { taskId: params.taskId, error: msg.slice(0, 200) },
+          content: [{ type: "text", text: `❌ Task ${params.taskId} wait failed: ${msg.slice(0, 500)}` }],
+          details: { taskId: params.taskId, completed: false, error: msg.slice(0, 200) },
         };
       }
     },

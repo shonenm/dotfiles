@@ -69,7 +69,7 @@
 | Mode | 動作 | 用途 |
 |------|------|------|
 | **async** (default) | pueue でバックグラウンド実行。`check_delegation` + `wait_delegation` で結果回収 | 独立タスクの並列化 |
-| **sync** | 完了までブロック。結果を直接返す | 依存関係のある逐次タスク |
+| **sync** | pueueへ登録後、最大10分待機。完了時は結果を返し、timeout時は継続中のtask IDを返す | 依存関係のある逐次タスク |
 
 ## pueue Integration
 
@@ -82,7 +82,7 @@ pueue log <id>   # ログ確認
 pueue wait <id>  # 完了待ち
 ```
 
-セッション開始時に自動でデーモン起動を試みる。
+セッション開始時に自動でデーモン起動を試みる。sync/asyncとも必ずpueueへ登録するため、親側の待機がtimeoutしても子taskはtask IDで追跡できる。timeout時は同じtask IDを`wait_delegation`へ渡して再待機し、同じworktreeへ代替writerを起動しない。
 
 ## Audit
 
