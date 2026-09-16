@@ -6,9 +6,10 @@ ext="$root/common/pi/.pi/agent/extensions/cursor-host.ts"
 
 grep -q '# Host Instructions' "$ext"
 grep -q 'session_before_compact' "$ext"
-grep -q 'agentFetchedRuleType(skill.description)' "$overlay/bridge/pi-context/rules-builder.ts"
-grep -q 'content: skill.description' "$overlay/bridge/pi-context/rules-builder.ts"
+! grep -q 'agentFetched' "$overlay/bridge/pi-context/rules-builder.ts"
+! grep -q 'parsed.skills' "$overlay/bridge/pi-context/rules-builder.ts"
 ! grep -q 'readFile' "$overlay/bridge/pi-context/rules-builder.ts"
+grep -q 'rewriteSkillSlash' "$root/common/pi/.pi/agent/extensions/skill-slash.ts"
 grep -q '"edit"' "$overlay/bridge/pi-to-cursor/request-builder.ts"
 grep -q 'cursor-grok-4.6-fast' "$overlay/provider/model-mapping.ts"
 grep -q 'rememberCursorContextUsage' "$overlay/bridge/cursor-to-pi/executors/hook.ts"
@@ -32,17 +33,26 @@ const prompt = buildCursorHostPrompt({
   date: "2026-09-16",
   appendSystemPrompt: "Speak Japanese.",
   contextFiles: [{ path: "/tmp/AGENTS.md", content: "Use bun." }],
-  skills: [
-    { name: "docs-research", description: "Read docs", filePath: "/tmp/SKILL.md" },
-    { name: "d-pr", description: "Claude only", filePath: "/tmp/d-pr.md" },
-  ],
 });
 if (!prompt.includes("# Host Instructions")) throw new Error("missing host instructions");
 if (!prompt.includes("Speak Japanese.")) throw new Error("missing append system");
 if (!prompt.includes("# Project Context")) throw new Error("missing project context");
-if (!prompt.includes("<name>docs-research</name>")) throw new Error("missing skill index");
-if (prompt.includes("d-pr")) throw new Error("claude skill leaked");
+if (!prompt.includes("/skill:name")) throw new Error("missing host skill policy");
+if (prompt.includes("<available_skills>")) throw new Error("skill catalog leaked");
 if (prompt.includes("You are an AI")) throw new Error("full prompt leaked");
+
+const { rewriteSkillSlash } = await import(
+  pathToFileURL(`${root}/common/pi/.pi/agent/extensions/skill-slash.ts`).href
+);
+if (rewriteSkillSlash("/docs-research foo", ["docs-research"], ["compact"]) !== "/skill:docs-research foo") {
+  throw new Error("slash rewrite failed");
+}
+if (rewriteSkillSlash("/compact", ["compact"], ["compact"]) !== "/compact") {
+  throw new Error("reserved slash rewritten");
+}
+if (rewriteSkillSlash("/skill:docs-research", ["docs-research"], []) !== "/skill:docs-research") {
+  throw new Error("skill prefix rewritten");
+}
 
 const { applyCursorUsage, rememberCursorContextUsage } = await import(
   pathToFileURL(`${root}/common/pi/.pi/agent/patches/pi-cursor-agent/0.4.4/src/provider/cursor-usage.ts`).href
@@ -73,10 +83,12 @@ const { parsePiSystemPrompt } = await import(
 );
 const parsed = parsePiSystemPrompt(prompt);
 if (!parsed.cleanedPrompt.includes("Speak Japanese.")) throw new Error("cleaned dropped host");
-if (parsed.skills.length !== 1 || parsed.skills[0].name !== "docs-research") {
-  throw new Error(JSON.stringify(parsed.skills));
-}
+if (parsed.skills.length !== 0) throw new Error(JSON.stringify(parsed.skills));
 if (parsed.contextFiles.length !== 1) throw new Error("context files missing");
+const leftover = parsePiSystemPrompt(`${prompt}\n\n<available_skills><skill><name>docs-research</name><description>Read docs</description><location>/tmp/SKILL.md</location></skill></available_skills>`);
+if (leftover.skills.length !== 1 || leftover.skills[0].name !== "docs-research") {
+  throw new Error(JSON.stringify(leftover.skills));
+}
 
 const { shouldReuseLiveCursorSession } = await import(
   pathToFileURL(`${root}/common/pi/.pi/agent/patches/pi-cursor-agent/0.4.4/src/provider/live-session-policy.ts`).href
