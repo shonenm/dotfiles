@@ -4,6 +4,7 @@ description: 現在のセッションで行った変更に関連するmdファ�
 user-invocable: true
 model: haiku
 when_to_use: "Use after completing code changes when related documentation in docs/ may need updating. Skip if the changes are only bug fixes, internal refactoring, or if no code changes were made this session."
+disable-model-invocation: true
 ---
 
 # Update-MD - ドキュメント更新

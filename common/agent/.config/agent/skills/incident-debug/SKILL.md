@@ -1,6 +1,7 @@
 ---
 name: incident-debug
 description: Investigate production incidents, errors, or unexpected behavior. Use when logs, metrics, or user reports indicate something is broken.
+disable-model-invocation: true
 ---
 
 # Incident Debug

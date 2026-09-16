@@ -6,6 +6,7 @@ model: haiku
 arguments: "[all] [<path>...]"
 argument-hint: "[all] [<path>...]"
 when_to_use: "Use when the user asks to commit, save, or checkpoint their work. Also use proactively after completing a feature or bug fix within the session. Do NOT use when the user asks to push or create a PR — use /d-pr for that."
+disable-model-invocation: true
 ---
 
 # Commit - Git コミット作成

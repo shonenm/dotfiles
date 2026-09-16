@@ -1,6 +1,7 @@
 ---
 name: deep-research
 description: "Conduct thorough web research using the host agent's native search and fetch tools. Search → fetch → cross-reference → cite. Use when investigating topics, errors, or multiple sources."
+disable-model-invocation: true
 ---
 
 # Deep Web Research

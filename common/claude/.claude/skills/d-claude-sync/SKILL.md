@@ -5,6 +5,7 @@ user-invocable: true
 arguments: "<import|export> [<description>]"
 argument-hint: "<import|export> [<skill-agent-rule-hook-or-feature-description>]"
 when_to_use: "Use when the user wants to port dotfiles Claude configuration to a project, or promote project-specific Claude configuration into dotfiles."
+disable-model-invocation: true
 ---
 
 # Claude Sync - dotfiles ↔ プロジェクト Claude 設定移植

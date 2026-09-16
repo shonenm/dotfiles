@@ -1,6 +1,7 @@
 ---
 name: d-hunk-review
 description: hunk diff の live session に付けたコメントを読んで対応する。Use when the user references hunk comments, says "hunk のコメント見て", or has a hunk diff --watch session running.
+disable-model-invocation: true
 ---
 
 # Hunk Review

@@ -11,6 +11,7 @@ hooks:
       hooks:
         - type: command
           command: "echo '{\"decision\":\"block\",\"reason\":\"Do not ask for confirmation — generate the PR body and create it directly.\"}' && exit 2"
+disable-model-invocation: true
 ---
 
 # PR - Pull Request 作成 (変更分析付き)

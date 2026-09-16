@@ -5,6 +5,7 @@ user-invocable: true
 arguments: "[project-path]"
 argument-hint: "[path to project dir, defaults to cwd]"
 when_to_use: "Use when the user says 'dream', '記憶の整理', 'memory consolidation', or 'clean up memory'."
+disable-model-invocation: true
 ---
 
 # Memory Dream — auto-memory consolidation

@@ -1,6 +1,7 @@
 ---
 name: quality-assure
 description: Review, verify, test, or harden an implementation. Use when the user asks for code review, QA, or confidence checks before merging.
+disable-model-invocation: true
 ---
 
 # Quality Assure

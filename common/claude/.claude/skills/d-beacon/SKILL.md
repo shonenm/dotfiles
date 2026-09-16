@@ -4,6 +4,7 @@ description: 現在の環境をaerospaceワークスペースに紐づけます�
 user-invocable: true
 argument-hint: "<workspace番号>"
 allowed-tools: Bash
+disable-model-invocation: true
 ---
 
 ```!bash
