@@ -113,6 +113,7 @@ install_npm_packages() {
   # pi-tui 0.84.1でも、tmux focus zoomでpaneが1列/1行になると描画例外でPiが終了する。
   # npm更新のたびに再現可能なlocal patchを適用する。
   "$DOTFILES_DIR/scripts/patch-pi-tui.sh"
+  "$DOTFILES_DIR/scripts/patch-pi-cursor-agent.sh" || true
 }
 
 install_claude_mem() {
