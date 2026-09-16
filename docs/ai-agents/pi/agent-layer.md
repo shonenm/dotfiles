@@ -50,4 +50,6 @@ server集合とpermission機構が異なるため、「全runtimeで1ファイ�
 3. runtime固有tool名を使う場合は、そのruntimeに限定するか利用可能性を明記する
 4. pi再起動または `/reload` 後に発見されることを確認する
 
+Pi から Cursor モデルを使う場合、skill を自動カタログに載せない。`/name` または `/skill:name` でそのターンに展開する。プロジェクト skill に `disable-model-invocation` を付ける必要はない。
+
 プロジェクト全体の開発原則は[`CLAUDE.md`](../../../CLAUDE.md)、pi固有の運用は[pi概要](overview.md)を参照。

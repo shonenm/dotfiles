@@ -88,7 +88,13 @@ export default function (pi: ExtensionAPI) {
   };
 
   pi.on("resources_discover", (_event, ctx) => {
-    const names = skillNamesFromPrompt(ctx.getSystemPrompt());
+    const names = [
+      ...skillNamesFromPrompt(ctx.getSystemPrompt()),
+      ...pi
+        .getCommands()
+        .filter((command) => command.source === "skill" && command.name.startsWith("skill:"))
+        .map((command) => command.name.slice("skill:".length)),
+    ];
     const existing = ctx.ui.getEditorComponent() as MarkedFactory | undefined;
     if (existing?.[factoryMarker]) {
       state = existing[factoryMarker]!;

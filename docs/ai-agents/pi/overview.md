@@ -11,7 +11,7 @@
 | pi CLI | エージェント本体 | `config/packages.npm.txt` の `@earendil-works/pi-coding-agent` (npm global) |
 | pi-tui narrow terminal patch | tmux focus zoomで1列/1行になった間は描画を停止し、Piの終了とscrollを防止 | `scripts/patch-pi-tui.sh` (Local patch) |
 | pi-cursor-agent | Cursor サブスク → Pi ホスト上の Agent ランタイム | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
-| pi-cursor-agent host overlay | 薄い host prompt、skill description-only、Cursor usage、Grok 4.6 mapping | `scripts/patch-pi-cursor-agent.sh` + `extensions/cursor-host.ts` |
+| pi-cursor-agent host overlay | 薄い host prompt、skill 索引なし、Cursor usage、Grok 4.6 mapping | `scripts/patch-pi-cursor-agent.sh` + `extensions/cursor-host.ts` + `extensions/skill-slash.ts` |
 | pi-codex-multi | 複数のCodex OAuthアカウントとrate limit時のfailover | `settings.json` の `packages` → `pi install npm:pi-codex-multi` |
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
@@ -91,7 +91,7 @@ pi
 | 認証 | pi 内 `/login` → Cursor Agent |
 | モデル例 | `cursor-agent/cursor-grok-4.6-fast`（thinking で high-fast に切替） |
 
-ホスト側は APPEND_SYSTEM / AGENTS.md / skill 索引だけを渡し、Cursor ネイティブと重複する tool は広告しない。context % は Cursor の `used_tokens` / preCompact を使う。長い会話の要約は Cursor 側、`/compact` だけ Pi 手動。Esc / Enter steer で新しい user メッセージが来たら Cursor live session は切って送り直す（tool 結果の返却だけ再利用する）。
+ホスト側は APPEND_SYSTEM / AGENTS.md だけを渡し、skill 索引は出さない。skill は `/name` または `/skill:name` でそのターンに展開する（`skill-slash.ts`）。共有・プロジェクトの SKILL.md に `disable-model-invocation` を足す必要はない。Cursor ネイティブと重複する tool は広告しない。context % は Cursor の `used_tokens` / preCompact を使う。長い会話の要約は Cursor 側、`/compact` だけ Pi 手動。Esc / Enter steer で新しい user メッセージが来たら Cursor live session は切って送り直す（tool 結果の返却だけ再利用する）。
 
 `@netandreus/pi-cursor-provider` は Cursor CLI 子プロセス方式で、ツールが CLI 側で実行されるため pi ハーネス統合には不向き。dotfiles では採用していない。
 
@@ -196,6 +196,7 @@ Cursor上限、YOLO / Ponytail（FULL）、package数 / auto-update、TOK / COST
 - `/statusline off`: footerを非表示（`on`で再表示）
 - `/status`: project、model / thinking、context、background agents、表示対象のextension statusをoverlayで一覧表示
 - 入力中の既知 skill 名はアクセント色でハイライトされる（`/reload` または再起動で skill 一覧を再読込）。
+- skill 本体は `/name` または `/skill:name` で展開する。`/skills` で名前一覧。Cursor モデルでは自動カタログを出さない。
 
 `Ctrl+S` / `Ctrl+R`はcustom extensionの`prompt-stash.ts` / `prompt-history.ts`が担当する。built-in shortcutとの競合警告を避けるため、選択画面内のモデル選択保存・セッション並べ替えは`Alt+S`、セッション名変更は`Alt+R`へ`keybindings.json`で変更している。変更は`/reload`で反映される。
 
