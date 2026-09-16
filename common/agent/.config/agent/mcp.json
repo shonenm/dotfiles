@@ -14,7 +14,12 @@
     },
     "woodpecker-ci": {
       "type": "stdio", "command": "woodpecker-mcp", "args": ["serve"],
-      "description": ""
+      "description": "",
+      "shapes": {
+        "get_pipeline_status": "summary",
+        "get_logs": "tail",
+        "list_pipelines": "summary"
+      }
     },
     "syntopic-beta": {
       "type": "stdio",
