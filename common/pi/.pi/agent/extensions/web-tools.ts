@@ -165,14 +165,31 @@ function curl(args: string[], opts: { timeout: number; maxBuffer?: number }): st
   }
 }
 
-function searxngSearch(query: string, num: number): string | null {
-  const url = `${SEARXNG_URL}/search?q=${encodeURIComponent(query)}&format=json`;
-  const result = curl(["-fsSL", "--max-time", "15", url], { timeout: 16000 });
+type SearxngHit = { text: string; resultCount: number };
+
+function searxngSearch(query: string, num: number): SearxngHit | null {
+  // Restrict to engines that still answer; CAPTCHA/429 engines are also
+  // dropped in SearXNG settings.yml. Empty results still count as success.
+  const params = new URLSearchParams({
+    q: query,
+    format: "json",
+    language: "en",
+    categories: "general,it,science,repos,q&a",
+    engines: "bing,yep,wikipedia,github,stackoverflow,mdn,huggingface,arxiv",
+  });
+  const url = `${SEARXNG_URL}/search?${params.toString()}`;
+  const result = curl(["-fsSL", "--max-time", "8", url], { timeout: 9000 });
   if (!result) return null;
   try {
     const data = JSON.parse(result);
-    if (!data.results || data.results.length === 0) return null;
-    return JSON.stringify(data.results.slice(0, num), null, 2);
+    if (!Array.isArray(data.results)) return null;
+    const results = data.results.slice(0, num);
+    const unresponsive = Array.isArray(data.unresponsive_engines) ? data.unresponsive_engines : [];
+    const body = results.length > 0 ? JSON.stringify(results, null, 2) : "No results.";
+    const note = unresponsive.length > 0
+      ? `\n\nUnresponsive engines: ${JSON.stringify(unresponsive)}`
+      : "";
+    return { text: body + note, resultCount: results.length };
   } catch {
     return null;
   }
@@ -251,14 +268,18 @@ export default function (pi: ExtensionAPI) {
 
       onUpdate?.({ content: [{ type: "text", text: `🔍 Searching: ${trimmedQuery.slice(0, 100)}...` }] });
 
-      // Try SearXNG first
-      let result = searxngSearch(trimmedQuery, n);
+      // Try SearXNG first. Empty result sets are valid; only transport/parse
+      // failure falls through to Jina.
+      const searxng = searxngSearch(trimmedQuery, n);
+      let result: string | null = searxng?.text ?? null;
+      let resultCount = searxng?.resultCount ?? 0;
       let backend = "searxng";
 
-      if (!result) {
+      if (!searxng) {
         onUpdate?.({ content: [{ type: "text", text: "SearXNG unavailable, trying Jina AI Search..." }] });
         result = jinaSearch(trimmedQuery);
         backend = "jina";
+        resultCount = (result?.match(/https?:\/\//g) || []).length;
       }
 
       if (!result) {
@@ -275,7 +296,7 @@ export default function (pi: ExtensionAPI) {
 
       return {
         content: [{ type: "text", text: `## Search Results (via ${backend})\n\n${result.slice(0, 15000)}` }],
-        details: { backend, query: trimmedQuery.slice(0, 100), resultCount: (result.match(/"url"/g) || []).length },
+        details: { backend, query: trimmedQuery.slice(0, 100), resultCount },
       };
     },
   });
