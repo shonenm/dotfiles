@@ -11,7 +11,7 @@
 | pi CLI | エージェント本体 | `config/packages.npm.txt` の `@earendil-works/pi-coding-agent` (npm global) |
 | pi-tui narrow terminal patch | tmux focus zoomで1列/1行になった間は描画を停止し、Piの終了とscrollを防止 | `scripts/patch-pi-tui.sh` (Local patch) |
 | pi-cursor-agent | Cursor サブスク → Pi ホスト上の Agent ランタイム | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
-| pi-cursor-agent host overlay | 薄い host prompt、skill description-only、Cursor usage、Grok 4.6 mapping | `scripts/patch-pi-cursor-agent.sh` + `extensions/cursor-host.ts` |
+| pi-cursor-agent host overlay | 薄い host prompt、Pi skill 非広告、Cursor usage、Grok 4.6 mapping | `scripts/patch-pi-cursor-agent.sh` + `extensions/cursor-host.ts` |
 | pi-codex-multi | 複数のCodex OAuthアカウントとrate limit時のfailover | `settings.json` の `packages` → `pi install npm:pi-codex-multi` |
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
@@ -86,12 +86,12 @@ pi
 | 項目 | 内容 |
 | --- | --- |
 | パッケージ | `npm:pi-cursor-agent` + `0.4.4` host overlay |
-| ホスト拡張 | `extensions/cursor-host.ts`（薄い prompt、Pi 自動 compact 無効） |
+| ホスト拡張 | `extensions/cursor-host.ts`（薄い prompt、skill 非広告、Pi 自動 compact 無効） |
 | 前提 | Cursor サブスク / `/login` Cursor Agent |
 | 認証 | pi 内 `/login` → Cursor Agent |
 | モデル例 | `cursor-agent/cursor-grok-4.6-fast`（thinking で high-fast に切替） |
 
-ホスト側は APPEND_SYSTEM / AGENTS.md / skill 索引だけを渡し、Cursor ネイティブと重複する tool は広告しない。context % は Cursor の `used_tokens` / preCompact を使う。長い会話の要約は Cursor 側、`/compact` だけ Pi 手動。Esc / Enter steer で新しい user メッセージが来たら Cursor live session は切って送り直す（tool 結果の返却だけ再利用する）。
+ホスト側は APPEND_SYSTEM と薄い AGENTS.md だけを渡す。Pi の skill 索引は Cursor に出さない。research / review 系は `disable-model-invocation` で自動起動しないが、`/deep-research` や `/skill:deep-research` で使える（`extensions/skill-slash.ts`）。Cursor ネイティブと重複する tool は広告しない。context % は Cursor の `used_tokens` / preCompact を使う。長い会話の要約は Cursor 側、`/compact` だけ Pi 手動。Esc / Enter steer で新しい user メッセージが来たら Cursor live session は切って送り直す（tool 結果の返却だけ再利用する）。
 
 `@netandreus/pi-cursor-provider` は Cursor CLI 子プロセス方式で、ツールが CLI 側で実行されるため pi ハーネス統合には不向き。dotfiles では採用していない。
 

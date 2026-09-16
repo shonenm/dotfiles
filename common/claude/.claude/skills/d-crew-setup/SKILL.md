@@ -5,6 +5,7 @@ user-invocable: true
 arguments: "[<path>]"
 argument-hint: "[<path>]"
 when_to_use: "Use when the user wants to set up ralph-crew autonomous dispatch on a new project (creating .claude/crew.json and launching the ralph-crew daemon inside a tmux session). Triggers: 'set up ralph-crew', 'configure crew on this project', '別 project で crew を試したい'."
+disable-model-invocation: true
 ---
 
 # Crew Setup - 対話式 ralph-crew セットアップ

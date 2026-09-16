@@ -2,6 +2,7 @@
 name: mcp-research
 description: MCPサーバーを選択し、必要なtoolだけを使って調査します。
 user-invocable: true
+disable-model-invocation: true
 ---
 
 # MCP Research

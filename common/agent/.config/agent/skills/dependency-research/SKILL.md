@@ -1,6 +1,7 @@
 ---
 name: dependency-research
 description: Investigate third-party libraries, APIs, or upstream changes. Use when evaluating dependencies, debugging version issues, or researching integration paths.
+disable-model-invocation: true
 ---
 
 # Dependency Research

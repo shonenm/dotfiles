@@ -5,6 +5,7 @@ user-invocable: true
 arguments: "[scope] [focus]"
 argument-hint: "[project|dotfiles|scaffold] [hooks|skills|agents|rules|permissions|all]"
 when_to_use: "Use when the user wants to audit, improve, or scaffold Claude Code or Cursor CLI harness configuration (settings, hooks, skills, agents, rules, permissions)."
+disable-model-invocation: true
 ---
 
 # Harness Audit - ハーネス監査・改善

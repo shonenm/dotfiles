@@ -5,6 +5,7 @@ user-invocable: true
 arguments: "<host> | <host>:<container> [--apply]"
 argument-hint: "<host>[:<container>] [--apply]"
 when_to_use: "Use when the user wants to register a new rcon target (remote host or remote-host:container pair) and verify everything is wired up for host-tmux + docker-exec operation. Automates the process described in docs/infrastructure/rcon-setup.md. Pass --apply to also execute compose mount edit + force-recreate + container-side dotfiles install automatically."
+disable-model-invocation: true
 ---
 
 # Setup rcon Target

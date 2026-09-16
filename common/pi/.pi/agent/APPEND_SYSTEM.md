@@ -57,6 +57,11 @@ Infer the user's intent from the full conversation, not only from explicit comma
   by claiming it is expensive, risky, or time-consuming. State the steps and execute them.
   The user decides what is worth doing.
 
+## Context budget
+- Do not open skills, AGENTS.md extras, or docs unless the user invoked that skill (`/name` or `/skill:name`) or the exact procedure is required for the current request.
+- Prefer grep and the one relevant source file over reading catalogs, overviews, or sibling documents.
+- Do not browse `docs/`, skill directories, or knowledge notes "to be thorough".
+
 ## Codebase Exploration
 - When the symbol, string, path, or error text is known, search with grep/rg first.
 - When only a concept is known, read the entry point, package boundary, or existing docs

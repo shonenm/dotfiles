@@ -1,6 +1,7 @@
 ---
 name: github-research
 description: "Research GitHub repositories, issues, PRs, and source code. Clones repos and uses rg/file read instead of reading GitHub HTML pages. Use when investigating open source projects, finding code examples, or debugging library behavior."
+disable-model-invocation: true
 ---
 
 # GitHub Research

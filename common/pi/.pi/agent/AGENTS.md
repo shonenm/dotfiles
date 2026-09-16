@@ -1,16 +1,14 @@
 # AGENTS.md (User Scoped)
 
-## Canonical docs
+Do not load linked docs or skills unless the current task needs that exact file.
 
-- Project rules: `~/dotfiles/CLAUDE.md`
-- pi usage: `~/dotfiles/docs/ai-agents/pi/`
-- pi implementation: `~/.pi/agent/extensions/`
-
-## Shared configuration
-
-- `~/.config/agent/skills/` — Agent Skills Standard; shared skillの正本
-- `~/.config/agent/knowledge/` — 横断原則の参照資料（自動注入ではない）
-- `~/.config/agent/mcp.json` — pi / Command Code用MCP設定。Claude MCPは別設定
+| Topic | Path |
+| --- | --- |
+| Project rules | `~/dotfiles/CLAUDE.md` |
+| pi usage | `~/dotfiles/docs/ai-agents/pi/` |
+| Shared skills | `/name` or `/skill:name` (`/skills` to list). Research/review are slash-only. |
+| Reference notes (not auto-injected) | `~/.config/agent/knowledge/` |
+| MCP for pi / Command Code | `~/.config/agent/mcp.json` |
 
 ## Execution rules
 
@@ -51,12 +49,4 @@
 
 ## pi-specific extensions
 
-- `permission-gate.ts` — dangerous shell commandの確認
-- `protected-paths.ts` — secret / generated path保護。`dist/`・`coverage/`という名前だけでは禁止しない。秘密鍵・認証設定・Git内部・依存物は保護し、会話中の承認では解除しない。
-- `web-tools.ts` — SearXNG + Jina、cache、citation、SSRF guard
-- `mcp-gateway.ts` — stdio MCP bridge。認可はpi-permission-system
-- `pi-hermes-memory` — scoped durable memory, session search, and consolidation
-- `agent-delegation.ts` — pueue delegation
-- `statusline.ts` — session / background activity表示
-
-Community packageが同じ保証を満たす場合はcustom実装を削除して採用する。remote MCPの実需要が出るまでStreamable HTTPは追加しない。
+Extension behavior lives in `~/.pi/agent/extensions/` and `~/dotfiles/docs/ai-agents/pi/`. Read those only when changing host behavior. Community packageが同じ保証を満たす場合はcustom実装を削除して採用する。

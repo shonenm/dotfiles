@@ -5,6 +5,7 @@ user-invocable: true
 arguments: "[pr [<number>] | local | <rev-range>] [-- <path>...]"
 argument-hint: "[pr [<number>] | local | <rev-range>] [-- <path>...]"
 when_to_use: "Use when the user wants to understand what a change does — 'この差分を解説して', '実装を理解したい', 'PR の内容を説明する HTML が欲しい', '今の作業差分をまとめて'. Do NOT use for reviewing code quality (that is /d-hunk-review) or for writing PR descriptions (/d-pr)."
+disable-model-invocation: true
 ---
 
 # Diff Explain - 解説つき差分ビュー生成

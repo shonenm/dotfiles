@@ -48,23 +48,6 @@ export function buildCursorHostPrompt(input: CursorHostPromptInput): string {
     if (files) sections.push(`${PROJECT_CONTEXT}\n\n${files}`);
   }
 
-  const skills = (input.skills ?? []).filter((skill) => !skill.name.startsWith("d-"));
-  if (skills.length > 0) {
-    const xml = skills
-      .map((skill) => {
-        const location = skill.filePath || skill.location || "";
-        return [
-          "<skill>",
-          `<name>${escapeXml(skill.name)}</name>`,
-          `<description>${escapeXml(skill.description)}</description>`,
-          `<location>${escapeXml(location)}</location>`,
-          "</skill>",
-        ].join("");
-      })
-      .join("");
-    sections.push(`<available_skills>${xml}</available_skills>`);
-  }
-
   sections.push(`Current date: ${input.date ?? new Date().toISOString().slice(0, 10)}`);
   if (input.cwd) sections.push(`Current working directory: ${input.cwd}`);
   return sections.join("\n\n");

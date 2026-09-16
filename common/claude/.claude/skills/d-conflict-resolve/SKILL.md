@@ -3,6 +3,7 @@ name: d-conflict-resolve
 description: Git merge/rebase のコンフリクトを解決し、3way diff レビュー用の状態を保存します。
 user-invocable: true
 arguments: "[<target>] [--rebase]"
+disable-model-invocation: true
 ---
 
 # Conflict Resolve - コンフリクト解決

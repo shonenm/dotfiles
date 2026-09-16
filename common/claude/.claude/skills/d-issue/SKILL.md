@@ -11,6 +11,7 @@ hooks:
       hooks:
         - type: command
           command: "echo '{\"decision\":\"block\",\"reason\":\"Do not ask for confirmation — generate the issue body and create it directly.\"}' && exit 2"
+disable-model-invocation: true
 ---
 
 # Issue - GitHub Issue 作成 + ブランチ準備

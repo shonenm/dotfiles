@@ -16,6 +16,11 @@ grep -q 'applyCursorUsage(output, model)' "$overlay/provider/stream.ts"
 grep -q 'shouldReuseLiveCursorSession' "$overlay/provider/stream.ts"
 grep -q 'Interrupted by user message' "$overlay/provider/stream.ts"
 grep -q 'HOST_INSTRUCTIONS' "$overlay/bridge/pi-context/parser.ts"
+! grep -q '<available_skills>' "$ext"
+grep -q 'registerCommand(skill.name' "$root/common/pi/.pi/agent/extensions/skill-slash.ts"
+for skill in deep-research docs-research github-research pr-review quality-assure; do
+  grep -q 'disable-model-invocation: true' "$root/common/agent/.config/agent/skills/$skill/SKILL.md"
+done
 
 DOTFILES_ROOT="$root" node --input-type=module <<'NODE'
 import { pathToFileURL } from "node:url";
@@ -40,8 +45,10 @@ const prompt = buildCursorHostPrompt({
 if (!prompt.includes("# Host Instructions")) throw new Error("missing host instructions");
 if (!prompt.includes("Speak Japanese.")) throw new Error("missing append system");
 if (!prompt.includes("# Project Context")) throw new Error("missing project context");
-if (!prompt.includes("<name>docs-research</name>")) throw new Error("missing skill index");
-if (prompt.includes("d-pr")) throw new Error("claude skill leaked");
+if (prompt.includes("<available_skills>")) throw new Error("skill index must stay out of Cursor host prompt");
+if (prompt.includes("docs-research") || prompt.includes("d-pr")) {
+  throw new Error("skills leaked into Cursor host prompt");
+}
 if (prompt.includes("You are an AI")) throw new Error("full prompt leaked");
 
 const { applyCursorUsage, rememberCursorContextUsage } = await import(
@@ -73,7 +80,7 @@ const { parsePiSystemPrompt } = await import(
 );
 const parsed = parsePiSystemPrompt(prompt);
 if (!parsed.cleanedPrompt.includes("Speak Japanese.")) throw new Error("cleaned dropped host");
-if (parsed.skills.length !== 1 || parsed.skills[0].name !== "docs-research") {
+if (parsed.skills.length !== 0) {
   throw new Error(JSON.stringify(parsed.skills));
 }
 if (parsed.contextFiles.length !== 1) throw new Error("context files missing");
@@ -89,6 +96,45 @@ if (shouldReuseLiveCursorSession([{ role: "toolResult" }, { role: "user" }])) {
 }
 if (shouldReuseLiveCursorSession([])) {
   throw new Error("empty transcript must not reuse live session");
+}
+
+const { discoverSlashSkills, parseSkillFrontmatter } = await import(
+  pathToFileURL(`${root}/common/pi/.pi/agent/extensions/skill-slash.ts`).href
+);
+const parsedSkill = parseSkillFrontmatter(`---
+name: docs-research
+description: "Read docs"
+disable-model-invocation: true
+---
+body
+`);
+if (!parsedSkill.slashOnly || parsedSkill.name !== "docs-research") {
+  throw new Error(JSON.stringify(parsedSkill));
+}
+const tmp = await import("node:fs");
+const os = await import("node:os");
+const path = await import("node:path");
+const dir = tmp.mkdtempSync(path.join(os.tmpdir(), "pi-skills-"));
+tmp.mkdirSync(path.join(dir, "docs-research"));
+tmp.writeFileSync(path.join(dir, "docs-research", "SKILL.md"), `---
+name: docs-research
+description: Read docs
+disable-model-invocation: true
+---
+`);
+tmp.mkdirSync(path.join(dir, "github-commit"));
+tmp.writeFileSync(path.join(dir, "github-commit", "SKILL.md"), `---
+name: github-commit
+description: Commit changes
+---
+`);
+const slash = discoverSlashSkills([dir]);
+if (slash.length !== 2) throw new Error(`slash ${slash.map((s) => s.name)}`);
+if (!slash.find((s) => s.name === "docs-research")?.slashOnly) {
+  throw new Error("docs-research should be slash-only");
+}
+if (slash.find((s) => s.name === "github-commit")?.slashOnly) {
+  throw new Error("github-commit should stay auto");
 }
 console.log("pi-cursor-host unit checks passed");
 NODE

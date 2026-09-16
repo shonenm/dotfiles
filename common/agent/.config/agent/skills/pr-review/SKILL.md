@@ -1,6 +1,7 @@
 ---
 name: pr-review
 description: Review a pull request or branch diff. Use when the user asks for PR feedback before merging.
+disable-model-invocation: true
 ---
 
 # PR Review

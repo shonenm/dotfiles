@@ -189,7 +189,7 @@ tmux source ~/.config/tmux/tmux.conf
 
 ## pi ハーネス + Cursor 課金
 
-**推奨: `pi-cursor-agent` プロバイダ** — Cursor を Agent ランタイム、Pi をホストにする。dotfiles の host overlay が prompt / skill / usage / 重複 tool を薄くし、steer / 割り込みの user メッセージでは Cursor live session を切って送り直す。
+**推奨: `pi-cursor-agent` プロバイダ** — Cursor を Agent ランタイム、Pi をホストにする。dotfiles の host overlay が prompt / usage / 重複 tool を薄くし、Pi skill 索引は出さない。steer / 割り込みの user メッセージでは Cursor live session を切って送り直す。
 
 | 方式 | 可否 | 備考 |
 | --- | --- | --- |

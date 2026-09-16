@@ -1,6 +1,7 @@
 ---
 name: docs-research
 description: "Research library, API, framework, or SDK documentation. Always checks installed version first, then looks up official docs, release notes, and changelogs. Use when working with specific libraries or frameworks."
+disable-model-invocation: true
 ---
 
 # Docs Research
