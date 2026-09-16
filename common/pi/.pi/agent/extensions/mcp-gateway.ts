@@ -24,6 +24,8 @@ import { homedir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { createInterface } from "node:readline";
 import { Writable } from "node:stream";
+import { applyResultBudget } from "./mcp-gateway/budget.ts";
+import { prepareToolParams, shapeResult } from "./mcp-gateway/shape.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,8 +37,9 @@ interface MCPServerConfig {
   env?: Record<string, string>;
   description?: string;
   enabled?: boolean;
-  /** Maximum result size in characters (default 10000) */
+  /** Maximum result size in characters (default 8000) */
   maxResultSize?: number;
+  shapes?: Record<string, string>;
 }
 
 interface MCPConfig {
@@ -366,7 +369,7 @@ class MCPManager {
         promptSnippet: `MCP tool from ${server}: ${tool.description ?? tool.name}`,
         promptGuidelines: [
           `Use ${tname} when you need to access ${server} capabilities.`,
-          `Check MCP tool results carefully; they may be truncated.`,
+          `Shaped MCP results are complete for their shape. If truncated=true, read the overflow file or call get_logs / detail=full; never treat omitted workflows as no failures.`,
         ],
         parameters: schema,
         execute: async (_toolCallId, params, _signal, onUpdate) => {
@@ -388,7 +391,8 @@ class MCPManager {
     const serverCfg = this.config.mcpServers[server];
 
     // Build details for audit (secrets redacted)
-    const argsSummary = redactSecrets(JSON.stringify(params)).slice(0, 200);
+    const forwardedParams = prepareToolParams(server, toolName, params, serverCfg?.shapes?.[toolName]);
+    const argsSummary = redactSecrets(JSON.stringify(forwardedParams)).slice(0, 200);
 
     onUpdate?.({ content: [{ type: "text", text: `🔌 MCP: ${server}/${toolName}...` }] });
 
@@ -417,10 +421,14 @@ class MCPManager {
       }
 
       const activeClient = this.clients.get(server)!;
-      const result = await activeClient.callTool(toolName, params);
+      const result = await activeClient.callTool(toolName, forwardedParams);
       const elapsed = Date.now() - startTime;
-      const maxSize = serverCfg?.maxResultSize ?? DEFAULT_MAX_RESULT;
-      const trimmed = result.slice(0, maxSize);
+      const selectedShape = serverCfg?.shapes?.[toolName];
+      const shaped = shapeResult({ server, tool: toolName, text: result, params: params, shape: selectedShape });
+      const budgeted = applyResultBudget(shaped.text, serverCfg?.maxResultSize ?? DEFAULT_MAX_RESULT, {
+        originalText: result,
+        omitted: shaped.omitted,
+      });
 
       logMCPAudit(server, toolName, argsSummary, "success", undefined, elapsed);
       updateMCPStats(server, "calls", elapsed);
@@ -428,15 +436,18 @@ class MCPManager {
       return {
         content: [{
           type: "text",
-          text: `## MCP: ${server}/${toolName} (${elapsed}ms)\n\n${trimmed}${result.length > maxSize ? "\n\n*(truncated)*" : ""}`,
+          text: `## MCP: ${server}/${toolName} (${elapsed}ms)\n\n${budgeted.text}`,
         }],
         details: {
           server,
           tool: toolName,
           status: "success",
           elapsedMs: elapsed,
-          resultLength: result.length,
-          truncated: result.length > maxSize,
+          resultLength: budgeted.resultLength,
+          truncated: budgeted.truncated,
+          ...(budgeted.overflowPath ? { overflow: budgeted.overflowPath } : {}),
+          shape: shaped.shape,
+          omitted: shaped.omitted,
         },
       };
     } catch (err: unknown) {

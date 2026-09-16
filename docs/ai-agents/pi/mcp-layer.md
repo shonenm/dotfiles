@@ -10,8 +10,11 @@ piは `mcp-gateway.ts` を介してstdio MCP serverをpi toolとして登録す�
 LLM
   → mcp_<server>_<tool>
   → pi-permission-system
-  → mcp-gateway.ts（result上限・secret redaction・audit）
-  → MCP server（stdio JSON-RPC）
+  → mcp-gateway.ts
+  → upstream MCP（stdio JSON-RPC、完全な結果）
+  → shaper（登録済みの要約／tail。未登録は本文をそのまま）
+  → budget（文字予算。超過時はoverflow。JSONならキー一覧とサイズ）
+  → model
 ```
 
 ## 設定
@@ -33,7 +36,12 @@ Claude Codeは `common/claude/.config/claude/mcp.json` を別の正本とし、`
       "args": [],
       "description": "purpose",
       "enabled": true,
-      "maxResultSize": 8000
+      "maxResultSize": 8000,
+      "shapes": {
+        "get_pipeline_status": "summary",
+        "get_logs": "tail",
+        "list_pipelines": "summary"
+      }
     }
   }
 }
@@ -49,7 +57,11 @@ MCP gateway自身は確認dialogを持たない。tool名 `mcp_*` に対する `
 
 - audit: `~/.pi/research/mcp-audit.jsonl`
 - stats: `~/.pi/research/mcp-stats.json`
-- result上限: server設定の `maxResultSize`、既定8000文字
+- 文字予算: server設定の `maxResultSize`、既定8000文字。これはslice用の窓ではなく、JSONを途中で切らないための予算
+- 予算超過、またはshaperが事実を省略したときは完全な本文を `~/.pi/research/mcp-overflow/<timestamp>-<uuid>.json` に保存する。モデルへは `truncated`、byte数、overflowパスを含むJSONを返す。JSONを文字数で切らない
+- 未登録toolの巨大JSONはキー一覧とサイズだけを本文に載せ、値はoverflowへ残す。小さい結果はそのまま通す
+- shaperは `shapes` でserver/toolごとに指定でき、コードにはWoodpeckerの `summary` / `tail` の既定値がある
+- shaped results are complete for their shape。`truncated=true` の場合はoverflowを読むか `get_logs` / `detail=full` を使い、省略されたworkflowを失敗なしと解釈しない
 - auditへ書く引数は既知のsecret形式をredact
 
 ## Skill
