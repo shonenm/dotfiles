@@ -106,6 +106,8 @@
     },
     "npm:awesome-pi-themes",
     "npm:pi-studio",
+    "npm:pi-mermaid",
+    "git:github.com/kostyay/pi-k-excalidraw",
     "npm:pi-extmgr",
     {
       "source": "npm:pi-beautiful-tui",
