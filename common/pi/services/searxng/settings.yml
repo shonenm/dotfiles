@@ -1,4 +1,18 @@
-use_default_settings: true
+use_default_settings:
+  engines:
+    keep_only:
+      - bing
+      - yep
+      - wikipedia
+      - github
+      - stackoverflow
+      - mdn
+      - npm
+      - pypi
+      - huggingface
+      - arxiv
+      - crates.io
+      - pkg.go.dev
 
 general:
   instance_name: "SearXNG (pi research)"
@@ -17,14 +31,7 @@ server:
 ui:
   static_use_hash: true
 
+# Fail fast on dead upstreams so web_search does not wait on CAPTCHA/429 engines.
 outgoing:
-  request_timeout: 10.0
-  max_request_timeout: 30.0
-
-# Override default engines: keep only what we need for pi research
-engines:
-  - name: duckduckgo
-    disabled: false
-
-  - name: wikipedia
-    disabled: false
+  request_timeout: 3.0
+  max_request_timeout: 5.0
