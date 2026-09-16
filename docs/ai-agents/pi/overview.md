@@ -1,8 +1,8 @@
 # pi-coding-agent (Codex + Cursor)
 
-> **由来:** **Upstream** pi本体・provider / **Plugin** settings.json導入package / **Configuration** settings・AGENTS.md・テーマ / **Custom** extensions / **Local patch** `scripts/patch-pi-tui.sh`（[区分](../../provenance.md#区分)）
+> **由来:** **Upstream** pi本体・provider / **Plugin** settings.json導入package / **Configuration** settings・AGENTS.md・テーマ / **Custom** extensions / **Local patch** `scripts/patch-pi-tui.sh` / `scripts/patch-pi-cursor-agent.sh`（[区分](../../provenance.md#区分)）
 
-[pi](https://pi.dev/) はミニマルな terminal coding harness。MCP / sub-agents / permission popup / plan mode を持たず、CLI extensions と skills で組み立てる思想。dotfiles では Codex を主軸に、Cursor サブスク向けに [pi-cursor-agent](https://www.npmjs.com/package/pi-cursor-agent) プロバイダも同梱し、xAI の Grok も選べるようにしている。`enabledModels` は `openai-codex/*`、`cursor-agent/*`、`opencode-go/*`、`xai/*`。
+[pi](https://pi.dev/) はミニマルな terminal coding harness。MCP / sub-agents / permission popup / plan mode を持たず、CLI extensions と skills で組み立てる思想。dotfiles では Cursor Agent を Pi 上の主推論経路にし、Pi は UI / 権限 / session / 追加 tool のホストに寄せる。[pi-cursor-agent](https://www.npmjs.com/package/pi-cursor-agent) に host overlay を当て、xAI の Grok と Codex（subagent）も使える。`enabledModels` は `openai-codex/*`、`cursor-agent/*`、`opencode-go/*`、`xai/*`。
 
 ## 構成
 
@@ -10,7 +10,8 @@
 | --- | --- | --- |
 | pi CLI | エージェント本体 | `config/packages.npm.txt` の `@earendil-works/pi-coding-agent` (npm global) |
 | pi-tui narrow terminal patch | tmux focus zoomで1列/1行になった間は描画を停止し、Piの終了とscrollを防止 | `scripts/patch-pi-tui.sh` (Local patch) |
-| pi-cursor-agent | Cursor サブスク → pi プロバイダ | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
+| pi-cursor-agent | Cursor サブスク → Pi ホスト上の Agent ランタイム | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
+| pi-cursor-agent host overlay | 薄い host prompt、skill description-only、Cursor usage、Grok 4.6 mapping | `scripts/patch-pi-cursor-agent.sh` + `extensions/cursor-host.ts` |
 | pi-codex-multi | 複数のCodex OAuthアカウントとrate limit時のfailover | `settings.json` の `packages` → `pi install npm:pi-codex-multi` |
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
@@ -80,14 +81,17 @@ pi
 
 ### Cursor Provider (pi-cursor-agent)
 
-[pi-cursor-agent](https://github.com/sudosubin/pi-frontier/tree/main/pi-cursor-agent) は Cursor API 経由で推論し、ツール実行は pi 側にブリッジする。dotfiles 拡張 (permission-gate, mcp-gateway, statusline) がそのまま効く。
+[pi-cursor-agent](https://github.com/sudosubin/pi-frontier/tree/main/pi-cursor-agent) は Cursor Agent プロトコルで推論し、ツール実行は Pi 側にブリッジする。dotfiles は Cursor をランタイム、Pi をホストとして扱う。
 
 | 項目 | 内容 |
 | --- | --- |
-| パッケージ | `npm:pi-cursor-agent` (`settings.json` → `packages`) |
-| 前提 | `cursor-agent` CLI (`install.sh`) |
+| パッケージ | `npm:pi-cursor-agent` + `0.4.4` host overlay |
+| ホスト拡張 | `extensions/cursor-host.ts`（薄い prompt、Pi 自動 compact 無効） |
+| 前提 | Cursor サブスク / `/login` Cursor Agent |
 | 認証 | pi 内 `/login` → Cursor Agent |
-| モデル例 | `cursor-agent/composer-2-fast`, `cursor-agent/claude-opus-4-6` |
+| モデル例 | `cursor-agent/cursor-grok-4.6-fast`（thinking で high-fast に切替） |
+
+ホスト側は APPEND_SYSTEM / AGENTS.md / skill 索引だけを渡し、Cursor ネイティブと重複する tool は広告しない。context % は Cursor の `used_tokens` / preCompact を使う。長い会話の要約は Cursor 側、`/compact` だけ Pi 手動。Esc / Enter steer で新しい user メッセージが来たら Cursor live session は切って送り直す（tool 結果の返却だけ再利用する）。
 
 `@netandreus/pi-cursor-provider` は Cursor CLI 子プロセス方式で、ツールが CLI 側で実行されるため pi ハーネス統合には不向き。dotfiles では採用していない。
 
