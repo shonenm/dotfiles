@@ -189,7 +189,7 @@ tmux source ~/.config/tmux/tmux.conf
 
 ## pi ハーネス + Cursor 課金
 
-**推奨: `pi-cursor-agent` プロバイダ** — 1 つの pi セッションで Cursor サブスクのモデルを使い、dotfiles 拡張 (permission-gate, mcp-gateway, delegation 等) を維持する。
+**推奨: `pi-cursor-agent` プロバイダ** — Cursor を Agent ランタイム、Pi をホストにする。dotfiles の host overlay が prompt / skill / usage / 重複 tool を薄くし、steer / 割り込みの user メッセージでは Cursor live session を切って送り直す。
 
 | 方式 | 可否 | 備考 |
 | --- | --- | --- |
@@ -205,7 +205,7 @@ tmux source ~/.config/tmux/tmux.conf
 ```bash
 pi
 > /login          # Cursor Agent を選択 → ブラウザ OAuth
-> /model cursor-agent/composer-2-fast
+> /model cursor-agent/cursor-grok-4.6-fast
 ```
 
 `enabledModels` に `cursor-agent/*` が含まれるため `/models` で Cursor モデルが選べる。
