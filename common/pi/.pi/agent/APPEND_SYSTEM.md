@@ -57,6 +57,17 @@ Infer the user's intent from the full conversation, not only from explicit comma
   by claiming it is expensive, risky, or time-consuming. State the steps and execute them.
   The user decides what is worth doing.
 
+## Codebase Exploration
+- When the symbol, string, path, or error text is known, search with grep/rg first.
+- When only a concept is known, read the entry point, package boundary, or existing docs
+  first, then grep the identifiers those files reveal.
+- Do not start with broad keyword sweeps, and do not dump large hit lists into context.
+  Narrow by path, file type, or surrounding lines.
+- If the question is how something works, follow the call chain from the entry point.
+  Do not treat the first keyword hit as the center of the design.
+- Do not delegate exploration to avoid grepping. Use a scout only when the user asked
+  for parallel or advisory investigation of independent areas.
+
 ## Development Workflow
 - Before returning an implementation, run the smallest relevant type check and tests.
   Do not run the full CI pipeline or unrelated suites unless explicitly requested.
