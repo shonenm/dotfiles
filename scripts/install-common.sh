@@ -114,6 +114,7 @@ install_npm_packages() {
   # npm更新のたびに再現可能なlocal patchを適用する。
   "$DOTFILES_DIR/scripts/patch-pi-tui.sh"
   "$DOTFILES_DIR/scripts/patch-pi-cursor-agent.sh" || true
+  "$DOTFILES_DIR/scripts/patch-pi-mermaid.sh" || true
 }
 
 install_claude_mem() {
