@@ -15,6 +15,10 @@ grep -q 'cursor-grok-4.6-fast' "$overlay/provider/model-mapping.ts"
 grep -q 'rememberCursorContextUsage' "$overlay/bridge/cursor-to-pi/executors/hook.ts"
 grep -q 'applyCursorUsage(output, model)' "$overlay/provider/stream.ts"
 grep -q 'shouldReuseLiveCursorSession' "$overlay/provider/stream.ts"
+grep -q 'shouldReplaceCachedTurns' "$overlay/bridge/pi-to-cursor/request-builder.ts"
+grep -q 'evict: false' "$overlay/provider/stream.ts"
+grep -q 'restoreAgentStoreFromBranch' "$overlay/provider/stream.ts"
+grep -q 'options?: { evict?: boolean }' "$overlay/provider/session-lifecycle.ts"
 grep -q 'Interrupted by user message' "$overlay/provider/stream.ts"
 grep -q 'HOST_INSTRUCTIONS' "$overlay/bridge/pi-context/parser.ts"
 
@@ -102,5 +106,11 @@ if (shouldReuseLiveCursorSession([{ role: "toolResult" }, { role: "user" }])) {
 if (shouldReuseLiveCursorSession([])) {
   throw new Error("empty transcript must not reuse live session");
 }
+
+const { shouldReplaceCachedTurns } = await import(
+  pathToFileURL(`${root}/common/pi/.pi/agent/patches/pi-cursor-agent/0.4.4/src/provider/live-session-policy.ts`).href
+);
+if (!shouldReplaceCachedTurns(0, 2)) throw new Error("empty cache must take rebuilt turns");
+if (shouldReplaceCachedTurns(3, 1)) throw new Error("shorter rebuild must not replace cache");
 console.log("pi-cursor-host unit checks passed");
 NODE

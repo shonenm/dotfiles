@@ -4,6 +4,10 @@
   "sessionSearch": {
     "variant": "legacy"
   },
+  "llmModelOverride": "openai-codex/gpt-5.6-luna",
+  "llmFallbackModels": [
+    "xai/grok-4.6"
+  ],
   "llmThinkingOverride": "low",
   "reviewEnabled": true,
   "memoryOverflowStrategy": "auto-consolidate",

@@ -47,8 +47,8 @@ import type {
 import {
   CURSOR_STATE_ENTRY_TYPE,
   ensureAgentStore,
-  evictAgentStore,
   persistAgentStore,
+  restoreAgentStoreFromBranch,
 } from "./agent-store";
 import {
   type ContentEvent,
@@ -399,7 +399,9 @@ export function streamCursorAgent(
     try {
       session = getLiveSession(sessionId);
       if (session && !shouldReuseLiveCursorSession(context.messages)) {
-        await terminateSession(sessionId, "Interrupted by user message");
+        await terminateSession(sessionId, "Interrupted by user message", {
+          evict: false,
+        });
         session = undefined;
       }
 
@@ -411,6 +413,10 @@ export function streamCursorAgent(
           );
         }
 
+        const branch = getCtx()?.sessionManager.getBranch();
+        if (branch) {
+          await restoreAgentStoreFromBranch(sessionId, branch).catch(() => {});
+        }
         const agentStore = await ensureAgentStore(sessionId);
         const cwd = getCtx()?.cwd ?? process.cwd();
         const requestContextTools = getContextTools(context);
@@ -608,14 +614,13 @@ export function streamCursorAgent(
           timestamp: output.timestamp,
           blocks: serializeContentBlocks(output.content),
         });
-        let flushed = false;
         try {
           await session.flushSessionState();
-          flushed = true;
         } catch {}
         deleteLiveSession(sessionId);
         await session.cursorRunPromise.catch(() => {});
-        await evictAgentStore(sessionId, { persist: !flushed }).catch(() => {});
+        // Keep the Cursor conversation store. Evicting here mints a new
+        // conversationId on the next user message and the model forgets the thread.
         stream.push({ type: "done", reason: "stop", message: output });
       }
       stream.end();
@@ -623,11 +628,9 @@ export function streamCursorAgent(
       output.stopReason = options?.signal?.aborted ? "aborted" : "error";
       output.errorMessage =
         error instanceof Error ? error.message : String(error);
-      let flushed = false;
       try {
         if (session) {
           await session.flushSessionState();
-          flushed = true;
           await session.cursorRunPromise.catch(() => {});
         }
       } catch {}
@@ -636,7 +639,6 @@ export function streamCursorAgent(
         sessionId,
         `Stream error: ${output.errorMessage}`,
       );
-      await evictAgentStore(sessionId, { persist: !flushed }).catch(() => {});
       stream.push({
         type: "error",
         reason: output.stopReason === "aborted" ? "aborted" : "error",
