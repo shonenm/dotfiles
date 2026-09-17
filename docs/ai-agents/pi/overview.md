@@ -91,7 +91,7 @@ pi
 | 認証 | pi 内 `/login` → Cursor Agent |
 | モデル例 | `cursor-agent/cursor-grok-4.6-fast`（thinking で high-fast に切替） |
 
-ホスト側は APPEND_SYSTEM / AGENTS.md だけを渡し、skill 索引は出さない。skill は `/name` または `/skill:name` でそのターンに展開する（`skill-slash.ts`）。共有・プロジェクトの SKILL.md に `disable-model-invocation` を足す必要はない。Cursor ネイティブと重複する tool は広告しない。context % は Cursor の `used_tokens` / preCompact を使う。長い会話の要約は Cursor 側、`/compact` だけ Pi 手動。Esc / Enter steer で新しい user メッセージが来たら Cursor live session は切って送り直す（tool 結果の返却だけ再利用する）。
+ホスト側は APPEND_SYSTEM / AGENTS.md だけを渡し、skill 索引は出さない。skill は `/name` または `/skill:name` でそのターンに展開する（`skill-slash.ts`）。共有・プロジェクトの SKILL.md に `disable-model-invocation` を足す必要はない。Cursor ネイティブと重複する tool は広告しない。context % は Cursor の `used_tokens` / preCompact を使う。長い会話の要約は Cursor 側、`/compact` だけ Pi 手動。Esc / Enter steer で新しい user メッセージが来たら Cursor live session は切って送り直す（tool 結果の返却だけ再利用する）。会話ストアは捨てない。捨てると次の発言で conversationId が新しくなり、モデルが履歴を忘れる。新しい接続では Pi の会話履歴から turn を組み直す。
 
 `@netandreus/pi-cursor-provider` は Cursor CLI 子プロセス方式で、ツールが CLI 側で実行されるため pi ハーネス統合には不向き。dotfiles では採用していない。
 

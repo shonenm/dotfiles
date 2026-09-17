@@ -31,6 +31,7 @@ import {
 import type { CursorStateStore } from "../../provider/state";
 import { type BlobStore, getBlobId } from "../../vendor/agent-kv";
 import { toolResultToText } from "../shared/tool-result";
+import { shouldReplaceCachedTurns } from "../../provider/live-session-policy";
 
 const CURSOR_NATIVE_TOOL_NAMES = new Set([
   "bash",
@@ -289,9 +290,16 @@ export function buildRunRequest(
     params.state,
   );
 
+  // A new Cursor connection only sends the latest user text as the action.
+  // Prior turns must live in conversationState. The cached snapshot is often
+  // the empty initial state from the previous run, so prefer Pi-built turns.
   const conversationState =
     cached && cached.rootPromptMessagesJson.length > 0
-      ? cached
+      ? Object.assign(cached, {
+          turns: shouldReplaceCachedTurns(cached.turns.length, turns.length)
+            ? turns
+            : cached.turns,
+        })
       : new ConversationStateStructureClass({
           rootPromptMessagesJson: [systemPromptId],
           turns,

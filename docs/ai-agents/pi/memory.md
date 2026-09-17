@@ -29,6 +29,10 @@ Piの記憶は、用途の異なる正本を分離する。
 {
   "memoryMode": "policy-only",
   "memoryPolicyStyle": "compact",
+  "llmModelOverride": "openai-codex/gpt-5.6-luna",
+  "llmFallbackModels": [
+    "xai/grok-4.6"
+  ],
   "llmThinkingOverride": "low",
   "reviewEnabled": true,
   "memoryOverflowStrategy": "auto-consolidate",
@@ -38,7 +42,7 @@ Piの記憶は、用途の異なる正本を分離する。
 }
 ```
 
-`llmModelOverride`は指定せず、Memory処理は現在のセッションのモデルを継承する。ChatGPT認証で利用できないモデルへの固定を避けるため。`llmThinkingOverride: "low"`とbackground review等の機能は維持する。設定変更は`/reload`で反映する。
+Cursor モデルは `complete()` / 子`pi -p` に provider が無い。background review はセッションモデルを継承せず、`openai-codex/gpt-5.6-luna`（失敗時は `xai/grok-4.6`）で回す。`llmThinkingOverride: "low"`と review 機能は維持する。設定変更は`/reload`で反映する。
 
 主な機能:
 
