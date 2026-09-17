@@ -1,6 +1,6 @@
 # pi-coding-agent (Codex + Cursor)
 
-> **由来:** **Upstream** pi本体・provider / **Plugin** settings.json導入package / **Configuration** settings・AGENTS.md・テーマ / **Custom** extensions / **Local patch** `scripts/patch-pi-tui.sh` / `scripts/patch-pi-cursor-agent.sh`（[区分](../../provenance.md#区分)）
+> **由来:** **Upstream** pi本体・provider / **Plugin** settings.json導入package / **Configuration** settings・AGENTS.md・テーマ / **Custom** extensions / **Local patch** `scripts/patch-pi-tui.sh` / `scripts/patch-pi-cursor-agent.sh` / `scripts/patch-pi-mermaid.sh`（[区分](../../provenance.md#区分)）
 
 [pi](https://pi.dev/) はミニマルな terminal coding harness。MCP / sub-agents / permission popup / plan mode を持たず、CLI extensions と skills で組み立てる思想。dotfiles では Cursor Agent を Pi 上の主推論経路にし、Pi は UI / 権限 / session / 追加 tool のホストに寄せる。[pi-cursor-agent](https://www.npmjs.com/package/pi-cursor-agent) に host overlay を当て、xAI の Grok と Codex（subagent）も使える。`enabledModels` は `openai-codex/*`、`cursor-agent/*`、`opencode-go/*`、`xai/*`。
 
@@ -12,6 +12,7 @@
 | pi-tui narrow terminal patch | tmux focus zoomで1列/1行になった間は描画を停止し、Piの終了とscrollを防止 | `scripts/patch-pi-tui.sh` (Local patch) |
 | pi-cursor-agent | Cursor サブスク → Pi ホスト上の Agent ランタイム | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
 | pi-cursor-agent host overlay | 薄い host prompt、skill 索引なし、Cursor usage、Grok 4.6 mapping | `scripts/patch-pi-cursor-agent.sh` + `extensions/cursor-host.ts` + `extensions/skill-slash.ts` |
+| pi-mermaid display-only overlay | mermaid の custom メッセージで Cursor に空 user turn を送らない | `scripts/patch-pi-mermaid.sh` |
 | pi-codex-multi | 複数のCodex OAuthアカウントとrate limit時のfailover | `settings.json` の `packages` → `pi install npm:pi-codex-multi` |
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
@@ -177,7 +178,7 @@ Cursor上限、YOLO / Ponytail（FULL）、package数 / auto-update、TOK / COST
 | `pi-open-tui` | install維持、UI entrypointは統合shellとの競合を避けてfilter |
 | `awesome-pi-themes` | theme比較用に有効 |
 | `pi-studio` | browser workspace、preview、annotationを有効。長い説明・表・HTMLは `/studio` |
-| `pi-mermaid` | 会話中の mermaid fence を TUI で ASCII 図として表示。`/pi-mermaid` で直前応答を再描画 |
+| `pi-mermaid` | 応答中の mermaid fence を TUI で ASCII 図として表示。`/pi-mermaid` で直前応答を再描画。Cursor 向けに display-only overlay（`scripts/patch-pi-mermaid.sh`）を当て、空の user turn を起こさない |
 | `git:github.com/kostyay/pi-k-excalidraw` | `/excalidraw` で Glimpse 窓に手描きキャンバス。`glimpseui` は package の npm 依存 |
 | `pi-extmgr` | package管理overlayを有効 |
 | `pi-beautiful-tui` | install維持、UI entrypointはfilter |
@@ -199,7 +200,7 @@ Cursor上限、YOLO / Ponytail（FULL）、package数 / auto-update、TOK / COST
 - `/status`: project、model / thinking、context、background agents、表示対象のextension statusをoverlayで一覧表示
 - 入力中の既知 skill 名はアクセント色でハイライトされる（`/reload` または再起動で skill 一覧を再読込）。
 - skill 本体は `/name` または `/skill:name` で展開する。`/skills` で名前一覧。Cursor モデルでは自動カタログを出さない。
-- 会話中の mermaid は `pi-mermaid` が TUI で描画する。手描き図は `/excalidraw`。ブラウザで見たい応答は `/studio`。
+- 応答の mermaid は `pi-mermaid` が TUI で描画する。手描き図は `/excalidraw`。ブラウザで見たい応答は `/studio`。送信文の mermaid は元の fence のまま（入力時は再描画しない）。
 
 `Ctrl+S` / `Ctrl+R`はcustom extensionの`prompt-stash.ts` / `prompt-history.ts`が担当する。built-in shortcutとの競合警告を避けるため、選択画面内のモデル選択保存・セッション並べ替えは`Alt+S`、セッション名変更は`Alt+R`へ`keybindings.json`で変更している。変更は`/reload`で反映される。
 

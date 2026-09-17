@@ -1270,6 +1270,7 @@ with open('$settings_file') as f:
   if install_state_is_current pi-packages "$packages_fp"; then
     log_success "Pi packages already match settings.json"
     "$DOTFILES_DIR/scripts/patch-pi-cursor-agent.sh" || log_warn "pi-cursor-agent overlay failed"
+    "$DOTFILES_DIR/scripts/patch-pi-mermaid.sh" || log_warn "pi-mermaid overlay failed"
     return 0
   fi
 
@@ -1288,11 +1289,13 @@ with open('$settings_file') as f:
     record_install_state pi-packages "$packages_fp"
   fi
   "$DOTFILES_DIR/scripts/patch-pi-cursor-agent.sh" || log_warn "pi-cursor-agent overlay failed"
+  "$DOTFILES_DIR/scripts/patch-pi-mermaid.sh" || log_warn "pi-mermaid overlay failed"
 }
 
 apply_pi_local_patches() {
   "$DOTFILES_DIR/scripts/patch-pi-tui.sh" || log_warn "pi-tui patch failed"
   "$DOTFILES_DIR/scripts/patch-pi-cursor-agent.sh" || log_warn "pi-cursor-agent overlay failed"
+  "$DOTFILES_DIR/scripts/patch-pi-mermaid.sh" || log_warn "pi-mermaid overlay failed"
 }
 
 # --- 4.6. Disable Serena MCP dashboard auto-open ---
