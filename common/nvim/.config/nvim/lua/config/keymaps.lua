@@ -6,6 +6,10 @@ local map = vim.keymap.set
 
 -- Window navigation: vim-tmux-navigator が担当 (C-h/j/k/l)
 
+-- Restore H/L to High/Low (window top/bottom). Buffer cycle is [b / ]b.
+pcall(vim.keymap.del, "n", "H")
+pcall(vim.keymap.del, "n", "L")
+
 -- Save & Quit
 map("n", "<leader>w", "<cmd>w<cr>", { desc = "Save" })
 map("n", "<leader>q", "<cmd>q<cr>", { desc = "Quit" })
