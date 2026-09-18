@@ -209,6 +209,10 @@ Cursor上限、YOLO / Ponytail（FULL）、package数 / auto-update、TOK / COST
 
 `common/pi/.pi/agent/extensions/permission-gate.ts`はdangerous shell commandを実行前に確認する。agentはセッション開始時のmain repositoryまたは既存worktreeで実装し、利用者の明示なしに別worktreeへ移動しない。worktree capacity追加は確認対象ではなくhard denyし、`git worktree add`と`pnpm wt provision`は実行しない。利用者が明示した既存pooled slotのclaim/listは許可する。capacity追加が必要な場合は利用者がpi外のterminalから実行する。
 
+### Bash timeout cap
+
+Cursor の Grok / Composer は Shell に `timeout 30000s` を付ける。Pi の bash はその秒数まで待つため、失敗してもプロセスが死なないと数時間ブロックする。`common/pi/.pi/agent/extensions/bash-timeout-cap.ts` は `tool_call` で foreground bash の timeout を 300秒に制限する。未指定と不正値も 300秒にする。確認ダイアログは出さず、cap した場合だけ tool result に再実行しない旨を付ける。5分を超える処理は `MonitorCreate` または pueue を使う。変更は `/reload` または pi 再起動で有効になる。
+
 ### 拡張機能
 
 pi packages 経由で extensions / skills を追加:
