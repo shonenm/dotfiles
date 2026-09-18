@@ -96,3 +96,6 @@ Infer the user's intent from the full conversation, not only from explicit comma
 - Do not start long-running processes (servers, watchers, daemons) directly from CLI; use `pueue` instead.
 - Start: `pueue add -- <command>`
 - Manage: `pueue status` / `pueue log` / `pueue follow` / `pueue kill`
+- Foreground bash timeout is hard-capped at 300 seconds by the host.
+  Do not retry the same command with a larger timeout.
+  Use MonitorCreate or pueue for work that needs more than 5 minutes.
