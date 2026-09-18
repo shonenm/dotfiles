@@ -582,7 +582,7 @@ conflict-review / rebase-review 起動時に自動設定される (`lua/plugins/
 
 | キー | 動作 | 対象ペイン |
 |------|------|-----------|
-| `H` / `L` | 前/次のファイルに移動 (タブ切替) | 全ペイン |
+| `[b` / `]b` | 前/次のファイルに移動 (タブ切替) | 全ペイン |
 | `]c` / `[c` | 次/前の diff hunk に移動 | 全ペイン (vim built-in) |
 | `<leader>m1`-`<leader>m9` | 指定番号の hunk にジャンプ | resolved (中央) |
 | `<leader>mo` | ours (左) から取り込み | resolved (中央) |
