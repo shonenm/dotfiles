@@ -33,7 +33,7 @@
 
 - 有限の実装完了条件には `/goal` を使う。
 - `/loop` / `LoopCreate` は時間間隔に意味がある観測・pollingだけに使う。
-- 長時間commandは `MonitorCreate`、通常のbackground processはpueueを使う。
+- 長時間commandは `MonitorCreate`、通常のbackground processはpueueを使う。foreground bash は 300秒で打ち切られる。
 
 ## Delegation
 
@@ -51,6 +51,7 @@
 
 ## pi-specific extensions
 
+- `bash-timeout-cap.ts` — foreground bash timeout を 300秒に制限。未指定も 300秒。長い処理は MonitorCreate / pueue
 - `permission-gate.ts` — dangerous shell commandの確認
 - `protected-paths.ts` — secret / generated path保護。`dist/`・`coverage/`という名前だけでは禁止しない。秘密鍵・認証設定・Git内部・依存物は保護し、会話中の承認では解除しない。
 - `web-tools.ts` — SearXNG + Jina、cache、citation、SSRF guard
