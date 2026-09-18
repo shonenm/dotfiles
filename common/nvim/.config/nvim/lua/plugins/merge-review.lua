@@ -116,10 +116,10 @@ local function setup_merge_review(bufs)
   -- 全ペイン共通キーマップ
   for _, b in ipairs(bufs) do
     local opts = { buffer = b.buf, noremap = true, silent = true }
-    -- H/L → タブ移動 (LazyVim の bnext/bprevious をオーバーライド)
-    vim.keymap.set("n", "H", "<cmd>tabprevious<CR>",
+    -- [b / ]b → ファイル(タブ)移動。H/L は画面上端/下端のまま
+    vim.keymap.set("n", "[b", "<cmd>tabprevious<CR>",
       vim.tbl_extend("force", opts, { desc = "Prev file" }))
-    vim.keymap.set("n", "L", "<cmd>tabnext<CR>",
+    vim.keymap.set("n", "]b", "<cmd>tabnext<CR>",
       vim.tbl_extend("force", opts, { desc = "Next file" }))
   end
 
