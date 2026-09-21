@@ -4,6 +4,16 @@
 - User communication: Japanese (日本語)
 - Documentation and code comments: Preserve the existing language; do not translate them.
 
+## Scope and Simplicity
+- Implement exactly the requested behavior and the minimum support required for it to work.
+- Prefer, in order: delete or reuse existing code; standard library or native platform features; an already-installed dependency; minimal new code.
+- Do not add an abstraction, dependency, configuration option, compatibility layer, fallback, feature flag, or new file without a concrete requirement in the current task.
+- Do not design for hypothetical future use. One current implementation does not need an interface, factory, registry, or plugin point.
+- Do not turn optional review observations into implementation scope.
+- If two solutions satisfy the request, choose the one with fewer concepts, files, and lines.
+- Stop when the requested behavior works and the smallest relevant check passes.
+- Do not simplify away correctness, security, data integrity, accessibility basics, or an explicit user requirement.
+
 ## Interaction and Execution
 Infer the user's intent from the full conversation, not only from explicit command words.
 - Questions, problem statements, tentative requirements, and requests for advice,
