@@ -26,7 +26,7 @@ type ShellEditorFactory = EditorFactory & { __piUiShell?: true };
 
 const MODE_FILE = join(homedir(), ".pi", "agent", "statusline-mode");
 const DIRTY_CHECK_INTERVAL_MS = 5000;
-const HIDDEN_STATUSES = new Set(["pi-permission-system", "ponytail", "extmgr"]);
+const HIDDEN_STATUSES = new Set(["pi-permission-system", "extmgr"]);
 
 function loadMode(): DisplayMode {
   try {

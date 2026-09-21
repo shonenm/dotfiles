@@ -16,7 +16,7 @@
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
 | pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
-| pi-hermes-memory | scope付きlong-term memory、session検索、background review、consolidation | `settings.json` の `packages` + `hermes-memory-config.json` |
+| pi-hermes-memory | 明示opt-inのmemory検索・session検索（自動保存なし） | `settings.json` の `packages` + `hermes-memory-config.json` |
 | UI比較package | header / footer / editor / theme / browser workspaceを実機比較 | `settings.json` の `packages`（下記参照） |
 | AGENTS.md | グローバル指示書 | `common/pi/.pi/agent/AGENTS.md` → `~/.pi/agent/AGENTS.md` |
 | pueue | バックグラウンドタスク・並列 delegation 用キュー | `config/Brewfile` (mac), `packages.linux.{apt,alpine}.txt` (linux) |
@@ -24,6 +24,8 @@
 ## 対話・Plan・Goalの使い分け
 
 通常対話では、質問・課題感・暫定要件を実装依頼として扱わない。`実装して`などの明示後に変更を開始し、動作するfirst implementationと最小の関連検証まで進めて利用者へ制御を返す。実装中の通常のedit/bashはYOLO modeで止めず、方針変更や節目を自然言語で報告する。
+
+`APPEND_SYSTEM.md` の `Scope and Simplicity` を全coding taskの上位方針とする。要求された挙動に必要な最小変更を選び、既存実装・stdlib・native機能を優先する。将来用の抽象化、設定、fallback、feature flag、追加ファイルは、現在の具体的要件がない限り作らない。Ponytail packageによる長い毎turn prompt注入は使用しない。
 
 要件や方式を先に固める場合は`/plan`を使う。read-onlyで調査・計画し、画面上のExecute選択または明示的な実装指示まで変更しない。
 
@@ -137,6 +139,10 @@ pueue log <task-id>
 
 `agent-notify.ts`は`agent_start`から`agent_settled`までを1つのrunning区間として扱い、stream/tool進捗を5秒間隔のheartbeatへ変換する。更新は直列化され、`turn_end`途中でidleへ戻る競合を起こさない。詳細は[AI agent状態管理](../../specs/agent-stop-notification.md)を参照。
 
+## Memory
+
+`pi-hermes-memory` はsession横断検索を残すため導入するが、memory保存は明示opt-inとする。`reviewEnabled`、`correctionDetection`、compact/shutdown時のflushは無効化し、利用者が保存・更新・削除を明示した場合だけmemory toolを使う。通常作業からdurable factを推測して保存しない。過去の会話を求められた場合は`session_search`、保存済みcontextの再利用を求められた場合は`memory_search`を使う。
+
 ## Web Research
 
 詳細は [web-research.md](web-research.md) を参照。
@@ -168,7 +174,7 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 
 `/statusline on|off`でfooterを表示・非表示にする。引数なしはtoggle。旧profile名（`detailed`、`balanced`、`minimal`、`compact`、`legacy`）と保存済み設定は`on`として扱い、幅によるprofile切り替えや行数上限は設けない。
 
-Cursor上限、YOLO / Ponytail（FULL）、package数 / auto-update、TOK / COST / WEB / MCPはfooterにも`/status`にも表示しない。Cursor上限の問い合わせとtoken / cost / research統計の読み取りもstatuslineから削除している。permission、Ponytail、package管理、Web / MCPの機能自体は変更しない。
+Cursor上限、YOLO、package数 / auto-update、TOK / COST / WEB / MCPはfooterにも`/status`にも表示しない。Cursor上限の問い合わせとtoken / cost / research統計の読み取りもstatuslineから削除している。permission、package管理、Web / MCPの機能自体は変更しない。
 
 比較用packageはinstall状態を維持するが、surface ownershipが競合する`pi-open-tui`、`pi-beautiful-tui`、`pi-system-theme`のextension entrypointはfilterする。theme collection、Pi Studio、extmgr、session／todo機能など、統合shellと重複しない機能は引き続き読み込む。tool pillsは標準ツールを再登録し、pi-subagents 0.67.0のbuiltin判定から`bash`・`edit`・`write`を除外させるため読み込まない。標準のツール表示を使い、編集権限や安全チェックは変更しない。設定変更は`/reload`または再起動で反映する。
 
