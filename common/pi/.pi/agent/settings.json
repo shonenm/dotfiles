@@ -1,6 +1,6 @@
 {
-  "defaultProvider": "cursor-agent",
-  "defaultModel": "cursor-grok-4.6-fast",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "high",
   "subagents": {
     "defaultModel": "openai-codex/gpt-5.6-luna",
@@ -10,7 +10,8 @@
       "allow": [
         "openai-codex/gpt-5.6-luna",
         "openai-codex/gpt-5.6-sol",
-        "openai-codex/gpt-6-astra"
+        "openai-codex/gpt-6-astra",
+        "cursor-agent/composer-2.5"
       ]
     }
   },

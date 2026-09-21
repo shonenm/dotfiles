@@ -17,7 +17,7 @@ for pattern in (
     "Read(**/.env.*)",
     "Read(~/.local/share/ai-notify/**)",
     "Shell(sudo **)",
-    "Shell(git push --force**)",
+    "Shell(git push --force)",
 ):
     assert pattern in deny, pattern
 assert cli["approvalMode"] == "unrestricted"
