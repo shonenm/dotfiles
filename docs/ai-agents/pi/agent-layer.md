@@ -29,7 +29,7 @@
 
 ### Skills
 
-共有skillの正本は `common/agent/.config/agent/skills/<name>/SKILL.md`。pi固有skillとの重複コピーは置かない。PiとCodexの双方で利用するskillはruntime固有toolを分岐して記載する。Ponytailはpi package / Claude pluginを正本とする。
+共有skillの正本は `common/agent/.config/agent/skills/<name>/SKILL.md`。pi固有skillとの重複コピーは置かない。PiとCodexの双方で利用するskillはruntime固有toolを分岐して記載する。常時適用するscope・simplicity原則はskillではなく、各runtimeのsystem-level instructionsを正本とする。
 
 ### MCP
 

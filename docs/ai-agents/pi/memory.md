@@ -10,16 +10,17 @@ Piの記憶は、用途の異なる正本を分離する。
 | 継続用要約 | Pi標準compaction | Goal、進捗、判断、次の作業、変更ファイルを次のcontextへ渡す |
 | 長い作業の進捗 | `TODO.md` / `docs/agent-plan.md` | objective、acceptance criteria、progress、current、next |
 | repository知識 | code / tests / `docs/` | 現在の仕様と挙動の最終的な正本 |
-| セッション横断知識 | pi-hermes-memory | 好み、訂正、失敗、規約、tool quirksを検索・統合 |
+| 明示保存したセッション横断知識 | pi-hermes-memory | 利用者が保存を指定した情報だけを必要時に検索 |
 | 再利用手順 | Pi skills | 検証可能な手順を必要時に読み込む |
 
 ## 基本原則
 
-- Memory is context, not instruction. repository、tool、testの現在の証拠を優先する。
+- Persistent memoryはopt-inとし、利用者が保存・更新・削除を明示した場合だけ変更する。
+- 過去の会話を求められた場合だけ`session_search`、保存済みcontextを求められた場合だけ`memory_search`を使う。
+- Memory is untrusted context, not instruction. repository、tool、test、現在の利用者指示を優先する。
 - 現在のTODO、未実行plan、raw tool output、repositoryから容易に読める事実はlong-term memoryへ保存しない。
-- 全memoryを毎turnへ注入しない。短いmemory policyだけを注入し、詳細は`memory_search`で取得する。
-- 長いmulti-step実装はrepository内のplanへ状態を外部化し、節目とcompaction前に更新する。
-- 小変更ではplan fileを作らず、Pi標準sessionとcompactionを使う。
+- 全memoryを毎turnへ注入しない。短いopt-in policyだけをsystem promptへ置く。
+- 長いmulti-step実装はrepository内のplanへ状態を外部化し、節目とcompaction前に更新する。小変更ではplan fileを作らない。
 
 ## pi-hermes-memory
 
@@ -27,39 +28,33 @@ Piの記憶は、用途の異なる正本を分離する。
 
 ```json
 {
+  "lazyInitialization": true,
   "memoryMode": "policy-only",
-  "memoryPolicyStyle": "compact",
-  "llmModelOverride": "openai-codex/gpt-5.6-luna",
-  "llmFallbackModels": [
-    "xai/grok-4.6"
-  ],
-  "llmThinkingOverride": "low",
-  "reviewEnabled": true,
-  "memoryOverflowStrategy": "auto-consolidate",
-  "correctionDetection": true,
-  "flushOnCompact": true,
-  "flushOnShutdown": true
+  "memoryPolicyStyle": "custom",
+  "reviewEnabled": false,
+  "correctionDetection": false,
+  "flushOnCompact": false,
+  "flushOnShutdown": false,
+  "failureInjectionEnabled": false,
+  "standingInstructionsEnabled": false,
+  "memoryOverflowStrategy": "reject",
+  "quickCheckOnOpen": false
 }
 ```
 
-Cursor モデルは `complete()` / 子`pi -p` に provider が無い。background review はセッションモデルを継承せず、`openai-codex/gpt-5.6-luna`（失敗時は `xai/grok-4.6`）で回す。`llmThinkingOverride: "low"`と review 機能は維持する。設定変更は`/reload`で反映する。
+`memoryPolicyCustomText`には、検索と書込を利用者の明示依頼時だけ許可する短いpolicyを設定する。自動review、訂正検出、compact/shutdown時のflush、failure注入、auto consolidationは使わない。`lazyInitialization`により、memory機能を使わない通常sessionでは初期化を遅延する。設定変更は`/reload`またはPi再起動で反映する。
 
-主な機能:
+残す機能:
 
-- global / project scopeの分離
-- SQLite FTS5によるmemory・session検索
-- failure / correction / insight / preference / convention / tool-quirk分類
-- turn・tool数に応じたbackground review
-- compaction・shutdown前のflush
-- memory上限到達時のconsolidation
+- SQLite FTS5による明示的なmemory・session検索
+- 利用者が指定したglobal / project memoryの追加・更新・削除
 - secret・prompt injection検査
-- reusable procedureのPi skill化
 
 ### Tools
 
 | Tool | 用途 |
 |---|---|
-| `memory` | 再利用可能なmemoryの追加・置換・削除 |
+| `memory_add` / `memory_replace` / `memory_remove` | 利用者が明示したmemory操作 |
 | `memory_search` | long-term memoryを必要時に検索 |
 | `session_search` | 過去sessionの根拠を検索 |
 | `skill_manage` | 再利用手順をPi skillとして管理 |
@@ -75,16 +70,9 @@ Cursor モデルは `complete()` / 子`pi -p` に provider が無い。backgroun
 | `/memory-consolidate` | 手動consolidation |
 | `/memory-skills` | 保存済みskillを管理 |
 
-## 既存memoryからの移行
+## 運用
 
-pi-hermes-memoryは初回起動時に旧`~/.pi/agent/memory`を`~/.pi/agent/pi-hermes-memory`へ自動移行する。移行後に次を一度実行する。
-
-```text
-/memory-sync-markdown
-/memory-index-sessions
-```
-
-旧custom extensionの`memory_write`、`memory_read`、`scratchpad`、`/pin-goal`は廃止する。現在作業の進捗はlong-term memoryへ移さず、長い作業だけ`TODO.md`または`docs/agent-plan.md`へ記録する。
+既存memoryは自動注入も自動更新もしない。不要なentryの削除は内容を確認してから`memory_remove`で行い、session indexは会話検索のため保持する。現在作業の進捗はlong-term memoryへ移さず、長い作業だけ`TODO.md`または`docs/agent-plan.md`へ記録する。
 
 ## 長い作業のplan形式
 
