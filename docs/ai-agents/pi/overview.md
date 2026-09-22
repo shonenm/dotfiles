@@ -129,11 +129,7 @@ pi --model 'openai-codex/gpt-5.6-sol:high' \
 
 ### 並列 delegation (pueue)
 
-```bash
-pueue add -i --print-task-id -- "pi --model 'openai-codex/gpt-5.6-luna:medium' -p '<instruction>' < /dev/null"
-pueue wait <task-id>
-pueue log <task-id>
-```
+pueueへ`pi -p`を直接追加せず、`delegate_agent`を使う。custom wrapperがstdin EOF、Pi JSON eventベースのinactivity監視、process treeの終了、最終assistant応答の回収を一体で扱う。task IDの確認と回収には`check_delegation` / `wait_delegation`を使う。詳細は[pi Agent Delegation Layer](agent-delegation.md#inactivity-watchdog)を参照する。
 
 ## tmux状態連携
 
