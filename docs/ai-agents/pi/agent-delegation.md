@@ -84,6 +84,10 @@ pueue wait <id>  # 完了待ち
 
 セッション開始時に自動でデーモン起動を試みる。sync/asyncとも必ずpueueへ登録するため、親側の待機がtimeoutしても子taskはtask IDで追跡できる。timeout時は同じtask IDを`wait_delegation`へ渡して再待機し、同じworktreeへ代替writerを起動しない。
 
+`pi -p`はpipeから受け取った標準入力をEOFまでpromptへ追加する。pueueは`pueue send`用にtaskの標準入力pipeを保持するため、委譲時は標準入力を`/dev/null`へ明示的に接続する。この接続を外すと、model呼び出し前にtaskが無期限に待機し、pueue log、session artifact、worktree変更がすべて空のままになる。
+
+切り分けでは、同じ最小promptをpueue直下と`</dev/null`付きで実行する。前者だけが停止する場合はprovider障害ではなく標準入力のEOF待ちである。model/provider単体は、pueueを介さず`pi --no-session --no-extensions --no-skills -p 'Reply only OK.'`で別に確認する。
+
 ## Audit
 
 全委譲は `~/.pi/research/delegation.jsonl` に記録:
