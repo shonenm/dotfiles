@@ -11,7 +11,7 @@
   ├─ subagent (pi-subagents)        ← chain/parallel + TUI進捗
   │   └─ reviewer / scout / worker / oracle
   └─ delegate_agent (custom)        ← pueue非同期 + 自動モデル選択
-      └─ pueue queue → pi -p → 結果回収
+      └─ pueue queue → inactivity watchdog → pi --mode json -p → 結果回収
 ```
 
 ## Tools
@@ -84,9 +84,27 @@ pueue wait <id>  # 完了待ち
 
 セッション開始時に自動でデーモン起動を試みる。sync/asyncとも必ずpueueへ登録するため、親側の待機がtimeoutしても子taskはtask IDで追跡できる。timeout時は同じtask IDを`wait_delegation`へ渡して再待機し、同じworktreeへ代替writerを起動しない。
 
-`pi -p`はpipeから受け取った標準入力をEOFまでpromptへ追加する。pueueは`pueue send`用にtaskの標準入力pipeを保持するため、委譲時は標準入力を`/dev/null`へ明示的に接続する。この接続を外すと、model呼び出し前にtaskが無期限に待機し、pueue log、session artifact、worktree変更がすべて空のままになる。
+`pi -p`はpipeから受け取った標準入力をEOFまでpromptへ追加する。pueueは`pueue send`用にtaskの標準入力pipeを保持するため、委譲時は標準入力を`/dev/null`へ明示的に接続する。この接続を外すと、model呼び出し前にtaskが無期限に待機し、pueue log、session artifact、worktree変更がすべて空のままになる。watchdog導入後も、pueueが起動する`sh -c 'exec "$@" </dev/null'`を通してwrapperとPiの両方へEOFを渡す。
 
 切り分けでは、同じ最小promptをpueue直下と`</dev/null`付きで実行する。前者だけが停止する場合はprovider障害ではなく標準入力のEOF待ちである。model/provider単体は、pueueを介さず`pi --no-session --no-extensions --no-skills -p 'Reply only OK.'`で別に確認する。
+
+## Inactivity Watchdog
+
+観測した根本原因は、plain `pi -p`が最終応答までstdoutへ進捗を出さず、pueue metadataにも最後の進捗時刻がないため、開始済みの停止taskと正常な長時間taskを区別できないことだった。委譲task内のNode wrapperがPiを`--mode json`で起動し、JSONLを逐次parseして監視する。wrapperはpueueがtaskを実際に開始した後で起動するため、queue待ち時間はinactivityに含まれない。child spawn直後から最初のeventまでのsilenceもstartup silenceとして同じdeadlineで監視する。
+
+activityはparseに成功したPi JSON recordの次のeventだけとする。
+
+- `agent_start` / `agent_end`
+- `message_update`
+- `tool_execution_start` / `tool_execution_update` / `tool_execution_end`
+
+model streamingとtool eventのたびにdeadlineをresetする。wall-clock runtime、CPU、file変更、plain text、parse不能な行、session headerはactivityにしない。`message_end`はauthoritativeな最終assistant textの回収に使うが、deadlineの延長には使わない。
+
+固定thresholdは**10分**。foreground command capの5分をそのまま閾値にすると、`tool_execution_start`後に上限まで出力しない正当なtoolとprovider側の遅延が競合するため、2倍の余裕を取る。具体的な別use caseがないため設定項目は設けない。
+
+10分間activityがない場合、wrapperはPiを独立process groupごと`SIGTERM`し、5秒待ってprocess groupが残存する場合だけ`SIGKILL`へescalateする。direct Pi childが先に終了してもgroup livenessを確認し、tool subprocessが残っている間はgraceとescalationを取り消さない。group消滅を確認してからwrapperはexit 124で終了し、pueueにはfailureとして残す。外部からwrapperへ届いた終了signalもchild process groupへ転送する。promptはargvのままでshell source、watchdog state、diagnosticへ複製しない。正常終了時は最後のassistant `message_end`のtextを通常のpueue logへ出す。
+
+`check_delegation(taskId)`と`wait_delegation(taskId)`は`PI_DELEGATION_INACTIVITY` markerを検出し、startup silenceか最後に観測したeventを含むdiagnosticを表示する。発生時は同じtask IDのpueue logで最後のeventとSIGKILL escalation有無を確認し、providerまたは停止したtoolを修復してから新しい委譲を起動する。taskがまだrunningの場合は代替writerを起動せず、同じIDを追跡する。
 
 ## Audit
 
