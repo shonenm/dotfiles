@@ -20,12 +20,15 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, appendFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
 const DELEGATION_LOG = join(homedir(), ".pi", "research", "delegation.jsonl");
+const WATCHDOG_PATH = fileURLToPath(new URL("./agent-delegation-watchdog.mjs", import.meta.url));
+const INACTIVITY_DIAGNOSTIC_PREFIX = "PI_DELEGATION_INACTIVITY:";
 // pueue label applied to delegated sub-agents (statusline filters on this).
 const DELEGATE_LABEL = "pi-delegate";
 
@@ -80,10 +83,15 @@ function queueDelegation(model: string, task: string): string {
       "--",
       "sh",
       "-c",
-      // pueue keeps a task's stdin pipe open for `pueue send`; pi -p reads piped stdin to EOF before processing the prompt.
+      // pueue keeps a task's stdin pipe open for `pueue send`; the wrapper and pi must inherit an explicit EOF.
       'exec "$@" </dev/null',
       "sh",
+      process.execPath,
+      WATCHDOG_PATH,
+      "--",
       "pi",
+      "--mode",
+      "json",
       "--model",
       model,
       "-p",
@@ -95,6 +103,35 @@ function queueDelegation(model: string, task: string): string {
 
 function isTimeoutError(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "ETIMEDOUT";
+}
+
+export function extractInactivityDiagnostic(log: string): string | undefined {
+  for (const line of log.split(/\r?\n/)) {
+    const marker = line.indexOf(INACTIVITY_DIAGNOSTIC_PREFIX);
+    if (marker < 0) continue;
+    const diagnostic = line.slice(marker + INACTIVITY_DIAGNOSTIC_PREFIX.length).trim();
+    if (diagnostic.startsWith("no parsed Pi lifecycle/progress event")) return diagnostic;
+  }
+  return undefined;
+}
+
+function taskLog(taskId: string): string {
+  return execFileSync("pueue", ["log", taskId], {
+    encoding: "utf-8", timeout: 5000,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
+function inactivityFailure(taskId: string, log: string) {
+  const diagnostic = extractInactivityDiagnostic(log);
+  if (!diagnostic) return undefined;
+  return {
+    content: [{
+      type: "text" as const,
+      text: `❌ Task ${taskId} failed the inactivity watchdog: ${diagnostic}\n\n\`\`\`\n${log.slice(-8000)}\n\`\`\``,
+    }],
+    details: { taskId, completed: false, inactivity: true, inactivityDiagnostic: diagnostic },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -154,10 +191,14 @@ export default function (pi: ExtensionAPI) {
             encoding: "utf-8", timeout: 600_000,
             stdio: ["ignore", "pipe", "pipe"],
           });
-          const result = execFileSync("pueue", ["log", taskId], {
-            encoding: "utf-8", timeout: 5000,
-            stdio: ["ignore", "pipe", "pipe"],
-          });
+          const result = taskLog(taskId);
+          const inactivity = inactivityFailure(taskId, result);
+          if (inactivity) {
+            return {
+              ...inactivity,
+              details: { ...inactivity.details, difficulty, mode: "sync", model: m, pueueTaskId: taskId },
+            };
+          }
           return {
             content: [{
               type: "text",
@@ -175,6 +216,17 @@ export default function (pi: ExtensionAPI) {
               }],
               details: { difficulty, mode: "sync", model: m, pueueTaskId: taskId, completed: false, timedOut: true },
             };
+          }
+          try {
+            const inactivity = inactivityFailure(taskId, taskLog(taskId));
+            if (inactivity) {
+              return {
+                ...inactivity,
+                details: { ...inactivity.details, difficulty, mode: "sync", model: m, pueueTaskId: taskId },
+              };
+            }
+          } catch {
+            // Keep the original wait error if the task log is unavailable.
           }
           return {
             content: [{ type: "text", text: `❌ Task ${taskId} wait failed: ${msg.slice(0, 500)}` }],
@@ -211,13 +263,14 @@ export default function (pi: ExtensionAPI) {
     async execute(_toolCallId, params) {
       try {
         if (params.taskId) {
-          const log = execFileSync("pueue", ["log", params.taskId], {
-            encoding: "utf-8", timeout: 5000,
-            stdio: ["ignore", "pipe", "pipe"],
-          });
+          const log = taskLog(params.taskId);
+          const diagnostic = extractInactivityDiagnostic(log);
           return {
-            content: [{ type: "text", text: `## Task ${params.taskId}\n\n\`\`\`\n${log.slice(-5000)}\n\`\`\`` }],
-            details: { taskId: params.taskId },
+            content: [{
+              type: "text",
+              text: `${diagnostic ? `❌ Inactivity watchdog: ${diagnostic}\n\n` : ""}## Task ${params.taskId}\n\n\`\`\`\n${log.slice(-5000)}\n\`\`\``,
+            }],
+            details: { taskId: params.taskId, inactivityDiagnostic: diagnostic },
           };
         }
 
@@ -257,10 +310,9 @@ export default function (pi: ExtensionAPI) {
           encoding: "utf-8", timeout: 600_000, // 10 min
           stdio: ["ignore", "pipe", "pipe"],
         });
-        const log = execFileSync("pueue", ["log", params.taskId], {
-          encoding: "utf-8", timeout: 5000,
-          stdio: ["ignore", "pipe", "pipe"],
-        });
+        const log = taskLog(params.taskId);
+        const inactivity = inactivityFailure(params.taskId, log);
+        if (inactivity) return inactivity;
         return {
           content: [{
             type: "text",
@@ -275,6 +327,12 @@ export default function (pi: ExtensionAPI) {
             content: [{ type: "text", text: `⏳ Task ${params.taskId} is still running. Call wait_delegation again with the same task ID.` }],
             details: { taskId: params.taskId, completed: false, timedOut: true },
           };
+        }
+        try {
+          const inactivity = inactivityFailure(params.taskId, taskLog(params.taskId));
+          if (inactivity) return inactivity;
+        } catch {
+          // Keep the original wait error if the task log is unavailable.
         }
         return {
           content: [{ type: "text", text: `❌ Task ${params.taskId} wait failed: ${msg.slice(0, 500)}` }],
