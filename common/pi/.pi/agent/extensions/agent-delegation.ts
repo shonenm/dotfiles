@@ -70,7 +70,25 @@ function resolveModel(difficulty: string, model?: string): string {
 function queueDelegation(model: string, task: string): string {
   return execFileSync(
     "pueue",
-    ["add", "--escape", "--immediate", "--print-task-id", "--label", DELEGATE_LABEL, "--", "pi", "--model", model, "-p", task],
+    [
+      "add",
+      "--escape",
+      "--immediate",
+      "--print-task-id",
+      "--label",
+      DELEGATE_LABEL,
+      "--",
+      "sh",
+      "-c",
+      // pueue keeps a task's stdin pipe open for `pueue send`; pi -p reads piped stdin to EOF before processing the prompt.
+      'exec "$@" </dev/null',
+      "sh",
+      "pi",
+      "--model",
+      model,
+      "-p",
+      task,
+    ],
     { encoding: "utf-8", timeout: 30_000, stdio: ["ignore", "pipe", "pipe"] }
   ).trim();
 }
