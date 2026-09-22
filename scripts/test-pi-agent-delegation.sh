@@ -5,11 +5,18 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-pi_bin=$(realpath "$(command -v pi)")
-pi_package=$(cd "$(dirname "$pi_bin")/.." && pwd)
-mkdir -p "$tmp/node_modules/@earendil-works" "$tmp/bin" "$tmp/home"
-ln -s "$pi_package" "$tmp/node_modules/@earendil-works/pi-coding-agent"
-ln -s "$pi_package/node_modules/typebox" "$tmp/node_modules/typebox"
+mkdir -p "$tmp/node_modules/typebox" "$tmp/bin" "$tmp/home"
+cat >"$tmp/node_modules/typebox/package.json" <<'JSON'
+{"type":"module","exports":"./index.js"}
+JSON
+cat >"$tmp/node_modules/typebox/index.js" <<'JS'
+const schema = (kind) => (...args) => ({ kind, args });
+export const Type = {
+  Object: schema("Object"),
+  Optional: schema("Optional"),
+  String: schema("String"),
+};
+JS
 ln -s "$root/common/pi/.pi/agent/extensions/agent-delegation.ts" "$tmp/agent-delegation.ts"
 ln -s "$root/common/pi/.pi/agent/extensions/agent-delegation-watchdog.mjs" "$tmp/agent-delegation-watchdog.mjs"
 cat >"$tmp/bin/pueue" <<'SH'
