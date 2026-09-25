@@ -197,6 +197,25 @@ install_context_mode() {
   log_success "context-mode plugin installed"
 }
 
+install_pstack() {
+  if ! command_exists claude; then
+    log_warn "claude CLI not found, skipping pstack"
+    return
+  fi
+
+  if claude plugin list 2>/dev/null | grep -q "pstack@pstack-claude"; then
+    log_success "pstack plugin already installed"
+    return
+  fi
+
+  log_info "Installing pstack Claude Code plugin..."
+  if ! claude plugin marketplace list 2>/dev/null | grep -q "^  ❯ pstack-claude$"; then
+    claude plugin marketplace add michael-denyer/pstack-claude
+  fi
+  claude plugin install pstack@pstack-claude
+  log_success "pstack plugin installed"
+}
+
 install_code_review_graph() {
   if ! command_exists uv; then
     log_warn "uv not found, skipping code-review-graph"
