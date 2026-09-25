@@ -50,6 +50,7 @@
 - [Codex CLI](ai-agents/codex/overview.md)
 - [Command Code](ai-agents/commandcode/overview.md)
 - [Cursor Agent CLI](ai-agents/cursor/overview.md)
+- [pstack](ai-agents/pstack.md)
 - [Ralph](ai-agents/ralph/overview.md)
   - [Crew orchestration](ai-agents/ralph/crew.md)
   - [Schedule](ai-agents/ralph/schedule.md)

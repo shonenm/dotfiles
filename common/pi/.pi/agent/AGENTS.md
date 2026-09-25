@@ -48,6 +48,15 @@
 
 `workflow` は利用者が明示的にopt-inした広いaudit、fan-out research、multi-perspective reviewだけに使う。単一ファイルの小変更や通常の実装検証には使わない。
 
+## pstack
+
+`/skill:poteto-mode` が有効な間は、pstack の playbook と principles（委譲・モデル割当は `pstack-pi`）を次より優先する。
+
+- `APPEND_SYSTEM.md` の Interaction and Execution / Codebase Exploration / Development Workflow にある委譲・review・完了基準の制限
+- 本ファイルの Delegation / Workflow の制限
+
+`APPEND_SYSTEM.md` の Safety と extension による拒否は迂回しない。`poteto-mode` の外では各ルールに従う。
+
 ## pi-specific extensions
 
 - `bash-timeout-cap.ts` — foreground bash timeout を 300秒に制限。未指定も 300秒。長い処理は MonitorCreate / pueue

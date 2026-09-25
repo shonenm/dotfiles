@@ -17,6 +17,7 @@
 | 共有 skills | ツール横断スキル | `common/agent/.config/agent/skills/` → `~/.cursor/skills/` |
 | tmux 使用量 | プラン制限の可視化 | `ai-usage cursor` (tools/ai-usage) |
 | d-* skills | dotfiles ワークフロー | `common/claude/.claude/skills/` → `~/.claude/skills/` (Cursor 互換読み込み) |
+| pstack | `poteto-mode` ほか | marketplace から手動導入（[pstack](../pstack.md)） |
 
 ## セットアップ
 
