@@ -18,6 +18,7 @@
 | pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
 | pi-hermes-memory | 明示opt-inのmemory検索・session検索（自動保存なし） | `settings.json` の `packages` + `hermes-memory-config.json` |
 | UI比較package | header / footer / editor / theme / browser workspaceを実機比較 | `settings.json` の `packages`（下記参照） |
+| oh-my-pstack | pstack の Pi 移植。[pstack](../pstack.md) | `settings.json` の `packages` |
 | AGENTS.md | グローバル指示書 | `common/pi/.pi/agent/AGENTS.md` → `~/.pi/agent/AGENTS.md` |
 | pueue | バックグラウンドタスク・並列 delegation 用キュー | `config/Brewfile` (mac), `packages.linux.{apt,alpine}.txt` (linux) |
 

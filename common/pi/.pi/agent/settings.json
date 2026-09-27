@@ -139,7 +139,8 @@
         "!extensions/tool-pills/index.ts"
       ]
     },
-    "npm:pi-codex-multi"
+    "npm:pi-codex-multi",
+    "git:github.com/shrimpwtf/oh-my-pstack"
   ],
   "lastChangelogVersion": "0.85.1"
 }
