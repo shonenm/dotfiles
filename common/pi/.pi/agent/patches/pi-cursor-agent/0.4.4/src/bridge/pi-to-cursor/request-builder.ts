@@ -1,14 +1,16 @@
 import { type JsonValue, Value } from "@bufbuild/protobuf";
-import type {
-  Api,
-  AssistantMessage,
-  Context,
-  Message,
-  Model,
-  TextContent,
-  Tool,
-  ToolResultMessage,
-} from "@mariozechner/pi-ai";
+import {
+  type Api,
+  type AssistantMessage,
+  type TranscriptContext,
+  type Message,
+  type Model,
+  type TextContent,
+  type Tool,
+  type ToolResultMessage,
+  getCurrentSystemPrompt,
+  getCurrentTools,
+} from "@earendil-works/pi-ai";
 import {
   AgentClientMessage,
   AgentConversationTurnStructure,
@@ -42,15 +44,11 @@ const CURSOR_NATIVE_TOOL_NAMES = new Set([
   "grep",
   "lsp",
   "todo_write",
-  "edit",
   "glob",
-  "find",
   "generate_image",
   "GenerateImage",
   "computer_use",
 ]);
-
-type ContextWithTools = Context & { tools?: Tool[] };
 
 function extractUserMessageText(msg: Message): string {
   if (msg.role !== "user") return "";
@@ -235,13 +233,12 @@ function buildMcpToolDefinitions(
 
 interface BuildRunRequestParams {
   model: Model<Api>;
-  context: Context;
+  context: TranscriptContext;
   conversationId: string;
   blobStore: BlobStore;
   conversationState: ConversationStateStructure | undefined;
   mcpToolDefinitions?: McpToolDefinition[];
   state?: CursorStateStore;
-  systemPromptOverride?: string;
 }
 
 interface BuildRunRequestResult {
@@ -252,10 +249,7 @@ interface BuildRunRequestResult {
 export function buildRunRequest(
   params: BuildRunRequestParams,
 ): BuildRunRequestResult {
-  const content =
-    params.systemPromptOverride ??
-    params.context.systemPrompt ??
-    "You are a helpful assistant.";
+  const content = getCurrentSystemPrompt(params.context.messages);
 
   const systemPromptJson = JSON.stringify({
     role: "system",
@@ -296,6 +290,7 @@ export function buildRunRequest(
   const conversationState =
     cached && cached.rootPromptMessagesJson.length > 0
       ? Object.assign(cached, {
+          rootPromptMessagesJson: [systemPromptId],
           turns: shouldReplaceCachedTurns(cached.turns.length, turns.length)
             ? turns
             : cached.turns,
@@ -340,6 +335,6 @@ export function buildRunRequest(
   };
 }
 
-export function getContextTools(context: Context): McpToolDefinition[] {
-  return buildMcpToolDefinitions((context as ContextWithTools).tools);
+export function getContextTools(context: TranscriptContext): McpToolDefinition[] {
+  return buildMcpToolDefinitions(getCurrentTools(context.messages));
 }
