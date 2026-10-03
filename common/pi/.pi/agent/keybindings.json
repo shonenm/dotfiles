@@ -2,6 +2,7 @@
   "tui.input.newLine": ["shift+enter", "alt+enter"],
   "tui.input.submit": ["enter"],
   "app.message.followUp": [],
+  "app.thinking.save": ["alt+s"],
   "app.models.save": ["alt+s"],
   "app.session.toggleSort": ["alt+s"],
   "app.session.rename": ["alt+r"]
