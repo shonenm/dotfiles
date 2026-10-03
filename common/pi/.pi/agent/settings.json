@@ -95,8 +95,8 @@
     "npm:@quintinshaw/pi-dynamic-workflows",
     "npm:@trevonistrevon/pi-loop",
     "npm:@narumitw/pi-goal",
-    "npm:pi-hermes-memory",
-    "npm:pi-remote-control",
+    "git:github.com/chandra447/pi-hermes-memory@b42abd3",
+    "npm:pi-remote-control@1.0.7",
     "npm:pi-cursor-agent",
     "npm:pi-permission-system",
     {
@@ -117,11 +117,12 @@
       ]
     },
     {
-      "source": "npm:pi-agent-extensions",
+      "source": "git:github.com/meirm/pi-agent-extensions@2f55903",
       "extensions": [
         "!extensions/powerline-footer/index.ts",
         "!extensions/whimsical/index.ts",
-        "!extensions/workflow/index.ts"
+        "!extensions/workflow/index.ts",
+        "!extensions/loop/index.ts"
       ]
     },
     {
@@ -133,12 +134,15 @@
     {
       "source": "git:github.com/tomsej/pi-ext",
       "extensions": [
-        "!extensions/custom-footer/custom-footer.ts",
-        "!extensions/leader-key/index.ts",
-        "!extensions/permissions/permissions.ts",
-        "!extensions/pi-cloak/index.ts",
-        "!extensions/tool-pills/index.ts"
-      ]
+        "extensions/pi-sem/index.ts",
+        "extensions/pi-vcc/index.ts",
+        "extensions/tool-trim/tool-trim.ts",
+        "extensions/wf-gate/wf-gate.ts"
+      ],
+      "skills": [
+        "skills/sem"
+      ],
+      "prompts": []
     },
     "npm:pi-codex-multi",
     "git:github.com/shrimpwtf/oh-my-pstack"
