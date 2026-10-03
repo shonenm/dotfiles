@@ -1,50 +1,19 @@
 // Session Manager Extension for pi
 //
-// Session naming, listing, import/export.
+// Session naming and import/export. /sessions is provided by pi-agent-extensions.
 // Auto-names sessions from git branch + first prompt.
 
-import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { existsSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { homedir } from "node:os";
-import { join, basename, dirname } from "node:path";
+import { join, basename } from "node:path";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 const SESSION_DIR = join(homedir(), ".pi", "agent", "sessions");
-
-function listSessions(): Array<{ file: string; name: string; cwd: string; modified: string }> {
-  const dirs = [SESSION_DIR, join(process.cwd(), ".pi", "sessions")];
-  const results: Array<{ file: string; name: string; cwd: string; modified: string }> = [];
-
-  function scan(dir: string) {
-    if (!existsSync(dir)) return;
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        scan(full);
-      } else if (entry.name.endsWith(".jsonl")) {
-        try {
-          const firstLine = readFileSync(full, "utf-8").split("\n")[0];
-          const header = JSON.parse(firstLine);
-          results.push({
-            file: full,
-            name: header.sessionName || basename(full, ".jsonl"),
-            cwd: header.cwd || "",
-            modified: entry.name.slice(0, 19),
-          });
-        } catch {
-          results.push({ file: full, name: basename(full, ".jsonl"), cwd: "", modified: "" });
-        }
-      }
-    }
-  }
-
-  for (const dir of dirs) scan(dir);
-  return results.sort((a, b) => b.modified.localeCompare(a.modified));
-}
 
 function gitBranchName(): string | null {
   try {
@@ -88,26 +57,6 @@ export default function (pi: ExtensionAPI) {
       }
       pi.setSessionName(args);
       ctx.ui.notify(`Session renamed: ${args}`, "info");
-    },
-  });
-
-  // -----------------------------------------------------------------------
-  // Command: /sessions
-  // -----------------------------------------------------------------------
-  pi.registerCommand("sessions", {
-    description: "List recent sessions",
-    handler: async (_args, ctx) => {
-      const sessions = listSessions();
-      if (sessions.length === 0) {
-        ctx.ui.notify("No sessions found", "info");
-        return;
-      }
-
-      const lines = sessions.slice(0, 20).map((s, i) =>
-        `${i + 1}. ${s.name} (${s.cwd || "?"}) — ${s.modified.slice(0, 16)}`
-      );
-
-      ctx.ui.notify(lines.join("\n"), "info");
     },
   });
 
