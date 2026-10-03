@@ -24,7 +24,11 @@ Piの記憶は、用途の異なる正本を分離する。
 
 ## pi-hermes-memory
 
-`settings.json`から`npm:pi-hermes-memory`を導入する。設定は`~/.pi/agent/hermes-memory-config.json`（正本: `common/pi/.pi/agent/hermes-memory-config.json`）。
+`settings.json` の `git:github.com/chandra447/pi-hermes-memory@b42abd3` を使用する。npm 0.9.9にはTUIを `dependencies` に含む不備があるため、[upstream修正 #273](https://github.com/chandra447/pi-hermes-memory/pull/273) を含むcommitを採用した。独自forkやinstalled fileの直接修正はしない。修正を含むnpm版が公開されたらnpm sourceへ戻せる。
+
+標準のresume / treeはセッション横断のFTS5検索やmemory操作の代替ではないため、これらの機能は保持する。pi 1.0.0の実際のloader経由で、隔離データのmemory追加・検索とsession検索を `scripts/test-pi-extension-packages.sh` で確認する。利用者の保存データはテストに使わない。
+
+設定の正本は `common/pi/.pi/agent/hermes-memory-config.json`。
 
 ```json
 {

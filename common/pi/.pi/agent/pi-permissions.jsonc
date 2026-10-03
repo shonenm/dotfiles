@@ -35,9 +35,9 @@
     "mcp": "allow",
     // その他ツール: 許可
     "*": "allow",
-    // mcp-gateway が登録する direct MCP tools はこの policy で一元制御する。
+    // 標準 MCP tools は codemode 経由も含め、この policy で一元制御する。
     // YOLO 中は自動許可、通常モードでは Allow Once / Always を選択する。
-    "mcp_*": "ask"
+    "mcp__*": "ask"
   },
 
   "bash": {

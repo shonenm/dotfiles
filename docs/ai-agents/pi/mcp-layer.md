@@ -1,31 +1,21 @@
 # pi MCP Layer
 
-> **由来:** **Upstream** MCP・各MCP server / **Configuration** 共有MCP定義・権限設定 / **Custom** mcp-gateway拡張（[区分](../../provenance.md#区分)）
+> **由来:** **Upstream** pi標準MCP・各MCP server / **Plugin** pi-permission-system / **Configuration** 共有MCP定義・権限設定・symlink（[区分](../../provenance.md#区分)）
 
-piは `mcp-gateway.ts` を介してstdio MCP serverをpi toolとして登録する。MCP toolの実行可否は `pi-permission-system` が一元的に判断する。
-
-## フロー
-
-```text
-LLM
-  → mcp_<server>_<tool>
-  → pi-permission-system
-  → mcp-gateway.ts
-  → upstream MCP（stdio JSON-RPC、完全な結果）
-  → shaper（登録済みの要約／tail。未登録は本文をそのまま）
-  → budget（文字予算。超過時はoverflow。JSONならキー一覧とサイズ）
-  → model
-```
+pi 1.0.0の `builtin:mcp` を使う。独自の `mcp-gateway.ts` は廃止し、`/mcp` は標準server managerが担当する。
 
 ## 設定
 
-後勝ちでmergeする。
+`common/pi/.pi/agent/mcp.json` は共有正本 `common/agent/.config/agent/mcp.json` への相対symlink。`install.sh` のGNU Stow処理により `~/.pi/agent/mcp.json` へ配置される。macOS / Linux / no-sudoで同じ構成を使う。
 
-1. `~/.config/agent/mcp.json` — pi / Command Code用global設定
-2. `<project>/.mcp.json` — project設定
-3. `<project>/.pi/mcp.json` — pi override
+読み込み順序:
 
-Claude Codeは `common/claude/.config/claude/mcp.json` を別の正本とし、`install.sh` が `claude mcp add-json --scope user` で登録する。Cursorは共有mcp.jsonの有効serverを `~/.cursor/mcp.json` へ生成する。
+1. `~/.pi/agent/mcp.json` — 共有設定と同じ内容
+2. `<project>/.pi/mcp.json` — trusted projectだけ。同名serverはglobal設定を置換
+
+旧gatewayが読んでいた `<project>/.mcp.json` は標準MCPでは読まれない。project固有serverは `.pi/mcp.json` へ移す。
+
+Claude Codeは `common/claude/.config/claude/mcp.json` を別の正本とし、`install.sh` が登録する。Cursorは共有設定から `~/.cursor/mcp.json` を生成する。
 
 ```json
 {
@@ -35,36 +25,49 @@ Claude Codeは `common/claude/.config/claude/mcp.json` を別の正本とし、`
       "command": "server-command",
       "args": [],
       "description": "purpose",
-      "enabled": true,
-      "maxResultSize": 8000,
-      "shapes": {
-        "get_pipeline_status": "summary",
-        "get_logs": "tail",
-        "list_pipelines": "summary"
-      }
+      "enabled": true
     }
   }
 }
 ```
 
-pi gatewayのtransportはstdioのみ。remote MCPの実需要がないため、Streamable HTTPは実装しない。
+stdioとStreamable HTTPはpi標準実装が扱う。独自transportは追加しない。secretはファイルへ直書きせず、標準の `${NAME}` 参照を使う。
 
-## Permission
+`/mcp` や `pi mcp add/remove` によるglobal設定の変更はsymlink先の共有正本にも反映される。piだけの差分はproject側へ置く。
 
-MCP gateway自身は確認dialogを持たない。tool名 `mcp_*` に対する `allow` / `ask` / `deny` は `~/.pi/agent/pi-permissions.jsonc` とpiのsession modeで決まる。YOLO modeの永続設定は `~/.pi/agent/permission-system.json`。
+## Toolと権限
 
-## Auditと制限
+tool名は `mcp__<server>__<tool>`。既定のexposureは `codemode` で、toolを直接modelへ宣言せず、`searchTools()` / `describeNamespace()` で発見して呼ぶ。`deferred` は `tool_search` で発見し、`direct` は常時宣言する。
 
-- audit: `~/.pi/research/mcp-audit.jsonl`
-- stats: `~/.pi/research/mcp-stats.json`
-- 文字予算: server設定の `maxResultSize`、既定8000文字。これはslice用の窓ではなく、JSONを途中で切らないための予算
-- 予算超過、またはshaperが事実を省略したときは完全な本文を `~/.pi/research/mcp-overflow/<timestamp>-<uuid>.json` に保存する。モデルへは `truncated`、byte数、overflowパスを含むJSONを返す。JSONを文字数で切らない
-- 未登録toolの巨大JSONはキー一覧とサイズだけを本文に載せ、値はoverflowへ残す。小さい結果はそのまま通す
-- shaperは `shapes` でserver/toolごとに指定でき、コードにはWoodpeckerの `summary` / `tail` の既定値がある
-- shaped results are complete for their shape。`truncated=true` の場合はoverflowを読むか `get_logs` / `detail=full` を使い、省略されたworkflowを失敗なしと解釈しない
-- auditへ書く引数は既知のsecret形式をredact
+```text
+LLM
+  → codemode / tool_search / direct MCP tool
+  → piのtool pipeline
+  → pi-permission-system
+  → 標準MCP client
+  → upstream MCP
+  → 標準の結果処理
+  → model
+```
 
-## Skill
+codemodeからの呼び出しも `tool_call` / `tool_result` を通る。`pi-permissions.jsonc` の `tools["mcp__*"] = "ask"` で通常モードの確認を維持する。YOLO modeでは自動許可する。`pi mcp` のshell commandはsession extensionを読み込まないため、この権限gateを通らない。
+
+## 結果とログ
+
+- 20 KBを超えるtext結果は標準処理で中間を省略し、完全な結果を一時fileへ保存する。
+- codemodeはMCPの完全な結果を受け取る。必要な部分だけ返すことでmodelへ渡す量を減らせる。
+- serverのlogging通知は `~/.pi/agent/mcp.log` へ記録する。
+- 旧gatewayの独自shaper、`maxResultSize`、audit / stats / overflow保存は廃止。標準MCPは既存設定の `shapes` / `maxResultSize` を利用しない。過去の保存データは削除しない。
+
+## 確認と反映
+
+```bash
+scripts/test-pi-mcp.sh    # 隔離serverでconfig / 権限 / 接続を検証
+pi --version             # 1.0.0
+pi mcp list              # 有効serverへ接続して状態とtool一覧を確認
+```
+
+`pi mcp list` は接続に失敗するとexit 1。接続先の認証や起動エラーは `/mcp` で確認する。設定変更後は `/reload` またはpi再起動で反映する。
 
 MCP serverの選択には共有skill `mcp-research` を使う。正本は `common/agent/.config/agent/skills/mcp-research/SKILL.md`。
 

@@ -2,13 +2,13 @@
 
 > **由来:** **Upstream** pi本体・provider / **Plugin** settings.json導入package / **Configuration** settings・AGENTS.md・テーマ / **Custom** extensions / **Local patch** `scripts/patch-pi-tui.sh` / `scripts/patch-pi-cursor-agent.sh`（[区分](../../provenance.md#区分)）
 
-[pi](https://pi.dev/) はミニマルな terminal coding harness。MCP / sub-agents / permission popup / plan mode を持たず、CLI extensions と skills で組み立てる思想。dotfiles では Cursor Agent を Pi 上の主推論経路にし、Pi は UI / 権限 / session / 追加 tool のホストに寄せる。[pi-cursor-agent](https://www.npmjs.com/package/pi-cursor-agent) に host overlay を当て、xAI の Grok と Codex（subagent）も使える。`enabledModels` は `openai-codex/*`、`cursor-agent/*`、`opencode-go/*`、`xai/*`。
+[pi](https://pi.dev/) はミニマルな terminal coding harness。MCPは標準機能、sub-agents / permission popup / plan mode はCLI extensions と skills で組み立てる。dotfiles では Cursor Agent を Pi 上の主推論経路にし、Pi は UI / 権限 / session / 追加 tool のホストに寄せる。[pi-cursor-agent](https://www.npmjs.com/package/pi-cursor-agent) に host overlay を当て、xAI の Grok と Codex（subagent）も使える。`enabledModels` は `openai-codex/*`、`cursor-agent/*`、`opencode-go/*`、`xai/*`。
 
 ## 構成
 
 | 要素 | 役割 | 配置 |
 | --- | --- | --- |
-| pi CLI | エージェント本体 | `config/packages.npm.txt` の `@earendil-works/pi-coding-agent` (npm global) |
+| pi CLI | エージェント本体。`^1.0.0` で1.xの更新を許可、2.xは対象外 | `config/packages.npm.txt` の `@earendil-works/pi-coding-agent` (npm global) |
 | pi-tui narrow terminal patch | tmux focus zoomで1列/1行になった間は描画を停止し、Piの終了とscrollを防止 | `scripts/patch-pi-tui.sh` (Local patch) |
 | pi-cursor-agent | Cursor サブスク → Pi ホスト上の Agent ランタイム | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
 | pi-cursor-agent host overlay | 薄い host prompt、skill 索引なし、Cursor usage、Grok 4.6 mapping | `scripts/patch-pi-cursor-agent.sh` + `extensions/cursor-host.ts` + `extensions/skill-slash.ts` |
@@ -16,7 +16,9 @@
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
 | pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
-| pi-hermes-memory | 明示opt-inのmemory検索・session検索（自動保存なし） | `settings.json` の `packages` + `hermes-memory-config.json` |
+| 標準 MCP | 共有server設定、codemode / tool_search、`/mcp` | `~/.pi/agent/mcp.json` → 共有設定へのlink |
+| pi-remote-control | Pi Relayとのremote操作 | `settings.json` の `npm:pi-remote-control@1.0.7` |
+| pi-hermes-memory | 明示opt-inのmemory / session検索 | upstream依存修正版 `git:github.com/chandra447/pi-hermes-memory@b42abd3` + `hermes-memory-config.json` |
 | UI比較package | header / footer / editor / theme / browser workspaceを実機比較 | `settings.json` の `packages`（下記参照） |
 | oh-my-pstack | pstack の Pi 移植。[pstack](../pstack.md) | `settings.json` の `packages` |
 | AGENTS.md | グローバル指示書 | `common/pi/.pi/agent/AGENTS.md` → `~/.pi/agent/AGENTS.md` |
@@ -138,7 +140,7 @@ pueueへ`pi -p`を直接追加せず、`delegate_agent`を使う。custom wrappe
 
 ## Memory
 
-`pi-hermes-memory` はsession横断検索を残すため導入するが、memory保存は明示opt-inとする。`reviewEnabled`、`correctionDetection`、compact/shutdown時のflushは無効化し、利用者が保存・更新・削除を明示した場合だけmemory toolを使う。通常作業からdurable factを推測して保存しない。過去の会話を求められた場合は`session_search`、保存済みcontextの再利用を求められた場合は`memory_search`を使う。
+`pi-hermes-memory` は依存宣言のupstream修正版で継続する。標準resume / treeではmemory操作とセッション横断検索を代替できないため停止しない。memory保存は明示opt-inとする。`reviewEnabled`、`correctionDetection`、compact/shutdown時のflushは無効化し、利用者が保存・更新・削除を明示した場合だけmemory toolを使う。通常作業からdurable factを推測して保存しない。過去の会話を求められた場合は`session_search`、保存済みcontextの再利用を求められた場合は`memory_search`を使う。
 
 ## Web Research
 
@@ -173,7 +175,7 @@ pueue用の `delegate_agent` だけは独立しているため、必要なら `c
 
 Cursor上限、YOLO、package数 / auto-update、TOK / COST / WEB / MCPはfooterにも`/status`にも表示しない。Cursor上限の問い合わせとtoken / cost / research統計の読み取りもstatuslineから削除している。permission、package管理、Web / MCPの機能自体は変更しない。
 
-比較用packageはinstall状態を維持するが、surface ownershipが競合する`pi-open-tui`、`pi-beautiful-tui`、`pi-system-theme`のextension entrypointはfilterする。theme collection、Pi Studio、extmgr、session／todo機能など、統合shellと重複しない機能は引き続き読み込む。tool pillsは標準ツールを再登録し、pi-subagents 0.67.0のbuiltin判定から`bash`・`edit`・`write`を除外させるため読み込まない。標準のツール表示を使い、編集権限や安全チェックは変更しない。設定変更は`/reload`または再起動で反映する。
+比較用packageはinstall状態を維持するが、surface ownershipが競合する`pi-open-tui`、`pi-beautiful-tui`、`pi-system-theme`のextension entrypointはfilterする。theme collection、Pi Studio、extmgrなど、統合shellと重複しない機能は引き続き読み込む。依存宣言の警告と実際のAPI不整合は分けて判断する。upstream修正版を優先し、代替のないtoolはloaderのhost aliasと代表機能を検証して残す。tool pillsは標準ツールを再登録し、pi-subagents 0.67.0のbuiltin判定から`bash`・`edit`・`write`を除外させるため読み込まない。標準のツール表示を使い、編集権限や安全チェックは変更しない。設定変更は`/reload`または再起動で反映する。
 
 | Package | 状態・利用箇所 |
 | --- | --- |
@@ -184,9 +186,17 @@ Cursor上限、YOLO、package数 / auto-update、TOK / COST / WEB / MCPはfooter
 | `git:github.com/kostyay/pi-k-excalidraw` | `/excalidraw` で Glimpse 窓に手描きキャンバス。`glimpseui` は package の npm 依存 |
 | `pi-extmgr` | package管理overlayを有効 |
 | `pi-beautiful-tui` | install維持、UI entrypointはfilter |
-| `pi-agent-extensions` | footer、workflow、周期的にworking messageを書き換えるwhimsicalをfilter。session / todo / prompt history等は有効 |
+| `pi-agent-extensions` | 依存宣言修正PR版 `git:github.com/meirm/pi-agent-extensions@2f55903` を使用。ask-user / todo / control / sessions等を保持。footer / whimsical / workflow / loopは既存ownerとの競合を避けてfilter |
 | `pi-system-theme` | Tokyo Night固定と競合するためentrypointをfilter |
-| `git:github.com/tomsej/pi-ext` | custom footer、重複permission、pi-cloak、built-in `ctrl+x`と競合するleader-key、subagentのツール判定と競合するtool pillsをfilter |
+| `git:github.com/tomsej/pi-ext` | sem / vcc / tool-trim / wf-gateを保持し、skillはsemのみ。重複するreview / handoff / UI等と他のskills・promptsは読み込まない。依存宣言警告は未解消だが、host aliasとsem / vccの実動作は検証済み |
+
+memory / session / todoの保存データは保持する。node_modules直書き、警告の抑制、旧piへのdowngradeは行わない。agent-extensionsは未mergeの[upstream PR #56](https://github.com/jayshah5696/pi-agent-extensions/pull/56) の内容を確認し、依存宣言・lockfile・changelogだけが変わるcommitを固定して採用する。merge / npm release後は公式sourceへ戻す。
+
+`pi-ext` のmanifest不備は残っている。選択したTypeScript extensionsは通常のpi loaderを通り、旧名importもhostの同一SDK / TUI / TypeBoxへ割り当てられることを確認している。別のextensionやcompiled ESM dependencyにも安全だとは一般化しない。
+
+command ownershipは `/btw`・`/sessions`・`/review`・`/handoff` がagent-extensions、`/loop` がpi-loop、`/mcp` が標準MCP。旧 `quick-question.ts` とcustomの `/sessions` 登録は削除し、session命名・import/exportと自作prompt history / stashは保持する。
+
+検証は `scripts/test-pi-extension-packages.sh`。仮のHOME / agentDir / session / memory / todoだけを使い、代表toolの実行とcommand / tool / shortcut / flagの二重登録を確認する。
 
 ### 表示を簡潔にする
 
