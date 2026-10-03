@@ -67,7 +67,25 @@ pi --version             # 1.0.0
 pi mcp list              # 有効serverへ接続して状態とtool一覧を確認
 ```
 
-`pi mcp list` は接続に失敗するとexit 1。接続先の認証や起動エラーは `/mcp` で確認する。設定変更後は `/reload` またはpi再起動で反映する。
+旧gatewayから標準MCPへ移行する既存環境では、共有設定が存在しても `~/.pi/agent/mcp.json` がなければserverは読み込まれない。dotfilesの更新や `/reload` だけでは新しいlinkは作られない。再インストールは不要で、まず既存の配置を確認する。
+
+```bash
+ls -ld ~/.pi/agent/mcp.json
+```
+
+ファイルもsymlinkも存在しない場合に限り、共有正本へのlinkを作る。既存の設定や壊れたsymlinkがある場合は上書きせず、その配置を確認する。
+
+```bash
+if [ ! -e "$HOME/.pi/agent/mcp.json" ] && [ ! -L "$HOME/.pi/agent/mcp.json" ]; then
+  mkdir -p "$HOME/.pi/agent"
+  ln -s "$HOME/.config/agent/mcp.json" "$HOME/.pi/agent/mcp.json"
+fi
+pi mcp list
+```
+
+`No MCP servers configured` は接続失敗ではなく、server設定が読み込まれていない状態。`pi mcp list` でserver名・接続状態・tool数を確認した後、実行中のsessionで `/reload` またはpiを再起動する。link復元前の `/reload` では解消しない。
+
+`pi mcp list` は接続に失敗するとexit 1。接続先の認証や起動エラーは `/mcp` で確認する。
 
 MCP serverの選択には共有skill `mcp-research` を使う。正本は `common/agent/.config/agent/skills/mcp-research/SKILL.md`。
 
