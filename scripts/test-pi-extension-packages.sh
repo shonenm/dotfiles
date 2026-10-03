@@ -17,6 +17,8 @@ const [root, piPackage, agentHome, tmp] = process.argv.slice(2);
 const host = (path) => import(pathToFileURL(join(piPackage, path)).href);
 const { loadExtensions } = await host("dist/core/extensions/loader.js");
 const { SessionManager } = await host("dist/core/session-manager.js");
+const { ExtensionRunner } = await host("dist/core/extensions/runner.js");
+const { KeybindingsManager } = await host("dist/core/keybindings.js");
 const { DefaultResourceLoader } = await host("dist/core/resource-loader.js");
 const { builtInExtensions } = await host("dist/extensions/index.js");
 const memoryRoot = join(agentHome, ".pi/agent/git/github.com/chandra447/pi-hermes-memory");
@@ -98,6 +100,10 @@ try {
   await loader.reload();
   const runtime = loader.getExtensions();
   assert.deepEqual(runtime.errors, []);
+  const runner = new ExtensionRunner(runtime.extensions, runtime.runtime, cwd, {}, {});
+  const keybindings = new KeybindingsManager(JSON.parse(readFileSync(join(root, "common/pi/.pi/agent/keybindings.json"), "utf8")));
+  runner.getShortcuts(keybindings.getResolvedBindings());
+  assert.deepEqual(runner.getShortcutDiagnostics(), []);
   for (const kind of ["commands", "tools", "shortcuts", "flags"]) {
     const owners = new Map();
     for (const extension of runtime.extensions) for (const name of extension[kind].keys()) {

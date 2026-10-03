@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
-pi_package=$(dirname "$(dirname "$(realpath "$(command -v pi)")")")
+pi_package="$(npm root -g)/@earendil-works/pi-coding-agent"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/node_modules/@earendil-works"
@@ -28,9 +28,14 @@ const pi = {
 history(pi);
 stash(pi);
 const runner = new ExtensionRunner([{ shortcuts }], {}, process.cwd(), {}, {});
+// The previous config must reproduce the conflict with Pi's built-in thinking save.
+runner.getShortcuts({ ...keybindings.getResolvedBindings(), "app.thinking.save": ["ctrl+s"] });
+assert(runner.getShortcutDiagnostics().some(({ message }) => message.includes("ctrl+s") && message.includes("app.thinking.save")));
 const available = runner.getShortcuts(keybindings.getResolvedBindings());
 assert(available.has("ctrl+s") && available.has("ctrl+r"));
 assert.deepEqual(runner.getShortcutDiagnostics(), []);
+assert(keybindings.matches("\x1bs", "app.thinking.save"));
+assert(!keybindings.matches("\x13", "app.thinking.save"));
 assert(keybindings.matches("\x1bs", "app.models.save"));
 assert(keybindings.matches("\x1bs", "app.session.toggleSort"));
 assert(keybindings.matches("\x1br", "app.session.rename"));
