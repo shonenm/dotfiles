@@ -214,7 +214,7 @@ command ownershipは `/btw`・`/sessions`・`/review`・`/handoff` がagent-exte
 - skill 本体は `/name` または `/skill:name` で展開する。`/skills` で名前一覧。Cursor モデルでは自動カタログを出さない。
 - 会話中の mermaid は `pi-mermaid` が TUI で描画する。手描き図は `/excalidraw`。ブラウザで見たい応答は `/studio`。
 
-`Ctrl+S` / `Ctrl+R`はcustom extensionの`prompt-stash.ts` / `prompt-history.ts`が担当する。built-in shortcutとの競合警告を避けるため、選択画面内のモデル選択保存・セッション並べ替えは`Alt+S`、セッション名変更は`Alt+R`へ`keybindings.json`で変更している。変更は`/reload`で反映される。
+`Ctrl+S` / `Ctrl+R`はcustom extensionの`prompt-stash.ts` / `prompt-history.ts`が担当する。built-in shortcutとの競合警告を避けるため、thinking level保存・選択画面内のモデル選択保存・セッション並べ替えは`Alt+S`、セッション名変更は`Alt+R`へ`keybindings.json`で変更している。変更は`/reload`で反映される。
 
 ### Permission gate
 
