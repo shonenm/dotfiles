@@ -33,7 +33,7 @@
 
 ### MCP
 
-- pi / Command Code: `common/agent/.config/agent/mcp.json`
+- pi / Command Code: `common/agent/.config/agent/mcp.json`。piは `~/.pi/agent/mcp.json` から同じ正本へlinkし、標準MCPが読み込む
 - Claude Code: `common/claude/.config/claude/mcp.json`
 - Cursor: 共有mcp.json → `~/.cursor/mcp.json`（`install.sh` が生成。ユーザー追加serverは残す）
 

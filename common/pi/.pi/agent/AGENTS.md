@@ -10,7 +10,7 @@
 
 - `~/.config/agent/skills/` — Agent Skills Standard; shared skillの正本
 - `~/.config/agent/knowledge/` — 横断原則の参照資料（自動注入ではない）
-- `~/.config/agent/mcp.json` — pi / Command Code用MCP設定。Claude MCPは別設定
+- `~/.config/agent/mcp.json` — pi / Command Code用MCP設定。pi標準MCPの `~/.pi/agent/mcp.json` からlink。Claude MCPは別設定
 
 ## Execution rules
 
@@ -63,9 +63,9 @@
 - `permission-gate.ts` — dangerous shell commandの確認
 - `protected-paths.ts` — secret / generated path保護。`dist/`・`coverage/`という名前だけでは禁止しない。秘密鍵・認証設定・Git内部・依存物は保護し、会話中の承認では解除しない。
 - `web-tools.ts` — SearXNG + Jina、cache、citation、SSRF guard
-- `mcp-gateway.ts` — stdio MCP bridge。認可はpi-permission-system
-- `pi-hermes-memory` — explicit-only memory search and session search; automatic writes are disabled
+- `builtin:mcp` — pi標準MCP。認可はpi-permission-system
+- `pi-hermes-memory` — upstream依存修正版を使用。memory / session検索は明示opt-in、自動保存なし
 - `agent-delegation.ts` — pueue delegation
 - `statusline.ts` — session / background activity表示
 
-Community packageが同じ保証を満たす場合はcustom実装を削除して採用する。remote MCPの実需要が出るまでStreamable HTTPは追加しない。
+標準機能が要件を満たす場合はcustom実装を削除して採用する。MCPはpi標準実装を使い、独自transportを追加しない。
