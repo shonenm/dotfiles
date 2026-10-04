@@ -1,0 +1,13 @@
+{
+  "autoMode": {
+    "enabled": true,
+    "classifierModel": "openai-codex/gpt-6-luna",
+    "classifierReasoningLevel": "low",
+    "allowInsideWorkingDirectory": true,
+    "classifyReadOnlyTools": false,
+    "log": {
+      "enabled": false,
+      "classifierIo": false
+    }
+  }
+}
