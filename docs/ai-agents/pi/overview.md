@@ -17,6 +17,7 @@
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
 | pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
 | pi-automode | GPT-6 Lunaでtool操作を分類、既定ON | upstream修正commit `git:github.com/czottmann/pi-automode@e69c020` + `extensions/pi-automode/config.json` |
+| pi-better-openai | `/fast`でOpenAIの優先処理を切り替え、初期OFF | `npm:pi-better-openai@0.1.22` + `extensions/pi-better-openai.json` |
 | 標準 MCP | 共有server設定、codemode / tool_search、`/mcp` | `~/.pi/agent/mcp.json` → 共有設定へのlink |
 | pi-remote-control | Pi Relayとのremote操作 | `settings.json` の `npm:pi-remote-control@1.0.7` |
 | pi-hermes-memory | 明示opt-inのmemory / session検索 | upstream依存修正版 `git:github.com/chandra447/pi-hermes-memory@b42abd3` + `hermes-memory-config.json` |
@@ -233,6 +234,24 @@ command ownershipは `/btw`・`/sessions`・`/review`・`/handoff` がagent-exte
 `permission-system.json`の`yoloMode`と`settings.json`の`hideThinkingBlock`は有効のままにする。対話の承認境界はwrite permissionではなく、明示的な実装指示と`/plan`で管理するため、実装開始後の通常操作は止めない。
 
 `common/pi/.pi/agent/extensions/permission-gate.ts`はdangerous shell commandを実行前に確認する。agentはセッション開始時のmain repositoryまたは既存worktreeで実装し、利用者の明示なしに別worktreeへ移動しない。worktree capacity追加は確認対象ではなくhard denyし、`git worktree add`と`pnpm wt provision`は実行しない。利用者が明示した既存pooled slotのclaim/listは許可する。capacity追加が必要な場合は利用者がpi外のterminalから実行する。
+
+### OpenAI Fast mode
+
+[pi-better-openai](https://github.com/mattleong/pi-better-openai) の公開npm版 `0.1.22` を固定して使う。設定の正本は `common/pi/.pi/agent/extensions/pi-better-openai.json`。StowによりmacOS / Linux / no-sudoで同じ設定を配置する。新規環境では `settings.json` のpackage宣言からPiが導入する。現在の環境へ明示的に導入する場合は次を実行し、Piを完全終了して再起動する。
+
+```bash
+pi install npm:pi-better-openai@0.1.22
+```
+
+- `/fast`で現在のセッションのFast要求をtoggleする。`/fast on`・`/fast off`はこの版では使えない。起動時だけ有効にする場合は `pi --fast`。
+- 初期OFF、`persistState: false`。Fast切り替えで共有の `settings.json` やStow管理の専用設定を書き換えず、次のセッションではOFFに戻る。
+- OpenAIの対応モデルへ `service_tier: "priority"` を追加する。推論レベル・prompt・認証・providerは変更しない。既定対象に `openai-codex/gpt-6.1-sol`、`gpt-6-astra`、`gpt-6-sol`、`gpt-6-luna` を追加している。Cursorなどの非対象モデルではrequestを変更しない。
+- 使用量取得・画像生成・petは無効。footerは `status` にして既存の `statusline.ts` を置き換えず、Fast要求中の表示だけを追加する。画像toolや `/openai-settings` 等の登録自体はpackageに残る。設定画面から無効機能を再有効化しない。
+- `.pi/extensions/pi-better-openai.json` があればproject設定が優先される。共有設定への書き込みを避ける方針を変える場合は明示的に設定を確認する。
+
+Fastは優先処理の要求であり、backendでの採用・速度向上を保証しない。[OpenAIのCodex speed説明](https://developers.openai.com/codex/speed.md)によると、ChatGPTの含まれる利用枠はStandardの2.5倍、購入credit等は2倍のrateで消費する。API key利用時は別のAPI料金が適用される。subagentのFastは `pi-subagents` の `fast: true` で別途指定する。automode classifierのモデルや設定は変更しない。
+
+検証は `scripts/test-pi-extension-packages.sh`。実際のPi loaderでpackageを読み込み、隔離したHOME / agentDirで `/fast`・`--fast`・GPT-6系のpayload・非対象モデル・設定保持・footer非置換・画像生成の拒否を確認する。command / tool / shortcut / flagの衝突も検出する。実APIのFast採用・認証・速度・課金はこのテストでは検証しない。コミュニティ拡張であり、採用数やテストの存在を安全性の保証とは扱わない。
 
 ### Automode
 
