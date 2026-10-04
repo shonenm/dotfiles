@@ -146,7 +146,8 @@
       "prompts": []
     },
     "npm:pi-codex-multi",
-    "git:github.com/shrimpwtf/oh-my-pstack"
+    "git:github.com/shrimpwtf/oh-my-pstack",
+    "npm:pi-better-openai@0.1.22"
   ],
   "lastChangelogVersion": "1.0.0"
 }
