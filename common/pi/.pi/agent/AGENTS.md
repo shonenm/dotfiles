@@ -64,6 +64,7 @@
 - `protected-paths.ts` — secret / generated path保護。`dist/`・`coverage/`という名前だけでは禁止しない。秘密鍵・認証設定・Git内部・依存物は保護し、会話中の承認では解除しない。
 - `web-tools.ts` — SearXNG + Jina、cache、citation、SSRF guard
 - `builtin:mcp` — pi標準MCP。認可はpi-permission-system
+- `pi-automode` — GPT-6 Luna / lowでtool操作を分類。deny / classifier障害はfail-closed。復旧の `/automode off` は利用者が実行し、agentは迂回しない
 - `pi-hermes-memory` — upstream依存修正版を使用。memory / session検索は明示opt-in、自動保存なし
 - `agent-delegation.ts` — pueue delegation
 - `statusline.ts` — session / background activity表示
