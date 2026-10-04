@@ -16,6 +16,7 @@
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
 | pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
+| pi-automode | GPT-6 Lunaでtool操作を分類、既定ON | upstream修正commit `git:github.com/czottmann/pi-automode@e69c020` + `extensions/pi-automode/config.json` |
 | 標準 MCP | 共有server設定、codemode / tool_search、`/mcp` | `~/.pi/agent/mcp.json` → 共有設定へのlink |
 | pi-remote-control | Pi Relayとのremote操作 | `settings.json` の `npm:pi-remote-control@1.0.7` |
 | pi-hermes-memory | 明示opt-inのmemory / session検索 | upstream依存修正版 `git:github.com/chandra447/pi-hermes-memory@b42abd3` + `hermes-memory-config.json` |
@@ -232,6 +233,20 @@ command ownershipは `/btw`・`/sessions`・`/review`・`/handoff` がagent-exte
 `permission-system.json`の`yoloMode`と`settings.json`の`hideThinkingBlock`は有効のままにする。対話の承認境界はwrite permissionではなく、明示的な実装指示と`/plan`で管理するため、実装開始後の通常操作は止めない。
 
 `common/pi/.pi/agent/extensions/permission-gate.ts`はdangerous shell commandを実行前に確認する。agentはセッション開始時のmain repositoryまたは既存worktreeで実装し、利用者の明示なしに別worktreeへ移動しない。worktree capacity追加は確認対象ではなくhard denyし、`git worktree add`と`pnpm wt provision`は実行しない。利用者が明示した既存pooled slotのclaim/listは許可する。capacity追加が必要な場合は利用者がpi外のterminalから実行する。
+
+### Automode
+
+`pi-automode` を既定ONにする。設定の正本は `common/pi/.pi/agent/extensions/pi-automode/config.json` で、Stowにより `~/.pi/agent/extensions/pi-automode/config.json` へ配置する。macOS / Linux / no-sudoで同じ設定を使う。
+
+- classifierは `openai-codex/gpt-6-luna`、reasoningは `low`。通常セッションとsubagentのモデル設定は変更しない。
+- 以前の設定と同じく `allowInsideWorkingDirectory: true`、`classifyReadOnlyTools: false`、ログOFF。保護対象の変更とbash等はclassifierへ送る。
+- 既存のpi-permission-system、permission-gate、protected-pathsは残す。YOLO modeでもautomodeのdenyとfail-closedは無効にならない。
+- 複数モデルfallbackは追加しない。認証・quota・provider障害でclassifier対象の操作が止まる場合は、利用者が `/automode status` / `/automode off` で確認・停止する。agentはブロックを迂回しない。
+- `/automode model` でclassifierを手動変更できる。`automode_inspect` はread-onlyの状態・設定診断tool。
+
+npm 1.17.0ではCodex classifierのsocketが残り `pi -p` が終了しない問題があるため、[upstream修正 #60](https://github.com/czottmann/pi-automode/issues/60) を含むcommit `e69c020` を固定して使用する。Codex classifierでは `cacheRetention: none` とする。修正を含むnpm release後に公式npm sourceへ戻せる。独自patchやinstalled fileの直接編集は行わない。
+
+`scripts/test-pi-extension-packages.sh` で標準loader / session_start / tool_call hookを検証する。仮のHOMEとconfigを使い、provider応答だけをfixtureに置き換えてモデル選択、許可、障害時ブロック、設定保護、Codex socketの非保持設定を確認する。実APIの認証・quotaはこのテストでは検証しない。新規導入・更新後はPiを完全終了して再起動する。
 
 ### Bash timeout cap
 

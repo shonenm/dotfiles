@@ -30,6 +30,7 @@ Use `pueue` for background processes: `pueue add -- <command>`
 - `protected-paths` — blocks writes to secrets and generated files
 - `web-tools` — search, fetch, cache, citation (SearXNG + Jina)
 - `builtin:mcp` — standard MCP support, gated by pi-permission-system
+- `pi-automode` — classifies tool calls with GPT-6 Luna / low. Denials and classifier failures are fail-closed. Only the user may run `/automode off`; do not bypass a block
 - `statusline` — footer with token stats, context, git branch, research activity
 
 ## Custom vs Community Packages
