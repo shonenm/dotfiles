@@ -5,7 +5,8 @@ pi_package="$(npm root -g)/@earendil-works/pi-coding-agent"
 agent_home="$HOME"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/home/.pi/agent/extensions/pi-automode" "$tmp/agent/sessions" "$tmp/project"
+mkdir -p "$tmp/home/.pi/agent/extensions/pi-automode" "$tmp/agent/extensions" "$tmp/agent/sessions" "$tmp/project"
+cp "$root/common/pi/.pi/agent/extensions/pi-better-openai.json" "$tmp/agent/extensions/"
 cp "$root/common/pi/.pi/agent/hermes-memory-config.json" "$tmp/agent/"
 cp "$root/common/pi/.pi/agent/extensions/pi-automode/config.json" "$tmp/home/.pi/agent/extensions/pi-automode/"
 HOME="$tmp/home" PI_CODING_AGENT_DIR="$tmp/agent" PI_VCC_CONFIG_PATH="$tmp/vcc.json" PI_AUTOMODE_SETTINGS_JSON="" \
@@ -27,7 +28,9 @@ const memoryRoot = join(agentHome, ".pi/agent/git/github.com/chandra447/pi-herme
 const agentRoot = join(agentHome, ".pi/agent/git/github.com/meirm/pi-agent-extensions");
 const extRoot = join(agentHome, ".pi/agent/git/github.com/tomsej/pi-ext");
 const automodeRoot = join(agentHome, ".pi/agent/git/github.com/czottmann/pi-automode");
-for (const packageRoot of [memoryRoot, agentRoot, automodeRoot]) {
+const fastRoot = join(agentHome, ".pi/agent/npm/node_modules/pi-better-openai");
+assert.equal(JSON.parse(readFileSync(join(fastRoot, "package.json"), "utf8")).version, "0.1.22");
+for (const packageRoot of [memoryRoot, agentRoot, automodeRoot, fastRoot]) {
   const manifest = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8"));
   assert(!Object.keys(manifest.dependencies ?? {}).some((name) => /^(?:@(?:earendil-works|mariozechner)\/pi-|typebox$|@sinclair\/typebox$)/.test(name)));
 }
@@ -60,6 +63,7 @@ const loaded = await loadExtensions([
   join(extRoot, "extensions/pi-sem/index.ts"),
   join(extRoot, "extensions/pi-vcc/index.ts"),
   join(automodeRoot, "extensions/auto-mode.ts"),
+  join(fastRoot, "index.ts"),
   probe,
 ], cwd);
 assert.deepEqual(loaded.errors, []);
@@ -77,6 +81,61 @@ const call = async (name, args, context = ctx) => {
   return result;
 };
 try {
+  const fast = loaded.extensions.find((extension) => extension.path === join(fastRoot, "index.ts"));
+  assert(fast);
+  const fastConfigPath = join(tmp, "agent/extensions/pi-better-openai.json");
+  const fastConfigBefore = readFileSync(fastConfigPath, "utf8");
+  const fastConfig = JSON.parse(fastConfigBefore);
+  assert.equal(fastConfig.persistState, false);
+  assert.equal(fastConfig.desiredActive, false);
+  assert.equal(fastConfig.footer.mode, "status");
+  for (const feature of ["usage", "image", "pets"]) assert.equal(fastConfig[feature].enabled, false);
+  const settingsPath = join(tmp, "agent/settings.json");
+  const settingsBefore = '{"unrelatedSetting":"preserve"}\n';
+  writeFileSync(settingsPath, settingsBefore);
+  const statuses = new Map();
+  const fastCtx = { ...ctx, mode: "tui", hasUI: true,
+    model: getModels("openai-codex").find((model) => model.id === "gpt-6.1-sol"),
+    modelRegistry: { isUsingOAuth() { assert.fail("Disabled usage must not access authentication"); } },
+    ui: { ...ctx.ui, setFooter() { assert.fail("Better OpenAI must not replace the existing footer"); },
+      setStatus: (key, value) => statuses.set(key, value) },
+  };
+  assert(fastCtx.model);
+  const emitFast = async (name, event = { type: name }) => {
+    const results = [];
+    for (const handler of fast.handlers.get(name) ?? []) results.push(await handler(event, fastCtx));
+    return results.find((result) => result !== undefined);
+  };
+  const payload = Object.freeze({ model: fastCtx.model.id, reasoning: { effort: "high" }, input: [] });
+  await emitFast("session_start");
+  assert.equal(await emitFast("before_provider_request", { payload }), undefined);
+  await fast.commands.get("fast").handler("", fastCtx);
+  for (const id of ["gpt-6.1-sol", "gpt-6-luna", "gpt-6-sol", "gpt-6-astra", "gpt-5.6-luna"]) {
+    fastCtx.model = getModels("openai-codex").find((model) => model.id === id);
+    assert(fastCtx.model, `${id} must be in the host catalog`);
+    await emitFast("model_select", { model: fastCtx.model });
+    const request = Object.freeze({ ...payload, model: id });
+    assert.deepEqual(await emitFast("before_provider_request", { payload: request }), { ...request, service_tier: "priority" });
+    assert.equal(Object.hasOwn(request, "service_tier"), false);
+    assert(statuses.get("better-openai").includes("fast"));
+  }
+  fastCtx.model = { provider: "cursor-agent", id: "composer-2.5" };
+  await emitFast("model_select", { model: fastCtx.model });
+  assert.equal(await emitFast("before_provider_request", { payload }), undefined);
+  fastCtx.model = getModels("openai-codex").find((model) => model.id === "gpt-6.1-sol");
+  await emitFast("model_select", { model: fastCtx.model });
+  await fast.commands.get("fast").handler("", fastCtx);
+  assert.equal(await emitFast("before_provider_request", { payload }), undefined);
+  loaded.runtime.flagValues.set("fast", true);
+  await emitFast("session_start");
+  assert.equal((await emitFast("before_provider_request", { payload })).service_tier, "priority");
+  loaded.runtime.flagValues.set("fast", false);
+  await emitFast("session_start");
+  assert.equal(await emitFast("before_provider_request", { payload }), undefined);
+  await assert.rejects(fast.tools.get("openai_image").definition.execute("fixture", { prompt: "fixture" }, undefined, undefined, fastCtx), /disabled in config/);
+  await emitFast("session_shutdown");
+  assert.equal(readFileSync(fastConfigPath, "utf8"), fastConfigBefore);
+  assert.equal(readFileSync(settingsPath, "utf8"), settingsBefore);
   const automode = loaded.extensions.find((extension) => extension.path === join(automodeRoot, "extensions/auto-mode.ts"));
   assert(automode);
   loaded.runtime.appendEntry = (type, data) => ctx.sessionManager.appendCustomEntry(type, data);
@@ -158,6 +217,7 @@ try {
   const owner = (name) => runtime.extensions.find((extension) => extension.commands.has(name))?.path;
   for (const name of ["btw", "sessions", "review", "handoff"]) assert.equal(owner(name), join(agentRoot, `extensions/${name}/index.ts`));
   assert(owner("loop")?.includes("/@trevonistrevon/pi-loop/"));
+  assert.equal(owner("fast"), join(fastRoot, "index.ts"));
   for (const name of ["session-name", "session-export", "session-import"]) assert(owner(name)?.endsWith("/extensions/session-manager.ts"));
   for (const warning of runtime.warnings ?? []) {
     assert.equal(warning.path, join(extRoot, "package.json"));
@@ -165,7 +225,7 @@ try {
   }
   const runtimeTools = new Set(runtime.extensions.flatMap((extension) => [...extension.tools.keys()]));
   for (const name of ["memory_search", "session_search", "ask_user", "todo", "list_sessions", "sem_entities", "sem_context", "sem_impact", "vcc_recall", "automode_inspect"]) assert(runtimeTools.has(name));
-  console.log("OK: Pi 1.x host aliases, memory/session search, ask_user, todo, session control, vcc, sem, GPT-6 Luna automode allow/fail-closed/Codex cacheRetention:none; no command/tool/shortcut/flag conflicts");
+  console.log("OK: Pi 1.x host aliases, memory/session search, ask_user, todo, session control, vcc, sem, GPT-6 Luna automode allow/fail-closed/Codex cacheRetention:none, GPT Fast toggle/CLI flag/initial-off/no config writes/no footer replacement; no command/tool/shortcut/flag conflicts");
 } finally {
   for (const handler of loaded.extensions[0].handlers.get("session_shutdown") ?? []) await handler({}, ctx);
 }
