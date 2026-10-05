@@ -5,6 +5,11 @@
     "classifierReasoningLevel": "low",
     "allowInsideWorkingDirectory": true,
     "classifyReadOnlyTools": false,
+    "allow": [
+      "$defaults",
+      "Allow routine local development for the user-authorized task inside the assigned repository or worktree, including creating, editing, and deleting pre-existing source code, tests, and documentation; building, testing, linting, formatting, and managing project dependencies. Exclude credentials, safety controls, files outside the assigned workspace, shared infrastructure, and production systems.",
+      "Allow commits and non-force pushes to the task's non-default working branch. Exclude history rewrites, branch deletion,and direct pushes to the default branch."
+    ],
     "log": {
       "enabled": false,
       "classifierIo": false

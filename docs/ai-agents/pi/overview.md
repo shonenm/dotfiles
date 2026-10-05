@@ -259,6 +259,7 @@ Fastは優先処理の要求であり、backendでの採用・速度向上を保
 
 - classifierは `openai-codex/gpt-6-luna`、reasoningは `low`。通常セッションとsubagentのモデル設定は変更しない。
 - 以前の設定と同じく `allowInsideWorkingDirectory: true`、`classifyReadOnlyTools: false`、ログOFF。保護対象の変更とbash等はclassifierへ送る。
+- `autoMode.allow` に通常のローカル開発と作業用の非default branchへのcommit・non-force pushの許可条件を追加する。対象repo / worktree内の既存ソース・テスト・文書の編集や削除、build・test・依存管理を含む。`$defaults`とhard-denyは保持し、秘密情報・安全設定・範囲外のファイル・shared / production環境は対象外とする。これはclassifierへの判断材料であり、`permissions.allow`による判定省略ではない。
 - 既存のpi-permission-system、permission-gate、protected-pathsは残す。YOLO modeでもautomodeのdenyとfail-closedは無効にならない。
 - 複数モデルfallbackは追加しない。認証・quota・provider障害でclassifier対象の操作が止まる場合は、利用者が `/automode status` / `/automode off` で確認・停止する。agentはブロックを迂回しない。
 - `/automode model` でclassifierを手動変更できる。`automode_inspect` はread-onlyの状態・設定診断tool。
