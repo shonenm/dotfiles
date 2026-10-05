@@ -28,7 +28,7 @@
 
 ## 対話・Plan・Goalの使い分け
 
-通常対話では、質問・課題感・暫定要件を実装依頼として扱わない。`実装して`などの明示後に変更を開始し、動作するfirst implementationと最小の関連検証まで進めて利用者へ制御を返す。実装中の通常のedit/bashはYOLO modeで止めず、方針変更や節目を自然言語で報告する。
+通常対話では、質問・課題感・暫定要件を実装依頼として扱わない。`実装して`などの明示後に変更を開始し、動作するfirst implementationと最小の関連検証まで進める。利用者が止めた操作を除き、今回の変更だけをcommit・pushしてから制御を返す。commit・pushの追加指示や確認は求めない。既定branch上では同じworking treeで作業branchを作成し、通常pushする。無関係な変更の取り込み、force push、既定branchへの直接push、PRの自動作成は行わない。認証・push先・関連検証・安全機構に問題があれば変更を保持して報告する。正本は `common/pi/.pi/agent/APPEND_SYSTEM.md`。実装中の通常のedit/bashはYOLO modeで止めず、方針変更や節目を自然言語で報告する。
 
 `APPEND_SYSTEM.md` の `Scope and Simplicity` を全coding taskの上位方針とする。要求された挙動に必要な最小変更を選び、既存実装・stdlib・native機能を優先する。将来用の抽象化、設定、fallback、feature flag、追加ファイルは、現在の具体的要件がない限り作らない。Ponytail packageによる長い毎turn prompt注入は使用しない。
 
