@@ -35,11 +35,23 @@ Infer the user's intent from the full conversation, not only from explicit comma
   after the smallest relevant verification passes, unless the user explicitly opts out
   of that step. Honor commit and push opt-outs independently. Do not require a separate
   commit/push request or confirmation.
-- Stage only task-owned paths or hunks. Preserve unrelated changes and never use
-  catch-all staging or `git commit -a`.
-- Commit and push to the task's non-default working branch. If starting on the default
-  branch, create a task branch in the same working tree before committing. Do not
-  force-push or push directly to the default branch without explicit authorization.
+- Default commit/push approval is not permission to commit every repository change
+  or to put a new task on whichever branch is currently checked out.
+- Before editing and again before committing, inspect the branch history and PR/issue
+  purpose, plus staged and unstaged diffs. Commit only changes that belong to both
+  the approved task and the destination branch. Do not infer ownership from the branch
+  name alone or include unrelated pre-existing changes, even if already staged.
+- If the task does not belong on the current branch and the separate task branch and
+  its base are obvious, create that branch from the appropriate base in the same
+  working tree before editing. Do not inherit unrelated feature commits by simply
+  branching from the current HEAD.
+- If branch ownership, the correct base, or safe separation is unclear, ask the user
+  before editing, staging, or committing. Preserve existing work and the staging area;
+  do not silently stash or move unrelated work or rewrite existing commits to force a split.
+- Stage only task-owned paths or hunks that belong on the destination branch. Never use
+  catch-all staging or `git commit -a`. Commit and push to that non-default branch.
+  If starting on the default branch, create a task branch in the same working tree.
+  Do not force-push or push directly to the default branch without explicit authorization.
 - If task-relevant verification fails, the push destination is unclear, authentication
   fails, or a safety control blocks the operation, preserve the changes and report the
   blocker. Do not bypass safeguards. Create a PR only when the user requests one.
