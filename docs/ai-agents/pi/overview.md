@@ -16,7 +16,6 @@
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
 | pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
-| pi-automode | GPT-6 Lunaでtool操作を分類、既定ON | upstream修正commit `git:github.com/czottmann/pi-automode@e69c020` + `extensions/pi-automode/config.json` |
 | pi-better-openai | `/fast`でOpenAIの優先処理を切り替え、初期OFF | `npm:pi-better-openai@0.1.22` + `extensions/pi-better-openai.json` |
 | 標準 MCP | 共有server設定、codemode / tool_search、`/mcp` | `~/.pi/agent/mcp.json` → 共有設定へのlink |
 | pi-remote-control | Pi Relayとのremote操作 | `settings.json` の `npm:pi-remote-control@1.0.7` |
@@ -249,25 +248,15 @@ pi install npm:pi-better-openai@0.1.22
 - 使用量取得・画像生成・petは無効。footerは `status` にして既存の `statusline.ts` を置き換えず、Fast要求中の表示だけを追加する。画像toolや `/openai-settings` 等の登録自体はpackageに残る。設定画面から無効機能を再有効化しない。
 - `.pi/extensions/pi-better-openai.json` があればproject設定が優先される。共有設定への書き込みを避ける方針を変える場合は明示的に設定を確認する。
 
-Fastは優先処理の要求であり、backendでの採用・速度向上を保証しない。[OpenAIのCodex speed説明](https://developers.openai.com/codex/speed.md)によると、ChatGPTの含まれる利用枠はStandardの2.5倍、購入credit等は2倍のrateで消費する。API key利用時は別のAPI料金が適用される。subagentのFastは `pi-subagents` の `fast: true` で別途指定する。automode classifierのモデルや設定は変更しない。
+Fastは優先処理の要求であり、backendでの採用・速度向上を保証しない。[OpenAIのCodex speed説明](https://developers.openai.com/codex/speed.md)によると、ChatGPTの含まれる利用枠はStandardの2.5倍、購入credit等は2倍のrateで消費する。API key利用時は別のAPI料金が適用される。subagentのFastは `pi-subagents` の `fast: true` で別途指定する。
 
 検証は `scripts/test-pi-extension-packages.sh`。実際のPi loaderでpackageを読み込み、隔離したHOME / agentDirで `/fast`・`--fast`・GPT-6系のpayload・非対象モデル・設定保持・footer非置換・画像生成の拒否を確認する。command / tool / shortcut / flagの衝突も検出する。実APIのFast採用・認証・速度・課金はこのテストでは検証しない。コミュニティ拡張であり、採用数やテストの存在を安全性の保証とは扱わない。
 
-### Automode
+### Tool操作の保護
 
-`pi-automode` を既定ONにする。設定の正本は `common/pi/.pi/agent/extensions/pi-automode/config.json` で、Stowにより `~/.pi/agent/extensions/pi-automode/config.json` へ配置する。macOS / Linux / no-sudoで同じ設定を使う。
+`pi-automode` は導入しない。通常作業を繰り返し拒否するclassifierを撤去し、tool操作の保護は既存のpi-permission-system、permission-gate、protected-pathsを使う。macOS / Linux / no-sudoで同じpackage設定を使う。
 
-- classifierは `openai-codex/gpt-6-luna`、reasoningは `low`。通常セッションとsubagentのモデル設定は変更しない。
-- 以前の設定と同じく `allowInsideWorkingDirectory: true`、`classifyReadOnlyTools: false`、ログOFF。保護対象の変更とbash等はclassifierへ送る。
-- `autoMode.allow` は通常のローカル開発、作業用の非default branchへのcommit・non-force push、設定済みremote上の作業PR操作を許可する。既存ソース・テスト・文書・通常のproject設定の編集や個別削除、build・test・依存管理を含み、パス列挙や実装意図の再承認を要求しない。実装意図と作業範囲は親agentが扱い、classifierは操作の危険性を判断する。これはclassifierへの判断材料であり、`permissions.allow`による判定省略ではない。
-- `allow` と `soft_deny` は `$defaults` を含めず、既定リストを置き換える。`soft_deny` はrepoや再生成できないdirectoryの再帰削除、無関係な変更の破棄、破壊的Git操作、shared / production操作などに限定し、再生成可能なbuild出力・cache・作業中の一時ファイルのcleanupは除外する。既定リストの置換を示すdiagnosticsは意図した通知で、設定エラーではない。`hard_deny` は `$defaults` を保持し、秘密情報の流出や安全機構の改変などの保護を維持する。
-- 既存のpi-permission-system、permission-gate、protected-pathsは残す。YOLO modeでもautomodeのdenyとfail-closedは無効にならない。
-- 複数モデルfallbackは追加しない。認証・quota・provider障害でclassifier対象の操作が止まる場合は、利用者が `/automode status` / `/automode off` で確認・停止する。agentはブロックを迂回しない。
-- `/automode model` でclassifierを手動変更できる。`automode_inspect` はread-onlyの状態・設定診断tool。
-
-npm 1.17.0ではCodex classifierのsocketが残り `pi -p` が終了しない問題があるため、[upstream修正 #60](https://github.com/czottmann/pi-automode/issues/60) を含むcommit `e69c020` を固定して使用する。Codex classifierでは `cacheRetention: none` とする。修正を含むnpm release後に公式npm sourceへ戻せる。独自patchやinstalled fileの直接編集は行わない。
-
-`scripts/test-pi-extension-packages.sh` で標準loader / session_start / tool_call hookを検証する。仮のHOMEとconfigを使い、provider応答だけをfixtureに置き換えてモデル選択、許可、障害時ブロック、設定保護、Codex socketの非保持設定を確認する。実APIの認証・quotaはこのテストでは検証しない。新規導入・更新後はPiを完全終了して再起動する。
+`scripts/test-pi-extension-packages.sh` で実際のPi loaderにautomodeのextension・command・toolがなく、既存のpermission拡張が残ることを確認する。既存セッションに読み込まれたextensionを外すには、設定更新後にPiを完全終了して再起動する。memory・session・todoなどの保存データは削除しない。
 
 ### Bash timeout cap
 
