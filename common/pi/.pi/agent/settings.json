@@ -99,7 +99,6 @@
     "npm:pi-remote-control@1.0.7",
     "npm:pi-cursor-agent",
     "npm:pi-permission-system",
-    "git:github.com/czottmann/pi-automode@e69c020",
     {
       "source": "npm:pi-open-tui",
       "extensions": [

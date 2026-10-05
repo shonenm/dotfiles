@@ -5,11 +5,10 @@ pi_package="$(npm root -g)/@earendil-works/pi-coding-agent"
 agent_home="$HOME"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/home/.pi/agent/extensions/pi-automode" "$tmp/agent/extensions" "$tmp/agent/sessions" "$tmp/project"
+mkdir -p "$tmp/home" "$tmp/agent/extensions" "$tmp/agent/sessions" "$tmp/project"
 cp "$root/common/pi/.pi/agent/extensions/pi-better-openai.json" "$tmp/agent/extensions/"
 cp "$root/common/pi/.pi/agent/hermes-memory-config.json" "$tmp/agent/"
-cp "$root/common/pi/.pi/agent/extensions/pi-automode/config.json" "$tmp/home/.pi/agent/extensions/pi-automode/"
-HOME="$tmp/home" PI_CODING_AGENT_DIR="$tmp/agent" PI_VCC_CONFIG_PATH="$tmp/vcc.json" PI_AUTOMODE_SETTINGS_JSON="" \
+HOME="$tmp/home" PI_CODING_AGENT_DIR="$tmp/agent" PI_VCC_CONFIG_PATH="$tmp/vcc.json" \
 node --input-type=module - "$root" "$pi_package" "$agent_home" "$tmp" <<'JS'
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -27,10 +26,9 @@ const { getModels } = await host("node_modules/@earendil-works/pi-ai/dist/compat
 const memoryRoot = join(agentHome, ".pi/agent/git/github.com/chandra447/pi-hermes-memory");
 const agentRoot = join(agentHome, ".pi/agent/git/github.com/meirm/pi-agent-extensions");
 const extRoot = join(agentHome, ".pi/agent/git/github.com/tomsej/pi-ext");
-const automodeRoot = join(agentHome, ".pi/agent/git/github.com/czottmann/pi-automode");
 const fastRoot = join(agentHome, ".pi/agent/npm/node_modules/pi-better-openai");
 assert.equal(JSON.parse(readFileSync(join(fastRoot, "package.json"), "utf8")).version, "0.1.22");
-for (const packageRoot of [memoryRoot, agentRoot, automodeRoot, fastRoot]) {
+for (const packageRoot of [memoryRoot, agentRoot, fastRoot]) {
   const manifest = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8"));
   assert(!Object.keys(manifest.dependencies ?? {}).some((name) => /^(?:@(?:earendil-works|mariozechner)\/pi-|typebox$|@sinclair\/typebox$)/.test(name)));
 }
@@ -62,7 +60,6 @@ const loaded = await loadExtensions([
   ...["ask-user", "todos", "control"].map((name) => join(agentRoot, `extensions/${name}/index.ts`)),
   join(extRoot, "extensions/pi-sem/index.ts"),
   join(extRoot, "extensions/pi-vcc/index.ts"),
-  join(automodeRoot, "extensions/auto-mode.ts"),
   join(fastRoot, "index.ts"),
   probe,
 ], cwd);
@@ -136,45 +133,7 @@ try {
   await emitFast("session_shutdown");
   assert.equal(readFileSync(fastConfigPath, "utf8"), fastConfigBefore);
   assert.equal(readFileSync(settingsPath, "utf8"), settingsBefore);
-  const automode = loaded.extensions.find((extension) => extension.path === join(automodeRoot, "extensions/auto-mode.ts"));
-  assert(automode);
   loaded.runtime.appendEntry = (type, data) => ctx.sessionManager.appendCustomEntry(type, data);
-  for (const handler of automode.handlers.get("session_start") ?? []) await handler({ type: "session_start" }, ctx);
-  const inspection = await call("automode_inspect", { action: "config" });
-  assert.equal(inspection.details.config.enabled, true);
-  assert.equal(inspection.details.config.classifierModel, "openai-codex/gpt-6-luna");
-  assert.equal(inspection.details.config.classifierReasoningLevel, "low");
-  assert.deepEqual(inspection.details.diagnostics, []);
-  const luna = getModels("openai-codex").find((model) => model.id === "gpt-6-luna");
-  assert(luna, "GPT-6 Luna must be available in the host model catalog");
-  const classifierCalls = [];
-  let providerFails = false;
-  const classifierCtx = { ...ctx, model: { provider: "fixture", id: "session-model" }, modelRegistry: {
-    find(provider, id) { assert.equal(provider, luna.provider); assert.equal(id, luna.id); return luna; },
-    async getApiKeyAndHeaders() { return { ok: true, apiKey: "fixture" }; },
-    streamSimple(model, _context, options) {
-      classifierCalls.push({ model, options });
-      return { async result() {
-        if (providerFails) throw new Error("fixture provider unavailable");
-        return { role: "assistant", content: [{ type: "text", text: "0" }], api: model.api, provider: model.provider, model: model.id,
-          stopReason: "stop", timestamp: Date.now(), usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } };
-      } };
-    },
-  } };
-  const [guard] = automode.handlers.get("tool_call");
-  const action = { type: "tool_call", toolCallId: "fixture", toolName: "bash", input: { command: "printf fixture" } };
-  assert.equal(await guard(action, classifierCtx), undefined);
-  assert.equal(classifierCalls.length, 1);
-  assert.equal(classifierCalls[0].options.reasoning, "low");
-  assert.equal(classifierCalls[0].options.cacheRetention, "none", "Codex classifier sockets must not be retained");
-  providerFails = true;
-  const denied = await guard(action, classifierCtx);
-  assert.equal(denied.block, true);
-  assert(denied.reason.includes("fixture provider unavailable"));
-  assert.equal(classifierCalls.length, 2, "Provider errors must not trigger a different classifier");
-  const protectedConfig = await guard({ ...action, toolName: "write", input: { path: join(tmp, "home/.pi/agent/extensions/pi-automode/config.json"), content: "{}" } }, classifierCtx);
-  assert.equal(protectedConfig.block, true);
-  assert.equal(classifierCalls.length, 2, "Safety-control writes must be blocked without a classifier call");
   const identity = await call("host_alias_probe", {});
   assert.deepEqual(identity.details, { typebox: true, tui: true, sdk: true });
   const memory = await call("memory_add", { target: "memory", content: "purple penguin memory fixture" });
@@ -224,8 +183,13 @@ try {
     assert(warning.warning.includes("Host-provided extension packages"));
   }
   const runtimeTools = new Set(runtime.extensions.flatMap((extension) => [...extension.tools.keys()]));
-  for (const name of ["memory_search", "session_search", "ask_user", "todo", "list_sessions", "sem_entities", "sem_context", "sem_impact", "vcc_recall", "automode_inspect"]) assert(runtimeTools.has(name));
-  console.log("OK: Pi 1.x host aliases, memory/session search, ask_user, todo, session control, vcc, sem, GPT-6 Luna automode allow/fail-closed/Codex cacheRetention:none, GPT Fast toggle/CLI flag/initial-off/no config writes/no footer replacement; no command/tool/shortcut/flag conflicts");
+  for (const name of ["memory_search", "session_search", "ask_user", "todo", "list_sessions", "sem_entities", "sem_context", "sem_impact", "vcc_recall"]) assert(runtimeTools.has(name));
+  assert(!runtimeTools.has("automode_inspect"));
+  assert.equal(owner("automode"), undefined);
+  assert(runtime.extensions.every((extension) => !extension.path.includes("pi-automode")));
+  assert(runtime.extensions.some((extension) => extension.path.includes("pi-permission-system")));
+  for (const name of ["permission-gate.ts", "protected-paths.ts"]) assert(runtime.extensions.some((extension) => extension.path.endsWith(`/extensions/${name}`)));
+  console.log("OK: Pi 1.x host aliases, memory/session search, ask_user, todo, session control, vcc, sem, GPT Fast toggle/CLI flag/initial-off/no config writes/no footer replacement; automode absent, permission guards retained; no command/tool/shortcut/flag conflicts");
 } finally {
   for (const handler of loaded.extensions[0].handlers.get("session_shutdown") ?? []) await handler({}, ctx);
 }
