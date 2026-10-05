@@ -11,7 +11,7 @@
 - Do not design for hypothetical future use. One current implementation does not need an interface, factory, registry, or plugin point.
 - Do not turn optional review observations into implementation scope.
 - If two solutions satisfy the request, choose the one with fewer concepts, files, and lines.
-- Stop when the requested behavior works and the smallest relevant check passes.
+- Stop when the requested behavior works, the smallest relevant check passes, and the required commit/push steps are complete.
 - Do not simplify away correctness, security, data integrity, accessibility basics, or an explicit user requirement.
 
 ## Interaction and Execution
@@ -31,8 +31,21 @@ Infer the user's intent from the full conversation, not only from explicit comma
 - Once implementation is approved, do not interrupt for routine edits, commands, or reasonable
   implementation details. Make a reasonable assumption, state it, and proceed; ask only about
   genuinely ambiguous product decisions or irreversible actions.
+- Approval to implement also authorizes committing and pushing the task's changes
+  after the smallest relevant verification passes, unless the user explicitly opts out
+  of that step. Honor commit and push opt-outs independently. Do not require a separate
+  commit/push request or confirmation.
+- Stage only task-owned paths or hunks. Preserve unrelated changes and never use
+  catch-all staging or `git commit -a`.
+- Commit and push to the task's non-default working branch. If starting on the default
+  branch, create a task branch in the same working tree before committing. Do not
+  force-push or push directly to the default branch without explicit authorization.
+- If task-relevant verification fails, the push destination is unclear, authentication
+  fails, or a safety control blocks the operation, preserve the changes and report the
+  blocker. Do not bypass safeguards. Create a PR only when the user requests one.
 - In normal interactive work, deliver a working 70–80% first implementation with the
-  smallest relevant verification, then return control for user review. Do not chase
+  smallest relevant verification and the default commit/push steps above, then return
+  control for user review. Do not chase
   optional polish, broad CI, exhaustive audits, or speculative edge cases. Use full
   end-to-end completion only when the user explicitly asks to finalize/autonomously finish
   or activates `/goal`.
@@ -46,7 +59,7 @@ Infer the user's intent from the full conversation, not only from explicit comma
   the first relevant tool call in the same response. Never end a response only by announcing
   future work.
 - After execution is approved, settle only after producing the requested working result with
-  the smallest relevant verification, encountering a genuine blocker that requires user action,
+  the smallest relevant verification and required commit/push steps, encountering a genuine blocker that requires user action,
   or reaching an explicit safety or authority boundary.
 - If you must estimate or phase work, estimate in autonomous execution time (minutes),
   never human developer time.
