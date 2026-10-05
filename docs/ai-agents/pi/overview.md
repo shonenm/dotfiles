@@ -99,7 +99,7 @@ pi
 
 ホスト側は APPEND_SYSTEM / AGENTS.md だけを渡し、skill 索引は出さない。skill は `/name` または `/skill:name` でそのターンに展開する（`skill-slash.ts`）。共有・プロジェクトの SKILL.md に `disable-model-invocation` を足す必要はない。provider は Pi の `TranscriptContext.messages` から `getCurrentSystemPrompt()` / `getCurrentTools()` で有効な指示とtool定義を取得し、指示全文を再抽出せずCursorへ渡す。対話用host拡張を読み込まないgraph実行でも、Piの操作規則とAGENTS.mdを欠落させない。Cursor native toolとの重複広告は避けるが、bridgeにnative executorがない`edit` / `find` は除外せずMCP bridge経由で広告する。再接続ではcached root promptを更新し、tool結果の直前にsystem更新がある場合もlive sessionを再接続する。context % は Cursor の `used_tokens` / preCompact を使う。長い会話の要約は Cursor 側、`/compact` だけ Pi 手動。Esc / Enter steer で新しい user メッセージが来たら Cursor live session は切って送り直す（tool 結果の返却だけ再利用する）。会話ストアは捨てない。捨てると次の発言で conversationId が新しくなり、モデルが履歴を忘れる。新しい接続では Pi の会話履歴から turn を組み直す。
 
-overlayの検証は `scripts/test-pi-cursor-host.sh`。隔離したpackageへpatchを再生成し、native Pi loaderを使って指示全文・tool schema・再接続時のsystem更新・実ファイルの差分編集・拒否結果の伝達を検証する。モデル通信と認証情報は使わない。Pi側で有効なprompt/toolを取得するAPIとbridgeが対応するupstream版へ移行できたら、この互換性patchを削除する。
+overlayの検証は `scripts/test-pi-cursor-host.sh`。隔離したpackageへpatchを再生成し、native Pi loaderを使って指示全文・tool schema・再接続時のsystem更新・実ファイルの差分編集・拒否結果の伝達を検証する。CIでも `config/packages.npm.txt` に宣言したPi本体とoverlay対象の `pi-cursor-agent@0.4.4` を導入してから実行し、開発者のHOMEにあるpackageを前提にしない。モデル通信と認証情報は使わない。Pi側で有効なprompt/toolを取得するAPIとbridgeが対応するupstream版へ移行できたら、この互換性patchを削除する。
 
 `install.sh` はglobal packageへoverlayを再適用する。project-local packageは別の導入先なので、自動では変更しない。必要なprojectに適用する場合は、導入先を明示して既存scriptを使う。
 
