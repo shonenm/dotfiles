@@ -15,5 +15,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install check dependencies
         run: sudo apt-get update && sudo apt-get install -y shellcheck stow
+      - name: Install Pi test dependencies
+        run: |
+          npm install --global "$(grep '^@earendil-works/pi-coding-agent@' config/packages.npm.txt)"
+          pi install npm:pi-cursor-agent@0.4.4
       - name: Run canonical checks
         run: scripts/dots check
