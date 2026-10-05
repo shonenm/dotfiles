@@ -6,10 +6,22 @@
     "allowInsideWorkingDirectory": true,
     "classifyReadOnlyTools": false,
     "allow": [
-      "$defaults",
-      "Allow routine local development for the user-authorized task inside the assigned repository or worktree, including creating, editing, and deleting pre-existing source code, tests, and documentation; building, testing, linting, formatting, and managing project dependencies. Exclude credentials, safety controls, files outside the assigned workspace, shared infrastructure, and production systems.",
-      "Allow commits and non-force pushes to the task's non-default working branch. Exclude history rewrites, branch deletion,and direct pushes to the default branch."
+      "Allow read-only inspection, searching, listing, and state queries that do not expose secrets.",
+      "Allow routine local development inside the assigned repository or worktree, including creating, editing, overwriting, and deleting individual pre-existing source, test, documentation, and ordinary project configuration files; building, testing, linting, formatting, running local development servers, and managing project dependencies. Do not require per-file authorization, enumerated path scopes, or repeated confirmation of implementation intent. The main agent handles task intent and implementation scope; this classifier checks action risk.",
+      "Allow task-owned Git commits, normal non-force pushes to a non-default working branch, and truthful task-related pull request operations on the repository's configured remote. Do not require separate confirmation for each routine step.",
+      "Allow standard toolchain installation from official installers and package registries, and cleanup of reproducible build outputs, caches, and task-created temporary files. These exceptions do not override hard-deny rules."
     ],
+    "soft_deny": [
+      "Recursively deleting a repository, worktree, non-generated directory, or unrelated user data; or bulk deletion of non-reproducible files. Cleanup of reproducible build outputs, caches, and task-created temporary files is exempt.",
+      "Discarding unrelated uncommitted changes, destructive Git resets, force pushes, deleting remote branches, rewriting remote history, or pushing directly to the repository's default branch.",
+      "Production deploys, production database migrations, production or shared infrastructure changes, and writes through remote shells to shared or production hosts.",
+      "Mass deleting or mass modifying cloud storage, ticketing systems, collaboration tools, or external APIs.",
+      "Downloading and executing code from untrusted external sources. Standard installation from official toolchain installers and package registries is exempt.",
+      "Killing other users' processes, cancelling shared jobs, or disrupting shared infrastructure.",
+      "Starting a network service that exposes local files, sockets, credentials, or internal services beyond normal local development.",
+      "Outbound messages, purchases, bookings, subscriptions, or real-world transactions, except truthful task-related pull request operations on the repository's configured remote."
+    ],
+    "hard_deny": ["$defaults"],
     "log": {
       "enabled": false,
       "classifierIo": false

@@ -259,7 +259,8 @@ Fastは優先処理の要求であり、backendでの採用・速度向上を保
 
 - classifierは `openai-codex/gpt-6-luna`、reasoningは `low`。通常セッションとsubagentのモデル設定は変更しない。
 - 以前の設定と同じく `allowInsideWorkingDirectory: true`、`classifyReadOnlyTools: false`、ログOFF。保護対象の変更とbash等はclassifierへ送る。
-- `autoMode.allow` に通常のローカル開発と作業用の非default branchへのcommit・non-force pushの許可条件を追加する。対象repo / worktree内の既存ソース・テスト・文書の編集や削除、build・test・依存管理を含む。`$defaults`とhard-denyは保持し、秘密情報・安全設定・範囲外のファイル・shared / production環境は対象外とする。これはclassifierへの判断材料であり、`permissions.allow`による判定省略ではない。
+- `autoMode.allow` は通常のローカル開発、作業用の非default branchへのcommit・non-force push、設定済みremote上の作業PR操作を許可する。既存ソース・テスト・文書・通常のproject設定の編集や個別削除、build・test・依存管理を含み、パス列挙や実装意図の再承認を要求しない。実装意図と作業範囲は親agentが扱い、classifierは操作の危険性を判断する。これはclassifierへの判断材料であり、`permissions.allow`による判定省略ではない。
+- `allow` と `soft_deny` は `$defaults` を含めず、既定リストを置き換える。`soft_deny` はrepoや再生成できないdirectoryの再帰削除、無関係な変更の破棄、破壊的Git操作、shared / production操作などに限定し、再生成可能なbuild出力・cache・作業中の一時ファイルのcleanupは除外する。既定リストの置換を示すdiagnosticsは意図した通知で、設定エラーではない。`hard_deny` は `$defaults` を保持し、秘密情報の流出や安全機構の改変などの保護を維持する。
 - 既存のpi-permission-system、permission-gate、protected-pathsは残す。YOLO modeでもautomodeのdenyとfail-closedは無効にならない。
 - 複数モデルfallbackは追加しない。認証・quota・provider障害でclassifier対象の操作が止まる場合は、利用者が `/automode status` / `/automode off` で確認・停止する。agentはブロックを迂回しない。
 - `/automode model` でclassifierを手動変更できる。`automode_inspect` はread-onlyの状態・設定診断tool。
