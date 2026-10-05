@@ -27,7 +27,7 @@
 
 ## 対話・Plan・Goalの使い分け
 
-通常対話では、質問・課題感・暫定要件を実装依頼として扱わない。`実装して`などの明示後に変更を開始し、動作するfirst implementationと最小の関連検証まで進める。利用者が止めた操作を除き、今回の変更だけをcommit・pushしてから制御を返す。commit・pushの追加指示や確認は求めない。既定branch上では同じworking treeで作業branchを作成し、通常pushする。無関係な変更の取り込み、force push、既定branchへの直接push、PRの自動作成は行わない。認証・push先・関連検証・安全機構に問題があれば変更を保持して報告する。正本は `common/pi/.pi/agent/APPEND_SYSTEM.md`。実装中の通常のedit/bashはYOLO modeで止めず、方針変更や節目を自然言語で報告する。
+通常対話では、質問・課題感・暫定要件を実装依頼として扱わない。`実装して`などの明示後に変更を開始し、動作するfirst implementationと最小の関連検証まで進める。利用者が止めた操作を除き、今回の変更だけをcommit・pushしてから制御を返す。commit・pushの追加指示や確認は求めないが、全差分や現在のbranchへの包括的な投入許可とは扱わない。実装前とcommit前にbranchの履歴・PR / issueの目的、staged / unstaged diffを確認し、今回の作業かつ投入先branchに属する変更だけを含める。別branchへの分離とbaseが自明なら、無関係なcommitを継承しない適切なbaseから同じworking treeで作業branchを作る。帰属・base・安全な分離が曖昧なら、変更・stage・commit前に利用者へ確認し、既存の変更とstage状態を保持する。既定branch上でも作業branchを作成して通常pushする。無関係な変更の取り込み、force push、既定branchへの直接push、PRの自動作成は行わない。認証・push先・関連検証・安全機構に問題があれば変更を保持して報告する。正本は `common/pi/.pi/agent/APPEND_SYSTEM.md`。実装中の通常のedit/bashはYOLO modeで止めず、方針変更や節目を自然言語で報告する。
 
 `APPEND_SYSTEM.md` の `Scope and Simplicity` を全coding taskの上位方針とする。要求された挙動に必要な最小変更を選び、既存実装・stdlib・native機能を優先する。将来用の抽象化、設定、fallback、feature flag、追加ファイルは、現在の具体的要件がない限り作らない。Ponytail packageによる長い毎turn prompt注入は使用しない。
 
@@ -99,7 +99,7 @@ pi
 
 ホスト側は APPEND_SYSTEM / AGENTS.md だけを渡し、skill 索引は出さない。skill は `/name` または `/skill:name` でそのターンに展開する（`skill-slash.ts`）。共有・プロジェクトの SKILL.md に `disable-model-invocation` を足す必要はない。provider は Pi の `TranscriptContext.messages` から `getCurrentSystemPrompt()` / `getCurrentTools()` で有効な指示とtool定義を取得し、指示全文を再抽出せずCursorへ渡す。対話用host拡張を読み込まないgraph実行でも、Piの操作規則とAGENTS.mdを欠落させない。Cursor native toolとの重複広告は避けるが、bridgeにnative executorがない`edit` / `find` は除外せずMCP bridge経由で広告する。再接続ではcached root promptを更新し、tool結果の直前にsystem更新がある場合もlive sessionを再接続する。context % は Cursor の `used_tokens` / preCompact を使う。長い会話の要約は Cursor 側、`/compact` だけ Pi 手動。Esc / Enter steer で新しい user メッセージが来たら Cursor live session は切って送り直す（tool 結果の返却だけ再利用する）。会話ストアは捨てない。捨てると次の発言で conversationId が新しくなり、モデルが履歴を忘れる。新しい接続では Pi の会話履歴から turn を組み直す。
 
-overlayの検証は `scripts/test-pi-cursor-host.sh`。隔離したpackageへpatchを再生成し、native Pi loaderを使って指示全文・tool schema・再接続時のsystem更新・実ファイルの差分編集・拒否結果の伝達を検証する。モデル通信と認証情報は使わない。Pi側で有効なprompt/toolを取得するAPIとbridgeが対応するupstream版へ移行できたら、この互換性patchを削除する。
+overlayの検証は `scripts/test-pi-cursor-host.sh`。隔離したpackageへpatchを再生成し、native Pi loaderを使って指示全文・tool schema・再接続時のsystem更新・実ファイルの差分編集・拒否結果の伝達を検証する。CIでも `config/packages.npm.txt` に宣言したPi本体とoverlay対象の `pi-cursor-agent@0.4.4` を導入してから実行し、開発者のHOMEにあるpackageを前提にしない。モデル通信と認証情報は使わない。Pi側で有効なprompt/toolを取得するAPIとbridgeが対応するupstream版へ移行できたら、この互換性patchを削除する。
 
 `install.sh` はglobal packageへoverlayを再適用する。project-local packageは別の導入先なので、自動では変更しない。必要なprojectに適用する場合は、導入先を明示して既存scriptを使う。
 
