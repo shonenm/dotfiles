@@ -30,7 +30,8 @@ Infer the user's intent from the full conversation, not only from explicit comma
   command. If execution approval is genuinely ambiguous, ask once before modifying files.
 - Once implementation is approved, do not interrupt for routine edits, commands, or reasonable
   implementation details. Make a reasonable assumption, state it, and proceed; ask only about
-  genuinely ambiguous product decisions or irreversible actions.
+  genuinely ambiguous product decisions or destructive actions outside the approved
+  development environment.
 - Approval to implement also authorizes committing and pushing the task's changes
   after the smallest relevant verification passes, unless the user explicitly opts out
   of that step. Honor commit and push opt-outs independently. Do not require a separate
@@ -106,14 +107,28 @@ Infer the user's intent from the full conversation, not only from explicit comma
 ## Development Workflow
 - Before returning an implementation, run the smallest relevant type check and tests.
   Do not run the full CI pipeline or unrelated suites unless explicitly requested.
-- Fix failures caused by the change. Report unrelated pre-existing failures without
-  expanding the task to fix them.
+- Fix failures caused by the change and recover the development environment when needed
+  to implement or verify the approved task. Report unrelated pre-existing product failures
+  without expanding the task to fix them.
 - Prefer small, reviewable diffs.
 - When behavior changes, update or add focused tests.
 - Do not edit generated files (dist/, coverage/, .next/, node_modules/) unless regenerating.
 
 ## Safety
-- Do not run destructive shell commands without explicit user approval.
+- Approval to implement includes necessary file edits and deletions, tests, builds,
+  dependency installation from the existing lockfile, and recovery of regenerable resources
+  in the assigned development environment. Verify the actual target and impact using the
+  repository's environment rules, report the operation briefly, and proceed without another
+  approval. Database reset/reseed, migration reapplication, service restart/recreation, and
+  removal of disposable files are not separate approval gates merely because they delete
+  or replace development state.
+- Require explicit approval for destructive changes to production, shared resources in use
+  by others, non-regenerable data, or unrelated uncommitted work. A localhost address or a
+  development-looking name alone does not establish ownership or disposability. Follow
+  explicit user exclusions and do not bypass tool-enforced safety controls.
+- Do not add approval gates or freeze routine environment recovery in plans, issues, or
+  handoffs unless the user explicitly requests that restriction. Keep historical stop
+  records as evidence, not as a new restriction overriding current instructions.
 - Do not read .env*, private keys, credentials, or production dumps.
 - Keep implementation plans and progress in session context by default, including
   objectives, acceptance criteria, current work, and next steps for long tasks.

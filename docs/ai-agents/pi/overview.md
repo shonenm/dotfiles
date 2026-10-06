@@ -230,9 +230,9 @@ command ownershipは `/btw`・`/sessions`・`/review`・`/handoff` がagent-exte
 
 ### Permission gate
 
-`permission-system.json`の`yoloMode`と`settings.json`の`hideThinkingBlock`は有効のままにする。対話の承認境界はwrite permissionではなく、明示的な実装指示と`/plan`で管理するため、実装開始後の通常操作は止めない。
+`permission-system.json`の`yoloMode`と`settings.json`の`hideThinkingBlock`は有効のままにする。対話の承認境界はwrite permissionではなく、明示的な実装指示と`/plan`で管理する。実装の承認は、必要な編集・削除・検証・既存lockfileからの依存同期・再生成可能な割当開発環境の復旧を含む。開発用DBのreset/seedやmigration再適用、service再起動/再作成、一時ファイル削除は、repoの規則に従って実際の対象と影響を確認し、報告して続行する。本番、他者が利用中の共有resource、再生成できないデータ、無関係な未commit変更への破壊的操作は別途承認する。利用者の明示した除外は維持し、計画・Issue・引き継ぎへ通常復旧の追加承認条件を勝手に書かない。正本は`common/pi/.pi/agent/APPEND_SYSTEM.md`。
 
-`common/pi/.pi/agent/extensions/permission-gate.ts`はdangerous shell commandを実行前に確認する。agentはセッション開始時のmain repositoryまたは既存worktreeで実装し、利用者の明示なしに別worktreeへ移動しない。worktree capacity追加は確認対象ではなくhard denyし、`git worktree add`と`pnpm wt provision`は実行しない。利用者が明示した既存pooled slotのclaim/listは許可する。capacity追加が必要な場合は利用者がpi外のterminalから実行する。
+`common/pi/.pi/agent/extensions/permission-gate.ts`はYOLO無効時にdangerous shell commandを実行前に確認する。YOLO有効時は通常の確認を省くが、hard denyは維持する。agentはセッション開始時のmain repositoryまたは既存worktreeで実装し、利用者の明示なしに別worktreeへ移動しない。worktree capacity追加は確認対象ではなくhard denyし、`git worktree add`と`pnpm wt provision`は実行しない。利用者が明示した既存pooled slotのclaim/listは許可する。capacity追加が必要な場合は利用者がpi外のterminalから実行する。
 
 ### OpenAI Fast mode
 
