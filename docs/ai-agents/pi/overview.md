@@ -31,7 +31,7 @@
 
 `APPEND_SYSTEM.md` の `Scope and Simplicity` を全coding taskの上位方針とする。要求された挙動に必要な最小変更を選び、既存実装・stdlib・native機能を優先する。将来用の抽象化、設定、fallback、feature flag、追加ファイルは、現在の具体的要件がない限り作らない。Ponytail packageによる長い毎turn prompt注入は使用しない。
 
-要件や方式を先に固める場合は`/plan`を使う。read-onlyで調査・計画し、画面上のExecute選択または明示的な実装指示まで変更しない。
+要件や方式を先に固める場合は`/plan`を使う。read-onlyで調査・計画し、画面上のExecute選択または明示的な実装指示まで変更しない。計画と進捗は標準ではセッション内で管理する。長い作業やcompactionを理由に `TODO.md` / `docs/agent-plan.md` を自動生成せず、repo内の計画ファイルを作成・更新するのは、利用者がファイル保存を明示した場合か正式な成果物として必要な場合だけとする。
 
 「全件完了まで継続」のように無人完遂を明示する場合だけ`/goal <goal>`を使う。`pi-goal.json`で自動応答を4回、無進捗を2回に制限し、上限到達時は状態を保持して停止する。必要なら利用者が`/goal resume`を選ぶ。利用者が「loop」と表現しても、時間間隔に意味がなければcron loopへ変換しない。
 
