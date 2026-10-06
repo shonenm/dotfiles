@@ -9,4 +9,4 @@ Create a step-by-step implementation plan for the requested change.
 4. **Risks**: What could go wrong and how to mitigate
 5. **Verification**: How to confirm each step works
 
-Keep the plan in a file (TODO.md or docs/agent-plan.md) and reference it during implementation.
+Present the plan in the conversation and reference it during implementation. Create or update a repository planning file only when the user explicitly requests a file-based plan or the plan is a required project deliverable.

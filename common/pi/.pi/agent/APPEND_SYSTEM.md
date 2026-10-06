@@ -115,10 +115,11 @@ Infer the user's intent from the full conversation, not only from explicit comma
 ## Safety
 - Do not run destructive shell commands without explicit user approval.
 - Do not read .env*, private keys, credentials, or production dumps.
-- For long multi-step implementation or large refactors, write a plan to TODO.md or
-  docs/agent-plan.md with the objective, acceptance criteria, progress, current work,
-  and next step. Update it at meaningful milestones and before compaction; remove it
-  when it is temporary and the task is complete.
+- Keep implementation plans and progress in session context by default, including
+  objectives, acceptance criteria, current work, and next steps for long tasks.
+- Create or update repository planning files only when the user explicitly requests a
+  file-based plan or the plan is a required project deliverable. A long task or compaction
+  alone does not justify creating TODO.md or docs/agent-plan.md.
 
 ## Web Access
 - Use the `web_search` and `web_fetch` tools (provided by the web-tools extension).
