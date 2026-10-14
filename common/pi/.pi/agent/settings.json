@@ -1,23 +1,23 @@
 {
-  "defaultProvider": "openai-codex",
+  "defaultProvider": "openai",
   "defaultModel": "gpt-6.1-sol",
   "defaultThinkingLevel": "high",
   "subagents": {
-    "defaultModel": "openai-codex/gpt-5.6-luna",
+    "defaultModel": "openai/gpt-5.6-luna",
     "defaultThinking": "medium",
     "modelScope": {
       "enforce": true,
       "allow": [
-        "openai-codex/gpt-5.6-luna",
-        "openai-codex/gpt-5.6-sol",
-        "openai-codex/gpt-6.1-sol",
-        "openai-codex/gpt-6-astra",
+        "openai/gpt-5.6-luna",
+        "openai/gpt-5.6-sol",
+        "openai/gpt-6.1-sol",
+        "openai/gpt-6-astra",
         "cursor-agent/composer-2.5"
       ]
     }
   },
   "enabledModels": [
-    "openai-codex/*",
+    "openai/*",
     "cursor-agent/*",
     "opencode-go/*",
     "xai/*"
@@ -144,7 +144,6 @@
       ],
       "prompts": []
     },
-    "npm:pi-codex-multi",
     "git:github.com/shrimpwtf/oh-my-pstack",
     "npm:pi-better-openai@0.1.22"
   ],

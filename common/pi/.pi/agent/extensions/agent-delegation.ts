@@ -11,8 +11,8 @@
 //
 // Model selection tiers (from AGENTS.md):
 //   high   → gpt-5.6-sol:high      (design, review, debugging)
-//   medium → gpt-5.4-mini:medium   (coding from a plan)
-//   low    → gpt-5.3-codex-spark:off (summaries, extraction)
+//   medium → gpt-6-luna:medium     (coding from a plan)
+//   low    → gpt-6-luna:off         (summaries, extraction)
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -33,9 +33,9 @@ const INACTIVITY_DIAGNOSTIC_PREFIX = "PI_DELEGATION_INACTIVITY:";
 const DELEGATE_LABEL = "pi-delegate";
 
 const MODEL_TIERS: Record<string, string> = {
-  high: "openai-codex/gpt-5.6-sol:high",
-  medium: "openai-codex/gpt-5.4-mini:medium",
-  low: "openai-codex/gpt-5.3-codex-spark:off",
+  high: "openai/gpt-5.6-sol:high",
+  medium: "openai/gpt-6-luna:medium",
+  low: "openai/gpt-6-luna:off",
 };
 
 // ---------------------------------------------------------------------------
@@ -151,7 +151,7 @@ export default function (pi: ExtensionAPI) {
       "worker (implement from plan), oracle (second opinion). " +
       "Supports sync (wait for result) and async (background via pueue) modes. " +
       "Use natural language in the task: 'Use reviewer to audit auth module for security issues'. " +
-      "Difficulty auto-selects model: high=gpt-5.6-sol, medium=gpt-5.4-mini, low=gpt-5.3-codex-spark.",
+      "Difficulty auto-selects model: high=gpt-5.6-sol, medium=gpt-6-luna, low=gpt-6-luna:off.",
     promptSnippet: "Delegate a task to a sub-agent (reviewer/scout/worker/oracle)",
     promptGuidelines: [
       "Use delegate_agent only when the user explicitly requests delegation, subagents, or multi-agent review.",
@@ -164,7 +164,7 @@ export default function (pi: ExtensionAPI) {
       task: Type.String({ description: "Task description/instructions for the sub-agent" }),
       difficulty: Type.Optional(Type.String({ description: "high, medium, or low. Default: medium" })),
       mode: Type.Optional(Type.String({ description: "'async' (pueue background) or 'sync' (wait). Default: 'async'" })),
-      model: Type.Optional(Type.String({ description: "Override model (e.g., 'openai-codex/gpt-5.6-sol:high')" })),
+      model: Type.Optional(Type.String({ description: "Override model (e.g., 'openai/gpt-5.6-sol:high')" })),
     }),
     async execute(_toolCallId, params, _signal, onUpdate) {
       const difficulty = params.difficulty || "medium";

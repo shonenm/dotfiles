@@ -23,9 +23,9 @@ const DEPTH_ENV = "PI_WORKFLOW_DEPTH";
 
 // Difficulty → model. Mirrors agent-delegation.ts; change per provider.
 const MODEL_TIERS: Record<string, string> = {
-  high: "openai-codex/gpt-5.6-sol:high",
-  medium: "openai-codex/gpt-5.4-mini:medium",
-  low: "openai-codex/gpt-5.3-codex-spark:off",
+  high: "openai/gpt-5.6-sol:high",
+  medium: "openai/gpt-6-luna:medium",
+  low: "openai/gpt-6-luna:off",
 };
 function resolveModel(difficulty?: string, model?: string): string {
   return model || MODEL_TIERS[difficulty ?? "medium"] || MODEL_TIERS.medium;
@@ -165,7 +165,7 @@ export async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, in
 const TaskSpec = Type.Object({
   task: Type.String({ description: "Instruction for the sub-agent" }),
   difficulty: Type.Optional(Type.String({ description: "high | medium | low (model tier). Default medium" })),
-  model: Type.Optional(Type.String({ description: "Override model id (e.g. openai-codex/gpt-5.6-sol:high)" })),
+  model: Type.Optional(Type.String({ description: "Override model id (e.g. openai/gpt-5.6-sol:high)" })),
   jsonKeys: Type.Optional(Type.Array(Type.String(), { description: "If set, instruct the sub-agent to return JSON with these keys and parse it" })),
 });
 

@@ -283,7 +283,7 @@ assert.equal(extractInactivityDiagnostic("ordinary provider failure"), undefined
     "add", "--escape", "--immediate", "--print-task-id", "--label", "pi-delegate", "--",
     "sh", "-c", 'exec "$@" </dev/null', "sh",
     process.execPath, `${tmp}/agent-delegation-watchdog.mjs`, "--",
-    "pi", "--mode", "json", "--model", "openai-codex/gpt-5.4-mini:medium", "-p", task,
+    "pi", "--mode", "json", "--model", "openai/gpt-6-luna:medium", "-p", task,
   ]);
   assert.throws(() => readFileSync(`${tmp}/must-not-exist`), /ENOENT/);
 
