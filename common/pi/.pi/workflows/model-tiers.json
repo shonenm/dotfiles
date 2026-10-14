@@ -1,7 +1,7 @@
 {
   "tiers": {
-    "small": "openai-codex/gpt-5.6-luna:medium",
-    "medium": "openai-codex/gpt-5.6-luna:medium",
-    "big": "openai-codex/gpt-5.6-luna:medium"
+    "small": "openai/gpt-5.6-luna:medium",
+    "medium": "openai/gpt-5.6-luna:medium",
+    "big": "openai/gpt-5.6-luna:medium"
   }
 }
