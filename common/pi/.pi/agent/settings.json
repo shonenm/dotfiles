@@ -147,5 +147,6 @@
     "git:github.com/shrimpwtf/oh-my-pstack",
     "npm:pi-better-openai@0.1.22"
   ],
-  "lastChangelogVersion": "1.0.0"
+  "lastChangelogVersion": "1.2.0",
+  "deviceId": "e32480e6-f369-4b18-8ba4-e309f41240a7"
 }
