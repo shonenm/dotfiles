@@ -775,29 +775,29 @@ url = "https://github.com/ivaaaan/smug/releases/download/v0.3.19/smug_0.3.19_Dar
 url_api = "https://api.github.com/repos/ivaaaan/smug/releases/assets/461959877"
 
 [[tools."github:joshmedeski/sesh"]]
-version = "2.32.0"
+version = "2.33.0"
 backend = "github:joshmedeski/sesh"
 specifiers = ["latest"]
 
 [tools."github:joshmedeski/sesh"."platforms.linux-arm64"]
-checksum = "sha256:84401f55d28eee018a38c8030d0dc1fe0c174a99e64508834384cab6ae4484ea"
-url = "https://github.com/joshmedeski/sesh/releases/download/v2.32.0/sesh_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/joshmedeski/sesh/releases/assets/609963509"
+checksum = "sha256:11bc0367b1cacebaa0b8e9d7db7479ad5e12a8a779a3a475268473c9b95cbf19"
+url = "https://github.com/joshmedeski/sesh/releases/download/v2.33.0/sesh_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/joshmedeski/sesh/releases/assets/634323881"
 
 [tools."github:joshmedeski/sesh"."platforms.linux-x64"]
-checksum = "sha256:03efc5ebc3f2159a497eb837e6c878a9a2a997d446e628e9e3a4445243c7129e"
-url = "https://github.com/joshmedeski/sesh/releases/download/v2.32.0/sesh_Linux_x86_64.tar.gz"
-url_api = "https://api.github.com/repos/joshmedeski/sesh/releases/assets/609963510"
+checksum = "sha256:e04fe35778eaf768a1fbbaa6e01d008ae22038c52b8d7834d38c9e7ad4822daa"
+url = "https://github.com/joshmedeski/sesh/releases/download/v2.33.0/sesh_Linux_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/joshmedeski/sesh/releases/assets/634323812"
 
 [tools."github:joshmedeski/sesh"."platforms.macos-arm64"]
-checksum = "sha256:27a03add6e2b47834d3b145a2673e27ded927d89986b087dafe2b5e9fc46e55b"
-url = "https://github.com/joshmedeski/sesh/releases/download/v2.32.0/sesh_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/joshmedeski/sesh/releases/assets/609963484"
+checksum = "sha256:3d930e169bba2dfae639f122a0d49b53e1e65c23985e2e25613d8e3586fc5875"
+url = "https://github.com/joshmedeski/sesh/releases/download/v2.33.0/sesh_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/joshmedeski/sesh/releases/assets/634323809"
 
 [tools."github:joshmedeski/sesh"."platforms.macos-x64"]
-checksum = "sha256:cefc824e6472e7b99219744cb16a9d69800a89396062798cba70f08a7a8d6746"
-url = "https://github.com/joshmedeski/sesh/releases/download/v2.32.0/sesh_Darwin_x86_64.tar.gz"
-url_api = "https://api.github.com/repos/joshmedeski/sesh/releases/assets/609963485"
+checksum = "sha256:8b32309da0536346c317476aae280d05586e85f10e938dff29aab3d4694fd8be"
+url = "https://github.com/joshmedeski/sesh/releases/download/v2.33.0/sesh_Darwin_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/joshmedeski/sesh/releases/assets/634323813"
 
 [[tools."github:lemonade-command/lemonade"]]
 version = "1.1.1"
@@ -942,14 +942,14 @@ checksum = "sha256:1462cb3b3046b815cf8ea436d3da450ec1a9f11dac7e5a46b0ada5305d7e8
 url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-x64.tar.gz"
 
 [[tools."npm:@xai-official/grok"]]
-version = "1.0.52"
-aube = { path = ".mise/locks/npm-xai-official-grok/1.0.52", digest = "sha256:dc32956cbc8491b91cfa6a29bb0e121b0a2001f2e0885a6da0ee4ccd87b3d392" }
+version = "1.0.55"
+aube = { path = ".mise/locks/npm-xai-official-grok/1.0.55", digest = "sha256:30a8d9d3e15d6671d0df4cf5eac9b3785553db48d1f845f7b0f8f371576e6990" }
 backend = "npm:@xai-official/grok"
 specifiers = ["latest"]
 
 [[tools."npm:cspell"]]
 version = "10.3.6"
-aube = { path = ".mise/locks/npm-cspell/10.3.6", digest = "sha256:af66160763e36677ec857fd1702ba372a153c40b4e608eb7e6cb286a38daf869" }
+aube = { path = ".mise/locks/npm-cspell/10.3.6", digest = "sha256:9d08c20d5c7d571f33d78320196651f328f8f6135e118148a25ae8926bb1bd2d" }
 backend = "npm:cspell"
 specifiers = ["latest"]
 
