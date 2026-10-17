@@ -252,6 +252,11 @@ fi
 # tmux 外: 新規ターミナル起動直後の素の zsh から既存 tmux session に直接 attach
 if command -v sesh &>/dev/null && command -v fzf &>/dev/null; then
   sesh-sessions() {
+    if [[ -n "${TUIOS_SESSION:-}" ]]; then
+      BUFFER="tui pick"
+      zle accept-line
+      return
+    fi
     local session
     # fzf の stdin を明示的に tty にリダイレクト (zle 経由では stdin が widget の
     # buffer になっていて fzf のインタラクション不可になる)
