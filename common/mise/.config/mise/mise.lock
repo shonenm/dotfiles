@@ -871,32 +871,32 @@ url = "https://github.com/ouch-org/ouch/releases/download/0.8.3/ouch-x86_64-appl
 url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/561447589"
 
 [[tools."github:shonenm/live-pr"]]
-version = "0.11.1"
+version = "0.12.0"
 backend = "github:shonenm/live-pr"
 specifiers = ["latest"]
 
 [tools."github:shonenm/live-pr"."platforms.linux-arm64"]
-checksum = "sha256:b8550852cc510160b3a839fd0a226fb5087bd211007b7a33a8cc0a65ebf11ac2"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.11.1/live-pr_0.11.1_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/647531541"
+checksum = "sha256:038d7d281daf9d037b2edf0438926385a0f68d203f73c7540f9e86e043deb8ed"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.12.0/live-pr_0.12.0_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/649583055"
 provenance = "github-attestations"
 
 [tools."github:shonenm/live-pr"."platforms.linux-x64"]
-checksum = "sha256:517868c676c72e30364cbc20af1facdf08af3c25b780666ff1c7f78fd1dd3c5d"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.11.1/live-pr_0.11.1_Linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/647531544"
+checksum = "sha256:8d4f930cb99b5d617cd8a32c772529e086770f8e3f38b604f3c478060b408c15"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.12.0/live-pr_0.12.0_Linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/649583062"
 provenance = "github-attestations"
 
 [tools."github:shonenm/live-pr"."platforms.macos-arm64"]
-checksum = "sha256:407d2536009b180ef17bbb347a41f2ade0a1e005a63dc7751470f1f13515a973"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.11.1/live-pr_0.11.1_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/647531536"
+checksum = "sha256:22fff00b95b8793dbfd71fa8929c839308932f566080324b57e04dc354c1e959"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.12.0/live-pr_0.12.0_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/649583056"
 provenance = "github-attestations"
 
 [tools."github:shonenm/live-pr"."platforms.macos-x64"]
-checksum = "sha256:a7c492c65b3b9e7e1252229749b5c80b3323a1ed4c4cc83ea78e673afe10145e"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.11.1/live-pr_0.11.1_Darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/647531538"
+checksum = "sha256:0d9162d21d9954326913fe8c6df21d98fc21c4215274d8a8aa98ed82ec1897e0"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.12.0/live-pr_0.12.0_Darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/649583063"
 provenance = "github-attestations"
 
 [[tools.go]]
@@ -921,29 +921,29 @@ checksum = "sha256:587b59182488b23aa6e5fc25110405a3e0e5b38ed2f5b2f46ed13c32aee35
 url = "https://dl.google.com/go/go1.27.2.darwin-amd64.tar.gz"
 
 [[tools.node]]
-version = "24.21.0"
+version = "24.22.0"
 backend = "core:node"
 specifiers = ["lts"]
 
 [tools.node."platforms.linux-arm64"]
-checksum = "sha256:724282c3b43aec998aa9527380465b45d229e021b58035f5f4f63095eabfe5d5"
-url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-arm64.tar.gz"
+checksum = "sha256:b7e7991d5407815adfa74a2a9cd4db683552c8ce32ff4a295c22e972849c3f5d"
+url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-linux-arm64.tar.gz"
 
 [tools.node."platforms.linux-x64"]
-checksum = "sha256:6e1db87ef58b8819e5d5402eff1536491b18edd8eb7bee5ef7897876e88dc5ff"
-url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.gz"
+checksum = "sha256:28ea0a438de9a13bd7891fd758eee6c7819ee8af5442dfd8d45bd65e56d4228c"
+url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-linux-x64.tar.gz"
 
 [tools.node."platforms.macos-arm64"]
-checksum = "sha256:bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057"
-url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz"
+checksum = "sha256:6a9724d9b50a5f22b4816cded441b5a8d9ddae546191a5e5b7efa5a5e2ee26d5"
+url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-darwin-arm64.tar.gz"
 
 [tools.node."platforms.macos-x64"]
-checksum = "sha256:1462cb3b3046b815cf8ea436d3da450ec1a9f11dac7e5a46b0ada5305d7e8097"
-url = "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-x64.tar.gz"
+checksum = "sha256:495e3f273c645f3c4677d438304cdfc701729ea5dec5728f5c8e76a2dece4b91"
+url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-darwin-x64.tar.gz"
 
 [[tools."npm:@xai-official/grok"]]
-version = "1.0.55"
-aube = { path = ".mise/locks/npm-xai-official-grok/1.0.55", digest = "sha256:30a8d9d3e15d6671d0df4cf5eac9b3785553db48d1f845f7b0f8f371576e6990" }
+version = "1.0.58"
+aube = { path = ".mise/locks/npm-xai-official-grok/1.0.58", digest = "sha256:4787229154479c6dc38b36deade0701019b319daec6f98ff99dda2374a371f08" }
 backend = "npm:@xai-official/grok"
 specifiers = ["latest"]
 
