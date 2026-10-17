@@ -649,6 +649,21 @@ url = "https://dl.deno.land/release/v2.9.7/deno-aarch64-apple-darwin.zip"
 checksum = "sha256:95daaff11c116a52ad54785e7914c8e9c9cdcaba793c5ed929c74ca2d8e6259a"
 url = "https://dl.deno.land/release/v2.9.7/deno-x86_64-apple-darwin.zip"
 
+[[tools."github:Gaurav-Gosain/tuios"]]
+version = "0.10.0"
+backend = "github:Gaurav-Gosain/tuios"
+specifiers = ["0.10.0"]
+
+[tools."github:Gaurav-Gosain/tuios"."platforms.linux-arm64"]
+checksum = "sha256:b74f60e69c94fd116fd8fc2b9dffc44fad5750395b77416c6d7815483510efac"
+url = "https://github.com/Gaurav-Gosain/tuios/releases/download/v0.10.0/tuios_0.10.0_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/Gaurav-Gosain/tuios/releases/assets/646364750"
+
+[tools."github:Gaurav-Gosain/tuios"."platforms.linux-x64"]
+checksum = "sha256:d1a63808639af8193db9c9b3440b24e0ded68a82dcbaa5981e1d571b3ecd3cd5"
+url = "https://github.com/Gaurav-Gosain/tuios/releases/download/v0.10.0/tuios_0.10.0_Linux_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/Gaurav-Gosain/tuios/releases/assets/646364859"
+
 [[tools."github:Mikescher/better-docker-ps"]]
 version = "1.18"
 backend = "github:Mikescher/better-docker-ps"
