@@ -1407,11 +1407,11 @@ function M.setup(opts)
         local diff = dir_mod.diff_directories(explorer.dir1, explorer.dir2)
         process_result(nil, diff.status_result)
       elseif explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
-        git.get_diff_revisions(explorer.base_revision, explorer.target_revision, explorer.git_root, process_result)
+        git.get_diff_revisions_with_line_stats(explorer.base_revision, explorer.target_revision, explorer.git_root, process_result)
       elseif explorer.base_revision then
-        git.get_diff_revision(explorer.base_revision, explorer.git_root, process_result)
+        git.get_diff_revision_with_line_stats(explorer.base_revision, explorer.git_root, process_result)
       else
-        git.get_status(explorer.git_root, process_result)
+        git.get_status_with_line_stats(explorer.git_root, process_result)
         fetch_and_render()
       end
     end
