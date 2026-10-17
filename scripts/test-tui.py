@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -66,15 +67,33 @@ class SessionTests(unittest.TestCase):
                 tui.dev()
         self.assertEqual(run.call_count, 1)
 
-    def test_no_daemon_is_empty_but_other_errors_surface(self):
-        with patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 1, "", "The TUIOS daemon is not running")):
-            self.assertEqual(tui.sessions(), [])
-        with patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 1, "", "permission denied")):
-            with self.assertRaisesRegex(RuntimeError, "permission denied"):
-                tui.sessions()
+    def test_no_daemon_returns_valid_saved_session_listing_with_exit_three(self):
+        for rows in ([], [{"name": "work", "saved": True}]):
+            with self.subTest(rows=rows), patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 3, json.dumps(rows), "")):
+                self.assertEqual(tui.sessions(), rows)
+
+    def test_other_listing_errors_surface_even_without_stderr(self):
+        for stderr, message in (("permission denied", "permission denied"), ("", "tuios ls exited 1")):
+            with self.subTest(stderr=stderr), patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 1, "", stderr)):
+                with self.assertRaisesRegex(RuntimeError, message):
+                    tui.sessions()
+
+    def test_no_argument_launch_creates_and_attaches_without_daemon(self):
+        with patch.object(sys, "argv", ["tui"]), patch.dict(os.environ, {}, clear=True), patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 3, "[]", "")) as run, patch.object(os, "execvp") as execute:
+            self.assertEqual(tui.main(), 0)
+        self.assertEqual(run.call_args_list[1].args[0], ("tuios", "new", "main", "--detach", "--cwd", str(Path.cwd())))
+        execute.assert_called_once_with("tuios", ["tuios", "attach", "main"])
 
 
 class ConfigTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("tuios"), "tuios not installed")
+    def test_installed_release_listing_before_daemon_start(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = {key: value for key, value in os.environ.items() if not key.startswith("TUIOS_")}
+            env.update(TUIOS_SERVER="ls-" + Path(temp).name[-8:], XDG_CONFIG_HOME=temp, XDG_CONFIG_DIRS=temp, XDG_STATE_HOME=f"{temp}/state")
+            with patch.dict(os.environ, env, clear=True):
+                self.assertEqual(tui.sessions(), [])
+
     @unittest.skipUnless(shutil.which("tuios"), "tuios not installed")
     def test_installed_release_accepts_keys_without_collisions(self):
         with tempfile.TemporaryDirectory() as temp:
