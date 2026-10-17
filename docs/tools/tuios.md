@@ -115,4 +115,4 @@ python3 scripts/test-tui.py
 tuios keybinds doctor
 ```
 
-テストは別の設定ディレクトリを使い、稼働中のtmux / TUIOS sessionを操作しない。Neovimはpluginの自動導入を伴わない最小設定で、内部移動・端でのOSC送信・従来tmuxコマンドの呼び分けを検証する。
+テストは別の設定ディレクトリを使い、稼働中のtmux / TUIOS sessionを操作しない。daemon未起動時に`ls --json`が終了コード3で保存済みsession一覧を返す仕様と、引数なし`tui`の起動経路も検証する。Neovimはpluginの自動導入を伴わない最小設定で、内部移動・端でのOSC送信・従来tmuxコマンドの呼び分けを検証する。
