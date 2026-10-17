@@ -17,7 +17,11 @@ LUA = r'''
 vim.opt.rtp:prepend(vim.env.TEST_PLUGIN_DATA .. "/nui.nvim")
 vim.opt.rtp:prepend(vim.env.TEST_PLUGIN_DATA .. "/codediff.nvim")
 vim.api.nvim_create_augroup("snacks.explorer", {})
-dofile(vim.env.TEST_CODEDIFF_CONFIG).setup({explorer = {auto_refresh = false}})
+local specs = dofile(vim.env.TEST_CODEDIFF_PLUGIN)
+local opts = specs[2].opts
+assert(opts.explorer.line_stats.enabled, "line statistics disabled in plugin config")
+opts.explorer.auto_refresh = false
+dofile(vim.env.TEST_CODEDIFF_CONFIG).setup(opts)
 vim.cmd("runtime plugin/codediff.lua")
 
 local lc = require("codediff.ui.lifecycle")
@@ -37,10 +41,33 @@ local function first_line(buf)
 end
 
 local function test()
+  local nodes = require("codediff.ui.explorer.nodes")
+  local Tree = require("codediff.ui.lib.tree")
+  local config = require("codediff.config")
+  local node = Tree.Node({text = "file.txt", data = {
+    path = "file.txt", group = "unstaged", status_symbol = "M",
+    line_stats = {insertions = 12, deletions = 4},
+  }})
+  for _, selected_path in ipairs({"", "file.txt"}) do
+    local row = nodes.prepare_node(node, 40, selected_path, "unstaged"):content()
+    assert(row:find("+12 -4", 1, true), "file counts missing: " .. row)
+    assert(vim.fn.strdisplaywidth(row) == 40, "stats overflow explorer width")
+  end
+  node.data.line_stats = {binary = true}
+  assert(nodes.prepare_node(node, 40):content():find("bin", 1, true), "binary label missing")
+  config.options.explorer.line_stats.enabled = false
+  assert(not nodes.prepare_node(node, 40):content():find("bin", 1, true), "disabled stats still shown")
+  config.options.explorer.line_stats.enabled = true
+
   vim.cmd("CodeDiff --inline HEAD~1")
   wait_for(function() return lc.get_explorer(vim.api.nvim_get_current_tabpage()) ~= nil end, "explorer did not open")
   local tab = vim.api.nvim_get_current_tabpage()
   local explorer = lc.get_explorer(tab)
+  wait_for(function()
+    local rows = table.concat(vim.api.nvim_buf_get_lines(explorer.bufnr, 0, -1, false), "\n")
+    return rows:find("+1 -1", 1, true) and rows:find("Files (1 · +1 -1)", 1, true)
+      and rows:find("○", 1, true)
+  end, "Git line counts missing from explorer")
   local file = assert(explorer.status_result.unstaged[1], "file missing")
   explorer.on_file_select(vim.tbl_extend("force", file, {group = "unstaged", git_root = explorer.git_root}))
   wait_for(function()
@@ -129,6 +156,7 @@ def main():
             os.environ,
             TEST_PLUGIN_DATA=str(DATA),
             TEST_CODEDIFF_CONFIG=str(ROOT / "common/nvim/.config/nvim/lua/config/codediff.lua"),
+            TEST_CODEDIFF_PLUGIN=str(ROOT / "common/nvim/.config/nvim/lua/plugins/codediff.lua"),
             LIVE_PR_REVIEW="1",
             LIVE_PR_REVIEWED_FILE=str(tmp / "reviewed.json"),
         )
