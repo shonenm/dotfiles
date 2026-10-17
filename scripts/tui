@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""TUIOS session/project picker and session-space navigation. tmux is untouched."""
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+
+
+def run(*args, **kwargs):
+    return subprocess.run(args, check=True, **kwargs)
+
+
+def sessions():
+    result = subprocess.run(["tuios", "ls", "--json"], capture_output=True, text=True)
+    if result.returncode:
+        if "daemon is not running" in result.stderr:
+            return []
+        raise RuntimeError(result.stderr.strip())
+    return json.loads(result.stdout)
+
+
+def choose(lines, prompt):
+    result = subprocess.run(
+        ["fzf", "--reverse", "--border", f"--prompt={prompt}> ", "--delimiter=\t", "--with-nth=2.."],
+        input="\n".join(lines), stdout=subprocess.PIPE, text=True,
+    )
+    if result.returncode in (1, 130):
+        return None
+    result.check_returncode()
+    return result.stdout.rstrip("\n").split("\t", 1)[0]
+
+
+def session_name(path):
+    path = str(Path(path).resolve())
+    name = re.sub(r"[^a-zA-Z0-9_-]", "-", Path(path).name)[:40] or "root"
+    return f"{name}-{hashlib.sha256(path.encode()).hexdigest()[:8]}"
+
+
+def connect(name, cwd=None):
+    if not any(row["name"] == name for row in sessions()):
+        run("tuios", "new", name, "--detach", "--cwd", str(cwd or Path.cwd()))
+    if os.environ.get("TUIOS_SESSION"):
+        run("tuios", "switch-session", name)
+    else:
+        os.execvp("tuios", ["tuios", "attach", name])
+
+
+def pick():
+    rows = sessions()
+    choices = {f"session:{r['name']}": (r["name"], None) for r in rows}
+    labels = [f"session:{r['name']}\t[{r.get('space') or '-'}] {r['name']}" for r in rows]
+    paths = [str(Path.home()), str(Path.home() / "dotfiles")]
+    for command in (("ghq", "list", "--full-path"), ("zoxide", "query", "--list")):
+        if not shutil.which(command[0]):
+            continue
+        paths.extend(run(*command, capture_output=True, text=True).stdout.splitlines())
+    for path in dict.fromkeys(paths):
+        if Path(path).is_dir():
+            key = f"path:{path}"
+            choices[key] = (session_name(path), path)
+            labels.append(f"{key}\t{path}")
+    selected = choose(labels, "session/project")
+    if selected:
+        connect(*choices[selected])
+
+
+def navigate(direction):
+    rows = sorted(sessions(), key=lambda row: (row.get("space", ""), row["name"]))
+    current = next((row for row in rows if row["name"] == os.environ.get("TUIOS_SESSION")), None)
+    if not current:
+        raise RuntimeError("run navigation inside a TUIOS session")
+    space = current.get("space", "")
+    delta = -1 if direction.startswith("prev") else 1
+    if direction.endswith("-group"):
+        groups = list(dict.fromkeys(row.get("space", "") for row in rows))
+        target = groups[(groups.index(space) + delta) % len(groups)]
+        candidates = [row for row in rows if row.get("space", "") == target]
+        destination = max(candidates, key=lambda row: row["last_active"])
+    else:
+        candidates = [row for row in rows if row.get("space", "") == space]
+        destination = candidates[(candidates.index(current) + delta) % len(candidates)]
+    run("tuios", "switch-session", destination["name"])
+
+
+def group():
+    rows = sessions()
+    groups = sorted({r.get("space", "") for r in rows} - {""})
+    chosen = choose(["new\tCreate space", "clear\tUngroup session"] + [f"group:{g}\t{g}" for g in groups], "space")
+    if not chosen:
+        return
+    if chosen == "clear":
+        args = []
+    elif chosen == "new":
+        name = input("New space: ").strip()
+        if not name:
+            return
+        args = [name]
+    else:
+        args = [chosen.removeprefix("group:")]
+    run("tuios", "set-session-space", *args)
+
+
+def root():
+    result = run("git", "rev-parse", "--show-toplevel", capture_output=True, text=True)
+    path = result.stdout.strip()
+    connect(session_name(path), path)
+
+
+def dev():
+    info = json.loads(run("tuios", "list-workspaces", "--json", capture_output=True, text=True).stdout)
+    if not any(row["window_count"] == 0 for row in info["workspaces"]):
+        raise RuntimeError("every workspace has a pane; dev layout was not opened")
+    path = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "tuios/dev.tape"
+    run("tuios", "tape", "exec", str(path))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="command")
+    for name in ("pick", "group", "root", "dev"):
+        sub.add_parser(name)
+    nav = sub.add_parser("nav")
+    nav.add_argument("direction", choices=("next", "prev", "next-group", "prev-group"))
+    attach = sub.add_parser("attach")
+    attach.add_argument("name", nargs="?", default="main")
+    attach.add_argument("--cwd", type=Path, default=Path.cwd())
+    args = parser.parse_args()
+    try:
+        if args.command in (None, "attach"):
+            connect(getattr(args, "name", "main"), getattr(args, "cwd", None))
+        elif args.command == "nav":
+            navigate(args.direction)
+        elif args.command == "pick":
+            pick()
+        elif args.command == "group":
+            group()
+        elif args.command == "root":
+            root()
+        elif args.command == "dev":
+            dev()
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+        print(f"tui: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

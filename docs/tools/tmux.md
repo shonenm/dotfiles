@@ -4,6 +4,8 @@
 
 TokyoNight Night テーマ + 透過背景。Ghostty / Neovim 統合対応。
 
+[TUIOSへの並行移行](tuios.md)を追加している。既存tmux設定・script・sessionは維持する。
+
 ## 基本設定
 
 | 設定 | 値 | 備考 |
