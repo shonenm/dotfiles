@@ -591,6 +591,7 @@ function M.setup(opts)
 
     -- Monkey-patch nodes.prepare_node to show hunk counts
     local nodes_mod = require("codediff.ui.explorer.nodes")
+    local stats_formatter = require("codediff.ui.explorer.formatters.stats")
     nodes_mod.prepare_node = function(node, max_width, selected_path, selected_group)
       local Line = require("codediff.ui.lib.line")
       local line = Line()
@@ -630,10 +631,12 @@ function M.setup(opts)
 
       if data.type == "group" then
         line:append(" ", "Directory")
-        if codereview_ctx() then
-          line:append(string.format("Files (%d)", data.file_count or 0), "Directory")
-        else
-          line:append(node.text, "Directory")
+        line:append(codereview_ctx() and "Files" or data.label, "Directory")
+        for _, segment in ipairs(stats_formatter.group_summary({
+          file_count = data.file_count or 0,
+          stats = explorer_config.line_stats.enabled and data.stats or nil,
+        })) do
+          line:append(segment.text, segment.hl)
         end
       elseif data.type == "directory" then
         local indent = build_indent_markers(data.indent_state)
@@ -722,7 +725,13 @@ function M.setup(opts)
         local used_width = vim.fn.strdisplaywidth(indent) + vim.fn.strdisplaywidth(icon_part)
         -- Reserve space for: hunk_count + space + status_symbol + trailing space
         local hunk_reserve = (hunk_str ~= "") and (vim.fn.strdisplaywidth(hunk_str) + 1) or 0
-        local status_reserve = vim.fn.strdisplaywidth(status_symbol) + 1 + hunk_reserve
+        local stat_segments = stats_formatter.file_segments(explorer_config.line_stats.enabled and data.line_stats or nil)
+        local stats_width = 0
+        for _, segment in ipairs(stat_segments) do
+          stats_width = stats_width + vim.fn.strdisplaywidth(segment.text)
+        end
+        local stats_reserve = stats_width > 0 and stats_width + 1 or 0
+        local status_reserve = vim.fn.strdisplaywidth(status_symbol) + 1 + hunk_reserve + stats_reserve
         local available_for_content = max_width - used_width - status_reserve
 
         local filename_len = vim.fn.strdisplaywidth(filename)
@@ -782,6 +791,13 @@ function M.setup(opts)
         local padding_needed = available_for_content - content_len
         if padding_needed > 0 then
           line:append(string.rep(" ", padding_needed), get_hl("Normal"))
+        end
+
+        for _, segment in ipairs(stat_segments) do
+          line:append(segment.text, get_hl(segment.hl))
+        end
+        if stats_width > 0 then
+          line:append(" ", get_hl("Normal"))
         end
 
         -- Append hunk count before status symbol
@@ -1391,11 +1407,11 @@ function M.setup(opts)
         local diff = dir_mod.diff_directories(explorer.dir1, explorer.dir2)
         process_result(nil, diff.status_result)
       elseif explorer.base_revision and explorer.target_revision and explorer.target_revision ~= "WORKING" then
-        git.get_diff_revisions(explorer.base_revision, explorer.target_revision, explorer.git_root, process_result)
+        git.get_diff_revisions_with_line_stats(explorer.base_revision, explorer.target_revision, explorer.git_root, process_result)
       elseif explorer.base_revision then
-        git.get_diff_revision(explorer.base_revision, explorer.git_root, process_result)
+        git.get_diff_revision_with_line_stats(explorer.base_revision, explorer.git_root, process_result)
       else
-        git.get_status(explorer.git_root, process_result)
+        git.get_status_with_line_stats(explorer.git_root, process_result)
         fetch_and_render()
       end
     end

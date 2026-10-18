@@ -16,6 +16,7 @@
   - [トラブルシューティング](troubleshooting/neovim.md)
   - [ローカルパッチ一覧](tools/neovim/patches/README.md)
 - [tmux](tools/tmux.md)
+- [TUIOS](tools/tuios.md)
 - [sesh](tools/sesh.md)
 - [Starship](tools/starship.md)
 - [Ghostty](tools/ghostty.md)

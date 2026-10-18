@@ -1,0 +1,202 @@
+# tmux の session / window / pane は TUIOS の session / workspace / window に対応。
+# config.toml は TUIOS の設定画面・hosts 管理用に残す。
+# command は共通shell resolverからlogin shellで実行し、user toolsのPATHを揃える。
+[startup]
+daemon = true
+tiled = true
+start_in_terminal_mode = true
+layout = "bsp"
+
+[appearance]
+theme = "tokyonight"
+motion = "none"
+scrollback_lines = 5000
+nvim_navigation = true
+new_window_inherit_cwd = true
+auto_enter_terminal_on_focus = "off"
+focus_follows_mouse = false
+dockbar_position = "bottom"
+shared_borders = true
+zoom_size = 100
+prefix_repeat_time = 1000
+
+[appearance.sidebar]
+position = "left"
+width = 32
+sections = "sessions,agents"
+show_agents = true
+
+[daemon]
+window_size = "latest"
+persist_scrollback = true
+resume_agents = "ask"
+
+[tape]
+autorun = "ask"
+
+[keybindings]
+leader_key = "ctrl+space"
+
+[keybindings.prefix_mode]
+new_workspace = ["c"]
+prefix_new_window = []
+prefix_next_window = []
+prefix_prev_window = []
+prefix_select_0 = []
+prefix_select_1 = []
+prefix_select_2 = []
+prefix_select_3 = []
+prefix_select_4 = []
+prefix_select_5 = []
+prefix_select_6 = []
+prefix_select_7 = []
+prefix_select_8 = []
+prefix_select_9 = []
+switch_workspace_1 = ["1"]
+switch_workspace_2 = ["2"]
+switch_workspace_3 = ["3"]
+switch_workspace_4 = ["4"]
+switch_workspace_5 = ["5"]
+switch_workspace_6 = ["6"]
+switch_workspace_7 = ["7"]
+switch_workspace_8 = ["8"]
+reload_config = ["r"]
+prefix_tape = []
+prefix_minimize = []
+prefix_workspace_switcher = ["w"]
+prefix_workspace = []
+prefix_split_horizontal = ["-"]
+prefix_split_vertical = ["|", "\\"]
+prefix_selection = ["v", "["]
+prefix_review = ["ctrl+v"]
+prefix_rename_window = ["t"]
+rename_workspace = ["T"]
+close_workspace = ["X"]
+prefix_close_session = []
+last_session = ["tab"]
+prefix_layout = ["l", "ctrl+t"]
+prefix_toggle_other_rail = []
+prefix_toggle_spotlight = []
+resize_pane_left_5 = ["H"]
+resize_pane_down_5 = ["J"]
+resize_pane_up_5 = ["K"]
+resize_pane_right_5 = ["L"]
+prev_workspace = ["p", "ctrl+h"]
+next_workspace = ["n", "ctrl+l"]
+prefix_toggle_sidebar = ["A", "b"]
+prefix_agents_settings = ["ctrl+a"]
+prefix_inbox = ["a", "i"]
+choose_tree = ["/", "ctrl+f"]
+launcher = []
+hints = ["e"]
+prefix_explore = []
+toggle_scratch = ["j"]
+prefix_jump_notif = []
+prefix_keybinds = []
+prefix_file_search = ["space"]
+prefix_toggle_tiling = []
+prefix_command_palette = [":"]
+display_panes = ["ctrl+q"]
+toggle_multifocus_all = ["S"]
+prefix_session_switcher = ["s", "f"]
+switch_workspace_9 = []
+prefix_last_message = []
+prefix_window = []
+prefix_scrollback = ["u", "ctrl+u"]
+mark_pane = ["M"]
+prefix_mail = []
+
+[keybindings.global]
+command_palette = []
+launcher = []
+prev_session = ["ctrl+alt+h", "alt+h"]
+next_session = ["ctrl+alt+l", "alt+l"]
+
+[keybindings.layout]
+preselect_left = []
+preselect_right = []
+preselect_up = []
+preselect_down = []
+
+[keybindings.terminal_mode]
+terminal_focus_left = ["ctrl+h"]
+terminal_focus_down = ["ctrl+j"]
+terminal_focus_up = ["ctrl+k"]
+terminal_focus_right = ["ctrl+l"]
+terminal_next_window = []
+terminal_prev_window = []
+prefix_fullscreen = ["ctrl+z"]
+
+[[keybindings.command]]
+name = "projects"
+key = "prefix+F"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui pick'"
+description = "Projects (ghq / zoxide)"
+width = "85%"
+height = "80%"
+
+[[keybindings.command]]
+name = "project-root"
+key = "prefix+9"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui root'"
+description = "Project root session"
+
+[[keybindings.command]]
+name = "session-space"
+key = "prefix+ctrl+s"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui space'"
+description = "Session space"
+
+[[keybindings.command]]
+name = "lazygit"
+key = "prefix+g"
+type = "scratch"
+command = "~/dotfiles/scripts/tmux-default-shell -lc 'lazygit'"
+width = "80%"
+height = "80%"
+
+[[keybindings.command]]
+name = "editor"
+key = "prefix+k"
+type = "scratch"
+command = "~/dotfiles/scripts/tmux-default-shell -lc 'nvim .'"
+width = "90%"
+height = "90%"
+
+[[keybindings.command]]
+name = "live-pr"
+key = "prefix+G"
+type = "scratch"
+command = "~/dotfiles/scripts/tmux-default-shell -lc 'live-pr'"
+width = "85%"
+height = "85%"
+
+[[keybindings.command]]
+name = "pgcli"
+key = "prefix+P"
+type = "scratch"
+command = "~/dotfiles/scripts/tmux-default-shell -lc 'pgcli \"${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/postgres}\"'"
+width = "80%"
+height = "80%"
+
+[[keybindings.command]]
+name = "quay"
+key = "prefix+Q"
+type = "scratch"
+command = "~/dotfiles/scripts/tmux-default-shell -lc 'quay'"
+width = "80%"
+height = "80%"
+
+[[keybindings.command]]
+name = "dev"
+key = "prefix+N"
+type = "shell"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui dev'"
+description = "Claude, Neovim and shell workspace"
+
+[[keybindings.copy_pipe]]
+key = "y"
+command = "~/dotfiles/scripts/clipboard-copy"
