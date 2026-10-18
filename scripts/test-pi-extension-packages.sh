@@ -92,7 +92,7 @@ try {
   writeFileSync(settingsPath, settingsBefore);
   const statuses = new Map();
   const fastCtx = { ...ctx, mode: "tui", hasUI: true,
-    model: getModels("openai-codex").find((model) => model.id === "gpt-6.1-sol"),
+    model: getModels("openai").find((model) => model.id === "gpt-6.1-sol"),
     modelRegistry: { isUsingOAuth() { assert.fail("Disabled usage must not access authentication"); } },
     ui: { ...ctx.ui, setFooter() { assert.fail("Better OpenAI must not replace the existing footer"); },
       setStatus: (key, value) => statuses.set(key, value) },
@@ -108,7 +108,7 @@ try {
   assert.equal(await emitFast("before_provider_request", { payload }), undefined);
   await fast.commands.get("fast").handler("", fastCtx);
   for (const id of ["gpt-6.1-sol", "gpt-6-luna", "gpt-6-sol", "gpt-6-astra", "gpt-5.6-luna"]) {
-    fastCtx.model = getModels("openai-codex").find((model) => model.id === id);
+    fastCtx.model = getModels("openai").find((model) => model.id === id);
     assert(fastCtx.model, `${id} must be in the host catalog`);
     await emitFast("model_select", { model: fastCtx.model });
     const request = Object.freeze({ ...payload, model: id });
@@ -119,7 +119,7 @@ try {
   fastCtx.model = { provider: "cursor-agent", id: "composer-2.5" };
   await emitFast("model_select", { model: fastCtx.model });
   assert.equal(await emitFast("before_provider_request", { payload }), undefined);
-  fastCtx.model = getModels("openai-codex").find((model) => model.id === "gpt-6.1-sol");
+  fastCtx.model = getModels("openai").find((model) => model.id === "gpt-6.1-sol");
   await emitFast("model_select", { model: fastCtx.model });
   await fast.commands.get("fast").handler("", fastCtx);
   assert.equal(await emitFast("before_provider_request", { payload }), undefined);

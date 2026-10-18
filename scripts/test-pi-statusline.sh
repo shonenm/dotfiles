@@ -64,7 +64,7 @@ const ctx = {
   cwd: `${tmp}/home/dotfiles`,
   sessionManager: { getBranch: () => assert.fail("Token history must not be collected") },
   getContextUsage: () => ({ tokens: 42000, contextWindow: 100000, percent: contextPercent }),
-  model: { provider: "openai-codex", id: "gpt-5.6-sol", contextWindow: 100000 },
+  model: { provider: "openai", id: "gpt-5.6-sol", contextWindow: 100000 },
   ui: {
     theme,
     setFooter: (factory) => { footerFactory = factory; },
