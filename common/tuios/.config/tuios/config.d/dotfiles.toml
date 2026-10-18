@@ -39,6 +39,10 @@ title = "overview"
 command = "~/dotfiles/scripts/tui rail"
 refresh = "3s"
 
+# tmux.expose 相当。pane navigator を画面カード一覧で開く。
+[panes]
+navigator_layout = "cards"
+
 [daemon]
 window_size = "latest"
 persist_scrollback = true
@@ -224,6 +228,24 @@ key = "prefix+N"
 type = "shell"
 command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui dev'"
 description = "Claude, Neovim and shell workspace"
+
+[[keybindings.command]]
+name = "theme"
+key = "prefix+y"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui theme'"
+description = "Theme (this client only)"
+width = "40%"
+height = "60%"
+
+[[keybindings.command]]
+name = "swap-pane"
+key = "prefix+m"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui swap'"
+description = "Swap the focused pane with a picked pane"
+width = "80%"
+height = "40%"
 
 [[keybindings.copy_pipe]]
 key = "y"

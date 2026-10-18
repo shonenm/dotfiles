@@ -127,6 +127,27 @@ class SessionTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "one attached session"):
                 tui.navigate_space("next", 42)
 
+    def test_theme_sets_the_picked_theme_on_this_client(self):
+        listing = subprocess.CompletedProcess([], 0, "tokyonight\ngruvbox_dark\n")
+        with patch.object(tui, "run", return_value=listing) as run, patch.object(tui, "choose", return_value="gruvbox_dark") as choose:
+            tui.theme()
+        choose.assert_called_once_with(["tokyonight\ttokyonight", "gruvbox_dark\tgruvbox_dark"], "theme")
+        run.assert_called_with("tuios", "run-command", "SetTheme", "gruvbox_dark")
+
+    def test_swap_offers_tiled_panes_of_the_active_workspace_by_title_index(self):
+        windows = [
+            {"window_id": "a", "index": 0, "title": "editor", "workspace": 1},
+            {"window_id": "b", "index": 1, "title": "shell", "workspace": 1},
+            {"window_id": "c", "index": 2, "title": "other", "workspace": 2},
+            {"window_id": "popup", "index": 3, "title": "Swap", "workspace": 1, "floating": True},
+        ]
+        listing = subprocess.CompletedProcess([], 0, json.dumps({"windows": windows}))
+        env = {"TUIOS_ACTIVE_PANE_ID": "b", "TUIOS_SESSION": "work", "HERDR_BIN_PATH": "/herdr"}
+        with patch.dict(os.environ, env), patch.object(tui, "run", return_value=listing) as run, patch.object(tui, "choose", return_value="a") as choose:
+            tui.swap()
+        choose.assert_called_once_with(["a\t1: editor"], "swap")
+        run.assert_called_with("/herdr", "pane", "swap", "--source-pane", "b", "--target-pane", "a")
+
     def test_rail_counts_agents_and_reads_live_branch_of_focused_pane(self):
         with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as plain:
             subprocess.run(["git", "init", "-q", "-b", "live", repo], check=True)

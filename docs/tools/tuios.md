@@ -1,6 +1,6 @@
 # TUIOS
 
-> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space設定と巡回・sidebar overview・Neovim navigation（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space設定と巡回・sidebar overview・theme / pane入替picker・Neovim navigation・ssh/fzf/tmuxへのキー委譲（[区分](../provenance.md#区分)）
 
 TUIOS 0.10.1の標準機能を中心に、local / remote session、layout、AI表示、復元を管理する。既存tmuxは引き続き利用できる。
 
@@ -43,11 +43,13 @@ prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 | `\|` / `-` | 左右 / 上下に分割 |
 | `H` / `J` / `K` / `L` | paneを5セル単位でリサイズ |
 | `z`、prefix不要の`Ctrl+z` | sidebarを残してzoom |
-| `v` / `[` | vi copy mode。`y`で`clipboard-copy`へ渡す |
+| `v` / `[` | vi copy mode。`y`で`clipboard-copy`へ渡す。`Esc`は選択中なら解除、それ以外は終了 |
 | `u` / `Ctrl+u` | scrollbackブラウザー |
 | `e` | native hints |
 | `s` / `f` | native session switcher。local / remoteのsessionを選択 |
-| `Ctrl+f` / `/` | native pane navigator。検索と画面preview |
+| `Ctrl+f` / `/` | native pane navigator。全sessionのpaneを画面カードで一覧（tmux.expose相当） |
+| `m` | focus中paneと入れ替えるpaneをfzfで選ぶ。番号はpaneタイトルの番号 |
+| `y` | themeをfzfで選ぶ。このclientだけに一時適用し、設定ファイルは変えない |
 | `F` | project picker。remoteは候補通知後に`prefix s`で選択 |
 | `Ctrl+s` | native spaceへ登録、作成、解除 |
 | `Tab` | 直前のsession。ホストをまたいで戻れる |
@@ -63,6 +65,14 @@ prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 | `:` | command palette |
 
 prefix不要の`Ctrl+h/j/k/l`はpane移動。TUIOS 0.10.1は端で反対側へwrapしない（[upstream #895](https://github.com/Gaurav-Gosain/tuios/issues/895)）。Neovimの内部splitを先に移動し、端でTUIOSへ移動を返す。tmux内では既存vim-tmux-navigatorを使う。
+
+TUIOS内のzshで`ssh`・`fzf`・`tmux`を実行している間は、`Ctrl+h/j/k/l`をそのprogramへ渡す（tmuxの`@vim_navigator_pattern`相当）。preexecでnvim navigatorの状態をactiveにし、終了後のpromptで戻す。端でのTUIOSへの返却はないため、実行中のpane移動はprefixやWindow modeで行う。コマンドラインから起動したprogramだけが対象で、`Ctrl+t`などのZLE widgetから開いたfzfは対象外。
+
+TUIOS 0.10.1未対応のため移植していないもの：
+
+- 入れ子用に外側のキーバインドをまとめて止めるモード（tmuxのF12）。leaderは2回押すとpaneへ送られる。
+- 端末タイトルへfocus中paneのcwd名を出す設定（tmuxの`set-titles`）。
+- copy modeの`Ctrl+u/d`を4行スクロールへ割り当てること。copy modeの移動キーは固定で、`Ctrl+u/d`は半画面移動。
 
 zoom中に分割すると、追加paneがzoomの下に隠れる。`prefix z`で配置全体を表示する。
 
