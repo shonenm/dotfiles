@@ -2,7 +2,7 @@
 
 > **由来:** **Upstream** pi本体・provider / **Plugin** settings.json導入package / **Configuration** settings・AGENTS.md・テーマ / **Custom** extensions / **Local patch** `scripts/patch-pi-tui.sh` / `scripts/patch-pi-cursor-agent.sh`（[区分](../../provenance.md#区分)）
 
-[pi](https://pi.dev/) はミニマルな terminal coding harness。MCPは標準機能、sub-agents / permission popup / plan mode はCLI extensions と skills で組み立てる。dotfiles では Cursor Agent を Pi 上の主推論経路にし、Pi は UI / 権限 / session / 追加 tool のホストに寄せる。[pi-cursor-agent](https://www.npmjs.com/package/pi-cursor-agent) に host overlay を当て、xAI の Grok と Codex（subagent）も使える。`enabledModels` は `openai-codex/*`、`cursor-agent/*`、`opencode-go/*`、`xai/*`。
+[pi](https://pi.dev/) はミニマルな terminal coding harness。MCPは標準機能、sub-agents / permission popup / plan mode はCLI extensions と skills で組み立てる。dotfiles では Cursor Agent を Pi 上の主推論経路にし、Pi は UI / 権限 / session / 追加 tool のホストに寄せる。[pi-cursor-agent](https://www.npmjs.com/package/pi-cursor-agent) に host overlay を当て、xAI の Grok と Codex（subagent）も使える。`enabledModels` は `openai/*`、`cursor-agent/*`、`opencode-go/*`、`xai/*`。
 
 ## 構成
 
@@ -12,7 +12,6 @@
 | pi-tui narrow terminal patch | tmux focus zoomで1列/1行になった間は描画を停止し、Piの終了とscrollを防止 | `scripts/patch-pi-tui.sh` (Local patch) |
 | pi-cursor-agent | Cursor サブスク → Pi ホスト上の Agent ランタイム | `settings.json` の `packages` → `pi install npm:pi-cursor-agent` |
 | pi-cursor-agent host overlay | 薄い host prompt、skill 索引なし、Cursor usage、Grok 4.6 mapping | `scripts/patch-pi-cursor-agent.sh` + `extensions/cursor-host.ts` + `extensions/skill-slash.ts` |
-| pi-codex-multi | 複数のCodex OAuthアカウントとrate limit時のfailover | `settings.json` の `packages` → `pi install npm:pi-codex-multi` |
 | pi-dynamic-workflows | Claude Code-style workflow / fan-out orchestration | `settings.json` の `packages` → `pi install npm:@quintinshaw/pi-dynamic-workflows` |
 | pi-loop | dynamic goal loop、cron/event re-wake loop、background monitor | `settings.json` の `packages` → `pi install npm:@trevonistrevon/pi-loop` |
 | pi-goal | `/goal` で上限付き自動継続を行う goal mode | `settings.json` の `packages` + `pi-goal.json` |
@@ -64,21 +63,21 @@ ls -la ~/.pi/agent/AGENTS.md  # dotfiles へのシンボリックリンクであ
 ```bash
 pi
 > /login
-# ChatGPT (Codex) を選択 → ブラウザで OAuth
+# OpenAI → Sign in with ChatGPT を選択 → ブラウザで OAuth (`/login openai`)
 > /login
 # Cursor Agent を選択 → ブラウザで OAuth (pi-cursor-agent)
 > /login
 # xAI を選択 → ブラウザで OAuth (Grok)
 ```
 
-認証情報は `~/.pi/credentials.json` に保存される (gitignore 済み、stow 対象外)。
+認証情報は `~/.pi/agent/auth.json` に保存される (gitignore 済み、stow 対象外)。
 
-複数のCodexアカウントを使う場合は、piを再起動してから`/subs add`、`/subs login`で追加する。`/pool create`では、prompt cacheを維持しやすいよう通常時のアカウントを固定し、rate limit時だけ残量の多いアカウントへ切り替える`quota-first`を選ぶ。
+pi 1.2 以降、旧 `openai-codex` プロバイダは「OpenAI Codex (legacy)」扱いで、ChatGPT ログインは `openai` プロバイダに保存される。モデル指定は `openai/<model>` を使う。
 
 サブスクリプションのおすすめ組合せ:
 
 - **Codex ($20 or $100/月)** をメイン
-  - `gpt-5.6-sol`, `gpt-5.6-luna`, `gpt-5.3-codex-spark` 等
+  - `gpt-5.6-sol`, `gpt-5.6-luna`, `gpt-6-luna` 等
 - **Cursor Pro/Team** — pi ハーネス内で Composer / Claude / GPT 等を使う場合
   - `/model cursor-agent/composer-2-fast` 等 (`enabledModels`: `cursor-agent/*`)
 - **xAI / Grok** — `xai/grok-4.6` 等 (`enabledModels`: `xai/*`)
@@ -137,8 +136,8 @@ subagent / workflowは利用者がdelegation、並列調査、multi-agent review
 ### 非対話モード (`-p`)
 
 ```bash
-pi --model 'openai-codex/gpt-5.6-sol:high' \
-   --fallback-models 'openai-codex/gpt-5.6-luna:medium' \
+pi --model 'openai/gpt-5.6-sol:high' \
+   --fallback-models 'openai/gpt-5.6-luna:medium' \
    -p '<instructions>'
 ```
 
@@ -164,7 +163,7 @@ dotfiles の拡張により Web Research Layer が利用可能。通常はSearXN
 
 ### モデル選択を変更する
 
-`subagent` の既定モデルは `common/pi/.pi/agent/settings.json` の `subagents.defaultModel` / `defaultThinking` / `modelScope.allow`、`workflow` は `common/pi/.pi/workflows/model-tiers.json` の全tierで管理する。両方の既定モデルは `openai-codex/gpt-5.6-luna` で、通常の呼び出しでは `model` を指定しない。変更する場合は現在のregistryに存在する `provider/model` を設定し、piを再起動する。許可リストへの追加だけではモデルは登録されず、registryへの登録も現在の認証での利用を保証しない。モデル指定なしの子起動で応答まで検証する。
+`subagent` の既定モデルは `common/pi/.pi/agent/settings.json` の `subagents.defaultModel` / `defaultThinking` / `modelScope.allow`、`workflow` は `common/pi/.pi/workflows/model-tiers.json` の全tierで管理する。両方の既定モデルは `openai/gpt-5.6-luna` で、通常の呼び出しでは `model` を指定しない。変更する場合は現在のregistryに存在する `provider/model` を設定し、piを再起動する。許可リストへの追加だけではモデルは登録されず、registryへの登録も現在の認証での利用を保証しない。モデル指定なしの子起動で応答まで検証する。
 
 pueue用の `delegate_agent` だけは独立しているため、必要なら `common/pi/.pi/agent/extensions/agent-delegation.ts` の `MODEL_TIERS` を編集する。runtimeの利用方針は `AGENTS.md` に記載する。
 
@@ -244,7 +243,7 @@ pi install npm:pi-better-openai@0.1.22
 
 - `/fast`で現在のセッションのFast要求をtoggleする。`/fast on`・`/fast off`はこの版では使えない。起動時だけ有効にする場合は `pi --fast`。
 - 初期OFF、`persistState: false`。Fast切り替えで共有の `settings.json` やStow管理の専用設定を書き換えず、次のセッションではOFFに戻る。
-- OpenAIの対応モデルへ `service_tier: "priority"` を追加する。推論レベル・prompt・認証・providerは変更しない。既定対象に `openai-codex/gpt-6.1-sol`、`gpt-6-astra`、`gpt-6-sol`、`gpt-6-luna` を追加している。Cursorなどの非対象モデルではrequestを変更しない。
+- OpenAIの対応モデルへ `service_tier: "priority"` を追加する。推論レベル・prompt・認証・providerは変更しない。既定対象に `openai/gpt-6.1-sol`、`gpt-6-astra`、`gpt-6-sol`、`gpt-6-luna` を追加している。Cursorなどの非対象モデルではrequestを変更しない。
 - 使用量取得・画像生成・petは無効。footerは `status` にして既存の `statusline.ts` を置き換えず、Fast要求中の表示だけを追加する。画像toolや `/openai-settings` 等の登録自体はpackageに残る。設定画面から無効機能を再有効化しない。
 - `.pi/extensions/pi-better-openai.json` があればproject設定が優先される。共有設定への書き込みを避ける方針を変える場合は明示的に設定を確認する。
 

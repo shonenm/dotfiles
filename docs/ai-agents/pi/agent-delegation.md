@@ -46,9 +46,9 @@
 | `worker` | 承認済み計画からの実装 | medium | `subagents.defaultModel` |
 | `oracle` | セカンドオピニオン、設計レビュー、前提検証 | high | `subagents.defaultModel` |
 
-`pi-subagents` の既定モデルは `settings.json` の `subagents.defaultModel` に設定した `openai-codex/gpt-5.6-luna`。通常の呼び出しでは `model` を渡さない。`defaultThinking` は、agent定義にthinkingがない場合の既定値として `medium` を設定する。`modelScope.allow` はこのモデル、`openai-codex/gpt-5.6-sol`、`openai-codex/gpt-6-astra` を許可し、利用者が明示した場合だけ呼び出し時にモデルを上書きする。
+`pi-subagents` の既定モデルは `settings.json` の `subagents.defaultModel` に設定した `openai/gpt-5.6-luna`。通常の呼び出しでは `model` を渡さない。`defaultThinking` は、agent定義にthinkingがない場合の既定値として `medium` を設定する。`modelScope.allow` はこのモデル、`openai/gpt-5.6-sol`、`openai/gpt-6-astra` を許可し、利用者が明示した場合だけ呼び出し時にモデルを上書きする。
 
-`modelScope.allow` と `enabledModels` はモデルを登録する設定ではない。既定モデルは現在のregistryに存在する完全修飾名（`provider/model`）で設定し、`subagent` の `action: "list", capabilities: true` と `model` なしの起動で確認する。registryへの登録だけでは、現在の認証で利用できる保証はない。モデル指定なしの子起動で実際の応答まで検証する。`openai-codex/gpt-5.4-mini` はChatGPTアカウントでの起動時に非対応エラーとなったため、既定値には使用しない。
+`modelScope.allow` と `enabledModels` はモデルを登録する設定ではない。既定モデルは現在のregistryに存在する完全修飾名（`provider/model`）で設定し、`subagent` の `action: "list", capabilities: true` と `model` なしの起動で確認する。registryへの登録だけでは、現在の認証で利用できる保証はない。モデル指定なしの子起動で実際の応答まで検証する。`openai/gpt-5.4-mini` はChatGPTアカウントでの起動時に非対応エラーとなったため、既定値には使用しない。
 
 `pi-dynamic-workflows` のモデル割り当ては別設定の `~/.pi/workflows/model-tiers.json` で管理する。`pi-subagents` の許可リスト変更では更新しない。
 
@@ -58,9 +58,9 @@
 
 | Difficulty | Primary Model | Override |
 |:----------:|---------------|----------|
-| `high` | openai-codex/gpt-5.6-sol:high | 手動オーバーライド |
-| `medium` | openai-codex/gpt-5.4-mini:medium | 手動オーバーライド |
-| `low` | openai-codex/gpt-5.3-codex-spark:off | 手動オーバーライド |
+| `high` | openai/gpt-5.6-sol:high | 手動オーバーライド |
+| `medium` | openai/gpt-6-luna:medium | 手動オーバーライド |
+| `low` | openai/gpt-6-luna:off | 手動オーバーライド |
 
 モデルは手動オーバーライド可能。
 
