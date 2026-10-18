@@ -2,7 +2,7 @@
 # ralph-schedule-exec.sh - One-shot executor for scheduled Claude TUI sessions
 #
 # Called by launchd (macOS) or at (Linux).
-# Launches Claude TUI in a tmux window and injects /ralph with the prompt file.
+# Launches Claude TUI in a tmux (or TUIOS) window and injects /ralph with the prompt file.
 set -euo pipefail
 
 # Rust binaries (ai-usage/wt/pomodoro) は ~/.local/bin。tmux run-shell / launchd /
@@ -87,6 +87,15 @@ branch="$(jq -r '.branch // empty' "$JOB_FILE")"
 base="$(jq -r '.base // empty' "$JOB_FILE")"
 model="$(jq -r '.model // "sonnet"' "$JOB_FILE")"
 prompt_file="$(jq -r '.prompt_file' "$JOB_FILE")"
+tuios_bin="$(jq -r '.tuios.bin // empty' "$JOB_FILE")"
+
+# A job scheduled inside TUIOS runs in that TUIOS session.
+if [[ -n "$tuios_bin" ]]; then
+  PATH="$(dirname "$tuios_bin"):$PATH"
+  tuios_server="$(jq -r '.tuios.server // empty' "$JOB_FILE")"
+  [[ -z "$tuios_server" ]] || export TUIOS_SERVER="$tuios_server"
+  ralph_route_tmux_to_tuios
+fi
 
 # --- Ensure tmux session ---
 

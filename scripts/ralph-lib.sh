@@ -155,6 +155,34 @@ ralph_adjust_permissions_for_fix() {
   '
 }
 
+# --- TUIOS ---
+# TUIOS の pane 内 (実 tmux の外) で実行されているか。tmux 互換が作った pane では
+# $TMUX が TUIOS の socket を指す。
+ralph_in_tuios() {
+  [[ -n "${TUIOS_SESSION:-}" ]] && [[ -z "${TMUX:-}" || "$TMUX" == */tuios-*/* ]] && command -v tuios >/dev/null
+}
+
+# 以降の tmux 呼び出しを TUIOS の tmux 互換へ送る。TUIOS_SESSION / TUIOS_PANE_ID を
+# 外すと互換層は daemon の全 session を tmux session として扱うため、crew などの
+# 専用 session を名前で作成・操作できる。互換層は session を終了しないので
+# kill-session だけ tuios 本体へ渡す。
+ralph_route_tmux_to_tuios() {
+  # shellcheck disable=SC2329 # called by the sourcing script
+  tmux() {
+    if [[ "${1:-}" == kill-session && "${2:-}" == -t ]]; then
+      tuios kill-session "$3"
+    else
+      env -u TUIOS_SESSION -u TUIOS_PANE_ID -u TMUX -u TMUX_PANE tuios tmux "$@"
+    fi
+  }
+}
+
+# TUIOS が pane を復元したとき tmux-default-shell が再実行するコマンドの置き場所。
+# tmux の @resurrect-processes 相当。pane ID は daemon の再起動後も変わらない。
+ralph_tuios_resume_file() {
+  printf '%s/ralph-crew/tuios-resume/%s\n' "${XDG_STATE_HOME:-$HOME/.local/state}" "${1:?pane id required}"
+}
+
 # --- Dual-mode: sourced ならライブラリ、実行されたら CLI (Go crew 用) ---
 # Go crew は Claude 所有スキーマの jq 操作を再実装せず、この CLI に shell-out する。
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

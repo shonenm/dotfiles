@@ -1,6 +1,6 @@
 # Ralph Crew - 定期ディスパッチ自律ワーカー管理
 
-> **由来:** **Upstream** Claude Code・tmux / **Configuration** crew定義 / **Custom** ralph-crew・daemon・dispatch処理（[区分](../../provenance.md#区分)）
+> **由来:** **Upstream** Claude Code・tmux・TUIOS tmux互換 / **Configuration** crew定義 / **Custom** ralph-crew・daemon・dispatch処理・TUIOS復元時の再開（[区分](../../provenance.md#区分)）
 
 常駐 Claude TUI ワーカーを tmux 上で管理し、設定ファイルのスケジュールに基づいてタスクを定期注入するシステム。`ralph-parallel` とは独立したライフサイクルモデル (一時的な並列実行 vs 常駐ワーカーへの定期注入)。
 
@@ -72,6 +72,20 @@ tmux new-window -d -t ralph-crew -n scheduler \
 - tmux-continuum (`@continuum-restore on`) が tmux server 再起動時に session layout を復元する。process までは復元されないため、コマンド自体も復元したい場合は `@resurrect-processes` に `'~ralph-crew daemon'` を追加する。
 
 `dispatch` は tmux セッションが存在しない場合 (再起動後・初回インストール・teardown 後) に自動で `init` 相当の処理を実行するため、daemon が動いている限りは無人運用可能。
+
+### TUIOS 内で使う
+
+TUIOS の pane (実 tmux の外) で実行すると、crew session を TUIOS に作る。tmux 呼び出しは TUIOS の tmux 互換 (`tuios tmux`) へ送り、pane の `TUIOS_SESSION` / `TUIOS_PANE_ID` を外して daemon の全 session を対象にする。worker は crew session の pane として sidebar・Inbox に表示される。
+
+- 実 tmux に同名の crew session が既にあれば、二重起動を避けてそちらを使い続ける。
+- 互換層は session を終了しないため、`teardown` の session 削除だけ `tuios kill-session` を使う。
+- daemon は TUIOS の pane で直接起動する。
+
+```bash
+ralph-crew daemon --interval 60 --config /path/to/project/.claude/crew.json
+```
+
+daemon は起動コマンドを pane ID ごとに `${XDG_STATE_HOME:-~/.local/state}/ralph-crew/tuios-resume/` に記録する。TUIOS が daemon 再起動後に session を復元すると、`tmux-default-shell` が復元された pane (`TUIOS_RESTORED=1`) でそのコマンドを再実行し、終了後は通常の shell に戻る。tmux の `@resurrect-processes` に相当する。`Ctrl-C` やエラーで止めた daemon は記録を消し、再開しない。TUIOS や OS の終了による `TERM` / `HUP` では記録を残す。
 
 ### スキル経由
 
@@ -217,7 +231,7 @@ dotfiles/
 - Notification hook: capture-pane の `❯` 検出より信頼性が高い状態検出
 - ファイル経由タスク注入: tmux send-keys のエスケープ問題を完全に回避
 - flock 排他制御: daemon tick と手動 dispatch が重複した場合の排他を保証
-- 外部 scheduler 非依存: daemon を tmux window に常駐させ、tmux-continuum でセッションを復元。launchd/cron/systemd いずれも不要で Mac/Linux/container で同じ構成で動く
+- 外部 scheduler 非依存: daemon を tmux window に常駐させ、tmux-continuum でセッションを復元。TUIOS では復元された pane で daemon を再開する。launchd/cron/systemd いずれも不要で Mac/Linux/container で同じ構成で動く
 - sliding window 再起動制限: 単純なカウンターではなく時間ベースで判定
 - `max_budget_usd` 非対応: persistent TUI では累積消費で予算到達時にフリーズするため
 - fix モードで worktree 分離: チェックは project_dir (read-only)、修正は一時 worktree で実施。ワーカー間の競合を防止

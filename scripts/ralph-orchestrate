@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ralph-orchestrate - Ralph worker lifecycle management
 #
-# Uses the `wt` binary (tools/wt) to create worktrees + tmux windows for each
+# Uses the `wt` binary (tools/wt) to create worktrees + tmux (or TUIOS) windows for each
 # worker, launches independent claude processes, and polls for completion.
 set -euo pipefail
 
@@ -15,6 +15,12 @@ export PATH="$HOME/.local/bin:$PATH"
 
 # shellcheck source=/dev/null
 source "$(dirname "$0")/ralph-lib.sh"
+
+# In TUIOS, run under its tmux shim so the script and `wt` open worker windows
+# in the current session, as they do in the current tmux session.
+if ralph_in_tuios && [[ -z "${RALPH_TUIOS_SHIM:-}" ]]; then
+  RALPH_TUIOS_SHIM=1 exec tuios tmux-shim -- "$0" "$@"
+fi
 
 readonly RALPH_RUNTIME="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/ralph"
 readonly RESULTS_DIR="$RALPH_RUNTIME/results"
