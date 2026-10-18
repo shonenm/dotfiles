@@ -235,29 +235,29 @@ url = "https://github.com/ducaale/xh/releases/download/v0.26.2/xh-v0.26.2-x86_64
 url_api = "https://api.github.com/repos/ducaale/xh/releases/assets/490411268"
 
 [[tools."aqua:fastfetch-cli/fastfetch"]]
-version = "2.69.0"
+version = "2.70.0"
 backend = "aqua:fastfetch-cli/fastfetch"
 specifiers = ["latest"]
 
 [tools."aqua:fastfetch-cli/fastfetch"."platforms.linux-arm64"]
-checksum = "sha256:843a0d4e3d604efc7cce18df1efcc09b00a1960cfea9949118b50bf999694027"
-url = "https://github.com/fastfetch-cli/fastfetch/releases/download/2.69.0/fastfetch-linux-aarch64.tar.gz"
-url_api = "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/assets/588203943"
+checksum = "sha256:fff4a127e4d76242e3bdac2a12430fc252fd6086d3eb30aee0382c3b0fece478"
+url = "https://github.com/fastfetch-cli/fastfetch/releases/download/2.70.0/fastfetch-linux-aarch64.tar.gz"
+url_api = "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/assets/639772780"
 
 [tools."aqua:fastfetch-cli/fastfetch"."platforms.linux-x64"]
-checksum = "sha256:9fe880a34de3fec88e57a69230c02fd7be0846db3f3ea9f88f2b74489a79ff55"
-url = "https://github.com/fastfetch-cli/fastfetch/releases/download/2.69.0/fastfetch-linux-amd64.tar.gz"
-url_api = "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/assets/588203754"
+checksum = "sha256:945b941b2a85e8de88b4c89714ad18ee6a7a129bb3c544bb448e9e0e027c226a"
+url = "https://github.com/fastfetch-cli/fastfetch/releases/download/2.70.0/fastfetch-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/assets/639772532"
 
 [tools."aqua:fastfetch-cli/fastfetch"."platforms.macos-arm64"]
-checksum = "sha256:3901a90b11f1823a00fea6f3c3c877e7f336465e9d9facc98fd6b8803e8fac7e"
-url = "https://github.com/fastfetch-cli/fastfetch/releases/download/2.69.0/fastfetch-macos-aarch64.tar.gz"
-url_api = "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/assets/588202979"
+checksum = "sha256:8e3e2f3583a5b43ea20c451edfe0dac7172835c5b7de97a96347168f31106558"
+url = "https://github.com/fastfetch-cli/fastfetch/releases/download/2.70.0/fastfetch-macos-universal.tar.gz"
+url_api = "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/assets/639771526"
 
 [tools."aqua:fastfetch-cli/fastfetch"."platforms.macos-x64"]
-checksum = "sha256:ec6ea2aed26df0561c9331526f1f4289f4285b11f7e3910c29f0b66766b635f1"
-url = "https://github.com/fastfetch-cli/fastfetch/releases/download/2.69.0/fastfetch-macos-amd64.tar.gz"
-url_api = "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/assets/588202958"
+checksum = "sha256:8e3e2f3583a5b43ea20c451edfe0dac7172835c5b7de97a96347168f31106558"
+url = "https://github.com/fastfetch-cli/fastfetch/releases/download/2.70.0/fastfetch-macos-universal.tar.gz"
+url_api = "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/assets/639771526"
 
 [[tools."aqua:gitleaks/gitleaks"]]
 version = "8.30.1"
@@ -664,6 +664,16 @@ checksum = "sha256:d1a63808639af8193db9c9b3440b24e0ded68a82dcbaa5981e1d571b3ecd3
 url = "https://github.com/Gaurav-Gosain/tuios/releases/download/v0.10.0/tuios_0.10.0_Linux_x86_64.tar.gz"
 url_api = "https://api.github.com/repos/Gaurav-Gosain/tuios/releases/assets/646364859"
 
+[tools."github:Gaurav-Gosain/tuios"."platforms.macos-arm64"]
+checksum = "sha256:3aacbdc3a45c46cdb9f7c052e1cc26de52b01ec82d44d9a6a59163d91fe71df8"
+url = "https://github.com/Gaurav-Gosain/tuios/releases/download/v0.10.0/tuios_0.10.0_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/Gaurav-Gosain/tuios/releases/assets/646364825"
+
+[tools."github:Gaurav-Gosain/tuios"."platforms.macos-x64"]
+checksum = "sha256:befd4a1112641dbdda243a6a13eee6f080e430664cd89c41459143571bdc6346"
+url = "https://github.com/Gaurav-Gosain/tuios/releases/download/v0.10.0/tuios_0.10.0_Darwin_x86_64.tar.gz"
+url_api = "https://api.github.com/repos/Gaurav-Gosain/tuios/releases/assets/646364544"
+
 [[tools."github:Mikescher/better-docker-ps"]]
 version = "1.18"
 backend = "github:Mikescher/better-docker-ps"
@@ -886,32 +896,32 @@ url = "https://github.com/ouch-org/ouch/releases/download/0.8.3/ouch-x86_64-appl
 url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/561447589"
 
 [[tools."github:shonenm/live-pr"]]
-version = "0.12.0"
+version = "0.12.1"
 backend = "github:shonenm/live-pr"
 specifiers = ["latest"]
 
 [tools."github:shonenm/live-pr"."platforms.linux-arm64"]
-checksum = "sha256:038d7d281daf9d037b2edf0438926385a0f68d203f73c7540f9e86e043deb8ed"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.12.0/live-pr_0.12.0_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/649583055"
+checksum = "sha256:5708839dd299b316c9ced2c0c25c251d69b533374fa7fecc5e57337cf785fe2d"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.12.1/live-pr_0.12.1_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/652531418"
 provenance = "github-attestations"
 
 [tools."github:shonenm/live-pr"."platforms.linux-x64"]
-checksum = "sha256:8d4f930cb99b5d617cd8a32c772529e086770f8e3f38b604f3c478060b408c15"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.12.0/live-pr_0.12.0_Linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/649583062"
+checksum = "sha256:248959f98f025c5e958a6b376213a6cbf3f5c4ad09fa040e1cee714f818eb3f1"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.12.1/live-pr_0.12.1_Linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/652531417"
 provenance = "github-attestations"
 
 [tools."github:shonenm/live-pr"."platforms.macos-arm64"]
-checksum = "sha256:22fff00b95b8793dbfd71fa8929c839308932f566080324b57e04dc354c1e959"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.12.0/live-pr_0.12.0_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/649583056"
+checksum = "sha256:57d92d6e21cd0ec19f9a2c373d8521fda8ddc9d24a47f5a72eebc5aed51ecb34"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.12.1/live-pr_0.12.1_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/652531421"
 provenance = "github-attestations"
 
 [tools."github:shonenm/live-pr"."platforms.macos-x64"]
-checksum = "sha256:0d9162d21d9954326913fe8c6df21d98fc21c4215274d8a8aa98ed82ec1897e0"
-url = "https://github.com/shonenm/live-pr/releases/download/v0.12.0/live-pr_0.12.0_Darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/649583063"
+checksum = "sha256:1baf67357e3e7d8afc4bb26443682245e4a92a71d5b5bd05860e5bb2f547c66e"
+url = "https://github.com/shonenm/live-pr/releases/download/v0.12.1/live-pr_0.12.1_Darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/652531420"
 provenance = "github-attestations"
 
 [[tools.go]]
@@ -957,14 +967,14 @@ checksum = "sha256:495e3f273c645f3c4677d438304cdfc701729ea5dec5728f5c8e76a2dece4
 url = "https://nodejs.org/dist/v24.22.0/node-v24.22.0-darwin-x64.tar.gz"
 
 [[tools."npm:@xai-official/grok"]]
-version = "1.0.58"
-aube = { path = ".mise/locks/npm-xai-official-grok/1.0.58", digest = "sha256:4787229154479c6dc38b36deade0701019b319daec6f98ff99dda2374a371f08" }
+version = "1.0.60"
+aube = { path = ".mise/locks/npm-xai-official-grok/1.0.60", digest = "sha256:d0497db9c14955ef56a9365d1206801ddb5f3e6db4b9e2f119e5619260de07ff" }
 backend = "npm:@xai-official/grok"
 specifiers = ["latest"]
 
 [[tools."npm:cspell"]]
-version = "10.3.6"
-aube = { path = ".mise/locks/npm-cspell/10.3.6", digest = "sha256:9d08c20d5c7d571f33d78320196651f328f8f6135e118148a25ae8926bb1bd2d" }
+version = "10.4.0"
+aube = { path = ".mise/locks/npm-cspell/10.4.0", digest = "sha256:6c1ead3d9382496b8cb710a4a35d467430608da93fbcb88cf2594c4892ed6cc5" }
 backend = "npm:cspell"
 specifiers = ["latest"]
 
