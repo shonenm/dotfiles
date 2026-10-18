@@ -89,6 +89,48 @@ class SessionTests(unittest.TestCase):
             tui.space()
         run.assert_called_once_with("tuios", "set-session-space", "clear")
 
+    def test_space_navigation_wraps_and_uses_native_activity_and_client_identity(self):
+        rows = [
+            {"name": "unfiled", "last_active": 1},
+            {"name": "renamed-a", "space": "code", "last_active": 2},
+            {"name": "code-b", "space": "code", "last_active": 4},
+            {"name": "ops-b", "space": "ops", "last_active": 6},
+            {"name": "ops-a", "space": "ops", "last_active": 6},
+        ]
+        for current, direction, target in (("renamed-a", "next", "ops-a"), ("renamed-a", "prev", "unfiled"), ("ops-b", "next", "unfiled"), ("unfiled", "next", "code-b"), ("unfiled", "prev", "ops-a")):
+            clients = [{"pid": 42, "session": current, "client_id": "own"}, {"pid": 43, "session": current, "client_id": "other"}, {"pid": 42, "session": "", "client_id": "cache"}]
+            result = subprocess.CompletedProcess([], 0, json.dumps(clients))
+            with self.subTest(current=current, direction=direction), patch.dict(os.environ, TUIOS_SESSION="stale-name"), patch.object(tui, "sessions", return_value=rows), patch.object(tui, "run", return_value=result) as run:
+                tui.navigate_space(direction, 42)
+            self.assertEqual(run.call_count, 2)
+            run.assert_called_with("tuios", "switch-session", "--client", "own", target)
+
+    def test_space_navigation_does_not_switch_another_client_while_remote(self):
+        clients = [{"pid": 42, "session": "", "client_id": "remote-stream"}, {"pid": 43, "session": "work", "client_id": "other"}]
+        result = subprocess.CompletedProcess([], 0, json.dumps(clients))
+        with patch.object(tui, "sessions", side_effect=AssertionError("do not navigate another client's sessions")), patch.object(tui, "run", return_value=result) as run:
+            tui.navigate_space("next", 42)
+        run.assert_called_once_with("tuios", "list-clients", "--json", capture_output=True, text=True)
+
+    def test_space_navigation_leaves_a_single_space_unchanged(self):
+        clients = [{"pid": 42, "session": "one", "client_id": "own"}]
+        result = subprocess.CompletedProcess([], 0, json.dumps(clients))
+        with patch.object(tui, "sessions", return_value=[{"name": "one", "space": "code"}, {"name": "two", "space": "code"}]), patch.object(tui, "run", return_value=result) as run:
+            tui.navigate_space("next", 42)
+        self.assertEqual(run.call_count, 1)
+
+    def test_space_navigation_refuses_ambiguous_client_identity(self):
+        clients = [{"pid": 42, "session": "one"}, {"pid": 42, "session": "two"}]
+        result = subprocess.CompletedProcess([], 0, json.dumps(clients))
+        with patch.object(tui, "run", return_value=result):
+            with self.assertRaisesRegex(RuntimeError, "one attached session"):
+                tui.navigate_space("next", 42)
+
+    def test_space_navigation_command_passes_direction_and_client_pid(self):
+        with patch.object(sys, "argv", ["tui", "space-nav", "next", "42"]), patch.object(tui, "navigate_space") as navigate:
+            self.assertEqual(tui.main(), 0)
+        navigate.assert_called_once_with("next", 42)
+
     def test_full_workspace_does_not_type_into_existing_program(self):
         full = subprocess.CompletedProcess([], 0, json.dumps({"workspaces": [{"window_count": 1}]}))
         with patch.object(tui, "run", return_value=full) as run:
@@ -176,7 +218,9 @@ class ConfigTests(unittest.TestCase):
         for key, action in {"h": "prev_session", "l": "next_session"}.items():
             self.assertEqual(bindings["global", f"ctrl+alt+{key}"], action)
             self.assertEqual(bindings["global", f"alt+{key}"], action)
-        for key in ("ctrl+alt+j", "ctrl+alt+k", "alt+j", "alt+k", "ctrl+p"):
+        self.assertEqual(bindings["global", "ctrl+alt+j"], "command:next-space")
+        self.assertEqual(bindings["global", "ctrl+alt+k"], "command:previous-space")
+        for key in ("alt+j", "alt+k", "ctrl+p"):
             self.assertNotIn(("global", key), bindings)
         self.assertEqual(bindings["prefix", "s"], "prefix_session_switcher")
         self.assertEqual(bindings["prefix", "tab"], "last_session")
@@ -192,11 +236,17 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config["appearance"]["auto_enter_terminal_on_focus"], "off")
         for entry in config["keybindings"]["command"]:
             self.assertNotIn("tui nav ", entry.get("command", ""))
-            self.assertNotIn(entry["key"], [f"{modifier}{key}" for modifier in ("alt+", "ctrl+alt+") for key in "hjkl"])
+            if entry["key"] in [f"{modifier}{key}" for modifier in ("alt+", "ctrl+alt+") for key in "hjkl"]:
+                self.assertEqual(entry["type"], "shell", entry["name"])
             if entry["name"] in ("project-root", "projects", "session-space"):
                 self.assertEqual(entry["type"], "popup", entry["name"])
         space = next(entry for entry in config["keybindings"]["command"] if entry["name"] == "session-space")
         self.assertIn("scripts/tui space'", space["command"])
+        for name, direction in (("next-space", "next"), ("previous-space", "prev")):
+            command = next(entry for entry in config["keybindings"]["command"] if entry["name"] == name)
+            self.assertEqual(command["type"], "shell")
+            self.assertIn("client_pid=$PPID;", command["command"])
+            self.assertIn(f"space-nav {direction} $client_pid", command["command"])
         hosts = tomllib.loads((ROOT / "mac/tuios/.config/tuios/config.d/20-hosts.toml").read_text())["hosts"]
         self.assertEqual(hosts["ailab"]["addr"], "ailab")
         self.assertEqual(hosts["pi-500"]["addr"], "pi-500")
