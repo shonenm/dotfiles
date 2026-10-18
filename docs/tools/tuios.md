@@ -49,7 +49,7 @@ prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 | `s` / `f` | native session switcher。local / remoteのsessionを選択 |
 | `Ctrl+f` / `/` | native pane navigator。検索と画面preview |
 | `F` | project picker。remoteは候補通知後に`prefix s`で選択 |
-| `Ctrl+g` | native spaceへ登録、作成、解除 |
+| `Ctrl+s` | native spaceへ登録、作成、解除 |
 | `Tab` | 直前のsession。ホストをまたいで戻れる |
 | `a` / `i`、続けて`Tab` | Inboxから全agentのAgents viewへ |
 | `A` / `b` | session / agent sidebar |
@@ -103,7 +103,7 @@ TUIOS内のshellの`Alt+s`はproject picker。通常のshell・tmux内は既存s
 
 spaceは関連するsessionをまとめるTUIOS標準の分類名。所属・保存・sidebar表示をnativeで管理し、独自のgroupやspace巡回は持たない。既存sessionのspace所属はそのまま維持する。
 
-- **所属変更・作成・解除**：`prefix Ctrl+g`のpicker。shellからは`tui space`。
+- **所属変更・作成・解除**：`prefix Ctrl+s`のpicker。shellからは`tui space`。
 - **別spaceのsessionへ移動**：`prefix Esc`でWindow modeへ入り、`s`でsidebarへfocus。`j/k`または矢印で目的のspace内のsessionを選び、`Enter`で移動する。
 - **名前からsessionを選択**：`prefix s`の標準switcher。ホストをまたぐ移動もここへまとめる。
 

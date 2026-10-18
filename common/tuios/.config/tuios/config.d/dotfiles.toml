@@ -145,7 +145,7 @@ description = "Project root session"
 
 [[keybindings.command]]
 name = "session-space"
-key = "prefix+ctrl+g"
+key = "prefix+ctrl+s"
 type = "popup"
 command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui space'"
 description = "Session space"

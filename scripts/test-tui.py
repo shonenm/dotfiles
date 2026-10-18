@@ -182,7 +182,8 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(bindings["prefix", "tab"], "last_session")
         self.assertEqual(bindings["prefix", "esc"], "prefix_exit_mode")
         self.assertEqual(bindings["window", "s"], "focus_sidebar")
-        self.assertEqual(bindings["prefix", "ctrl+g"], "command:session-space")
+        self.assertEqual(bindings["prefix", "ctrl+s"], "command:session-space")
+        self.assertNotIn(("prefix", "ctrl+g"), bindings)
 
     def test_restore_project_trust_and_remote_action_placement(self):
         config = tomllib.loads((ROOT / "common/tuios/.config/tuios/config.d/dotfiles.toml").read_text())
