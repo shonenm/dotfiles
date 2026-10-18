@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TUIOS session/project picker and session-space navigation. tmux is untouched."""
+"""TUIOS launcher, project picker and native-space settings."""
 
 import argparse
 import hashlib
@@ -41,56 +41,51 @@ def session_name(path):
     return f"{name}-{hashlib.sha256(path.encode()).hexdigest()[:8]}"
 
 
+def switch_session(*args):
+    result = subprocess.run(["tuios", "switch-session", *args], capture_output=True, text=True)
+    if result.returncode:
+        # A linked host cannot switch the local client's view. Leave that
+        # choice to the native picker, which receives the user's own key.
+        if "refused: switch_session came from host " in result.stderr:
+            print(f"Session {args[-1]}: Ctrl+Space s で選択", flush=True)
+            if sys.stdin.isatty():
+                try:
+                    input("Enterで閉じる: ")
+                except (EOFError, KeyboardInterrupt):
+                    pass
+            return
+        raise RuntimeError(result.stderr.strip() or f"tuios switch-session exited {result.returncode}")
+
+
 def connect(name, cwd=None):
-    if not any(row["name"] == name for row in sessions()):
-        run("tuios", "new", name, "--detach", "--cwd", str(cwd or Path.cwd()))
     if os.environ.get("TUIOS_SESSION"):
-        run("tuios", "switch-session", name)
+        args = ["--create"]
+        if cwd is not None:
+            args.extend(["--cwd", str(cwd)])
+        switch_session(*args, name)
     else:
-        os.execvp("tuios", ["tuios", "attach", name])
+        if cwd is not None:
+            os.chdir(cwd)
+        os.execvp("tuios", ["tuios", "attach", "--create", name])
 
 
 def pick():
-    rows = sessions()
-    choices = {f"session:{r['name']}": (r["name"], None) for r in rows}
-    labels = [f"session:{r['name']}\t[{r.get('space') or '-'}] {r['name']}" for r in rows]
     paths = [str(Path.home()), str(Path.home() / "dotfiles")]
     for command in (("ghq", "list", "--full-path"), ("zoxide", "query", "--list")):
         if not shutil.which(command[0]):
             continue
         paths.extend(run(*command, capture_output=True, text=True).stdout.splitlines())
-    for path in dict.fromkeys(paths):
-        if Path(path).is_dir():
-            key = f"path:{path}"
-            choices[key] = (session_name(path), path)
-            labels.append(f"{key}\t{path}")
-    selected = choose(labels, "session/project")
-    if selected:
-        connect(*choices[selected])
+    paths = list(dict.fromkeys(path for path in paths if Path(path).is_dir()))
+    selected = choose([f"{index}\t{path}" for index, path in enumerate(paths)], "project")
+    if selected is not None:
+        path = paths[int(selected)]
+        connect(session_name(path), path)
 
 
-def navigate(direction):
-    rows = sorted(sessions(), key=lambda row: (row.get("space", ""), row["name"]))
-    current = next((row for row in rows if row["name"] == os.environ.get("TUIOS_SESSION")), None)
-    if not current:
-        raise RuntimeError("run navigation inside a TUIOS session")
-    space = current.get("space", "")
-    delta = -1 if direction.startswith("prev") else 1
-    if direction.endswith("-group"):
-        groups = list(dict.fromkeys(row.get("space", "") for row in rows))
-        target = groups[(groups.index(space) + delta) % len(groups)]
-        candidates = [row for row in rows if row.get("space", "") == target]
-        destination = max(candidates, key=lambda row: row["last_active"])
-    else:
-        candidates = [row for row in rows if row.get("space", "") == space]
-        destination = candidates[(candidates.index(current) + delta) % len(candidates)]
-    run("tuios", "switch-session", destination["name"])
-
-
-def group():
+def space():
     rows = sessions()
-    groups = sorted({r.get("space", "") for r in rows} - {""})
-    chosen = choose(["new\tCreate space", "clear\tUngroup session"] + [f"group:{g}\t{g}" for g in groups], "space")
+    spaces = sorted({r.get("space", "") for r in rows} - {""})
+    chosen = choose(["new\tCreate space", "clear\tRemove from space"] + [f"space:{name}\t{name}" for name in spaces], "space")
     if not chosen:
         return
     if chosen == "clear":
@@ -101,7 +96,7 @@ def group():
             return
         args = [name]
     else:
-        args = [chosen.removeprefix("group:")]
+        args = [chosen.removeprefix("space:")]
     run("tuios", "set-session-space", *args)
 
 
@@ -122,23 +117,24 @@ def dev():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command")
-    for name in ("pick", "group", "root", "dev"):
+    for name in ("pick", "space", "root", "dev"):
         sub.add_parser(name)
-    nav = sub.add_parser("nav")
-    nav.add_argument("direction", choices=("next", "prev", "next-group", "prev-group"))
     attach = sub.add_parser("attach")
     attach.add_argument("name", nargs="?", default="main")
     attach.add_argument("--cwd", type=Path, default=Path.cwd())
     args = parser.parse_args()
     try:
-        if args.command in (None, "attach"):
-            connect(getattr(args, "name", "main"), getattr(args, "cwd", None))
-        elif args.command == "nav":
-            navigate(args.direction)
+        if args.command is None:
+            if os.environ.get("TUIOS_SESSION"):
+                run("tuios", "run-command", "prefix_session_switcher")
+            else:
+                os.execvp("tuios", ["tuios"])
+        elif args.command == "attach":
+            connect(args.name, args.cwd)
         elif args.command == "pick":
             pick()
-        elif args.command == "group":
-            group()
+        elif args.command == "space":
+            space()
         elif args.command == "root":
             root()
         elif args.command == "dev":
