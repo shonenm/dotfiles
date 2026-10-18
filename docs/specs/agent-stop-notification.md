@@ -65,12 +65,13 @@ runtime namespaceは`${TMUX%%,*}`のchecksumを用いるため、複数tmux serv
 
 ## Remote / container
 
-remote状態は`${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status/`へatomic publishする。JSONには`tool`、`status`、`workspace`、`tmux_session`、`tmux_window_index`、`updated`を含む。consumerはprovider/workspaceごとの最新recordをstatus filterより先に確定し、`none`をtombstoneとして扱う。
+remote状態は`${DOTFILES_SHARED_DIR:-$HOME/.cache}/claude/status/`へatomic publishする。JSONには`tool`、`status`、`workspace`、`tmux_session`、`tmux_window_index`、`updated`を含む。TUIOS paneでは`tmux_session`が`tuios:<session>`、`tmux_window_index`がpane IDになる。consumerはprovider/workspaceごとの最新recordをstatus filterより先に確定し、`none`をtombstoneとして扱う。
 
 ## 検証
 
 ```bash
 scripts/test-tmux-agent-status.sh
+scripts/test-tuios-notify-focus.sh
 shellcheck -S warning -x scripts/tmux-agent-*.sh scripts/tmux-claude-pane.sh scripts/ai-notify.sh
 scripts/check-markdown-links.py
 scripts/check-package-duplication.sh

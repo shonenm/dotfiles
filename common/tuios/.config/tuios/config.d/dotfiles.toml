@@ -44,6 +44,11 @@ window_size = "latest"
 persist_scrollback = true
 resume_agents = "ask"
 
+# tmux の session-window-changed と同じく、focus した pane の AI 通知を消す。
+# daemon が実行するため、変更は tuios kill-server 後に反映される。
+[hooks]
+after-focus-change = ["~/dotfiles/scripts/tmux-claude-focus.sh"]
+
 [tape]
 autorun = "ask"
 
