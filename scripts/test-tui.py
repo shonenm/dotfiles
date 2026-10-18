@@ -146,6 +146,20 @@ class SessionTests(unittest.TestCase):
             "  \033[90m└ live\033[0m",
         ])
 
+    def test_rail_marks_working_agent_without_recent_report_as_hang(self):
+        panes = [
+            {"session": "work", "focused": True, "cwd": "", "state": "working", "harness_id": "claude-code", "evidence_age_ms": 120_000},
+            {"session": "work", "focused": False, "cwd": "", "state": "working", "harness_id": "pi", "evidence_age_ms": 119_999},
+            {"session": "work", "focused": False, "cwd": "", "state": "idle", "harness_id": "pi", "evidence_age_ms": 999_999},
+            {"session": "work", "focused": False, "cwd": "", "state": "working", "harness_id": "pi", "evidence_age_ms": None},
+        ]
+        listing = subprocess.CompletedProcess([], 0, json.dumps({"agents": panes}))
+        with patch.object(tui, "sessions", return_value=[{"name": "work"}]), patch.object(tui, "run", return_value=listing), patch("sys.stdout", new_callable=io.StringIO) as out:
+            tui.rail()
+        self.assertEqual(out.getvalue().splitlines(), [
+            "work 4 \033[35m●\033[0m\033[33m●\033[0m\033[90m●\033[0m\033[33m●\033[0m",
+        ])
+
     def test_space_navigation_command_passes_direction_and_client_pid(self):
         with patch.object(sys, "argv", ["tui", "space-nav", "next", "42"]), patch.object(tui, "navigate_space") as navigate:
             self.assertEqual(tui.main(), 0)
