@@ -13,7 +13,7 @@ motion = "none"
 scrollback_lines = 5000
 nvim_navigation = true
 new_window_inherit_cwd = true
-auto_enter_terminal_on_focus = "all"
+auto_enter_terminal_on_focus = "off"
 focus_follows_mouse = false
 dockbar_position = "bottom"
 shared_borders = true
@@ -109,6 +109,10 @@ prefix_mail = []
 [keybindings.global]
 command_palette = []
 launcher = []
+prev_session = ["ctrl+alt+h", "alt+h"]
+next_session = ["ctrl+alt+l", "alt+l"]
+prefix_session_switcher = ["ctrl+alt+j", "alt+j"]
+last_session = ["ctrl+alt+k", "alt+k"]
 
 [keybindings.layout]
 preselect_left = []
@@ -147,55 +151,6 @@ key = "prefix+ctrl+g"
 type = "popup"
 command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui group'"
 description = "Session space"
-
-[[keybindings.command]]
-name = "previous-session"
-key = "alt+h"
-type = "popup"
-command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav prev'"
-
-[[keybindings.command]]
-name = "next-session"
-key = "alt+l"
-type = "popup"
-command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav next'"
-
-[[keybindings.command]]
-name = "next-space"
-key = "alt+j"
-type = "popup"
-command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav next-group'"
-
-[[keybindings.command]]
-name = "previous-space"
-key = "alt+k"
-type = "popup"
-command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav prev-group'"
-
-# popup は表示中sessionのホストで実行される。shell はローカル実行。
-[[keybindings.command]]
-name = "previous-session-ctrl-alt"
-key = "ctrl+alt+h"
-type = "popup"
-command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav prev'"
-
-[[keybindings.command]]
-name = "next-session-ctrl-alt"
-key = "ctrl+alt+l"
-type = "popup"
-command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav next'"
-
-[[keybindings.command]]
-name = "next-space-ctrl-alt"
-key = "ctrl+alt+j"
-type = "popup"
-command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav next-group'"
-
-[[keybindings.command]]
-name = "previous-space-ctrl-alt"
-key = "ctrl+alt+k"
-type = "popup"
-command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav prev-group'"
 
 [[keybindings.command]]
 name = "lazygit"
