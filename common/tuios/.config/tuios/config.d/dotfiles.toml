@@ -150,6 +150,21 @@ type = "popup"
 command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui space'"
 description = "Session space"
 
+# shell はclientのマシンでpopupなしに実行する。親PIDで対象clientを特定する。
+[[keybindings.command]]
+name = "next-space"
+key = "ctrl+alt+j"
+type = "shell"
+command = "client_pid=$PPID; exec ~/dotfiles/scripts/tmux-default-shell -lc \"~/dotfiles/scripts/tui space-nav next $client_pid\""
+description = "Next local space"
+
+[[keybindings.command]]
+name = "previous-space"
+key = "ctrl+alt+k"
+type = "shell"
+command = "client_pid=$PPID; exec ~/dotfiles/scripts/tmux-default-shell -lc \"~/dotfiles/scripts/tui space-nav prev $client_pid\""
+description = "Previous local space"
+
 [[keybindings.command]]
 name = "lazygit"
 key = "prefix+g"
