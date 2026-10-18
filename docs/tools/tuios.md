@@ -1,6 +1,6 @@
 # TUIOS
 
-> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space設定と巡回・sidebar overview・theme / pane入替picker・Neovim navigation・ssh/fzf/tmuxへのキー委譲（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space設定と巡回・sidebar overview・theme / pane入替picker・dock status・Neovim navigation・ssh/fzf/tmuxへのキー委譲（[区分](../provenance.md#区分)）
 
 TUIOS 0.10.1の標準機能を中心に、local / remote session、layout、AI表示、復元を管理する。既存tmuxは引き続き利用できる。
 
@@ -165,6 +165,7 @@ tmuxの`pane-border-status`に合わせる。
 - focus外paneの`dim_unfocused`は使わない。TUIOS 0.10.1はtheme設定時に既定背景のセルへthemeの背景色を塗るため、背景透過が消える。代わりに枠線をtokyonightの青系で色分けする（focus `#7aa2f7`、focus外 `#3b4261`）。
 - sidebarの`overview`は`tui rail`の出力で、sessionごとのagent数・状態色（黄=作業中、赤=要応答/エラー、緑=完了、紫=hang、灰=待機）と、focus中paneのcwdのbranchを3秒ごとに表示する。localのsessionのみが対象。`tuios ls`のbranchはsession作成時の値なので使わない。
 - hangはtmuxの`tmux-agent-hang-watch.sh`相当。`working`のまま`AGENT_HANG_THRESHOLD`秒（既定120）hookのreportがないpaneを紫で示す。hookはtool呼び出しごとに`working`を再reportし`evidence_age_ms`を更新するため、これをheartbeatとして使う。画面出力は生存扱いにしない。常駐watcherは置かず、railの3秒周期で判定する。表示はoverviewのみで、TUIOS標準のrail glyph・Inbox・通知は`working`のまま（hook経由のagentの無応答検知はTUIOS 0.10.1未対応）。1つのtoolが長時間動く間やtool呼び出しのない長い思考中も同じくhangと推定される。
+- dockの右側はtmuxの`status-right`相当。CPU・RAM（標準）、GPU、`/`の使用率、focus中paneのbranch、`月/日 時:分`の時計、ホスト名を並べる。GPU・ストレージ・branchは`tui dock gpu|storage|branch`の出力で、tmuxと同じ閾値色を使う。GPUはmacOSの`macmon`かLinuxの`nvidia-smi`があるときだけ表示する。dock commandにはfocus中paneのcwdが渡らないため、branchは`tuios list-agents -s $TUIOS_SESSION`のfocus中paneから引く。remote sessionのbranchはTUIOS 0.10.1未対応で表示しない。mode・prefix・copyの表示はdock標準のpillを使う。
 
 ## AI表示
 

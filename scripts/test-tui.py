@@ -148,6 +148,25 @@ class SessionTests(unittest.TestCase):
         choose.assert_called_once_with(["a\t1: editor"], "swap")
         run.assert_called_with("/herdr", "pane", "swap", "--source-pane", "b", "--target-pane", "a")
 
+    def test_dock_branch_follows_focused_pane_of_client_session(self):
+        with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as plain:
+            subprocess.run(["git", "init", "-q", "-b", "live", repo], check=True)
+            panes = [{"focused": False, "cwd": plain}, {"focused": True, "cwd": repo}]
+            listing = subprocess.CompletedProcess([], 0, json.dumps({"agents": panes}))
+            with patch.dict(os.environ, TUIOS_SESSION="work"), patch.object(tui, "run", return_value=listing) as run, patch("sys.stdout", new_callable=io.StringIO) as out:
+                tui.dock("branch")
+        run.assert_called_once_with("tuios", "list-agents", "--all", "-s", "work", "--json", capture_output=True, text=True)
+        self.assertEqual(out.getvalue(), " live\n")
+
+    def test_dock_hides_gpu_without_a_reader_and_colours_storage_by_threshold(self):
+        with patch.object(tui, "gpu_percent", return_value=None), patch("sys.stdout", new_callable=io.StringIO) as out:
+            tui.dock("gpu")
+        self.assertEqual(out.getvalue(), "")
+        usage = shutil._ntuple_diskusage(100, 92, 8)
+        with patch.object(tui.shutil, "disk_usage", return_value=usage), patch("sys.stdout", new_callable=io.StringIO) as out:
+            tui.dock("storage")
+        self.assertEqual(out.getvalue(), " \033[38;2;224;175;104m92%\033[0m\n")
+
     def test_rail_counts_agents_and_reads_live_branch_of_focused_pane(self):
         with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as plain:
             subprocess.run(["git", "init", "-q", "-b", "live", repo], check=True)
