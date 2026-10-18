@@ -72,29 +72,6 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(choose.call_args.args[1], "project")
             connect.assert_called_once_with(tui.session_name(project), str(project))
 
-    def test_navigation_stays_in_space_and_wraps(self):
-        rows = [
-            {"name": "a", "space": "code", "last_active": 1},
-            {"name": "b", "space": "code", "last_active": 2},
-            {"name": "c", "space": "ops", "last_active": 3},
-            {"name": "d", "space": "ops", "last_active": 4},
-        ]
-        with patch.dict(os.environ, TUIOS_SESSION="old-name"), patch.object(tui, "sessions", return_value=rows), patch.object(tui, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps({"session_name": "a"}))), patch.object(tui, "switch_session") as switch:
-            tui.navigate("prev")
-            self.assertEqual(switch.call_args.args, ("b",))
-            tui.navigate("next-group")
-            self.assertEqual(switch.call_args.args, ("d",))
-
-    def test_space_navigation_breaks_native_second_resolution_ties_by_name(self):
-        rows = [
-            {"name": "b", "space": "code", "last_active": 2},
-            {"name": "a", "space": "code", "last_active": 2},
-            {"name": "ops", "space": "ops", "last_active": 3},
-        ]
-        with patch.object(tui, "sessions", return_value=rows), patch.object(tui, "run", return_value=subprocess.CompletedProcess([], 0, json.dumps({"session_name": "ops"}))), patch.object(tui, "switch_session") as switch:
-            tui.navigate("prev-group")
-        switch.assert_called_once_with("a")
-
     def test_native_space_named_clear_is_not_a_menu_action(self):
         with patch.object(tui, "sessions", return_value=[{"space": "clear"}]), patch.object(tui, "choose", return_value="group:clear"), patch.object(tui, "run") as run:
             tui.group()
@@ -189,16 +166,20 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(bindings["prefix", "i"], "prefix_inbox")
         self.assertEqual(bindings["prefix.layout", "s"], "layout_prefix_save")
         self.assertEqual(bindings["prefix.layout", "l"], "layout_prefix_load")
-        for key, action in {"h": "previous-session", "l": "next-session", "j": "next-space", "k": "previous-space"}.items():
-            self.assertEqual(bindings["global", f"ctrl+alt+{key}"], f"command:{action}-ctrl-alt")
+        for key, action in {"h": "prev_session", "l": "next_session", "j": "prefix_session_switcher", "k": "last_session"}.items():
+            self.assertEqual(bindings["global", f"ctrl+alt+{key}"], action)
+            self.assertEqual(bindings["global", f"alt+{key}"], action)
         self.assertNotIn(("global", "ctrl+p"), bindings)
 
     def test_restore_project_trust_and_remote_action_placement(self):
         config = tomllib.loads((ROOT / "common/tuios/.config/tuios/config.d/dotfiles.toml").read_text())
         self.assertEqual(config["daemon"]["resume_agents"], "ask")
         self.assertEqual(config["tape"]["autorun"], "ask")
+        self.assertEqual(config["appearance"]["auto_enter_terminal_on_focus"], "off")
         for entry in config["keybindings"]["command"]:
-            if "tui nav " in entry.get("command", "") or entry["name"] in ("project-root", "projects", "session-space"):
+            self.assertNotIn("tui nav ", entry.get("command", ""))
+            self.assertNotIn(entry["key"], [f"{modifier}{key}" for modifier in ("alt+", "ctrl+alt+") for key in "hjkl"])
+            if entry["name"] in ("project-root", "projects", "session-space"):
                 self.assertEqual(entry["type"], "popup", entry["name"])
         hosts = tomllib.loads((ROOT / "mac/tuios/.config/tuios/config.d/20-hosts.toml").read_text())["hosts"]
         self.assertEqual(hosts["ailab"]["addr"], "ailab")

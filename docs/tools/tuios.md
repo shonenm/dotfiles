@@ -1,6 +1,6 @@
 # TUIOS
 
-> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space巡回・Neovim navigation（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space設定・Neovim navigation（[区分](../provenance.md#区分)）
 
 TUIOS 0.10.1の標準機能を中心に、local / remote session、layout、AI表示、復元を管理する。既存tmuxは引き続き利用できる。
 
@@ -16,6 +16,8 @@ tui pick                     # ghq / zoxideからプロジェクトを選択
 ```
 
 `tui`をTUIOS内で実行するとnative session switcherを開く。新しいGhosttyウィンドウでは、そのまま`tui`で起動する。
+
+設定を反映するには`prefix d`でdetachして`tui`で再接続する。daemonとsession内のprogramは維持される。
 
 `install.sh`は次を設定する。
 
@@ -48,7 +50,7 @@ prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 | `Ctrl+f` / `/` | native pane navigator。検索と画面preview |
 | `F` | project picker。remoteは候補通知後に`prefix s`で選択 |
 | `Ctrl+g` | native spaceへ登録、作成、解除 |
-| `Tab` | 直前のsession |
+| `Tab` | 直前のsession。ホストをまたいで戻れる |
 | `a` / `i`、続けて`Tab` | Inboxから全agentのAgents viewへ |
 | `A` / `b` | session / agent sidebar |
 | `Ctrl+a` | Agents設定。integrationの確認・更新 |
@@ -64,9 +66,36 @@ prefix不要の`Ctrl+h/j/k/l`はpane移動。Neovimの内部splitを先に移動
 
 zoom中に分割すると、追加paneがzoomの下に隠れる。`prefix z`で配置全体を表示する。
 
+## Window管理モード
+
+`prefix Esc`または`Alt+Esc`でWindow modeへ入る。TUIOSのwindowはterminal paneと同じもので、Ghostty内のwindow配置を操作するモードになる。キーボードで別paneへ移動してもWindow modeを維持し、`Enter` / `i`で入力を始める。
+
+| Window mode中のキー | 操作 |
+|---|---|
+| `Tab` / `Shift+Tab` | 次 / 前のwindowを選択 |
+| `h/j/k/l` | その方向のwindowへfocus。自由配置ではsnap |
+| `n` | 新しいwindowを開く |
+| `N` | ホストを選んでsessionを作成 |
+| `m` / `M` | 最小化 / すべて復元 |
+| `z` | zoom |
+| `t` | タイル配置 / 自由配置を切替 |
+| `r` | window名を変更 |
+| `Enter` / `i` | 選んだwindowへ入力 |
+
+自由配置ではwindowを重ね、タイトルバーをドラッグして移動する。タイル配置では別paneの中央へdropすると入れ替わり、端へdropするとその方向へ組み直す。`prefix t`は名前変更、Window modeの`t`は配置切替という違いに注意する。
+
 ## Session・project picker
 
 既存sessionはnative switcherで選ぶ。名前の絞り込み、作成、rename、削除、linked remoteへの切替を備える。pane navigatorはsession / workspace / paneのツリーと画面previewを表示する。
+
+| prefix不要のキー | 操作 |
+|---|---|
+| `Ctrl+Alt+h` / `Ctrl+Alt+l` | 同じホスト内のsessionを前 / 次へ。spaceをまたぐ |
+| `Ctrl+Alt+j` | local / remoteを含むnative session switcher |
+| `Ctrl+Alt+k` | 直前のsessionへ戻る。ホストをまたいで往復できる |
+| `Alt+h/l/j/k` | 上と同じ。AeroSpace使用時はCtrl付きキーを使う |
+
+移動キーはnative actionへ直接割り当て、shellやcommand popupを起動しない。`Ctrl+Alt+j`でホスト名またはsession名を検索して`Enter`で移動し、`Ctrl+Alt+k`で元のsessionへ戻る。
 
 project pickerはhome、dotfiles、ghq、zoxideのディレクトリ一覧を扱う。選択後はnativeの`switch-session --create --cwd`へ渡す。同名checkoutの衝突を避けるため、session名はディレクトリ名とパスのhashで作る。
 
@@ -76,17 +105,11 @@ TUIOS内のshellの`Alt+s`はproject picker。通常のshell・tmux内は既存s
 
 所属・保存・sidebar表示はnative spaceを使う。`prefix Ctrl+g`で登録する。
 
-| prefix不要のキー | 操作 |
-|---|---|
-| `Ctrl+Alt+h` / `Ctrl+Alt+l` | 同じspaceのsessionを前 / 次へ |
-| `Ctrl+Alt+j` / `Ctrl+Alt+k` | 次 / 前のspaceへ |
-| `Alt+h/l/j/k` | 上と同じ。AeroSpaceとの競合時はCtrl付きキーを使う |
+spaceの所属変更は`prefix Ctrl+g`のpickerへ集約する。spaceごとのsessionはnative sidebarで選ぶ。session移動キーはspaceで絞らず、同じホスト内のsessionを巡回する。
 
-localでは移動先spaceの最終利用時刻が新しいsessionへ切り替える。時刻は秒単位で、同時刻なら名前順の先頭を選ぶ。巡回処理はnativeのsession一覧・space属性を読み、独自の状態ファイルを作らない。rename後のsession名もnativeから取得する。
+project pickerでremoteの切替先を選んだ場合はpopupにsession名を表示する。`Enter`で閉じ、`prefix s`の標準pickerから選択して確定する。TUIOS 0.10.1のhost-command fenceを維持し、remote popupからlocal画面を自動で切り替える要求を標準UIへの案内に変える。通常のsession移動とホストをまたぐ移動はnative actionで直接処理する。
 
-remote表示中はpopupに切替候補のsession名を表示する。`Enter`で閉じ、`prefix s`の標準pickerから選択して確定する。TUIOS 0.10.1のhost-command fenceを維持し、remote popupからlocal画面を自動で切り替える要求を標準UIへの案内に変える。project pickerも同じ導線を使う。
-
-project picker、space設定、巡回はpopup型commandとしてsessionのホストで実行する。各ホストにもdotfilesの更新と`install.sh`を適用する。shell型commandはMacで実行されるため、`N`の固定雛形はlocal向け。
+project pickerとspace設定はpopup型commandとしてsessionのホストで実行する。各ホストにもdotfilesの更新と`install.sh`を適用する。shell型commandはMacで実行されるため、`prefix N`の固定雛形はlocal向け。
 
 spaceはホストごとの分類。同名spaceが複数ホストにあっても別グループで、global sessionはspaceへ所属しない。
 
@@ -145,4 +168,4 @@ python3 scripts/test-tui.py
 tuios keybinds doctor
 ```
 
-テストは隔離した設定を使用し、nativeのキー割当、project選択、space巡回、hook再導入、Neovim移動を確認する。実TUIでのlayout・復元の検証は専用daemon、remote検証は専用sessionで行い、稼働中の作業sessionを維持する。
+テストは隔離した設定を使用し、nativeの移動キー、Window mode設定、project選択、space設定、hook再導入、Neovim移動を確認する。実TUIでのlayout・復元の検証は専用daemon、remote検証は専用sessionで行い、稼働中の作業sessionを維持する。

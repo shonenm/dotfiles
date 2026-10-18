@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TUIOS launcher, project picker and native-space navigation."""
+"""TUIOS launcher, project picker and native-space settings."""
 
 import argparse
 import hashlib
@@ -82,25 +82,6 @@ def pick():
         connect(session_name(path), path)
 
 
-def navigate(direction):
-    rows = sorted(sessions(), key=lambda row: (row.get("space", ""), row["name"]))
-    info = json.loads(run("tuios", "session-info", "--json", capture_output=True, text=True).stdout)
-    current = next((row for row in rows if row["name"] == info["session_name"]), None)
-    if not current:
-        raise RuntimeError("run navigation inside a TUIOS session")
-    space = current.get("space", "")
-    delta = -1 if direction.startswith("prev") else 1
-    if direction.endswith("-group"):
-        groups = list(dict.fromkeys(row.get("space", "") for row in rows))
-        target = groups[(groups.index(space) + delta) % len(groups)]
-        candidates = [row for row in rows if row.get("space", "") == target]
-        destination = max(candidates, key=lambda row: row["last_active"])
-    else:
-        candidates = [row for row in rows if row.get("space", "") == space]
-        destination = candidates[(candidates.index(current) + delta) % len(candidates)]
-    switch_session(destination["name"])
-
-
 def group():
     rows = sessions()
     groups = sorted({r.get("space", "") for r in rows} - {""})
@@ -138,8 +119,6 @@ def main():
     sub = parser.add_subparsers(dest="command")
     for name in ("pick", "group", "root", "dev"):
         sub.add_parser(name)
-    nav = sub.add_parser("nav")
-    nav.add_argument("direction", choices=("next", "prev", "next-group", "prev-group"))
     attach = sub.add_parser("attach")
     attach.add_argument("name", nargs="?", default="main")
     attach.add_argument("--cwd", type=Path, default=Path.cwd())
@@ -152,8 +131,6 @@ def main():
                 os.execvp("tuios", ["tuios"])
         elif args.command == "attach":
             connect(args.name, args.cwd)
-        elif args.command == "nav":
-            navigate(args.direction)
         elif args.command == "pick":
             pick()
         elif args.command == "group":
