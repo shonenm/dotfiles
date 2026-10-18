@@ -1,6 +1,6 @@
 # Ralph Schedule - 予約投稿型 Claude TUI 実行
 
-> **由来:** **Upstream** Claude Code・tmux / **Configuration** schedule定義 / **Custom** ralph-schedule・実行処理（[区分](../../provenance.md#区分)）
+> **由来:** **Upstream** Claude Code・tmux・TUIOS tmux互換 / **Configuration** schedule定義 / **Custom** ralph-schedule・実行処理（[区分](../../provenance.md#区分)）
 
 指定時刻に Claude TUI を自動起動し、`/d-ralph` で自律実行させるワンショットスケジューラー。セッション切れ時でもシェルスクリプトのみで予約の登録・実行が完結する。
 
@@ -121,6 +121,8 @@ executor は launchd から呼ばれるため `$TMUX` が未設定。worktree �
 - 登録時の tmux セッション名を記録 (`$TMUX` 未設定時は `ralph-schedule` をデフォルトに)
 - executor はセッション存在確認 -> なければ作成
 - `tmux new-window -t <session> -n <window> -c <dir>` で直接ウィンドウ作成
+
+TUIOS の pane で登録すると、その TUIOS session 名と `tuios` の絶対パス、`TUIOS_SERVER` をジョブに記録する。executor は launchd / at の最小環境から TUIOS の tmux 互換 (`tuios tmux`) を使い、同じ session にウィンドウを作る。
 
 ## File Structure
 

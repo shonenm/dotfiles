@@ -243,9 +243,15 @@ cmd_add() {
   mkdir -p "${STATE_DIR}"/{jobs,prompts,logs}
 
   # Determine tmux session
-  local tmux_session="ralph-schedule"
+  local tmux_session="ralph-schedule" tuios_bin="" tuios_server=""
   if [[ -n "${TMUX:-}" ]]; then
     tmux_session="$(tmux display-message -p '#{session_name}')"
+  elif [[ -n "${TUIOS_SESSION:-}" ]] && command -v tuios >/dev/null; then
+    # The executor runs from launchd / at without the pane's environment, so
+    # record which TUIOS daemon and binary hold this session.
+    tmux_session="$TUIOS_SESSION"
+    tuios_bin="$(command -v tuios)"
+    tuios_server="${TUIOS_SERVER:-}"
   fi
 
   # Determine tmux window name and worktree path
@@ -308,6 +314,8 @@ cmd_add() {
     --arg project_dir "$project_dir" \
     --arg tmux_session "$tmux_session" \
     --arg tmux_window "$tmux_window" \
+    --arg tuios_bin "$tuios_bin" \
+    --arg tuios_server "$tuios_server" \
     --arg worktree_path "$worktree_path" \
     --arg prompt_file "$prompt_file" \
     --arg scheduler "$scheduler" \
@@ -323,6 +331,7 @@ cmd_add() {
       project_dir: $project_dir,
       tmux_session: $tmux_session,
       tmux_window: $tmux_window,
+      tuios: (if $tuios_bin == "" then null else {bin: $tuios_bin, server: $tuios_server} end),
       worktree_path: (if $worktree_path == "" then null else $worktree_path end),
       prompt_file: $prompt_file,
       status: "pending",
