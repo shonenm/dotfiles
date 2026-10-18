@@ -1,6 +1,7 @@
 #!/bin/bash
-# tmuxウィンドウフォーカス時の通知消去スクリプト
-# tmux hook (session-window-changed) から呼び出される
+# tmuxウィンドウ / TUIOS pane フォーカス時の通知消去スクリプト
+# tmux hook (session-window-changed) と TUIOS hook (after-focus-change) から呼び出される
+# TUIOS の位置は session を "tuios:<session>"、window を pane ID として扱う
 # 5秒タイマーロジック（SketchyBarと同じ）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,8 +15,14 @@ FOCUS_STATE_FILE="$RUNTIME_DIR/focus"
 mkdir -p "$RUNTIME_DIR"
 
 # 現在のセッション・ウィンドウ情報を取得
-SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
-WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
+if [[ "${TUIOS_EVENT:-}" == after-focus-change ]]; then
+  SESSION="tuios:${TUIOS_SESSION_ID:-}"
+  WINDOW_INDEX="${TUIOS_WINDOW_ID:-}"
+  [[ "$SESSION" == tuios: ]] && SESSION=""
+else
+  SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+  WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
+fi
 
 [[ -z "$SESSION" || -z "$WINDOW_INDEX" ]] && exit 0
 
@@ -35,7 +42,8 @@ start_clear_timer() {
   # 既存タイマーをキャンセル
   if [[ -f "$FOCUS_STATE_FILE" ]]; then
     local prev_pid
-    prev_pid=$(cut -d: -f4 "$FOCUS_STATE_FILE" 2>/dev/null)
+    prev_pid=$(cat "$FOCUS_STATE_FILE" 2>/dev/null)
+    prev_pid="${prev_pid##*:}"
     [[ -n "$prev_pid" ]] && { kill "$prev_pid" 2>/dev/null; wait "$prev_pid" 2>/dev/null; } || true
   fi
 
@@ -58,9 +66,9 @@ has_notification() {
   local session="$1"
   local window_index="$2"
 
-  # 1. pane option チェック（高速）
-  local pane_count
-  pane_count=$(tmux list-panes -t "${session}:${window_index}" -F '#{@agent_status}' 2>/dev/null \
+  # 1. pane option チェック（高速、tmux のみ）
+  local pane_count=0
+  [[ "$session" != tuios:* ]] && pane_count=$(tmux list-panes -t "${session}:${window_index}" -F '#{@agent_status}' 2>/dev/null \
     | grep -cE '^(idle|permission|complete|hang|error)$' || true)
   [[ $pane_count -gt 0 ]] && return 0
 
@@ -88,11 +96,12 @@ has_notification() {
 
 # 前回のフォーカス状態をチェック
 if [[ -f "$FOCUS_STATE_FILE" ]]; then
+  # session:window:ts:pid。TUIOS の session は "tuios:" を含むため右から分解する。
   prev_state=$(cat "$FOCUS_STATE_FILE" 2>/dev/null)
-  prev_session=$(echo "$prev_state" | cut -d: -f1)
-  prev_window=$(echo "$prev_state" | cut -d: -f2)
-  prev_ts=$(echo "$prev_state" | cut -d: -f3)
-  prev_pid=$(echo "$prev_state" | cut -d: -f4)
+  prev_pid="${prev_state##*:}"; prev_state="${prev_state%:*}"
+  prev_ts="${prev_state##*:}"; prev_state="${prev_state%:*}"
+  prev_window="${prev_state##*:}"
+  prev_session="${prev_state%:*}"
 
   # 同じウィンドウなら何もしない（重複イベント対策）
   [[ "$prev_session" == "$SESSION" && "$prev_window" == "$WINDOW_INDEX" ]] && exit 0

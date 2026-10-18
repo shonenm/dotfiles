@@ -13,28 +13,54 @@ mkdir -p "$(dirname "$FOCUS_STATE_FILE")"
 BADGE_COLOR="$SERVICE_MODE_COLOR"
 BADGE_COLOR_DIM="$DIM_BADGE_COLOR"
 
-# Remove notifications for a workspace (considering tmux position)
+TERMINAL_APPS="|Ghostty|Terminal|iTerm2|Alacritty|Warp|WezTerm|kitty|"
+
+# Positions shown in the terminal, one "session<TAB>window" per line: the tmux
+# client, and the focused pane of each attached TUIOS session as
+# "tuios:<session><TAB><pane id>". Empty for other apps.
+current_positions() {
+  [[ "$TERMINAL_APPS" == *"|${1:-}|"* ]] || return 0
+  tmux display-message -p '#S	#I' 2>/dev/null
+  command -v tuios >/dev/null 2>&1 || return 0
+  local session
+  tuios list-clients --json 2>/dev/null | jq -r '.[].session | select(. != "")' | sort -u |
+    while IFS= read -r session; do
+      tuios list-windows -s "$session" --json 2>/dev/null |
+        jq -r --arg s "$session" '"tuios:\($s)\t\(.focused_window_id // "")"'
+    done
+}
+
+# Where a notification is relative to the current positions:
+# none (no position recorded), unknown (its multiplexer shows nothing), match, other.
+position_status() {
+  local session="$1" window="$2" positions="$3" kind_positions
+  [[ -z "$session" || -z "$window" ]] && { echo none; return; }
+  if [[ "$session" == tuios:* ]]; then
+    kind_positions=$(printf '%s\n' "$positions" | grep '^tuios:')
+  else
+    kind_positions=$(printf '%s\n' "$positions" | grep -v '^tuios:' | grep .)
+  fi
+  if [[ -z "$kind_positions" ]]; then
+    echo unknown
+  elif printf '%s\n' "$kind_positions" | grep -qxF "${session}	${window}"; then
+    echo match
+  else
+    echo other
+  fi
+}
+
+# Remove notifications for a workspace unless they belong to another tmux
+# window / TUIOS pane than the one on screen.
 remove_notifications_for_workspace() {
   local target_workspace="$1"
-  local target_session="${2:-}"
-  local target_window="${3:-}"
+  local positions="${2:-}"
 
   for f in "$STATUS_DIR"/workspace_"${target_workspace}"_*.json; do
     [[ -f "$f" ]] || continue
     local notif_session notif_window
     notif_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
     notif_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
-
-    if [[ -z "$notif_session" || -z "$notif_window" ]]; then
-      # No tmux info in notification -> OK to delete
-      rm -f "$f"
-    elif [[ -z "$target_session" || -z "$target_window" ]]; then
-      # Current tmux not detected (VS Code etc) -> OK to delete
-      rm -f "$f"
-    elif [[ "$notif_session" == "$target_session" && "$notif_window" == "$target_window" ]]; then
-      # tmux position matches -> delete
-      rm -f "$f"
-    fi
+    [[ "$(position_status "$notif_session" "$notif_window" "$positions")" == other ]] || rm -f "$f"
   done
 }
 
@@ -53,40 +79,20 @@ start_clear_timer() {
   local now
   now=$(date +%s)
 
-  # Record current tmux position (for timer execution)
-  # Only use tmux info for terminal apps
-  local cur_session="" cur_window=""
-  case "$app_name" in
-    "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
-      cur_session=$(tmux display-message -p '#S' 2>/dev/null || echo "")
-      cur_window=$(tmux display-message -p '#I' 2>/dev/null || echo "")
-      ;;
-  esac
+  # Record the position on screen now, for the timer.
+  local positions
+  positions=$(current_positions "$app_name")
 
   # Start background timer for auto-clear after 5 seconds
   (
     sleep 5
-    # Delete considering tmux info
-    for f in "$STATUS_DIR"/workspace_"${workspace}"_*.json; do
-      [[ -f "$f" ]] || continue
-      local notif_session notif_window
-      notif_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
-      notif_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
-
-      if [[ -z "$notif_session" || -z "$notif_window" ]]; then
-        rm -f "$f"
-      elif [[ -z "$cur_session" || -z "$cur_window" ]]; then
-        rm -f "$f"
-      elif [[ "$notif_session" == "$cur_session" && "$notif_window" == "$cur_window" ]]; then
-        rm -f "$f"
-      fi
-    done
+    remove_notifications_for_workspace "$workspace" "$positions"
     sketchybar --trigger claude_status_change 2>/dev/null
   ) &
   local timer_pid=$!
 
   # Save workspace focus state
-  echo "${workspace}:${now}:${timer_pid}:${cur_session}:${cur_window}" > "$FOCUS_STATE_FILE"
+  echo "${workspace}:${now}:${timer_pid}::" > "$FOCUS_STATE_FILE"
 }
 
 # 3-stage logic for window focus change
@@ -110,9 +116,6 @@ handle_focus_change() {
     prev_workspace=$(echo "$prev_state" | cut -d: -f1)
     prev_ts=$(echo "$prev_state" | cut -d: -f2)
     prev_pid=$(echo "$prev_state" | cut -d: -f3)
-    # prev_session/prev_tmux_window: parsed but not currently needed
-    # prev_session=$(echo "$prev_state" | cut -d: -f4)
-    # prev_tmux_window=$(echo "$prev_state" | cut -d: -f5)
 
     local elapsed=$((now - prev_ts))
 
@@ -172,30 +175,19 @@ handle_notification_arrived() {
   if ls "$STATUS_DIR"/workspace_"${focused_ws}"_*.json &>/dev/null; then
     local should_start_timer=true
 
-    # For terminal apps with tmux, also check tmux position
-    case "$app_name" in
-      "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
-        local current_session current_window
-        current_session=$(tmux display-message -p '#S' 2>/dev/null)
-        current_window=$(tmux display-message -p '#I' 2>/dev/null)
-        if [[ -n "$current_session" && -n "$current_window" ]]; then
-          # Check notifications with tmux info
-          for f in "$STATUS_DIR"/workspace_"${focused_ws}"_*.json; do
-            [[ -f "$f" ]] || continue
-            local notif_session notif_window
-            notif_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
-            notif_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
-
-            if [[ -n "$notif_session" && -n "$notif_window" ]]; then
-              if [[ "$notif_session" != "$current_session" || "$notif_window" != "$current_window" ]]; then
-                should_start_timer=false
-                break
-              fi
-            fi
-          done
-        fi
-        ;;
-    esac
+    # Wait while a notification belongs to another tmux window / TUIOS pane
+    local positions
+    positions=$(current_positions "$app_name")
+    for f in "$STATUS_DIR"/workspace_"${focused_ws}"_*.json; do
+      [[ -f "$f" ]] || continue
+      local notif_session notif_window
+      notif_session=$(jq -r '.tmux_session // ""' "$f" 2>/dev/null)
+      notif_window=$(jq -r '.tmux_window_index // ""' "$f" 2>/dev/null)
+      if [[ "$(position_status "$notif_session" "$notif_window" "$positions")" == other ]]; then
+        should_start_timer=false
+        break
+      fi
+    done
 
     if [[ "$should_start_timer" == "true" ]]; then
       start_clear_timer "$focused_ws" "$app_name"
@@ -220,14 +212,9 @@ update_badges() {
   local ws_counts=""
   local app_counts=""
 
-  # Get current tmux position for terminal apps (once outside loop)
-  local current_tmux_session="" current_tmux_window=""
-  case "$focused_app" in
-    "Ghostty"|"Terminal"|"iTerm2"|"Alacritty"|"Warp"|"WezTerm"|"kitty")
-      current_tmux_session=$(tmux display-message -p '#S' 2>/dev/null || echo "")
-      current_tmux_window=$(tmux display-message -p '#I' 2>/dev/null || echo "")
-      ;;
-  esac
+  # Get current tmux / TUIOS positions for terminal apps (once outside loop)
+  local positions
+  positions=$(current_positions "$focused_app")
 
   if [[ -d "$STATUS_DIR" ]]; then
     for f in "$STATUS_DIR"/workspace_*.json; do
@@ -243,10 +230,8 @@ update_badges() {
 
       if [[ "$file_ws" == "$focused_ws" ]]; then
         # Focused workspace -> for app badges
-        # Skip if tmux position matches current (directly viewing)
-        if [[ -n "$file_tmux_session" && -n "$file_tmux_window" && \
-              "$file_tmux_session" == "$current_tmux_session" && \
-              "$file_tmux_window" == "$current_tmux_window" ]]; then
+        # Skip if its position is on screen (directly viewing)
+        if [[ "$(position_status "$file_tmux_session" "$file_tmux_window" "$positions")" == match ]]; then
           :
         else
           app_counts="$app_counts|$file_ws"
