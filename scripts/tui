@@ -124,6 +124,24 @@ def navigate_space(direction, client_pid):
     run("tuios", "switch-session", "--client", client["client_id"], destination["name"])
 
 
+AGENT_COLORS = {"working": 33, "needs_input": 31, "errored": 31, "done": 32}
+
+
+def rail():
+    # Rows for the rail's custom section: agents per session, then the branch
+    # of its focused pane. `tuios ls` keeps the branch from session creation.
+    panes = json.loads(run("tuios", "list-agents", "--all", "--all-sessions", "--json", capture_output=True, text=True).stdout)["agents"]
+    for row in sorted(sessions(), key=lambda row: (row.get("space", ""), row["name"])):
+        own = sorted((p for p in panes if p["session"] == row["name"]), key=lambda p: not p["focused"])
+        states = [p["state"] for p in own if p["harness_id"]]
+        dots = "".join(f"\033[{AGENT_COLORS.get(state, 90)}m●\033[0m" for state in states)
+        print(f"{row['name']} {len(states)} {dots}" if states else row["name"])
+        cwd = next((p["cwd"] for p in own if p["cwd"]), None)
+        branch = cwd and subprocess.run(["git", "-C", cwd, "branch", "--show-current"], capture_output=True, text=True).stdout.strip()
+        if branch:
+            print(f"  \033[90m└ {branch}\033[0m")
+
+
 def root():
     result = run("git", "rev-parse", "--show-toplevel", capture_output=True, text=True)
     path = result.stdout.strip()
@@ -141,7 +159,7 @@ def dev():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command")
-    for name in ("pick", "space", "root", "dev"):
+    for name in ("pick", "space", "root", "dev", "rail"):
         sub.add_parser(name)
     nav = sub.add_parser("space-nav")
     nav.add_argument("direction", choices=("next", "prev"))
@@ -164,6 +182,8 @@ def main():
             space()
         elif args.command == "space-nav":
             navigate_space(args.direction, args.client_pid)
+        elif args.command == "rail":
+            rail()
         elif args.command == "root":
             root()
         elif args.command == "dev":
