@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TUIOS launcher, project picker and native-space settings."""
+"""TUIOS launcher, project picker and native-space settings/navigation."""
 
 import argparse
 import hashlib
@@ -100,6 +100,30 @@ def space():
     run("tuios", "set-session-space", *args)
 
 
+def navigate_space(direction, client_pid):
+    # The shell keybinding passes its client's PID. Session names alone can
+    # target another client, and the local daemon has no attach while remote.
+    clients = json.loads(run("tuios", "list-clients", "--json", capture_output=True, text=True).stdout)
+    clients = [row for row in clients if row["pid"] == client_pid and row["session"]]
+    if not clients:
+        return
+    if len(clients) != 1:
+        raise RuntimeError("space navigation requires one attached session for this client")
+    client = clients[0]
+    rows = sorted(sessions(), key=lambda row: (row.get("space", ""), row["name"]))
+    current = next((row for row in rows if row["name"] == client["session"]), None)
+    if current is None:
+        raise RuntimeError("client session is not in the live session listing")
+    spaces = list(dict.fromkeys(row.get("space", "") for row in rows))
+    if len(spaces) < 2:
+        return
+    delta = 1 if direction == "next" else -1
+    target = spaces[(spaces.index(current.get("space", "")) + delta) % len(spaces)]
+    candidates = [row for row in rows if row.get("space", "") == target]
+    destination = max(candidates, key=lambda row: row["last_active"])
+    run("tuios", "switch-session", "--client", client["client_id"], destination["name"])
+
+
 def root():
     result = run("git", "rev-parse", "--show-toplevel", capture_output=True, text=True)
     path = result.stdout.strip()
@@ -119,6 +143,9 @@ def main():
     sub = parser.add_subparsers(dest="command")
     for name in ("pick", "space", "root", "dev"):
         sub.add_parser(name)
+    nav = sub.add_parser("space-nav")
+    nav.add_argument("direction", choices=("next", "prev"))
+    nav.add_argument("client_pid", type=int)
     attach = sub.add_parser("attach")
     attach.add_argument("name", nargs="?", default="main")
     attach.add_argument("--cwd", type=Path, default=Path.cwd())
@@ -135,6 +162,8 @@ def main():
             pick()
         elif args.command == "space":
             space()
+        elif args.command == "space-nav":
+            navigate_space(args.direction, args.client_pid)
         elif args.command == "root":
             root()
         elif args.command == "dev":

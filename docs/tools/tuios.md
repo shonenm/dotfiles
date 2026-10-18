@@ -1,6 +1,6 @@
 # TUIOS
 
-> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space設定・Neovim navigation（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space設定と巡回・Neovim navigation（[区分](../provenance.md#区分)）
 
 TUIOS 0.10.1の標準機能を中心に、local / remote session、layout、AI表示、復元を管理する。既存tmuxは引き続き利用できる。
 
@@ -91,9 +91,10 @@ zoom中に分割すると、追加paneがzoomの下に隠れる。`prefix z`で�
 | prefix不要のキー | 操作 |
 |---|---|
 | `Ctrl+Alt+h` / `Ctrl+Alt+l` | 同じホスト内のsessionを前 / 次へ。spaceをまたぐ |
-| `Alt+h/l` | 上と同じ。AeroSpace使用時はCtrl付きキーを使う |
+| `Ctrl+Alt+j` / `Ctrl+Alt+k` | localの次 / 前のspaceへ |
+| `Alt+h/l` | 同じホスト内のsessionを前 / 次へ。AeroSpace使用時はCtrl付きキーを使う |
 
-移動キーはnative actionへ直接割り当て、shellやcommand popupを起動しない。ホストをまたぐ移動は`prefix s`でホスト名またはsession名を検索して`Enter`で確定し、`prefix Tab`で元のsessionへ戻る。`Ctrl+Alt+j/k`と`Alt+j/k`への独自割当は設けない。
+sessionの前後移動はnative actionへ直接割り当て、shellやcommand popupを起動しない。ホストをまたぐ移動は`prefix s`でホスト名またはsession名を検索して`Enter`で確定し、`prefix Tab`で元のsessionへ戻る。`Ctrl+Alt+j/k`はlocalのspace巡回用で、`Alt+j/k`はAeroSpaceとの競合を避けて割り当てない。
 
 project pickerはhome、dotfiles、ghq、zoxideのディレクトリ一覧を扱う。選択後はnativeの`switch-session --create --cwd`へ渡す。同名checkoutの衝突を避けるため、session名はディレクトリ名とパスのhashで作る。
 
@@ -101,13 +102,19 @@ TUIOS内のshellの`Alt+s`はproject picker。通常のshell・tmux内は既存s
 
 ## Space
 
-spaceは関連するsessionをまとめるTUIOS標準の分類名。所属・保存・sidebar表示をnativeで管理し、独自のgroupやspace巡回は持たない。既存sessionのspace所属はそのまま維持する。
+spaceは関連するsessionをまとめるTUIOS標準の分類名。所属・保存・sidebar表示をnativeで管理する。localのspace巡回だけhelperで補い、独自の分類や状態ファイルは持たない。既存sessionのspace所属はそのまま維持する。
 
 - **所属変更・作成・解除**：`prefix Ctrl+s`のpicker。shellからは`tui space`。
 - **別spaceのsessionへ移動**：`prefix Esc`でWindow modeへ入り、`s`でsidebarへfocus。`j/k`または矢印で目的のspace内のsessionを選び、`Enter`で移動する。
 - **名前からsessionを選択**：`prefix s`の標準switcher。ホストをまたぐ移動もここへまとめる。
 
 spaceの見出しは分類表示で、移動先にはその中のsessionを選ぶ。`Ctrl+Alt+h/l`はspaceで絞らず、同じホスト内のsessionを巡回する。
+
+`Ctrl+Alt+j/k`はspace名順で次 / 前へ巡回する。未所属も巡回先に含め、移動先では最終利用時刻が新しいsessionを選ぶ。同時刻ならsession名順の先頭を選ぶ。spaceが1つなら移動しない。
+
+巡回はpopupなしのlocal shell commandで実行する。keybindingからclientのPIDを渡し、nativeの`list-clients`で現在のsessionを取得して`switch-session --client`でそのclientだけを動かす。rename前の環境変数や別clientの表示sessionには依存しない。
+
+remote表示中のspace巡回はTUIOS 0.10.1の標準APIでは行えないため、`prefix s`またはsidebarでsessionを選ぶ。`Ctrl+Alt+j/k`はlocal専用で、host-command fenceを迂回しない。
 
 project pickerでremoteの切替先を選んだ場合はpopupにsession名を表示する。`Enter`で閉じ、`prefix s`の標準pickerから選択して確定する。TUIOS 0.10.1のhost-command fenceを維持し、remote popupからlocal画面を自動で切り替える要求を標準UIへの案内に変える。通常のsession移動とホストをまたぐ移動はnative actionで直接処理する。
 
