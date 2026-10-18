@@ -1,5 +1,6 @@
 # tmux の session / window / pane は TUIOS の session / workspace / window に対応。
 # config.toml は TUIOS の設定画面・hosts 管理用に残す。
+# command は共通shell resolverからlogin shellで実行し、user toolsのPATHを揃える。
 [startup]
 daemon = true
 tiled = true
@@ -28,6 +29,10 @@ show_agents = true
 [daemon]
 window_size = "latest"
 persist_scrollback = true
+resume_agents = "ask"
+
+[tape]
+autorun = "ask"
 
 [keybindings]
 leader_key = "ctrl+space"
@@ -79,8 +84,9 @@ resize_pane_right_5 = ["L"]
 prev_workspace = ["p", "ctrl+h"]
 next_workspace = ["n", "ctrl+l"]
 prefix_toggle_sidebar = ["A", "b"]
-prefix_agents_settings = []
-prefix_inbox = ["a"]
+prefix_agents_settings = ["ctrl+a"]
+prefix_inbox = ["a", "i"]
+choose_tree = ["/", "ctrl+f"]
 launcher = []
 hints = ["e"]
 prefix_explore = []
@@ -121,65 +127,81 @@ prefix_fullscreen = ["ctrl+z"]
 
 [[keybindings.command]]
 name = "projects"
-key = "prefix+ctrl+f"
+key = "prefix+F"
 type = "popup"
-command = "~/dotfiles/scripts/tui pick"
-description = "Sessions and projects"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui pick'"
+description = "Projects (ghq / zoxide)"
 width = "85%"
 height = "80%"
 
 [[keybindings.command]]
 name = "project-root"
 key = "prefix+9"
-type = "shell"
-command = "~/dotfiles/scripts/tui root"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui root'"
 description = "Project root session"
 
 [[keybindings.command]]
 name = "session-space"
 key = "prefix+ctrl+g"
 type = "popup"
-command = "~/dotfiles/scripts/tui group"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui group'"
 description = "Session space"
 
 [[keybindings.command]]
 name = "previous-session"
 key = "alt+h"
-type = "shell"
-command = "~/dotfiles/scripts/tui nav prev"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav prev'"
 
 [[keybindings.command]]
 name = "next-session"
 key = "alt+l"
-type = "shell"
-command = "~/dotfiles/scripts/tui nav next"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav next'"
 
 [[keybindings.command]]
 name = "next-space"
 key = "alt+j"
-type = "shell"
-command = "~/dotfiles/scripts/tui nav next-group"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav next-group'"
 
 [[keybindings.command]]
 name = "previous-space"
 key = "alt+k"
-type = "shell"
-command = "~/dotfiles/scripts/tui nav prev-group"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav prev-group'"
+
+# popup は表示中sessionのホストで実行される。shell はローカル実行。
+[[keybindings.command]]
+name = "previous-session-ctrl-alt"
+key = "ctrl+alt+h"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav prev'"
 
 [[keybindings.command]]
-name = "projects-alt"
-key = "prefix+F"
+name = "next-session-ctrl-alt"
+key = "ctrl+alt+l"
 type = "popup"
-command = "~/dotfiles/scripts/tui pick"
-description = "Sessions and projects"
-width = "85%"
-height = "80%"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav next'"
+
+[[keybindings.command]]
+name = "next-space-ctrl-alt"
+key = "ctrl+alt+j"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav next-group'"
+
+[[keybindings.command]]
+name = "previous-space-ctrl-alt"
+key = "ctrl+alt+k"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui nav prev-group'"
 
 [[keybindings.command]]
 name = "lazygit"
 key = "prefix+g"
 type = "scratch"
-command = "lazygit"
+command = "~/dotfiles/scripts/tmux-default-shell -lc 'lazygit'"
 width = "80%"
 height = "80%"
 
@@ -187,7 +209,7 @@ height = "80%"
 name = "editor"
 key = "prefix+k"
 type = "scratch"
-command = "nvim ."
+command = "~/dotfiles/scripts/tmux-default-shell -lc 'nvim .'"
 width = "90%"
 height = "90%"
 
@@ -195,7 +217,7 @@ height = "90%"
 name = "live-pr"
 key = "prefix+G"
 type = "scratch"
-command = "live-pr"
+command = "~/dotfiles/scripts/tmux-default-shell -lc 'live-pr'"
 width = "85%"
 height = "85%"
 
@@ -203,7 +225,7 @@ height = "85%"
 name = "pgcli"
 key = "prefix+P"
 type = "scratch"
-command = 'pgcli "${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/postgres}"'
+command = "~/dotfiles/scripts/tmux-default-shell -lc 'pgcli \"${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/postgres}\"'"
 width = "80%"
 height = "80%"
 
@@ -211,7 +233,7 @@ height = "80%"
 name = "quay"
 key = "prefix+Q"
 type = "scratch"
-command = "quay"
+command = "~/dotfiles/scripts/tmux-default-shell -lc 'quay'"
 width = "80%"
 height = "80%"
 
@@ -219,7 +241,7 @@ height = "80%"
 name = "dev"
 key = "prefix+N"
 type = "shell"
-command = "~/dotfiles/scripts/tui dev"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui dev'"
 description = "Claude, Neovim and shell workspace"
 
 [[keybindings.copy_pipe]]

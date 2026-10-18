@@ -693,13 +693,13 @@ setup_tuios() {
   fi
   local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/tuios"
   mkdir -p "$config_dir/config.d"
-  # 0.10.0 does not load config.d until config.toml exists.
+  # config.d is read once config.toml exists.
   [[ -e "$config_dir/config.toml" ]] || touch "$config_dir/config.toml"
   python3 - "$config_dir/config.d/10-shell.toml" "$DOTFILES_DIR/scripts/tmux-default-shell" <<'PYEOF'
 import json, pathlib, sys
 pathlib.Path(sys.argv[1]).write_text("[appearance]\npreferred_shell = " + json.dumps(sys.argv[2]) + "\n")
 PYEOF
-  if ! tuios integration install claude-code pi --command "$(command -v tuios)"; then
+  if ! tuios integration install claude-code pi; then
     log_error "TUIOS integration installation failed"
     SETUP_FAILED=true
   fi
