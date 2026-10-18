@@ -43,7 +43,7 @@
 "aqua:direnv/direnv" = "latest"
 
 # --- github backend (aqua 未収録の 8 tools) ---
-"github:Gaurav-Gosain/tuios" = "0.10.0"
+"github:Gaurav-Gosain/tuios" = "0.10.1"
 "github:ivaaaan/smug" = "latest"
 "github:MilesCranmer/rip2[exe=rip]" = "latest"
 "github:ouch-org/ouch" = "latest"

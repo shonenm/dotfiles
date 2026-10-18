@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from unittest.mock import patch
 
@@ -26,38 +27,66 @@ class SessionTests(unittest.TestCase):
         self.assertNotEqual(tui.session_name("/tmp/a/project"), tui.session_name("/tmp/b/project"))
         self.assertRegex(tui.session_name("/tmp/日本語 project;$(x)"), r"^[a-zA-Z0-9_-]+$")
 
-    def test_existing_session_switches_without_recreating(self):
-        with patch.dict(os.environ, TUIOS_SESSION="current"), patch.object(tui, "sessions", return_value=[{"name": "work"}]), patch.object(tui, "run") as run:
+    def test_switch_and_create_are_owned_by_native_command(self):
+        with patch.dict(os.environ, TUIOS_SESSION="current"), patch.object(tui, "sessions", side_effect=AssertionError("no preflight listing")), patch.object(tui, "switch_session") as switch:
             tui.connect("work")
-        run.assert_called_once_with("tuios", "switch-session", "work")
+        switch.assert_called_once_with("--create", "work")
 
-    def test_new_session_preserves_path_as_one_argument(self):
-        with patch.dict(os.environ, TUIOS_SESSION="current"), patch.object(tui, "sessions", return_value=[]), patch.object(tui, "run") as run:
+    def test_project_path_is_one_argument(self):
+        with patch.dict(os.environ, TUIOS_SESSION="current"), patch.object(tui, "switch_session") as switch:
             tui.connect("work", "/tmp/a b;$x")
-        self.assertEqual(run.call_args_list[0].args, ("tuios", "new", "work", "--detach", "--cwd", "/tmp/a b;$x"))
-        self.assertEqual(run.call_args_list[1].args, ("tuios", "switch-session", "work"))
+        switch.assert_called_once_with("--create", "--cwd", "/tmp/a b;$x", "work")
 
-    def test_navigation_stays_in_space_and_wraps(self):
-        rows = [
-            {"name": "a", "space": "code", "last_active": 1},
-            {"name": "b", "space": "code", "last_active": 2},
-            {"name": "c", "space": "ops", "last_active": 3},
-            {"name": "d", "space": "ops", "last_active": 4},
-        ]
-        with patch.dict(os.environ, TUIOS_SESSION="a"), patch.object(tui, "sessions", return_value=rows), patch.object(tui, "run") as run:
-            tui.navigate("prev")
-            self.assertEqual(run.call_args.args, ("tuios", "switch-session", "b"))
-            tui.navigate("next-group")
-            self.assertEqual(run.call_args.args, ("tuios", "switch-session", "d"))
+    def test_remote_refusal_guides_user_to_native_picker(self):
+        refused = subprocess.CompletedProcess([], 1, "", "switch-session failed: refused: switch_session came from host ailab and would change this machine, not the session")
+        with patch.object(subprocess, "run", return_value=refused) as command, patch.object(tui, "run") as extra, patch.object(sys.stdin, "isatty", return_value=True), patch("builtins.print") as message, patch("builtins.input") as acknowledge:
+            tui.switch_session("remote-work")
+        command.assert_called_once_with(["tuios", "switch-session", "remote-work"], capture_output=True, text=True)
+        message.assert_called_once_with("Session remote-work: Ctrl+Space s で選択", flush=True)
+        acknowledge.assert_called_once_with("Enterで閉じる: ")
+        extra.assert_not_called()
+
+    def test_switch_errors_other_than_host_fence_remain_errors(self):
+        failed = subprocess.CompletedProcess([], 1, "", "permission denied")
+        with patch.object(subprocess, "run", return_value=failed), patch.object(tui, "run") as notify:
+            with self.assertRaisesRegex(RuntimeError, "permission denied"):
+                tui.switch_session("work")
+        notify.assert_not_called()
+
+    def test_attach_outside_uses_native_create_in_requested_directory(self):
+        with patch.dict(os.environ, {}, clear=True), patch.object(os, "chdir") as change, patch.object(os, "execvp") as execute:
+            tui.connect("work", "/tmp/a b;$x")
+        change.assert_called_once_with("/tmp/a b;$x")
+        execute.assert_called_once_with("tuios", ["tuios", "attach", "--create", "work"])
+
+    def test_project_picker_deduplicates_folders_without_session_listing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            (home / "dotfiles").mkdir()
+            project = home / "project with spaces"
+            project.mkdir()
+            result = subprocess.CompletedProcess([], 0, f"{project}\n{project}\n")
+            with patch.object(Path, "home", return_value=home), patch.object(shutil, "which", return_value="installed"), patch.object(tui, "run", return_value=result), patch.object(tui, "sessions", side_effect=AssertionError("native navigator owns sessions")), patch.object(tui, "choose", return_value="2") as choose, patch.object(tui, "connect") as connect:
+                tui.pick()
+            self.assertEqual(len(choose.call_args.args[0]), 3)
+            self.assertEqual(choose.call_args.args[1], "project")
+            connect.assert_called_once_with(tui.session_name(project), str(project))
+
+    def test_space_command_sets_native_membership(self):
+        rows = [{"space": "work"}, {"space": "work"}, {"space": "personal"}, {"space": ""}]
+        with patch.object(sys, "argv", ["tui", "space"]), patch.object(tui, "sessions", return_value=rows), patch.object(tui, "choose", return_value="space:work") as choose, patch.object(tui, "run") as run:
+            self.assertEqual(tui.main(), 0)
+        choose.assert_called_once_with(["new\tCreate space", "clear\tRemove from space", "space:personal\tpersonal", "space:work\twork"], "space")
+        run.assert_called_once_with("tuios", "set-session-space", "work")
 
     def test_native_space_named_clear_is_not_a_menu_action(self):
-        with patch.object(tui, "sessions", return_value=[{"space": "clear"}]), patch.object(tui, "choose", return_value="group:clear"), patch.object(tui, "run") as run:
-            tui.group()
+        with patch.object(tui, "sessions", return_value=[{"space": "clear"}]), patch.object(tui, "choose", return_value="space:clear"), patch.object(tui, "run") as run:
+            tui.space()
         run.assert_called_once_with("tuios", "set-session-space", "clear")
 
     def test_create_space_named_clear(self):
         with patch.object(tui, "sessions", return_value=[]), patch.object(tui, "choose", return_value="new"), patch("builtins.input", return_value="clear"), patch.object(tui, "run") as run:
-            tui.group()
+            tui.space()
         run.assert_called_once_with("tuios", "set-session-space", "clear")
 
     def test_full_workspace_does_not_type_into_existing_program(self):
@@ -78,11 +107,39 @@ class SessionTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, message):
                     tui.sessions()
 
-    def test_no_argument_launch_creates_and_attaches_without_daemon(self):
-        with patch.object(sys, "argv", ["tui"]), patch.dict(os.environ, {}, clear=True), patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 3, "[]", "")) as run, patch.object(os, "execvp") as execute:
+    def test_no_argument_launch_delegates_to_native_last_session_or_creation(self):
+        with patch.object(sys, "argv", ["tui"]), patch.dict(os.environ, {}, clear=True), patch.object(tui, "run") as run, patch.object(os, "execvp") as execute:
             self.assertEqual(tui.main(), 0)
-        self.assertEqual(run.call_args_list[1].args[0], ("tuios", "new", "main", "--detach", "--cwd", str(Path.cwd())))
-        execute.assert_called_once_with("tuios", ["tuios", "attach", "main"])
+        run.assert_not_called()
+        execute.assert_called_once_with("tuios", ["tuios"])
+
+    def test_no_argument_launch_inside_opens_native_switcher(self):
+        with patch.object(sys, "argv", ["tui"]), patch.dict(os.environ, TUIOS_SESSION="work"), patch.object(tui, "run") as run:
+            self.assertEqual(tui.main(), 0)
+        run.assert_called_once_with("tuios", "run-command", "prefix_session_switcher")
+
+
+class ShellTests(unittest.TestCase):
+    def test_user_shell_forwards_commands_and_keeps_no_argument_launch(self):
+        for kind in ("pixi", "nix", "chroot"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temp:
+                home = Path(temp)
+                if kind == "pixi":
+                    executable = home / ".pixi/bin/zsh"
+                elif kind == "nix":
+                    executable = home / ".nix-profile/bin/zsh"
+                else:
+                    executable = home / ".local/bin/nix-user-chroot"
+                    (home / ".nix-store/nix").mkdir(parents=True)
+                executable.parent.mkdir(parents=True, exist_ok=True)
+                executable.write_text('#!/bin/sh\nfor arg do printf "%s\\n" "$arg"; done > "$TEST_ARGS"\nprintf "%s" "$PATH" > "$TEST_PATH"\n')
+                executable.chmod(0o755)
+                env = {**os.environ, "HOME": temp, "PATH": "/usr/bin:/bin", "TEST_ARGS": str(home / "args"), "TEST_PATH": str(home / "path")}
+                for args in ([], ["-lc", "printf 'space ; $value'"]):
+                    subprocess.run(["bash", str(ROOT / "scripts/tmux-default-shell"), *args], env=env, check=True)
+                    prefix = [str(home / ".nix-store/nix"), str(home / ".nix-profile/bin/zsh")] if kind == "chroot" else []
+                    self.assertEqual((home / "args").read_text().splitlines(), prefix + args)
+                    self.assertEqual((home / "path").read_text().split(":")[:3], [str(home / ".local/bin"), str(home / ".pixi/bin"), str(home / ".local/share/mise/shims")])
 
 
 class ConfigTests(unittest.TestCase):
@@ -111,7 +168,38 @@ class ConfigTests(unittest.TestCase):
         for key, action in {"c": "new_workspace", "n": "next_workspace", "p": "prev_workspace", "T": "rename_workspace", "9": "command:project-root", "g": "command:lazygit", "j": "toggle_scratch", "G": "command:live-pr", "space": "prefix_file_search"}.items():
             self.assertEqual(bindings["prefix", key], action)
         self.assertEqual(bindings["terminal", "ctrl+h"], "terminal_focus_left")
-        self.assertNotIn(("global", "ctrl+p"), bindings)
+        self.assertEqual(bindings["prefix", "ctrl+f"], "choose_tree")
+        self.assertEqual(bindings["prefix", "F"], "command:projects")
+        self.assertEqual(bindings["prefix", "i"], "prefix_inbox")
+        self.assertEqual(bindings["prefix.layout", "s"], "layout_prefix_save")
+        self.assertEqual(bindings["prefix.layout", "l"], "layout_prefix_load")
+        for key, action in {"h": "prev_session", "l": "next_session"}.items():
+            self.assertEqual(bindings["global", f"ctrl+alt+{key}"], action)
+            self.assertEqual(bindings["global", f"alt+{key}"], action)
+        for key in ("ctrl+alt+j", "ctrl+alt+k", "alt+j", "alt+k", "ctrl+p"):
+            self.assertNotIn(("global", key), bindings)
+        self.assertEqual(bindings["prefix", "s"], "prefix_session_switcher")
+        self.assertEqual(bindings["prefix", "tab"], "last_session")
+        self.assertEqual(bindings["prefix", "esc"], "prefix_exit_mode")
+        self.assertEqual(bindings["window", "s"], "focus_sidebar")
+        self.assertEqual(bindings["prefix", "ctrl+s"], "command:session-space")
+        self.assertNotIn(("prefix", "ctrl+g"), bindings)
+
+    def test_restore_project_trust_and_remote_action_placement(self):
+        config = tomllib.loads((ROOT / "common/tuios/.config/tuios/config.d/dotfiles.toml").read_text())
+        self.assertEqual(config["daemon"]["resume_agents"], "ask")
+        self.assertEqual(config["tape"]["autorun"], "ask")
+        self.assertEqual(config["appearance"]["auto_enter_terminal_on_focus"], "off")
+        for entry in config["keybindings"]["command"]:
+            self.assertNotIn("tui nav ", entry.get("command", ""))
+            self.assertNotIn(entry["key"], [f"{modifier}{key}" for modifier in ("alt+", "ctrl+alt+") for key in "hjkl"])
+            if entry["name"] in ("project-root", "projects", "session-space"):
+                self.assertEqual(entry["type"], "popup", entry["name"])
+        space = next(entry for entry in config["keybindings"]["command"] if entry["name"] == "session-space")
+        self.assertIn("scripts/tui space'", space["command"])
+        hosts = tomllib.loads((ROOT / "mac/tuios/.config/tuios/config.d/20-hosts.toml").read_text())["hosts"]
+        self.assertEqual(hosts["ailab"]["addr"], "ailab")
+        self.assertEqual(hosts["pi-500"]["addr"], "pi-500")
 
     @unittest.skipUnless(shutil.which("tuios"), "tuios not installed")
     def test_installer_preserves_tmux_hooks_and_is_idempotent(self):
