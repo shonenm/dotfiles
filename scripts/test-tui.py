@@ -3,6 +3,7 @@
 
 import importlib.machinery
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -125,6 +126,25 @@ class SessionTests(unittest.TestCase):
         with patch.object(tui, "run", return_value=result):
             with self.assertRaisesRegex(RuntimeError, "one attached session"):
                 tui.navigate_space("next", 42)
+
+    def test_rail_counts_agents_and_reads_live_branch_of_focused_pane(self):
+        with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as plain:
+            subprocess.run(["git", "init", "-q", "-b", "live", repo], check=True)
+            panes = [
+                {"session": "work", "focused": False, "cwd": plain, "state": "none", "harness_id": ""},
+                {"session": "work", "focused": True, "cwd": repo, "state": "working", "harness_id": "claude-code"},
+                {"session": "work", "focused": False, "cwd": repo, "state": "needs_input", "harness_id": "pi"},
+                {"session": "idle", "focused": True, "cwd": plain, "state": "none", "harness_id": ""},
+            ]
+            rows = [{"name": "work", "branch": "stale"}, {"name": "idle"}]
+            listing = subprocess.CompletedProcess([], 0, json.dumps({"agents": panes}))
+            with patch.object(tui, "sessions", return_value=rows), patch.object(tui, "run", return_value=listing), patch("sys.stdout", new_callable=io.StringIO) as out:
+                tui.rail()
+        self.assertEqual(out.getvalue().splitlines(), [
+            "idle",
+            "work 2 \033[33m●\033[0m\033[31m●\033[0m",
+            "  \033[90m└ live\033[0m",
+        ])
 
     def test_space_navigation_command_passes_direction_and_client_pid(self):
         with patch.object(sys, "argv", ["tui", "space-nav", "next", "42"]), patch.object(tui, "navigate_space") as navigate:
