@@ -26,6 +26,9 @@ border_focused_color = "#7aa2f7"
 border_unfocused_color = "#3b4261"
 zoom_size = 100
 prefix_repeat_time = 1000
+show_cpu = true
+show_ram = true
+show_clock = true
 
 [appearance.sidebar]
 position = "left"
@@ -42,6 +45,28 @@ refresh = "3s"
 # tmux.expose 相当。pane navigator を画面カード一覧で開く。
 [panes]
 navigator_layout = "cards"
+
+# tmux status-right 相当。mode・prefix・copy表示はdock標準のpillを使う。
+[dock]
+right = ["transfers", "notifications", "copy-help", "cpu", "ram", "custom/gpu", "custom/storage", "custom/branch", "clock", "custom/host", "session-controls"]
+
+[dock.clock]
+format = "01/02 15:04"
+
+[dock.custom.gpu]
+command = "~/dotfiles/scripts/tui dock gpu"
+refresh = "5s"
+
+[dock.custom.storage]
+command = "~/dotfiles/scripts/tui dock storage"
+refresh = "60s"
+
+[dock.custom.branch]
+command = "~/dotfiles/scripts/tui dock branch"
+refresh = "3s"
+
+[dock.custom.host]
+command = "hostname -s"
 
 [daemon]
 window_size = "latest"
