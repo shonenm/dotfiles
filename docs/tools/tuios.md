@@ -153,7 +153,8 @@ tmuxの`pane-border-status`に合わせる。
 
 - pane上端に`番号: タイトル`を表示し、window buttonは隠す。TUIOS 0.10.1は`shared_borders`有効時にtitleを描画しないため無効にしている。
 - focus外paneの`dim_unfocused`は使わない。TUIOS 0.10.1はtheme設定時に既定背景のセルへthemeの背景色を塗るため、背景透過が消える。代わりに枠線をtokyonightの青系で色分けする（focus `#7aa2f7`、focus外 `#3b4261`）。
-- sidebarの`overview`は`tui rail`の出力で、sessionごとのagent数・状態色（黄=作業中、赤=要応答/エラー、緑=完了、灰=待機）と、focus中paneのcwdのbranchを3秒ごとに表示する。localのsessionのみが対象。`tuios ls`のbranchはsession作成時の値なので使わない。
+- sidebarの`overview`は`tui rail`の出力で、sessionごとのagent数・状態色（黄=作業中、赤=要応答/エラー、緑=完了、紫=hang、灰=待機）と、focus中paneのcwdのbranchを3秒ごとに表示する。localのsessionのみが対象。`tuios ls`のbranchはsession作成時の値なので使わない。
+- hangはtmuxの`tmux-agent-hang-watch.sh`相当。`working`のまま`AGENT_HANG_THRESHOLD`秒（既定120）hookのreportがないpaneを紫で示す。hookはtool呼び出しごとに`working`を再reportし`evidence_age_ms`を更新するため、これをheartbeatとして使う。画面出力は生存扱いにしない。常駐watcherは置かず、railの3秒周期で判定する。表示はoverviewのみで、TUIOS標準のrail glyph・Inbox・通知は`working`のまま（hook経由のagentの無応答検知はTUIOS 0.10.1未対応）。1つのtoolが長時間動く間やtool呼び出しのない長い思考中も同じくhangと推定される。
 
 ## AI表示
 
