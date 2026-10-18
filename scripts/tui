@@ -82,10 +82,10 @@ def pick():
         connect(session_name(path), path)
 
 
-def group():
+def space():
     rows = sessions()
-    groups = sorted({r.get("space", "") for r in rows} - {""})
-    chosen = choose(["new\tCreate space", "clear\tUngroup session"] + [f"group:{g}\t{g}" for g in groups], "space")
+    spaces = sorted({r.get("space", "") for r in rows} - {""})
+    chosen = choose(["new\tCreate space", "clear\tRemove from space"] + [f"space:{name}\t{name}" for name in spaces], "space")
     if not chosen:
         return
     if chosen == "clear":
@@ -96,7 +96,7 @@ def group():
             return
         args = [name]
     else:
-        args = [chosen.removeprefix("group:")]
+        args = [chosen.removeprefix("space:")]
     run("tuios", "set-session-space", *args)
 
 
@@ -117,7 +117,7 @@ def dev():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command")
-    for name in ("pick", "group", "root", "dev"):
+    for name in ("pick", "space", "root", "dev"):
         sub.add_parser(name)
     attach = sub.add_parser("attach")
     attach.add_argument("name", nargs="?", default="main")
@@ -133,8 +133,8 @@ def main():
             connect(args.name, args.cwd)
         elif args.command == "pick":
             pick()
-        elif args.command == "group":
-            group()
+        elif args.command == "space":
+            space()
         elif args.command == "root":
             root()
         elif args.command == "dev":
