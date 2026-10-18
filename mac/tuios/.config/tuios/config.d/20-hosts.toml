@@ -1,0 +1,6 @@
+# Macの画面から各ホストの永続sessionを管理する。SSH aliasを使う。
+[hosts.ailab]
+addr = "ailab"
+
+[hosts.pi-500]
+addr = "pi-500"

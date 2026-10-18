@@ -1,112 +1,142 @@
 # TUIOS
 
-> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/` / **Custom** `scripts/tui`・Neovim navigation（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space巡回・Neovim navigation（[区分](../provenance.md#区分)）
 
-既存tmuxを残した並行移行の第1段階。ローカルのキー操作、sessionグループ、popup、Claude / Piの状態表示をTUIOS 0.10.0で再構成する。`tbrowser`などの追加はまだ行わない。
+TUIOS 0.10.1の標準機能を中心に、local / remote session、layout、AI表示、復元を管理する。既存tmuxは引き続き利用できる。
 
 ## 導入と起動
 
-macOSは`config/Brewfile`、Linuxのsudo / no-sudo両経路は`config/mise-linux.toml`で導入する。`install.sh`はStowに加えて次を設定する。
-
-- `~/.config/tuios/config.d/dotfiles.toml`に共通設定をlink。
-- `config.toml`がなければ空ファイルを作成。0.10.0はこのファイルがないと`config.d`を読み込まない。
-- `config.d/10-shell.toml`にshell resolverの絶対パスを生成。既存の`tmux-default-shell`を共有し、zsh / nix-user-chrootの選択を維持する。tmuxコマンドは呼ばない。
-- `tuios integration install claude-code pi`でupstreamのhookを導入。Claudeの既存hookとstatus line、Piの既存extensionは残す。Claude設定のテンプレート生成後に毎回実行する。
+macOSは`config/Brewfile`、Linuxのsudo / no-sudo両経路は`config/mise-linux.toml`で導入する。Linuxは0.10.1を固定する。
 
 ```bash
 ./install.sh
-
-tui                         # mainを作成、または再接続
-tui attach work --cwd ~/work # 指定sessionを作成、または再接続
-tui pick                    # session / ghq / zoxideから選択
+tui                          # 最後に使ったsessionへ接続。初回はnativeが作成
+tui attach work --cwd ~/work  # 指定sessionを作成・再接続
+tui pick                     # ghq / zoxideからプロジェクトを選択
 ```
 
-Ghosttyの起動設定は変更しない。tmuxの内側から重ねて起動せず、新しいGhosttyウィンドウのshellで`tui`を実行する。tmuxの既存paneは移されず、そのまま稼働する。戻る場合はTUIOSをdetachし、従来どおり`tmux attach`する。
+`tui`をTUIOS内で実行するとnative session switcherを開く。新しいGhosttyウィンドウでは、そのまま`tui`で起動する。
 
-## 対応関係
+`install.sh`は次を設定する。
 
-| tmux | TUIOS |
-|---|---|
-| session | session |
-| window | workspace |
-| pane | window |
-| session group | space |
-| popup用session | scratch pane |
-| resurrect / continuum | daemonの保存・復元 |
+- 共通設定とmacOS用hosts設定をStowでlink。
+- `config.toml`がなければ空ファイルを作成し、`config.d`を読み込めるようにする。
+- `config.d/10-shell.toml`へshell resolverの絶対パスを生成。既存`tmux-default-shell`のzsh / nix-user-chroot選択を共有する。user binをPATHへ追加し、popup commandもlogin shellで実行する。
+- `tuios integration install claude-code pi`でupstreamのhookを更新。Claudeの既存hook・status line、Piの他extensionを維持する。
 
-workspaceは1〜9の固定枠。sessionは必要に応じて作成する。既存tmuxのsessionやgroupを自動importする処理はない。プロジェクトsession名はディレクトリ名とパスのhashで作り、同名checkoutの衝突を避ける。
+`config.toml`はmachine-localな設定画面・hosts登録用。ここで設定した値は`config.d`より優先する。`tuios config origin KEY --json`で設定元を確認できる。
 
 ## キー操作
 
-prefixは従来と同じ`Ctrl+Space`。以下は特記しない限りprefixの後に押す。0.10.0には開発版のtmux presetがないため、個別に割り当てる。
+prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 
 | キー | 操作 |
 |---|---|
-| `c` | 空きworkspaceを作成しshellを開く |
+| `c` | 空きworkspaceへshellを開く |
 | `n` / `p`、`Ctrl+l` / `Ctrl+h` | 使用中workspaceを次 / 前へ |
 | `1`〜`8` | workspaceを選択 |
-| `9` | 現在のGitルートに対応するsessionへ |
+| `9` | Gitルートのproject sessionへ |
 | `T` / `t` | workspace名 / pane名を変更 |
 | `X` / `x` | workspace / paneを閉じる |
-| `\|` / `-` | 左右 / 上下に分割し、cwdを継承 |
-| `H` / `J` / `K` / `L` | paneをリサイズ。従来の2セルではなく5セル単位 |
-| `z`、prefix不要の`Ctrl+z` | zoom |
-| `v` / `[` | vi copy mode。`y`は既存`clipboard-copy`へ渡す |
+| `\|` / `-` | 左右 / 上下に分割 |
+| `H` / `J` / `K` / `L` | paneを5セル単位でリサイズ |
+| `z`、prefix不要の`Ctrl+z` | sidebarを残してzoom |
+| `v` / `[` | vi copy mode。`y`で`clipboard-copy`へ渡す |
 | `u` / `Ctrl+u` | scrollbackブラウザー |
 | `e` | native hints |
 | `s` / `f` | native session switcher |
-| `Ctrl+f` / `F` | session / ghq / zoxide picker |
-| `Ctrl+g` | 現sessionをspaceへ登録、作成、解除 |
+| `Ctrl+f` / `/` | native pane navigator。検索と画面preview |
+| `F` | project picker。remoteは候補通知後に`prefix s`で選択 |
+| `Ctrl+g` | native spaceへ登録、作成、解除 |
 | `Tab` | 直前のsession |
-| `a` | Inbox |
+| `a` / `i`、続けて`Tab` | Inboxから全agentのAgents viewへ |
 | `A` / `b` | session / agent sidebar |
+| `Ctrl+a` | Agents設定。integrationの確認・更新 |
 | `o` / `O` | 要応答 / 完了したagentへ |
 | `Ctrl+v` | native diff review |
 | `S` | paneへの同時入力を切り替え |
-| `l`、続けて`s` / `l` | native layoutを保存 / 読み込み |
-| `N` | 空きworkspaceにClaude / Neovim / shellを開く |
-| `r` / `?` / `d` | 設定再読込 / help / detach |
+| `l`、続けて`s` / `l` | native layoutの保存 / 読込 |
+| `N` | localの空きworkspaceへClaude / Neovim / shellを開く |
+| `r` / `?` / `d` | 再読込 / help / detach |
 | `:` | command palette |
 
-prefix不要の`Ctrl+h/j/k/l`はpane移動。Neovimでは先に内部splitを移動し、端に達したときだけOSC 7777でTUIOSへ移動を返す。tmux内では既存のvim-tmux-navigatorを使う。
+prefix不要の`Ctrl+h/j/k/l`はpane移動。Neovimの内部splitを先に移動し、端でTUIOSへ移動を返す。tmux内では既存vim-tmux-navigatorを使う。
 
-`Alt+h/l`は同じspaceのsessionを前後に巡回し、`Alt+j/k`はspace間を移動する。移動先spaceでは最後に使ったsessionを選ぶ。TUIOS内のshellでは`Alt+s`が`tui pick`を開く。tmux内・通常のshellでは従来のsesh動作を残す。
+zoom中に分割すると、追加paneがzoomの下に隠れる。`prefix z`で配置全体を表示する。
+
+## Session・project picker
+
+既存sessionはnative switcherで選ぶ。名前の絞り込み、作成、rename、削除、linked remoteへの切替を備える。pane navigatorはsession / workspace / paneのツリーと画面previewを表示する。
+
+project pickerはhome、dotfiles、ghq、zoxideのディレクトリ一覧を扱う。選択後はnativeの`switch-session --create --cwd`へ渡す。同名checkoutの衝突を避けるため、session名はディレクトリ名とパスのhashで作る。
+
+TUIOS内のshellの`Alt+s`はproject picker。通常のshell・tmux内は既存seshを使う。
+
+## Spaceによるグループ管理
+
+所属・保存・sidebar表示はnative spaceを使う。`prefix Ctrl+g`で登録する。
+
+| prefix不要のキー | 操作 |
+|---|---|
+| `Ctrl+Alt+h` / `Ctrl+Alt+l` | 同じspaceのsessionを前 / 次へ |
+| `Ctrl+Alt+j` / `Ctrl+Alt+k` | 次 / 前のspaceへ |
+| `Alt+h/l/j/k` | 上と同じ。AeroSpaceとの競合時はCtrl付きキーを使う |
+
+localでは移動先spaceの最終利用時刻が新しいsessionへ切り替える。時刻は秒単位で、同時刻なら名前順の先頭を選ぶ。巡回処理はnativeのsession一覧・space属性を読み、独自の状態ファイルを作らない。rename後のsession名もnativeから取得する。
+
+remote表示中はpopupに切替候補のsession名を表示する。`Enter`で閉じ、`prefix s`の標準pickerから選択して確定する。TUIOS 0.10.1のhost-command fenceを維持し、remote popupからlocal画面を自動で切り替える要求を標準UIへの案内に変える。project pickerも同じ導線を使う。
+
+project picker、space設定、巡回はpopup型commandとしてsessionのホストで実行する。各ホストにもdotfilesの更新と`install.sh`を適用する。shell型commandはMacで実行されるため、`N`の固定雛形はlocal向け。
+
+spaceはホストごとの分類。同名spaceが複数ホストにあっても別グループで、global sessionはspaceへ所属しない。
+
+## Remote hosts
+
+Mac用の`20-hosts.toml`でSSH aliasの`ailab`と`pi-500`を登録する。native sidebar / switcherからlocalとremoteを同じ画面で管理する。
+
+```bash
+tuios hosts                           # 接続状態とdaemon version
+tuios hosts sync ailab --start         # binaryを揃え、未起動daemonを開始
+tuios new --host ailab work            # remoteに永続sessionを作成して表示
+tuios attach --host ailab work         # 既存remote sessionを表示
+```
+
+`hosts sync --start`は既存daemonを維持する。更新済みbinaryへ切り替えるdaemon再起動は、そこで動く全paneのprogramを終了する操作なので、作業の切れ目に行う。
+
+長時間のClaude / Piはremote側のsessionへ置く。Macの端末を閉じてもremoteで実行が続く。local sessionへremote paneを混ぜる`new-window --host`は、一時的に並べる用途に使う。混在paneの切断保持は既定10分で、local daemon再起動後の復元先はlocal shellになる。
+
+従来の`rcon`は[tmux + Docker経路](../infrastructure/rcon.md)として維持する。containerへの自動入場・cwd継承はこの経路を利用する。TUIOSのhost登録はSSHホストが対象。
+
+## Layout・プロジェクト起動
+
+`prefix l s`で名前付きlayoutを保存し、`prefix l l`で選ぶ。既存paneのprocessを再利用し、不足paneを作成、余剰paneを最小化する。保存先は`~/.config/tuios/layouts/`。
+
+project選択だけならnative session作成で十分。初回にエディタやagentも開きたいプロジェクトには、標準の`.tuios.tape`を置く。`autorun = "ask"`で内容を確認して実行する。command paletteのproject tape reviewから操作する。
+
+`prefix N`は既存`dev.tape`のlocal向け雛形。全workspace使用中は中止し、既存programへの誤入力を防ぐ。
+
+## AI表示
+
+`prefix a`または`prefix i`でInboxを開き、`Tab`でAgents viewへ切り替える。local / 他session / linked remoteのagentを一覧表示し、検索、filter、sort、返信、paneへの移動をnativeに任せる。
+
+- Claude Codeのpreviewはtranscriptから会話・tool callを表示。
+- Piのpreviewはturn要約・最終message・mailが中心。
+- `tuios integration status claude-code pi --json`でhookの更新状態を確認。
+- `tuios doctor agents`で検出・integrationを診断。
+
+upstream integrationを更新したら、新しく起動したharnessで反映する。既存会話はそのまま継続できる。新しいUIを使うときはdetachして`tui`で再接続する。
+
+## 復元
+
+native daemonがsession、space、layout、cwd、履歴を保存する。`resume_agents = "ask"`で、再起動後にClaude / Piの会話再開をInboxから選ぶ。Claudeは`--resume`、Piは`--session`で会話へ戻る。
+
+普段はdetachでprocessを維持する。OS / daemon再起動後は保存状態から新しいshellを起動する。Neovimの未保存bufferや実行途中のjobは各program側で保存・再開する。`kill-session`は保存状態も削除する。
 
 ## Popup
 
-| キー | 内容 |
-|---|---|
-| `j` | native scratch shell |
-| `g` | lazygit |
-| `k` | `nvim .` |
-| `G` | live-pr |
-| `P` | pgcli。既存と同じ`DATABASE_URL`既定値 |
-| `Q` | quay |
-| `Space` | native file search |
+`j`はscratch shell、`g`はlazygit、`k`は`nvim .`、`G`はlive-pr、`P`はpgcli、`Q`はquay、`Space`はnative file search。
 
-shell以外のpopupもnative scratchで実装する。同じキーで表示を切り替え、プロセスを保持する。cwdは最初に開いた位置を使う。native scratch shellは別のworkspaceからも呼べる。popupの中でもprefixがTUIOSの操作に使われる。
-
-`N`は`dev.tape`を実行する。全workspaceが使用中なら実行せず、稼働中のprogramへコマンドを誤入力しない。
-
-## Agent状態
-
-ClaudeとPiの状態変換・hook更新はupstreamに任せる。新しく起動したClaude / Piで反映する。現在進行中の会話を再起動する必要はない。
-
-- Claudeの従来の通知やtmux hookは残す。tmux外でno-opになる既存処理を変更しない。
-- PiのTUIOS extensionはinstallerが生成する。dotfiles側へupstream実装を複製しない。
-- 状態はTUIOSのsidebar / Inbox / attention jumpへ表示する。既存のtmux agent indexやsidebar用paneは使わない。
-- SSH切断・client detachではdaemon上のprocessが続く。OS再起動後の復元はprocessの継続ではない。会話の再開はnative resume機能で行う。
-
-## 未移行部分
-
-現時点で全面移行完了とは扱わない。
-
-- `rcon`は従来のhost tmux + Docker経路を維持する。TUIOSへの切り替えにはremote側導入に加えて、Docker内からホストdaemonへhookを届けるsocket共有とcwd継承の検証が必要。
-- tmuxの`F12` nested mode、任意2 paneのfzf swap、sticky zoom、セッションaccent color、既存layout preset、smugの任意YAMLは移植していない。TUIOS互換APIの`swap-pane`も0.10.0では非対応であり、成功するようには見せない。
-- native layout / hints / reviewの操作体系はtmux pluginと同一ではない。既存のtmux scriptをTUIOS上でそのまま呼ばない。
-- モバイル接続、ブラウザー、terminal-browser、Webサーバーの導入は別段階とする。
-
-`config.toml`はmachine-localな設定画面・hosts登録用に残す。ここで変更した値は`config.d`より優先する。共通設定へ戻す場合は該当するlocal overrideを削除する。
+scratchは同じキーで表示を切り替え、processを保持する。cwdは最初に開いた位置を使う。remote sessionではそのホスト上で実行する。
 
 ## 検証
 
@@ -115,4 +145,4 @@ python3 scripts/test-tui.py
 tuios keybinds doctor
 ```
 
-テストは別の設定ディレクトリを使い、稼働中のtmux / TUIOS sessionを操作しない。daemon未起動時に`ls --json`が終了コード3で保存済みsession一覧を返す仕様と、引数なし`tui`の起動経路も検証する。Neovimはpluginの自動導入を伴わない最小設定で、内部移動・端でのOSC送信・従来tmuxコマンドの呼び分けを検証する。
+テストは隔離した設定を使用し、nativeのキー割当、project選択、space巡回、hook再導入、Neovim移動を確認する。実TUIでのlayout・復元の検証は専用daemon、remote検証は専用sessionで行い、稼働中の作業sessionを維持する。
