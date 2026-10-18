@@ -1,7 +1,8 @@
 #!/bin/bash
 # tmux-docker-enter — enter a docker container from a tmux pane with cwd propagation
 #
-# Usage (via tmux default-command / new-session / split-window):
+# Usage (via tmux default-command / new-session / split-window, or the
+# TUIOS pane shell `tmux-default-shell` for sessions registered by `tui rcon`):
 #   docker-enter <container> [shell]
 #
 # Behavior:
@@ -25,6 +26,19 @@ fi
 
 cwd="$(pwd 2>/dev/null || echo)"
 
+# TUIOS focuses a new pane before its shell starts, and a pane's host cwd is
+# the docker client's, so neither names the folder to inherit. Take the
+# container cwd of the session's pane that drew a prompt last (zshrc hook).
+if [[ -z "${TMUX:-}" && -n "${TUIOS_PANE_ID:-}" ]]; then
+  state_dir="$HOME/.cache/tmux-pane-state-$container"
+  latest=""
+  for id in $(tuios list-windows -s "$TUIOS_SESSION" --json 2>/dev/null | jq -r '.windows[].window_id' 2>/dev/null); do
+    file="$state_dir/cwd-$id"
+    [[ "$id" != "$TUIOS_PANE_ID" && -r "$file" && ( -z "$latest" || "$file" -nt "$latest" ) ]] && latest="$file"
+  done
+  [[ -n "$latest" ]] && cwd="$(head -1 "$latest")"
+fi
+
 # Build docker exec args
 args=(exec -it)
 [[ -n "${TERM:-}" ]]           && args+=(-e "TERM=$TERM")
@@ -32,6 +46,8 @@ args=(exec -it)
 [[ -n "${CLAUDE_CONTEXT:-}" ]] && args+=(-e "CLAUDE_CONTEXT=$CLAUDE_CONTEXT")
 # Pass TMUX_PANE so container-side zshrc chpwd hook can write per-pane cwd state
 [[ -n "${TMUX_PANE:-}" ]]      && args+=(-e "TMUX_PANE=$TMUX_PANE")
+# TUIOS panes have no TMUX_PANE; the same hook keys the cwd file by this id.
+[[ -z "${TMUX:-}" && -n "${TUIOS_PANE_ID:-}" ]] && args+=(-e "RCON_PANE_ID=$TUIOS_PANE_ID")
 # Propagate rcon provenance so env-context inside the container can reconstruct
 # where it came from (host machine, container name, host $HOME). Without these
 # the container-side env-context returns "unknown" and tools fail loudly

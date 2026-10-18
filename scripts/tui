@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TUIOS launcher, project picker and native-space settings/navigation."""
+"""TUIOS launcher, project picker, native-space settings/navigation and rcon containers."""
 
 import argparse
 import hashlib
@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -124,6 +125,37 @@ def navigate_space(direction, client_pid):
     run("tuios", "switch-session", "--client", client["client_id"], destination["name"])
 
 
+RCON_STATE = '${XDG_STATE_HOME:-$HOME/.local/state}/tuios-rcon'
+
+
+def rcon(target):
+    # `host:container` opens a session named after the container on that host
+    # (`local` for this machine). Its pane shells enter the container through
+    # tmux-default-shell, which reads the state file written here first.
+    if target is None:
+        path = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "rcon/targets"
+        lines = [line.strip() for line in path.read_text().splitlines() if line.strip() and not line.lstrip().startswith("#")]
+        target = choose([f"{line}\t{line}" for line in lines], "rcon")
+        if target is None:
+            return
+    host, _, container = target.partition(":")
+    if not container:
+        switch_session("--create", "main" if host == "local" else f"{host}:main")
+        return
+    name = re.sub(r"[:.]", "-", container)
+    script = f'd="{RCON_STATE}"; mkdir -p "$d" && printf "%s\\n" {shlex.quote(container)} > "$d"/{shlex.quote(name)}'
+    if host == "local":
+        run("sh", "-c", script)
+        switch_session("--create", name)
+    else:
+        hosts = json.loads(run("tuios", "hosts", "--json", capture_output=True, text=True).stdout)["hosts"]
+        addr = next((row.get("addr") or host for row in hosts if row["host"] == host), None)
+        if addr is None:
+            raise RuntimeError(f"{host} is not in the [hosts] config table")
+        run("ssh", addr, script)
+        switch_session("--create", f"{host}:{name}")
+
+
 AGENT_COLORS = {"working": 33, "needs_input": 31, "errored": 31, "done": 32, "hang": 35}
 # tmux-claude-pane.sh と同じ閾値。hookのreportごとに更新されるevidenceだけで判定する。
 HANG_THRESHOLD_MS = int(os.environ.get("AGENT_HANG_THRESHOLD", "120")) * 1000
@@ -232,6 +264,8 @@ def main():
     nav.add_argument("client_pid", type=int)
     dock_item = sub.add_parser("dock")
     dock_item.add_argument("item", choices=("gpu", "storage", "branch"))
+    rcon_parser = sub.add_parser("rcon")
+    rcon_parser.add_argument("target", nargs="?")
     attach = sub.add_parser("attach")
     attach.add_argument("name", nargs="?", default="main")
     attach.add_argument("--cwd", type=Path, default=Path.cwd())
@@ -250,6 +284,8 @@ def main():
             space()
         elif args.command == "space-nav":
             navigate_space(args.direction, args.client_pid)
+        elif args.command == "rcon":
+            rcon(args.target)
         elif args.command == "rail":
             rail()
         elif args.command == "theme":
