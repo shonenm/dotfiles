@@ -16,15 +16,28 @@ new_window_inherit_cwd = true
 auto_enter_terminal_on_focus = "off"
 focus_follows_mouse = false
 dockbar_position = "bottom"
-shared_borders = true
+# tmux の pane-border-status 相当。title は shared_borders 無効時のみ描画される。
+# dim_unfocused は theme 設定時に背景を塗り透過を消すため使わない。
+shared_borders = false
+window_title_format = "{index}: {title}"
+hide_window_buttons = true
+# focus は tokyonight の blue / fg_gutter で示す。
+border_focused_color = "#7aa2f7"
+border_unfocused_color = "#3b4261"
 zoom_size = 100
 prefix_repeat_time = 1000
 
 [appearance.sidebar]
 position = "left"
 width = 32
-sections = "sessions,agents"
+sections = "sessions,custom,agents"
 show_agents = true
+
+# tmux sidebar 相当の session ごとの agent 数と branch。
+[appearance.sidebar.custom]
+title = "overview"
+command = "~/dotfiles/scripts/tui rail"
+refresh = "3s"
 
 [daemon]
 window_size = "latest"
