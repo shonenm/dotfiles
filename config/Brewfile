@@ -11,6 +11,7 @@ tap "oven-sh/bun"
 
 # --- Shell & Terminal ---
 brew "tmux"
+brew "tuios"  # tmux と並行管理する移行先
 brew "starship"
 brew "sheldon"
 brew "atuin"

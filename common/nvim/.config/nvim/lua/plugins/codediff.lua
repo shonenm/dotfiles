@@ -29,6 +29,7 @@ return {
       explorer = {
         view_mode = "tree",
         indent_markers = true,
+        line_stats = { enabled = true },
       },
     },
     config = function(_, opts)

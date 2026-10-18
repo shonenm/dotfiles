@@ -4,6 +4,8 @@
 
 SSH + ホスト側 tmux + Docker をワンコマンドで接続するツール。
 
+TUIOSでは[native Remote hosts](../tools/tuios.md#remote-hosts)でホストの永続sessionへ接続する。`rcon`は従来のtmux運用とcontainer自動入場に使う。
+
 > tmux server が重くなった時の再起動・復元手順は
 > [tmux-server-restart.md](./tmux-server-restart.md) を参照(再起動は必ず rcon 経由で)。
 

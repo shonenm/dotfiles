@@ -512,6 +512,7 @@ verify_stow() {
   local failed=()
   local checks=(
     ".config/tmux"
+    ".config/tuios/config.d/dotfiles.toml"
     ".config/mise"
     ".config/nvim"
     ".config/starship.toml"
@@ -680,6 +681,27 @@ link_dotfiles() {
     log_error "Some dotfiles could not be linked"
   else
     log_success "Dotfiles linked successfully"
+  fi
+}
+
+# TUIOS owns its hook format. Install after template generation so both the
+# existing tmux hooks and the upstream TUIOS hooks survive each install.
+setup_tuios() {
+  if ! command_exists tuios; then
+    log_warn "TUIOS not installed; skipping integrations"
+    return
+  fi
+  local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/tuios"
+  mkdir -p "$config_dir/config.d"
+  # config.d is read once config.toml exists.
+  [[ -e "$config_dir/config.toml" ]] || touch "$config_dir/config.toml"
+  python3 - "$config_dir/config.d/10-shell.toml" "$DOTFILES_DIR/scripts/tmux-default-shell" <<'PYEOF'
+import json, pathlib, sys
+pathlib.Path(sys.argv[1]).write_text("[appearance]\npreferred_shell = " + json.dumps(sys.argv[2]) + "\n")
+PYEOF
+  if ! tuios integration install claude-code pi; then
+    log_error "TUIOS integration installation failed"
+    SETUP_FAILED=true
   fi
 }
 
@@ -1192,6 +1214,7 @@ main() {
 
   # 4. Generate AI CLI configs (with absolute paths)
   generate_ai_cli_configs
+  setup_tuios
 
   # 4.6. Disable Serena MCP dashboard auto-open
   configure_serena_dashboard
