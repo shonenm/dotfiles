@@ -111,8 +111,6 @@ command_palette = []
 launcher = []
 prev_session = ["ctrl+alt+h", "alt+h"]
 next_session = ["ctrl+alt+l", "alt+l"]
-prefix_session_switcher = ["ctrl+alt+j", "alt+j"]
-last_session = ["ctrl+alt+k", "alt+k"]
 
 [keybindings.layout]
 preselect_left = []
@@ -149,7 +147,7 @@ description = "Project root session"
 name = "session-space"
 key = "prefix+ctrl+g"
 type = "popup"
-command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui group'"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui space'"
 description = "Session space"
 
 [[keybindings.command]]

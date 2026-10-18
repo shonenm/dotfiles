@@ -72,14 +72,21 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(choose.call_args.args[1], "project")
             connect.assert_called_once_with(tui.session_name(project), str(project))
 
+    def test_space_command_sets_native_membership(self):
+        rows = [{"space": "work"}, {"space": "work"}, {"space": "personal"}, {"space": ""}]
+        with patch.object(sys, "argv", ["tui", "space"]), patch.object(tui, "sessions", return_value=rows), patch.object(tui, "choose", return_value="space:work") as choose, patch.object(tui, "run") as run:
+            self.assertEqual(tui.main(), 0)
+        choose.assert_called_once_with(["new\tCreate space", "clear\tRemove from space", "space:personal\tpersonal", "space:work\twork"], "space")
+        run.assert_called_once_with("tuios", "set-session-space", "work")
+
     def test_native_space_named_clear_is_not_a_menu_action(self):
-        with patch.object(tui, "sessions", return_value=[{"space": "clear"}]), patch.object(tui, "choose", return_value="group:clear"), patch.object(tui, "run") as run:
-            tui.group()
+        with patch.object(tui, "sessions", return_value=[{"space": "clear"}]), patch.object(tui, "choose", return_value="space:clear"), patch.object(tui, "run") as run:
+            tui.space()
         run.assert_called_once_with("tuios", "set-session-space", "clear")
 
     def test_create_space_named_clear(self):
         with patch.object(tui, "sessions", return_value=[]), patch.object(tui, "choose", return_value="new"), patch("builtins.input", return_value="clear"), patch.object(tui, "run") as run:
-            tui.group()
+            tui.space()
         run.assert_called_once_with("tuios", "set-session-space", "clear")
 
     def test_full_workspace_does_not_type_into_existing_program(self):
@@ -166,10 +173,16 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(bindings["prefix", "i"], "prefix_inbox")
         self.assertEqual(bindings["prefix.layout", "s"], "layout_prefix_save")
         self.assertEqual(bindings["prefix.layout", "l"], "layout_prefix_load")
-        for key, action in {"h": "prev_session", "l": "next_session", "j": "prefix_session_switcher", "k": "last_session"}.items():
+        for key, action in {"h": "prev_session", "l": "next_session"}.items():
             self.assertEqual(bindings["global", f"ctrl+alt+{key}"], action)
             self.assertEqual(bindings["global", f"alt+{key}"], action)
-        self.assertNotIn(("global", "ctrl+p"), bindings)
+        for key in ("ctrl+alt+j", "ctrl+alt+k", "alt+j", "alt+k", "ctrl+p"):
+            self.assertNotIn(("global", key), bindings)
+        self.assertEqual(bindings["prefix", "s"], "prefix_session_switcher")
+        self.assertEqual(bindings["prefix", "tab"], "last_session")
+        self.assertEqual(bindings["prefix", "esc"], "prefix_exit_mode")
+        self.assertEqual(bindings["window", "s"], "focus_sidebar")
+        self.assertEqual(bindings["prefix", "ctrl+g"], "command:session-space")
 
     def test_restore_project_trust_and_remote_action_placement(self):
         config = tomllib.loads((ROOT / "common/tuios/.config/tuios/config.d/dotfiles.toml").read_text())
@@ -181,6 +194,8 @@ class ConfigTests(unittest.TestCase):
             self.assertNotIn(entry["key"], [f"{modifier}{key}" for modifier in ("alt+", "ctrl+alt+") for key in "hjkl"])
             if entry["name"] in ("project-root", "projects", "session-space"):
                 self.assertEqual(entry["type"], "popup", entry["name"])
+        space = next(entry for entry in config["keybindings"]["command"] if entry["name"] == "session-space")
+        self.assertIn("scripts/tui space'", space["command"])
         hosts = tomllib.loads((ROOT / "mac/tuios/.config/tuios/config.d/20-hosts.toml").read_text())["hosts"]
         self.assertEqual(hosts["ailab"]["addr"], "ailab")
         self.assertEqual(hosts["pi-500"]["addr"], "pi-500")

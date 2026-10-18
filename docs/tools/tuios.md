@@ -46,7 +46,7 @@ prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 | `v` / `[` | vi copy mode。`y`で`clipboard-copy`へ渡す |
 | `u` / `Ctrl+u` | scrollbackブラウザー |
 | `e` | native hints |
-| `s` / `f` | native session switcher |
+| `s` / `f` | native session switcher。local / remoteのsessionを選択 |
 | `Ctrl+f` / `/` | native pane navigator。検索と画面preview |
 | `F` | project picker。remoteは候補通知後に`prefix s`で選択 |
 | `Ctrl+g` | native spaceへ登録、作成、解除 |
@@ -91,27 +91,29 @@ zoom中に分割すると、追加paneがzoomの下に隠れる。`prefix z`で�
 | prefix不要のキー | 操作 |
 |---|---|
 | `Ctrl+Alt+h` / `Ctrl+Alt+l` | 同じホスト内のsessionを前 / 次へ。spaceをまたぐ |
-| `Ctrl+Alt+j` | local / remoteを含むnative session switcher |
-| `Ctrl+Alt+k` | 直前のsessionへ戻る。ホストをまたいで往復できる |
-| `Alt+h/l/j/k` | 上と同じ。AeroSpace使用時はCtrl付きキーを使う |
+| `Alt+h/l` | 上と同じ。AeroSpace使用時はCtrl付きキーを使う |
 
-移動キーはnative actionへ直接割り当て、shellやcommand popupを起動しない。`Ctrl+Alt+j`でホスト名またはsession名を検索して`Enter`で移動し、`Ctrl+Alt+k`で元のsessionへ戻る。
+移動キーはnative actionへ直接割り当て、shellやcommand popupを起動しない。ホストをまたぐ移動は`prefix s`でホスト名またはsession名を検索して`Enter`で確定し、`prefix Tab`で元のsessionへ戻る。`Ctrl+Alt+j/k`と`Alt+j/k`への独自割当は設けない。
 
 project pickerはhome、dotfiles、ghq、zoxideのディレクトリ一覧を扱う。選択後はnativeの`switch-session --create --cwd`へ渡す。同名checkoutの衝突を避けるため、session名はディレクトリ名とパスのhashで作る。
 
 TUIOS内のshellの`Alt+s`はproject picker。通常のshell・tmux内は既存seshを使う。
 
-## Spaceによるグループ管理
+## Space
 
-所属・保存・sidebar表示はnative spaceを使う。`prefix Ctrl+g`で登録する。
+spaceは関連するsessionをまとめるTUIOS標準の分類名。所属・保存・sidebar表示をnativeで管理し、独自のgroupやspace巡回は持たない。既存sessionのspace所属はそのまま維持する。
 
-spaceの所属変更は`prefix Ctrl+g`のpickerへ集約する。spaceごとのsessionはnative sidebarで選ぶ。session移動キーはspaceで絞らず、同じホスト内のsessionを巡回する。
+- **所属変更・作成・解除**：`prefix Ctrl+g`のpicker。shellからは`tui space`。
+- **別spaceのsessionへ移動**：`prefix Esc`でWindow modeへ入り、`s`でsidebarへfocus。`j/k`または矢印で目的のspace内のsessionを選び、`Enter`で移動する。
+- **名前からsessionを選択**：`prefix s`の標準switcher。ホストをまたぐ移動もここへまとめる。
+
+spaceの見出しは分類表示で、移動先にはその中のsessionを選ぶ。`Ctrl+Alt+h/l`はspaceで絞らず、同じホスト内のsessionを巡回する。
 
 project pickerでremoteの切替先を選んだ場合はpopupにsession名を表示する。`Enter`で閉じ、`prefix s`の標準pickerから選択して確定する。TUIOS 0.10.1のhost-command fenceを維持し、remote popupからlocal画面を自動で切り替える要求を標準UIへの案内に変える。通常のsession移動とホストをまたぐ移動はnative actionで直接処理する。
 
 project pickerとspace設定はpopup型commandとしてsessionのホストで実行する。各ホストにもdotfilesの更新と`install.sh`を適用する。shell型commandはMacで実行されるため、`prefix N`の固定雛形はlocal向け。
 
-spaceはホストごとの分類。同名spaceが複数ホストにあっても別グループで、global sessionはspaceへ所属しない。
+spaceはホストごとの分類。同名spaceが複数ホストにあっても別のspaceで、global sessionはspaceへ所属しない。
 
 ## Remote hosts
 
