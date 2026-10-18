@@ -1,6 +1,6 @@
 # TUIOS
 
-> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space設定と巡回・Neovim navigation（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space設定と巡回・sidebar overview・Neovim navigation（[区分](../provenance.md#区分)）
 
 TUIOS 0.10.1の標準機能を中心に、local / remote session、layout、AI表示、復元を管理する。既存tmuxは引き続き利用できる。
 
@@ -62,7 +62,7 @@ prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 | `r` / `?` / `d` | 再読込 / help / detach |
 | `:` | command palette |
 
-prefix不要の`Ctrl+h/j/k/l`はpane移動。Neovimの内部splitを先に移動し、端でTUIOSへ移動を返す。tmux内では既存vim-tmux-navigatorを使う。
+prefix不要の`Ctrl+h/j/k/l`はpane移動。TUIOS 0.10.1は端で反対側へwrapしない（[upstream #895](https://github.com/Gaurav-Gosain/tuios/issues/895)）。Neovimの内部splitを先に移動し、端でTUIOSへ移動を返す。tmux内では既存vim-tmux-navigatorを使う。
 
 zoom中に分割すると、追加paneがzoomの下に隠れる。`prefix z`で配置全体を表示する。
 
@@ -94,7 +94,7 @@ zoom中に分割すると、追加paneがzoomの下に隠れる。`prefix z`で�
 | `Ctrl+Alt+j` / `Ctrl+Alt+k` | localの次 / 前のspaceへ |
 | `Alt+h/l` | 同じホスト内のsessionを前 / 次へ。AeroSpace使用時はCtrl付きキーを使う |
 
-sessionの前後移動はnative actionへ直接割り当て、shellやcommand popupを起動しない。ホストをまたぐ移動は`prefix s`でホスト名またはsession名を検索して`Enter`で確定し、`prefix Tab`で元のsessionへ戻る。`Ctrl+Alt+j/k`はlocalのspace巡回用で、`Alt+j/k`はAeroSpaceとの競合を避けて割り当てない。
+sessionの前後移動はnative actionへ直接割り当て、shellやcommand popupを起動しない。ホスト巡回キーはTUIOS 0.10.1にない（[upstream #896](https://github.com/Gaurav-Gosain/tuios/issues/896)）。ホストをまたぐ移動は`prefix s`でホスト名またはsession名を検索して`Enter`で確定し、`prefix Tab`で元のsessionへ戻る。`Ctrl+Alt+j/k`はlocalのspace巡回用で、`Alt+j/k`はAeroSpaceとの競合を避けて割り当てない。
 
 project pickerはhome、dotfiles、ghq、zoxideのディレクトリ一覧を扱う。選択後はnativeの`switch-session --create --cwd`へ渡す。同名checkoutの衝突を避けるため、session名はディレクトリ名とパスのhashで作る。
 
@@ -146,6 +146,14 @@ tuios attach --host ailab work         # 既存remote sessionを表示
 project選択だけならnative session作成で十分。初回にエディタやagentも開きたいプロジェクトには、標準の`.tuios.tape`を置く。`autorun = "ask"`で内容を確認して実行する。command paletteのproject tape reviewから操作する。
 
 `prefix N`は既存`dev.tape`のlocal向け雛形。全workspace使用中は中止し、既存programへの誤入力を防ぐ。
+
+## 表示
+
+tmuxの`pane-border-status`に合わせる。
+
+- pane上端に`番号: タイトル`を表示し、window buttonは隠す。TUIOS 0.10.1は`shared_borders`有効時にtitleを描画しないため無効にしている。
+- focus外paneの`dim_unfocused`は使わない。TUIOS 0.10.1はtheme設定時に既定背景のセルへthemeの背景色を塗るため、背景透過が消える。代わりに枠線をtokyonightの青系で色分けする（focus `#7aa2f7`、focus外 `#3b4261`）。
+- sidebarの`overview`は`tui rail`の出力で、sessionごとのagent数・状態色（黄=作業中、赤=要応答/エラー、緑=完了、灰=待機）と、focus中paneのcwdのbranchを3秒ごとに表示する。localのsessionのみが対象。`tuios ls`のbranchはsession作成時の値なので使わない。
 
 ## AI表示
 
