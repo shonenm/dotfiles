@@ -48,7 +48,7 @@ prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 | `e` | native hints |
 | `s` / `f` | native session switcher。local / remoteのsessionを選択 |
 | `Ctrl+f` / `/` | native pane navigator。全sessionのpaneを画面カードで一覧（tmux.expose相当） |
-| `m` | focus中paneと入れ替えるpaneをfzfで選ぶ。候補はpaneタイトルと同じ`番号: 名前`で、最小化したpaneは除く |
+| `m` | 入れ替える2つのpaneをfzfで順に選ぶ（src → dst、tmux-swap-pickerと同じ）。候補はfocus中paneを含むworkspace内のpaneで、paneタイトルと同じ`番号: 名前`。最小化したpaneは除く |
 | `y` | themeをfzfで選ぶ。このclientだけに一時適用し、設定ファイルは変えない |
 | `F` | project picker。remoteは候補通知後に`prefix s`で選択 |
 | `Ctrl+s` | native spaceへ登録、作成、解除 |
