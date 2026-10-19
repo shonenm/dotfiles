@@ -8,7 +8,8 @@ start_in_terminal_mode = true
 layout = "bsp"
 
 [appearance]
-theme = "tokyonight"
+# tmux の pane-active-border-style 相当の mode 色は themes/tokyonight-tmux.json で定義する。
+theme = "tokyonight-tmux"
 motion = "none"
 scrollback_lines = 5000
 nvim_navigation = true
@@ -21,9 +22,6 @@ dockbar_position = "bottom"
 shared_borders = false
 window_title_format = "{index}: {title}"
 hide_window_buttons = true
-# focus は tokyonight の blue / fg_gutter で示す。
-border_focused_color = "#7aa2f7"
-border_unfocused_color = "#3b4261"
 zoom_size = 100
 prefix_repeat_time = 1000
 show_cpu = true
@@ -123,7 +121,9 @@ prefix_selection = ["v", "[", "u", "ctrl+u"]
 prefix_review = ["ctrl+v"]
 prefix_rename_window = ["t"]
 rename_workspace = ["T"]
-close_workspace = ["X"]
+close_workspace = []
+prefix_close_window = []
+prefix_exit_mode = []
 prefix_close_session = []
 last_session = ["tab"]
 prefix_layout = ["l", "ctrl+t"]
@@ -157,6 +157,10 @@ prefix_window = []
 prefix_scrollback = []
 mark_pane = ["M"]
 prefix_mail = []
+
+# 確認なしで閉じる Window mode のキーは使わない。閉じるのは prefix x / X の確認付き command。
+[keybindings.window_management]
+close_window = []
 
 [keybindings.global]
 command_palette = []
@@ -282,6 +286,33 @@ command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui swa
 description = "Swap the focused pane with a picked pane"
 width = "80%"
 height = "40%"
+
+# prefix Esc は何もしない。割り当てがないと Esc が pane へ渡るため no-op を置く。
+[[keybindings.command]]
+name = "prefix-escape-noop"
+key = "prefix+esc"
+type = "shell"
+command = "true"
+description = "Do nothing"
+
+# tmux の confirm-before。TUIOS 標準の close は確認しないため popup で y/n を聞く。
+[[keybindings.command]]
+name = "kill-pane"
+key = "prefix+x"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui confirm pane'"
+description = "Close the focused pane after confirming"
+width = "40%"
+height = "5"
+
+[[keybindings.command]]
+name = "kill-workspace"
+key = "prefix+X"
+type = "popup"
+command = "~/dotfiles/scripts/tmux-default-shell -lc '~/dotfiles/scripts/tui confirm workspace'"
+description = "Close the focused workspace after confirming"
+width = "40%"
+height = "5"
 
 [[keybindings.copy_pipe]]
 key = "y"

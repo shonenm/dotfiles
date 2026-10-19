@@ -39,7 +39,7 @@ prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 | `1`〜`8` | workspaceを選択 |
 | `9` | Gitルートのproject sessionへ |
 | `T` / `t` | workspace名 / pane名を変更 |
-| `X` / `x` | workspace / paneを閉じる |
+| `X` / `x` | workspace / paneを閉じる。tmuxの`confirm-before`と同じく`y`で確定し、それ以外は閉じない |
 | `\|` / `-` | 左右 / 上下に分割 |
 | `H` / `J` / `K` / `L` | paneを5セル単位でリサイズ |
 | `z`、prefix不要の`Ctrl+z` | sidebarを残してzoom |
@@ -78,7 +78,7 @@ zoom中に分割すると、追加paneがzoomの下に隠れる。`prefix z`で�
 
 ## Window管理モード
 
-`prefix Esc`または`Alt+Esc`でWindow modeへ入る。TUIOSのwindowはterminal paneと同じもので、Ghostty内のwindow配置を操作するモードになる。キーボードで別paneへ移動してもWindow modeを維持し、`Enter` / `i`で入力を始める。
+`Alt+Esc`でWindow modeへ入る。`prefix Esc`は何もしない（割り当てがないとEscがpaneへ渡るため、no-opのcommandを置いている）。TUIOSのwindowはterminal paneと同じもので、Ghostty内のwindow配置を操作するモードになる。キーボードで別paneへ移動してもWindow modeを維持し、`Enter` / `i`で入力を始める。
 
 | Window mode中のキー | 操作 |
 |---|---|
@@ -91,6 +91,8 @@ zoom中に分割すると、追加paneがzoomの下に隠れる。`prefix z`で�
 | `t` | タイル配置 / 自由配置を切替 |
 | `r` | window名を変更 |
 | `Enter` / `i` | 選んだwindowへ入力 |
+
+Window modeの`w` / `x`（確認なしでwindowを閉じる）は外している。閉じるときは確認付きの`prefix x`を使う。
 
 自由配置ではwindowを重ね、タイトルバーをドラッグして移動する。タイル配置では別paneの中央へdropすると入れ替わり、端へdropするとその方向へ組み直す。`prefix t`は名前変更、Window modeの`t`は配置切替という違いに注意する。
 
@@ -115,7 +117,7 @@ TUIOS内のshellの`Alt+s`はproject picker。通常のshell・tmux内は既存s
 spaceは関連するsessionをまとめるTUIOS標準の分類名。所属・保存・sidebar表示をnativeで管理する。localのspace巡回だけhelperで補い、独自の分類や状態ファイルは持たない。既存sessionのspace所属はそのまま維持する。
 
 - **所属変更・作成・解除**：`prefix Ctrl+s`のpicker。shellからは`tui space`。
-- **別spaceのsessionへ移動**：`prefix Esc`でWindow modeへ入り、`s`でsidebarへfocus。`j/k`または矢印で目的のspace内のsessionを選び、`Enter`で移動する。
+- **別spaceのsessionへ移動**：`Alt+Esc`でWindow modeへ入り、`s`でsidebarへfocus。`j/k`または矢印で目的のspace内のsessionを選び、`Enter`で移動する。
 - **名前からsessionを選択**：`prefix s`の標準switcher。ホストをまたぐ移動もここへまとめる。
 
 spaceの見出しは分類表示で、移動先にはその中のsessionを選ぶ。`Ctrl+Alt+h/l`はspaceで絞らず、同じホスト内のsessionを巡回する。
@@ -177,10 +179,11 @@ project選択だけならnative session作成で十分。初回にエディタ�
 
 ## 表示
 
-tmuxの`pane-border-status`に合わせる。
+tmuxの`pane-border-status`と`pane-active-border-style`に合わせる。
 
+- 枠線の色はtokyonightを元にした`themes/tokyonight-tmux.json`で決める。focus中は青`#7aa2f7`、copy modeは赤`#f7768e`、同時入力（multifocus）は緑`#73daca`、focus外は`#3b4261`。`border_focused_color`はmodeの色を上書きして消すため設定しない。Window modeはtheme標準の`accent_bright`。tmuxのprefix（黄）とzoom（紫）の枠線色はTUIOS 0.10.1未対応で、prefix中はdockのmode表示、zoomはpaneの大きさで判別する。
 - pane上端に`番号: タイトル`を表示し、window buttonは隠す。TUIOS 0.10.1は`shared_borders`有効時にtitleを描画しないため無効にしている。
-- focus外paneの`dim_unfocused`は使わない。TUIOS 0.10.1はtheme設定時に既定背景のセルへthemeの背景色を塗るため、背景透過が消える。代わりに枠線をtokyonightの青系で色分けする（focus `#7aa2f7`、focus外 `#3b4261`）。
+- focus外paneの`dim_unfocused`は使わない。TUIOS 0.10.1はtheme設定時に既定背景のセルへthemeの背景色を塗るため、背景透過が消える。代わりに枠線の色でfocusとmodeを示す。
 - sidebarのsession一覧はTUIOS標準のsessions欄だけを使う。session行の状態glyphとrepo / branchのgroupingは標準表示。
 - sidebar最下部の`usage`はtmux sidebarのUSAGEと同じAI使用量で、`tui usage`が`ai-usage`（claude / codex / gemini / cursor / grok）を並列に呼んで30秒ごとに描く。リミット消化ペースの色（青=使い切り、緑=ペース良好、黄・橙=余り気味、赤=使い切れない見込み）は`tmux-agent-sidebar.sh`と同じ判定。
 - dockの`󰚩 N ●●`は`tui dock agents`の出力で、表示中sessionのagent数と状態色（黄=作業中、赤=要応答/エラー、緑=完了、紫=hang、灰=待機）を3秒ごとに表示する。agentがいなければcellを隠す。
