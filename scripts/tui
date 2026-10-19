@@ -173,6 +173,41 @@ def swap():
         run(os.environ["HERDR_BIN_PATH"], "pane", "swap", "--source-pane", active, "--target-pane", chosen)
 
 
+def level(percent, steps):
+    # tmux status pillsと同じtokyonightの閾値色。steps は (下限, 色) の降順。
+    color = next((c for floor, c in steps if percent >= floor), "#9ece6a")
+    r, g, b = (int(color[i:i + 2], 16) for i in (1, 3, 5))
+    return f"\033[38;2;{r};{g};{b}m{percent}%\033[0m"
+
+
+def gpu_percent():
+    if sys.platform == "darwin" and shutil.which("macmon"):
+        out = subprocess.run(["macmon", "pipe", "-s", "1", "-i", "100"], capture_output=True, text=True, timeout=2).stdout
+        return round(json.loads(out.splitlines()[0])["gpu_usage"][1]) if out.strip() else None
+    if shutil.which("nvidia-smi"):
+        out = subprocess.run(["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=2).stdout
+        return int(out.split()[0]) if out.strip() else None
+    return None
+
+
+def dock(item):
+    # Cells for [dock.custom.*]. GPUや表示対象がない環境では何も出さず、cellを隠す。
+    if item == "gpu":
+        percent = gpu_percent()
+        if percent is not None:
+            print(f" {level(percent, ((80, '#f7768e'), (50, '#e0af68')))}")
+    elif item == "storage":
+        usage = shutil.disk_usage("/")
+        print(f" {level(round(usage.used * 100 / usage.total), ((95, '#f7768e'), (90, '#e0af68'), (80, '#bb9af7')))}")
+    elif item == "branch":
+        # dock commandにはfocus中paneのcwdが渡らないため、sessionのpane一覧から引く。
+        panes = json.loads(run("tuios", "list-agents", "--all", "-s", os.environ["TUIOS_SESSION"], "--json", capture_output=True, text=True).stdout)["agents"]
+        cwd = next((p["cwd"] for p in panes if p["focused"] and p["cwd"]), None)
+        branch = cwd and subprocess.run(["git", "-C", cwd, "branch", "--show-current"], capture_output=True, text=True).stdout.strip()
+        if branch:
+            print(f" {branch}")
+
+
 def root():
     result = run("git", "rev-parse", "--show-toplevel", capture_output=True, text=True)
     path = result.stdout.strip()
@@ -195,6 +230,8 @@ def main():
     nav = sub.add_parser("space-nav")
     nav.add_argument("direction", choices=("next", "prev"))
     nav.add_argument("client_pid", type=int)
+    dock_item = sub.add_parser("dock")
+    dock_item.add_argument("item", choices=("gpu", "storage", "branch"))
     attach = sub.add_parser("attach")
     attach.add_argument("name", nargs="?", default="main")
     attach.add_argument("--cwd", type=Path, default=Path.cwd())
@@ -219,11 +256,13 @@ def main():
             theme()
         elif args.command == "swap":
             swap()
+        elif args.command == "dock":
+            dock(args.item)
         elif args.command == "root":
             root()
         elif args.command == "dev":
             dev()
-    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
         print(f"tui: {error}", file=sys.stderr)
         return 1
     return 0
