@@ -124,7 +124,17 @@ def navigate_space(direction, client_pid):
     run("tuios", "switch-session", "--client", client["client_id"], destination["name"])
 
 
-AGENT_COLORS = {"working": 33, "needs_input": 31, "errored": 31, "done": 32}
+AGENT_COLORS = {"working": 33, "needs_input": 31, "errored": 31, "done": 32, "hang": 35}
+# tmux-claude-pane.sh と同じ閾値。hookのreportごとに更新されるevidenceだけで判定する。
+HANG_THRESHOLD_MS = int(os.environ.get("AGENT_HANG_THRESHOLD", "120")) * 1000
+
+
+def agent_state(pane):
+    # working のまま hook の report が途絶えた pane を hang と推定する。
+    age = pane.get("evidence_age_ms")
+    if pane["state"] == "working" and age is not None and age >= HANG_THRESHOLD_MS:
+        return "hang"
+    return pane["state"]
 
 
 def rail():
@@ -133,7 +143,7 @@ def rail():
     panes = json.loads(run("tuios", "list-agents", "--all", "--all-sessions", "--json", capture_output=True, text=True).stdout)["agents"]
     for row in sorted(sessions(), key=lambda row: (row.get("space", ""), row["name"])):
         own = sorted((p for p in panes if p["session"] == row["name"]), key=lambda p: not p["focused"])
-        states = [p["state"] for p in own if p["harness_id"]]
+        states = [agent_state(p) for p in own if p["harness_id"]]
         dots = "".join(f"\033[{AGENT_COLORS.get(state, 90)}m●\033[0m" for state in states)
         print(f"{row['name']} {len(states)} {dots}" if states else row["name"])
         cwd = next((p["cwd"] for p in own if p["cwd"]), None)
