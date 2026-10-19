@@ -182,7 +182,7 @@ tmuxの`pane-border-status`に合わせる。
 - pane上端に`番号: タイトル`を表示し、window buttonは隠す。TUIOS 0.10.1は`shared_borders`有効時にtitleを描画しないため無効にしている。
 - focus外paneの`dim_unfocused`は使わない。TUIOS 0.10.1はtheme設定時に既定背景のセルへthemeの背景色を塗るため、背景透過が消える。代わりに枠線をtokyonightの青系で色分けする（focus `#7aa2f7`、focus外 `#3b4261`）。
 - sidebarのsession一覧はTUIOS標準のsessions欄だけを使う。session行の状態glyphとrepo / branchのgroupingは標準表示。
-- sidebarの`usage`はtmux sidebarと同じAI使用量で、`tui usage`が`ai-usage`（claude / codex / gemini / cursor / grok）を並列に呼んで30秒ごとに描く。リミット消化ペースの色（青=使い切り、緑=ペース良好、黄・橙=余り気味、赤=使い切れない見込み）は`tmux-agent-sidebar.sh`と同じ判定。
+- sidebar最下部の`usage`はtmux sidebarのUSAGEと同じAI使用量で、`tui usage`が`ai-usage`（claude / codex / gemini / cursor / grok）を並列に呼んで30秒ごとに描く。リミット消化ペースの色（青=使い切り、緑=ペース良好、黄・橙=余り気味、赤=使い切れない見込み）は`tmux-agent-sidebar.sh`と同じ判定。
 - dockの`󰚩 N ●●`は`tui dock agents`の出力で、表示中sessionのagent数と状態色（黄=作業中、赤=要応答/エラー、緑=完了、紫=hang、灰=待機）を3秒ごとに表示する。agentがいなければcellを隠す。
 - hangはtmuxの`tmux-agent-hang-watch.sh`相当。`working`のまま`AGENT_HANG_THRESHOLD`秒（既定120）hookのreportがないpaneを紫で示す。hookはtool呼び出しごとに`working`を再reportし`evidence_age_ms`を更新するため、これをheartbeatとして使う。画面出力は生存扱いにしない。常駐watcherは置かず、dock cellの3秒周期で判定する。表示はdockのみで、TUIOS標準のrail glyph・Inbox・通知は`working`のまま（hook経由のagentの無応答検知はTUIOS 0.10.1未対応）。1つのtoolが長時間動く間やtool呼び出しのない長い思考中も同じくhangと推定される。
 - dockの右側はtmuxの`status-right`相当。CPU・RAM（標準）、GPU、`/`の使用率、focus中paneのbranch、`月/日 時:分`の時計、ホスト名を並べる。GPU・ストレージ・branchは`tui dock gpu|storage|branch`の出力で、tmuxと同じ閾値色を使う。GPUはmacOSの`macmon`かLinuxの`nvidia-smi`があるときだけ表示する。dock commandにはfocus中paneのcwdが渡らないため、branchは`tuios list-agents -s $TUIOS_SESSION`のfocus中paneから引く。remote sessionのbranchはTUIOS 0.10.1未対応で表示しない。mode・prefix・copyの表示はdock標準のpillを使う。

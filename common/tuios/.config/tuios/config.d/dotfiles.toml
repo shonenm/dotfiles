@@ -33,10 +33,10 @@ show_clock = true
 [appearance.sidebar]
 position = "left"
 width = 32
-sections = "sessions,custom,agents"
+sections = "sessions,agents,custom"
 show_agents = true
 
-# tmux sidebar 相当の AI 使用量 (ai-usage)。session 一覧は標準 sessions 欄だけ。
+# tmux sidebar の USAGE 相当 (ai-usage)。tmux と同じく最下部に置く。session 一覧は標準 sessions 欄だけ。
 [appearance.sidebar.custom]
 title = "usage"
 command = "~/dotfiles/scripts/tui usage"
