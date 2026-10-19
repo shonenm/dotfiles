@@ -1,6 +1,6 @@
 # Claude Beacon
 
-> **由来:** **Upstream** Claude Code・tmux・SketchyBar / **Configuration** hook・表示連携 / **Custom** beacon・状態管理スクリプト（[区分](../../provenance.md#区分)）
+> **由来:** **Upstream** Claude Code・tmux・TUIOS・SketchyBar / **Configuration** hook・表示連携 / **Custom** beacon・状態管理スクリプト（[区分](../../provenance.md#区分)）
 
 A system that visualizes Claude Code events (completion, approval pending, input waiting, etc.) through Slack notifications + SketchyBar/tmux badges.
 
@@ -213,7 +213,7 @@ Environment variable for properly handling notifications inside containers. Auto
 | `project` | Project name (shown in Slack notification) |
 | `device` | Device name (shown in Slack notification) |
 | `workspace` | AeroSpace workspace number (for SketchyBar) |
-| `tmux_session` | tmux session name |
+| `tmux_session` | tmux session name（TUIOS では `tuios:<session>`） |
 | `tmux_window` | tmux window index |
 
 ### dexec (shell function)
@@ -344,6 +344,11 @@ Notification clearing process when focusing tmux window. Called from `session-wi
 
 - Auto-clear with 5 second timer
 - Timer cancels if window is left
+
+TUIOS 内では `ai-notify.sh` が位置を `tmux_session = "tuios:<session>"`、`tmux_window_index = <pane ID>` として記録する。tmux の session 名は `:` を含められないため、prefix で区別できる。TUIOS の `after-focus-change` hook（`common/tuios/.config/tuios/config.d/dotfiles.toml`）が同じスクリプトを呼び、focus した pane の通知へ同じ5秒ルールを適用する。SketchyBar plugin は tmux の現在位置と、attach 中の各 TUIOS session の focus pane を表示中の位置として扱う。
+
+- hook は daemon が実行するため、設定の変更は `tuios kill-server` 後に反映される。daemon を止めると session 内の program も終了するので、作業の切れ目に行う。
+- client の session 切替は focus 変更として発火しないため、TUIOS 0.10.1 では切替先の pane の通知は消えない。切替先で pane を移るか、SketchyBar の workspace focus で消える。
 
 ### common/tmux/.config/tmux/claude-hooks.tmux
 

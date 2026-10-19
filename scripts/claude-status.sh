@@ -66,7 +66,7 @@ set_status() {
   fi
 
   # tmux通知（セッションがある場合のみ）
-  if [[ -n "$tmux_session" ]]; then
+  if [[ -n "$tmux_session" && "$tmux_session" != tuios:* ]]; then
     tmux refresh-client -S 2>/dev/null || true
   fi
 }
