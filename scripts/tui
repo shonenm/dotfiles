@@ -169,21 +169,6 @@ def agent_state(pane):
     return pane["state"]
 
 
-def rail():
-    # Rows for the rail's custom section: agents per session, then the branch
-    # of its focused pane. `tuios ls` keeps the branch from session creation.
-    panes = json.loads(run("tuios", "list-agents", "--all", "--all-sessions", "--json", capture_output=True, text=True).stdout)["agents"]
-    for row in sorted(sessions(), key=lambda row: (row.get("space", ""), row["name"])):
-        own = sorted((p for p in panes if p["session"] == row["name"]), key=lambda p: not p["focused"])
-        states = [agent_state(p) for p in own if p["harness_id"]]
-        dots = "".join(f"\033[{AGENT_COLORS.get(state, 90)}m●\033[0m" for state in states)
-        print(f"{row['name']} {len(states)} {dots}" if states else row["name"])
-        cwd = next((p["cwd"] for p in own if p["cwd"]), None)
-        branch = cwd and subprocess.run(["git", "-C", cwd, "branch", "--show-current"], capture_output=True, text=True).stdout.strip()
-        if branch:
-            print(f"  \033[90m└ {branch}\033[0m")
-
-
 def theme():
     # SetTheme changes the client's theme for now; the config keeps its theme.
     names = run("tuios", "--list-themes", capture_output=True, text=True).stdout.split()
@@ -199,8 +184,8 @@ def swap():
     listing = run("tuios", "list-windows", "-s", os.environ["TUIOS_SESSION"], "--json", capture_output=True, text=True)
     windows = json.loads(listing.stdout)["windows"]
     workspace = next(w["workspace"] for w in windows if w["window_id"] == active)
-    chosen = choose([f"{w['window_id']}\t{w['index'] + 1}: {w['title']}" for w in windows
-                     if w["workspace"] == workspace and not w.get("floating") and w["window_id"] != active], "swap")
+    chosen = choose([f"{w['window_id']}\t{w['index'] + 1}: {w.get('display_name') or w['title']}" for w in windows
+                     if w["workspace"] == workspace and not w.get("floating") and not w.get("minimized") and w["window_id"] != active], "swap")
     if chosen:
         run(os.environ["HERDR_BIN_PATH"], "pane", "swap", "--source-pane", active, "--target-pane", chosen)
 
@@ -231,6 +216,11 @@ def dock(item):
     elif item == "storage":
         usage = shutil.disk_usage("/")
         print(f" {level(round(usage.used * 100 / usage.total), ((95, '#f7768e'), (90, '#e0af68'), (80, '#bb9af7')))}")
+    elif item == "agents":
+        panes = json.loads(run("tuios", "list-agents", "--all", "-s", os.environ["TUIOS_SESSION"], "--json", capture_output=True, text=True).stdout)["agents"]
+        states = [agent_state(p) for p in panes if p["harness_id"]]
+        if states:
+            print(f"󰚩 {len(states)} " + "".join(f"\033[{AGENT_COLORS.get(state, 90)}m●\033[0m" for state in states))
     elif item == "branch":
         # dock commandにはfocus中paneのcwdが渡らないため、sessionのpane一覧から引く。
         panes = json.loads(run("tuios", "list-agents", "--all", "-s", os.environ["TUIOS_SESSION"], "--json", capture_output=True, text=True).stdout)["agents"]
@@ -257,13 +247,13 @@ def dev():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command")
-    for name in ("pick", "space", "root", "dev", "rail", "theme", "swap"):
+    for name in ("pick", "space", "root", "dev", "theme", "swap"):
         sub.add_parser(name)
     nav = sub.add_parser("space-nav")
     nav.add_argument("direction", choices=("next", "prev"))
     nav.add_argument("client_pid", type=int)
     dock_item = sub.add_parser("dock")
-    dock_item.add_argument("item", choices=("gpu", "storage", "branch"))
+    dock_item.add_argument("item", choices=("gpu", "storage", "agents", "branch"))
     rcon_parser = sub.add_parser("rcon")
     rcon_parser.add_argument("target", nargs="?")
     attach = sub.add_parser("attach")
@@ -286,8 +276,6 @@ def main():
             navigate_space(args.direction, args.client_pid)
         elif args.command == "rcon":
             rcon(args.target)
-        elif args.command == "rail":
-            rail()
         elif args.command == "theme":
             theme()
         elif args.command == "swap":
