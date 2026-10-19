@@ -42,7 +42,7 @@ prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 | `X` / `x` | workspace / paneを閉じる。tmuxの`confirm-before`と同じく`y`で確定し、それ以外は閉じない |
 | `\|` / `-` | 左右 / 上下に分割 |
 | `H` / `J` / `K` / `L` | paneを5セル単位でリサイズ |
-| `z`、prefix不要の`Ctrl+z` | sidebarを残してzoom |
+| `z`、prefix不要の`Ctrl+z` | sidebarを残してzoom。zoom中はfocus枠線が紫 |
 | `v` / `[` | vi copy mode。`y`で`clipboard-copy`へ渡す。`Esc`は選択中なら解除、それ以外は終了 |
 | `u` / `Ctrl+u` | copy modeへ入る。tmuxは入ると同時に半ページ上へ移動するが、TUIOS 0.10.1は1キーに2操作を割り当てられないため、続けて`Ctrl+u`で半ページ上へ移動する。scrollbackブラウザーのキー割り当ては外した |
 | `e` | native hints |
@@ -61,7 +61,7 @@ prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 | `S` | paneへの同時入力を切り替え |
 | `l`、続けて`s` / `l` | native layoutの保存 / 読込 |
 | `N` | localの空きworkspaceへClaude / Neovim / shellを開く |
-| `r` / `?` / `d` | 再読込 / help / detach |
+| `r` / `?` / `d` | 再読込（実行中はfocus枠線が橙） / help / detach |
 | `:` | command palette |
 
 prefix不要の`Ctrl+h/j/k/l`はpane移動。TUIOS 0.10.1は端で反対側へwrapしない（[upstream #895](https://github.com/Gaurav-Gosain/tuios/issues/895)）。Neovimの内部splitを先に移動し、端でTUIOSへ移動を返す。tmux内では既存vim-tmux-navigatorを使う。
@@ -181,7 +181,7 @@ project選択だけならnative session作成で十分。初回にエディタ�
 
 tmuxの`pane-border-status`と`pane-active-border-style`に合わせる。
 
-- 枠線の色はtokyonightを元にした`themes/tokyonight-tmux.json`で決める。focus中は青`#7aa2f7`、copy modeは赤`#f7768e`、同時入力（multifocus）は緑`#73daca`、focus外は`#3b4261`。`border_focused_color`はmodeの色を上書きして消すため設定しない。focus外の色はthemeで指定すると背景とのコントラスト補正で明るくなるため、`border_unfocused_color`で固定する。Window modeはtheme標準の`accent_bright`。tmuxのprefix（黄）とzoom（紫）の枠線色はTUIOS 0.10.1未対応で、prefix中はdockのmode表示、zoomはpaneの大きさで判別する。
+- 枠線の色はtokyonightを元にした`themes/tokyonight-tmux.json`で決める。focus中は青`#7aa2f7`、copy modeは赤`#f7768e`、同時入力（multifocus）は緑`#73daca`、focus外は`#3b4261`。`border_focused_color`はmodeの色を上書きして消すため設定しない。focus外の色はthemeで指定すると背景とのコントラスト補正で明るくなるため、`border_unfocused_color`で固定する。Window modeはtheme標準の`accent_bright`。zoom（紫`#bb9af7`）とreload（橙`#ff9e64`）はTUIOS 0.10.1未対応のため、`prefix z` / `Ctrl+z` / `prefix r`を`tui mode zoom|reload`に置き換え、focus枠線の色だけ違うtheme（`tokyonight-tmux-zoom` / `-reload`）をclientへ一時適用する。設定ファイルは書き換えない。Window modeの`z`やpaneを閉じてzoomが解けた場合は、次のzoom / reloadまで紫が残る。prefix（黄）は押下を拾う手段がなく、dockのmode表示で判別する。
 - pane上端に`番号: タイトル`を表示し、window buttonは隠す。TUIOS 0.10.1は`shared_borders`有効時にtitleを描画しないため無効にしている。
 - focus外paneの`dim_unfocused`は使わない。TUIOS 0.10.1はtheme設定時に既定背景のセルへthemeの背景色を塗るため、背景透過が消える。代わりに枠線の色でfocusとmodeを示す。
 - sidebarのsession一覧はTUIOS標準のsessions欄だけを使う。session行の状態glyphとrepo / branchのgroupingは標準表示。
