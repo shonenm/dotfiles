@@ -164,6 +164,28 @@ class SessionTests(unittest.TestCase):
         choose.assert_called_once()
         self.assertEqual(run.call_count, 1)
 
+    def test_usage_draws_ai_usage_records_with_pace_like_tmux_sidebar(self):
+        outputs = {
+            "claude": "C\x1fcurrent\x1fG\x1f46%\x1f3h20m\nC\x1fweekly\x1fG\x1f30%\x1f3d12h\n",
+            "codex": "X\x1f--\n",
+        }
+        with patch.object(tui, "ai_usage", side_effect=lambda p: outputs.get(p, "")), patch("sys.stdout", new_callable=io.StringIO) as out:
+            tui.usage()
+        claude, codex = "\033[38;2;255;102;0m", "\033[38;2;125;211;252m"
+        self.assertEqual(out.getvalue().splitlines(), [
+            f"{claude}C\033[0m \033[2mcurrent\033[0m",
+            f"  {claude}G 46%\033[0m  \033[2m3h20m\033[0m",
+            "  \033[2mweekly\033[0m",
+            f"  {claude}G 30%\033[0m  \033[38;5;208m3d12h\033[0m \033[38;5;208m●\033[0m",
+            f"{codex}X\033[0m \033[2m--\033[0m",
+        ])
+
+    def test_pace_color_skips_early_window_and_marks_used_up(self):
+        self.assertEqual(tui.pace_color(10, "weekly", "6d23h"), "")
+        self.assertEqual(tui.pace_color(100, "current", "1h"), "\033[38;5;39m")
+        self.assertEqual(tui.pace_color(10, "current", "1h"), "\033[38;5;203m")
+        self.assertEqual(tui.pace_color(50, "unknown", "1h"), "")
+
     def test_dock_branch_follows_focused_pane_of_client_session(self):
         with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as plain:
             subprocess.run(["git", "init", "-q", "-b", "live", repo], check=True)
