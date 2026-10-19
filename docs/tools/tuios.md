@@ -181,7 +181,7 @@ project選択だけならnative session作成で十分。初回にエディタ�
 
 tmuxの`pane-border-status`と`pane-active-border-style`に合わせる。
 
-- 枠線の色はtokyonightを元にした`themes/tokyonight-tmux.json`で決める。focus中は青`#7aa2f7`、copy modeは赤`#f7768e`、同時入力（multifocus）は緑`#73daca`、focus外は`#3b4261`。`border_focused_color`はmodeの色を上書きして消すため設定しない。Window modeはtheme標準の`accent_bright`。tmuxのprefix（黄）とzoom（紫）の枠線色はTUIOS 0.10.1未対応で、prefix中はdockのmode表示、zoomはpaneの大きさで判別する。
+- 枠線の色はtokyonightを元にした`themes/tokyonight-tmux.json`で決める。focus中は青`#7aa2f7`、copy modeは赤`#f7768e`、同時入力（multifocus）は緑`#73daca`、focus外は`#3b4261`。`border_focused_color`はmodeの色を上書きして消すため設定しない。focus外の色はthemeで指定すると背景とのコントラスト補正で明るくなるため、`border_unfocused_color`で固定する。Window modeはtheme標準の`accent_bright`。tmuxのprefix（黄）とzoom（紫）の枠線色はTUIOS 0.10.1未対応で、prefix中はdockのmode表示、zoomはpaneの大きさで判別する。
 - pane上端に`番号: タイトル`を表示し、window buttonは隠す。TUIOS 0.10.1は`shared_borders`有効時にtitleを描画しないため無効にしている。
 - focus外paneの`dim_unfocused`は使わない。TUIOS 0.10.1はtheme設定時に既定背景のセルへthemeの背景色を塗るため、背景透過が消える。代わりに枠線の色でfocusとmodeを示す。
 - sidebarのsession一覧はTUIOS標準のsessions欄だけを使う。session行の状態glyphとrepo / branchのgroupingは標準表示。
