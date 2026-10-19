@@ -22,6 +22,9 @@ dockbar_position = "bottom"
 shared_borders = false
 window_title_format = "{index}: {title}"
 hide_window_buttons = true
+# theme の border.unfocused は背景とのコントラスト補正で明るくなるため、設定値で固定する。
+# focus 側の border_focused_color は mode 色を消すので使わない（themes/tokyonight-tmux.json）。
+border_unfocused_color = "#3b4261"
 zoom_size = 100
 prefix_repeat_time = 1000
 show_cpu = true
