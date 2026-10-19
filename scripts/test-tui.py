@@ -135,7 +135,7 @@ class SessionTests(unittest.TestCase):
         choose.assert_called_once_with(["tokyonight\ttokyonight", "gruvbox_dark\tgruvbox_dark"], "theme")
         run.assert_called_with("tuios", "run-command", "SetTheme", "gruvbox_dark")
 
-    def test_swap_offers_tiled_panes_of_the_active_workspace_by_title_index(self):
+    def test_swap_picks_source_and_target_among_workspace_panes_including_focus(self):
         windows = [
             {"window_id": "scratch", "index": 0, "title": "scratch", "workspace": 1000},
             {"window_id": "a", "index": 1, "title": "~/src", "display_name": "editor", "workspace": 1},
@@ -147,10 +147,22 @@ class SessionTests(unittest.TestCase):
         ]
         listing = subprocess.CompletedProcess([], 0, json.dumps({"windows": windows}))
         env = {"TUIOS_ACTIVE_PANE_ID": "b", "TUIOS_SESSION": "work", "HERDR_BIN_PATH": "/herdr"}
-        with patch.dict(os.environ, env), patch.object(tui, "run", return_value=listing) as run, patch.object(tui, "choose", return_value="a") as choose:
+        with patch.dict(os.environ, env), patch.object(tui, "run", return_value=listing) as run, patch.object(tui, "choose", side_effect=["b", "d"]) as choose:
             tui.swap()
-        choose.assert_called_once_with(["a\t1: editor", "d\t3: logs"], "swap")
-        run.assert_called_with("/herdr", "pane", "swap", "--source-pane", "b", "--target-pane", "a")
+        self.assertEqual([c.args for c in choose.call_args_list], [
+            (["a\t1: editor", "b\t2: shell (focus)", "d\t3: logs"], "swap src"),
+            (["a\t1: editor", "d\t3: logs"], "swap dst"),
+        ])
+        run.assert_any_call("/herdr", "pane", "swap", "--source-pane", "b", "--target-pane", "d")
+        run.assert_called_with("tuios", "focus-window", "-s", "work", "b", capture_output=True)
+
+    def test_swap_cancelled_source_swaps_nothing(self):
+        listing = subprocess.CompletedProcess([], 0, json.dumps({"windows": [{"window_id": "a", "index": 0, "title": "x", "workspace": 1}]}))
+        env = {"TUIOS_ACTIVE_PANE_ID": "a", "TUIOS_SESSION": "work", "HERDR_BIN_PATH": "/herdr"}
+        with patch.dict(os.environ, env), patch.object(tui, "run", return_value=listing) as run, patch.object(tui, "choose", return_value=None) as choose:
+            tui.swap()
+        choose.assert_called_once()
+        self.assertEqual(run.call_count, 1)
 
     def test_dock_branch_follows_focused_pane_of_client_session(self):
         with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as plain:

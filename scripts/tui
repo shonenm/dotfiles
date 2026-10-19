@@ -178,18 +178,24 @@ def theme():
 
 
 def swap():
-    # The popup is a floating window and the focused one; the command's
-    # active pane is the one under it. Labels repeat the pane titles' {index},
+    # Like tmux-swap-picker: pick the source, then the target, among the panes
+    # of the workspace under the popup. Labels repeat the pane titles' {index},
     # which counts the workspace's windows that are not minimized.
     active = os.environ["TUIOS_ACTIVE_PANE_ID"]
     listing = run("tuios", "list-windows", "-s", os.environ["TUIOS_SESSION"], "--json", capture_output=True, text=True)
     windows = json.loads(listing.stdout)["windows"]
     workspace = next(w["workspace"] for w in windows if w["window_id"] == active)
     shown = [w for w in windows if w["workspace"] == workspace and not w.get("minimized")]
-    chosen = choose([f"{w['window_id']}\t{position}: {w.get('display_name') or w['title']}"
-                     for position, w in enumerate(shown, 1) if not w.get("floating") and w["window_id"] != active], "swap")
-    if chosen:
-        run(os.environ["HERDR_BIN_PATH"], "pane", "swap", "--source-pane", active, "--target-pane", chosen)
+    panes = [(w["window_id"], f"{position}: {w.get('display_name') or w['title']}{' (focus)' if w['window_id'] == active else ''}")
+             for position, w in enumerate(shown, 1) if not w.get("floating")]
+    source = choose([f"{pane}\t{label}" for pane, label in panes], "swap src")
+    if not source:
+        return
+    target = choose([f"{pane}\t{label}" for pane, label in panes if pane != source], "swap dst")
+    if target:
+        run(os.environ["HERDR_BIN_PATH"], "pane", "swap", "--source-pane", source, "--target-pane", target)
+        # herdr focuses the source; keep the pane that had focus, as tmux does.
+        run("tuios", "focus-window", "-s", os.environ["TUIOS_SESSION"], active, capture_output=True)
 
 
 def level(percent, steps):
