@@ -199,6 +199,20 @@ class SessionTests(unittest.TestCase):
             else:
                 self.assertEqual(run.call_count, 1)
 
+    def test_mode_zoom_and_reload_pick_the_border_theme_by_zoom_state(self):
+        env = {"TUIOS_SESSION": "work", "TUIOS_ACTIVE_PANE_ID": "p", "TUIOS_SOCKET": "/run/tuios.sock"}
+        for action, zoomed, theme in (("zoom", True, "tokyonight-tmux-zoom"), ("zoom", False, "tokyonight-tmux"), ("reload", True, "tokyonight-tmux-zoom")):
+            layout = subprocess.CompletedProcess([], 0, json.dumps({"result": {"layout": {"zoomed": zoomed}}}))
+            with self.subTest(action=action, zoomed=zoomed), patch.dict(os.environ, env), patch.object(tui, "run", return_value=layout) as run, patch.object(tui.time, "sleep"):
+                tui.mode(action)
+            calls = [c.args for c in run.call_args_list]
+            self.assertIn(("/run/herdr/bin/herdr", "pane", "layout", "--pane", "p"), calls)
+            self.assertEqual(calls[-1], ("tuios", "run-command", "-s", "work", "SetTheme", theme))
+            if action == "reload":
+                self.assertEqual(calls[:2], [("tuios", "run-command", "-s", "work", "SetTheme", "tokyonight-tmux-reload"), ("tuios", "run-command", "-s", "work", "reload_config")])
+            else:
+                self.assertEqual(calls[0], ("tuios", "run-command", "-s", "work", "prefix_fullscreen"))
+
     def test_dock_branch_follows_focused_pane_of_client_session(self):
         with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as plain:
             subprocess.run(["git", "init", "-q", "-b", "live", repo], check=True)

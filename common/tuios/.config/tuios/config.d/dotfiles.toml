@@ -113,7 +113,8 @@ switch_workspace_5 = ["5"]
 switch_workspace_6 = ["6"]
 switch_workspace_7 = ["7"]
 switch_workspace_8 = ["8"]
-reload_config = ["r"]
+reload_config = []
+prefix_fullscreen = []
 prefix_tape = []
 prefix_minimize = []
 prefix_workspace_switcher = ["w"]
@@ -184,7 +185,7 @@ terminal_focus_up = ["ctrl+k"]
 terminal_focus_right = ["ctrl+l"]
 terminal_next_window = []
 terminal_prev_window = []
-prefix_fullscreen = ["ctrl+z"]
+prefix_fullscreen = []
 
 [[keybindings.command]]
 name = "projects"
@@ -297,6 +298,28 @@ key = "prefix+esc"
 type = "shell"
 command = "true"
 description = "Do nothing"
+
+# tmux の zoom (紫) / reload (橙) の枠線色。focus 枠線だけ違う theme を client へ一時適用する。
+[[keybindings.command]]
+name = "zoom"
+key = "prefix+z"
+type = "shell"
+command = "exec ~/dotfiles/scripts/tui mode zoom"
+description = "Zoom the focused pane"
+
+[[keybindings.command]]
+name = "zoom-no-prefix"
+key = "ctrl+z"
+type = "shell"
+command = "exec ~/dotfiles/scripts/tui mode zoom"
+description = "Zoom the focused pane"
+
+[[keybindings.command]]
+name = "reload"
+key = "prefix+r"
+type = "shell"
+command = "exec ~/dotfiles/scripts/tui mode reload"
+description = "Reload the config"
 
 # tmux の confirm-before。TUIOS 標準の close は確認しないため popup で y/n を聞く。
 [[keybindings.command]]
