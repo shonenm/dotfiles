@@ -142,6 +142,27 @@ def rail():
             print(f"  \033[90m└ {branch}\033[0m")
 
 
+def theme():
+    # SetTheme changes the client's theme for now; the config keeps its theme.
+    names = run("tuios", "--list-themes", capture_output=True, text=True).stdout.split()
+    chosen = choose([f"{name}\t{name}" for name in names], "theme")
+    if chosen:
+        run("tuios", "run-command", "SetTheme", chosen)
+
+
+def swap():
+    # The popup is a floating window and the focused one; the command's
+    # active pane is the one under it. Labels match the pane titles' {index}.
+    active = os.environ["TUIOS_ACTIVE_PANE_ID"]
+    listing = run("tuios", "list-windows", "-s", os.environ["TUIOS_SESSION"], "--json", capture_output=True, text=True)
+    windows = json.loads(listing.stdout)["windows"]
+    workspace = next(w["workspace"] for w in windows if w["window_id"] == active)
+    chosen = choose([f"{w['window_id']}\t{w['index'] + 1}: {w['title']}" for w in windows
+                     if w["workspace"] == workspace and not w.get("floating") and w["window_id"] != active], "swap")
+    if chosen:
+        run(os.environ["HERDR_BIN_PATH"], "pane", "swap", "--source-pane", active, "--target-pane", chosen)
+
+
 def root():
     result = run("git", "rev-parse", "--show-toplevel", capture_output=True, text=True)
     path = result.stdout.strip()
@@ -159,7 +180,7 @@ def dev():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command")
-    for name in ("pick", "space", "root", "dev", "rail"):
+    for name in ("pick", "space", "root", "dev", "rail", "theme", "swap"):
         sub.add_parser(name)
     nav = sub.add_parser("space-nav")
     nav.add_argument("direction", choices=("next", "prev"))
@@ -184,6 +205,10 @@ def main():
             navigate_space(args.direction, args.client_pid)
         elif args.command == "rail":
             rail()
+        elif args.command == "theme":
+            theme()
+        elif args.command == "swap":
+            swap()
         elif args.command == "root":
             root()
         elif args.command == "dev":
