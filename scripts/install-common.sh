@@ -203,16 +203,27 @@ install_pstack() {
     return
   fi
 
+  # 非公式移植版から cursor/plugins 公式版へ移行
   if claude plugin list 2>/dev/null | grep -q "pstack@pstack-claude"; then
-    log_success "pstack plugin already installed"
+    claude plugin uninstall pstack@pstack-claude
+  fi
+  if claude plugin marketplace list 2>/dev/null | grep -q "^  ❯ pstack-claude$"; then
+    claude plugin marketplace remove pstack-claude
+  fi
+
+  # 第三者 marketplace は自動更新されないため、導入済みなら更新する
+  if claude plugin list 2>/dev/null | grep -q "pstack@cursor-plugins"; then
+    claude plugin marketplace update cursor-plugins
+    claude plugin update pstack@cursor-plugins
+    log_success "pstack plugin updated"
     return
   fi
 
   log_info "Installing pstack Claude Code plugin..."
-  if ! claude plugin marketplace list 2>/dev/null | grep -q "^  ❯ pstack-claude$"; then
-    claude plugin marketplace add michael-denyer/pstack-claude
+  if ! claude plugin marketplace list 2>/dev/null | grep -q "^  ❯ cursor-plugins$"; then
+    claude plugin marketplace add cursor/plugins
   fi
-  claude plugin install pstack@pstack-claude
+  claude plugin install pstack@cursor-plugins
   log_success "pstack plugin installed"
 }
 
