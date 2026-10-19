@@ -179,13 +179,15 @@ def theme():
 
 def swap():
     # The popup is a floating window and the focused one; the command's
-    # active pane is the one under it. Labels match the pane titles' {index}.
+    # active pane is the one under it. Labels repeat the pane titles' {index},
+    # which counts the workspace's windows that are not minimized.
     active = os.environ["TUIOS_ACTIVE_PANE_ID"]
     listing = run("tuios", "list-windows", "-s", os.environ["TUIOS_SESSION"], "--json", capture_output=True, text=True)
     windows = json.loads(listing.stdout)["windows"]
     workspace = next(w["workspace"] for w in windows if w["window_id"] == active)
-    chosen = choose([f"{w['window_id']}\t{w['index'] + 1}: {w.get('display_name') or w['title']}" for w in windows
-                     if w["workspace"] == workspace and not w.get("floating") and not w.get("minimized") and w["window_id"] != active], "swap")
+    shown = [w for w in windows if w["workspace"] == workspace and not w.get("minimized")]
+    chosen = choose([f"{w['window_id']}\t{position}: {w.get('display_name') or w['title']}"
+                     for position, w in enumerate(shown, 1) if not w.get("floating") and w["window_id"] != active], "swap")
     if chosen:
         run(os.environ["HERDR_BIN_PATH"], "pane", "swap", "--source-pane", active, "--target-pane", chosen)
 
