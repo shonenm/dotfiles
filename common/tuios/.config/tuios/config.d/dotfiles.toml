@@ -33,8 +33,14 @@ show_clock = true
 [appearance.sidebar]
 position = "left"
 width = 32
-sections = "sessions,agents"
+sections = "sessions,agents,custom"
 show_agents = true
+
+# tmux sidebar の USAGE 相当 (ai-usage)。tmux と同じく最下部に置く。session 一覧は標準 sessions 欄だけ。
+[appearance.sidebar.custom]
+title = "usage"
+command = "~/dotfiles/scripts/tui usage"
+refresh = "30s"
 
 # tmux.expose 相当。pane navigator を画面カード一覧で開く。
 [panes]
@@ -113,7 +119,7 @@ prefix_workspace_switcher = ["w"]
 prefix_workspace = []
 prefix_split_horizontal = ["-"]
 prefix_split_vertical = ["|", "\\"]
-prefix_selection = ["v", "["]
+prefix_selection = ["v", "[", "u", "ctrl+u"]
 prefix_review = ["ctrl+v"]
 prefix_rename_window = ["t"]
 rename_workspace = ["T"]
@@ -148,7 +154,7 @@ prefix_session_switcher = ["s", "f"]
 switch_workspace_9 = []
 prefix_last_message = []
 prefix_window = []
-prefix_scrollback = ["u", "ctrl+u"]
+prefix_scrollback = []
 mark_pane = ["M"]
 prefix_mail = []
 
