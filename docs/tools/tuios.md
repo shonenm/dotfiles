@@ -173,6 +173,7 @@ tmuxの`pane-border-status`に合わせる。
 - Piのpreviewはturn要約・最終message・mailが中心。
 - `tuios integration status claude-code pi --json`でhookの更新状態を確認。
 - `tuios doctor agents`で検出・integrationを診断。
+- SketchyBar / Slack通知はtmuxと同じ`ai-notify.sh`を使う。`after-focus-change` hookでfocusしたpaneの通知を消す。詳細は[Claude Beacon](../ai-agents/claude/claude-beacon.md#scriptstmux-claude-focussh)。hookの変更は`tuios kill-server`後に反映される。
 
 upstream integrationを更新したら、新しく起動したharnessで反映する。既存会話はそのまま継続できる。新しいUIを使うときはdetachして`tui`で再接続する。
 

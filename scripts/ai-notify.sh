@@ -289,12 +289,16 @@ get_webhook() {
       WORKSPACE=$(jq -r --arg key "$MAP_ENV_KEY" '.[$key].workspace // empty' "$WORKSPACE_MAP_FILE" 2>/dev/null)
     fi
 
-    # tmux情報の取得（tmux内の場合のみ）
+    # tmux / TUIOS の位置情報の取得（どちらかの内側の場合のみ）
     TMUX_SESSION=""
     TMUX_WINDOW_INDEX=""
     if [[ -n "${TMUX:-}" ]]; then
       TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
       TMUX_WINDOW_INDEX=$(tmux display-message -p '#I' 2>/dev/null || echo "")
+    elif [[ -n "${TUIOS_SESSION:-}" && -n "${TUIOS_PANE_ID:-}" ]]; then
+      # tmux session名は ":" を含めないため、prefixでTUIOSの位置と区別する。
+      TMUX_SESSION="tuios:$TUIOS_SESSION"
+      TMUX_WINDOW_INDEX="$TUIOS_PANE_ID"
     fi
   fi
 
