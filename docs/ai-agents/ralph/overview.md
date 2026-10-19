@@ -108,7 +108,7 @@ Archives state file to `${XDG_STATE_HOME:-$HOME/.local/state}/ralph/archive_<tim
 /d-ralph-parallel "Add login page, Add signup page"  # Comma-separated
 ```
 
-Orchestrates up to 4 concurrent workers, each in a separate git worktree + tmux window. Workers are launched via `/d-ralph` skill (Stop hook autonomous loop + backpressure hook quality gate). The orchestrator handles implementation only: init → gen-prompt → launch → wait → results summary → stop. Merge, cleanup, and PR creation are delegated to separate skills invoked by the user after review.
+Orchestrates up to 4 concurrent workers, each in a separate git worktree + tmux window. Inside a TUIOS pane, `ralph-orchestrate` re-runs itself under `tuios tmux-shim`, so it and `wt` open the worker windows in the current TUIOS session. Run its other commands from the same TUIOS session, because the shim only sees that session. Workers are launched via `/d-ralph` skill (Stop hook autonomous loop + backpressure hook quality gate). The orchestrator handles implementation only: init → gen-prompt → launch → wait → results summary → stop. Merge, cleanup, and PR creation are delegated to separate skills invoked by the user after review.
 
 ```
 /d-ralph-collect send T-1 "PRを作成して"             # Send instruction to worker

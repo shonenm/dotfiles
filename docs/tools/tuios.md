@@ -172,6 +172,8 @@ native daemonがsession、space、layout、cwd、履歴を保存する。`resume
 
 普段はdetachでprocessを維持する。OS / daemon再起動後は保存状態から新しいshellを起動する。Neovimの未保存bufferや実行途中のjobは各program側で保存・再開する。`kill-session`は保存状態も削除する。
 
+例外として、paneで動いていた`ralph-crew daemon`は`tmux-default-shell`が復元時に再実行する。TUIOSはshell以外のprogramを自動で再起動しないため、daemon側がpane IDごとに起動コマンドを記録する。詳細は[Ralph Crew](../ai-agents/ralph/crew.md#tuios-内で使う)。
+
 ## Popup
 
 `j`はscratch shell、`g`はlazygit、`k`は`nvim .`、`G`はlive-pr、`P`はpgcli、`Q`はquay、`Space`はnative file search。

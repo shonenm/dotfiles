@@ -4,6 +4,12 @@
 # Not accessible + nix-user-chroot present → enter chroot first.
 # User tools are needed even when SSH starts the daemon with a system-only PATH.
 export PATH="$HOME/.local/bin:$HOME/.pixi/bin:$HOME/.local/share/mise/shims:$PATH"
+# A TUIOS-restored pane resumes what ralph-crew daemon recorded for it
+# (tmux @resurrect-processes equivalent), then stays an interactive shell.
+_resume="${XDG_STATE_HOME:-$HOME/.local/state}/ralph-crew/tuios-resume/${TUIOS_PANE_ID:-}"
+if [ $# -eq 0 ] && [ -n "${TUIOS_RESTORED:-}" ] && [ -n "${TUIOS_PANE_ID:-}" ] && [ -f "$_resume" ]; then
+  set -- -ic ". '$_resume'; exec \"\$0\" -i"
+fi
 # Fallback to user/system zsh or bash.
 _nix_zsh="$HOME/.nix-profile/bin/zsh"
 if [ -x "$_nix_zsh" ]; then

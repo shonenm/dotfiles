@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ralph-crew - Persistent worker management with periodic task dispatch
 #
-# Manages long-lived Claude TUI workers in tmux, dispatching tasks on schedule.
+# Manages long-lived Claude TUI workers in tmux (or TUIOS via its tmux
+# compatibility layer), dispatching tasks on schedule.
 # Designed for launchd integration (periodic dispatch via StartInterval).
 set -euo pipefail
 
@@ -57,6 +58,12 @@ _load_config() {
   LOG_FILE="${STATE_DIR}/logs/dispatch.log"
 
   CONFIG_FILE="$abs_config"
+
+  # TUIOS 内では crew session を TUIOS に置く。実 tmux に同名 session が
+  # 既にあれば、二重に起動しないようそちらを使い続ける。
+  if ralph_in_tuios && ! { [[ -z "${TMUX:-}" ]] && command tmux has-session -t "$TMUX_SESSION" 2>/dev/null; }; then
+    ralph_route_tmux_to_tuios
+  fi
 }
 
 # --- Worker state ---
@@ -1065,7 +1072,8 @@ cmd_teardown() {
 
 # Long-running scheduler: invokes `dispatch` every --interval seconds in the
 # current shell's lifetime. Designed to run inside a dedicated tmux window so
-# that tmux-continuum persists it across tmux server restarts. Replaces the
+# that tmux-continuum persists it across tmux server restarts, or inside a
+# TUIOS pane, which resumes it when TUIOS restores the session. Replaces the
 # previous launchd/cron integration so ralph-crew runs portably without any
 # OS-level scheduler dependency.
 cmd_daemon() {
@@ -1114,16 +1122,28 @@ cmd_daemon() {
   # with the current session state when the daemon starts.
   _run_init "$config_file" || _log "daemon startup: _run_init failed (continuing)"
 
+  # In a TUIOS pane, record this command so the pane resumes it when TUIOS
+  # restores the session (tmux-default-shell reads the file). Ctrl+C or an
+  # error exit forgets it; TERM / HUP (daemon or machine shutdown) keep it.
+  local resume_file="" keep_resume=0
+  if [[ -n "${TUIOS_PANE_ID:-}" ]] && ralph_in_tuios; then
+    resume_file="$(ralph_tuios_resume_file "$TUIOS_PANE_ID")"
+    mkdir -p "$(dirname "$resume_file")"
+    printf 'cd %q && %q daemon --config %q --interval %q\n' \
+      "$PWD" "$(cd "$(dirname "$0")" && pwd)/$(basename "$0")" "$config_file" "$interval_seconds" > "$resume_file"
+  fi
+
   _stop_daemon() {
     _log "daemon stopping (signal received, pid=$$)"
     # Kill any in-flight backgrounded sleep so the loop exits immediately
     # rather than blocking until the current tick ends.
     [[ -n "${sleep_pid:-}" ]] && kill "$sleep_pid" 2>/dev/null || true
-    rm -f "$pidfile"
+    keep_resume="$1"
     exit 0
   }
-  trap _stop_daemon INT TERM
-  trap 'rm -f "$pidfile"' EXIT
+  trap '_stop_daemon 0' INT
+  trap '_stop_daemon 1' TERM HUP
+  trap 'rm -f "$pidfile"; [[ "$keep_resume" == 1 || -z "$resume_file" ]] || rm -f "$resume_file"' EXIT
 
   _log "daemon starting (pid=$$, interval=${interval_seconds}s, config=$config_file)"
   local sleep_pid=""
@@ -1167,7 +1187,8 @@ Usage:
   ralph-crew daemon [--interval <sec>] [--config <path>]
                                                 Long-running loop: call dispatch every N seconds.
                                                 Intended to run inside a dedicated tmux window so
-                                                tmux-continuum persists it across restarts.
+                                                tmux-continuum persists it across restarts, or a
+                                                TUIOS pane, which resumes it after a restore.
   ralph-crew status [--json] [--config <path>] Show worker status
   ralph-crew send <worker-id> "<message>" [--config <path>]
                                                 Send manual message to worker

@@ -21,8 +21,12 @@ get_tmux_pane_info() {
         echo "(detached)"
         return
     fi
-    # tmuxのpane一覧からTTYでマッチ
-    tmux list-panes -a -F '#{pane_tty}|#{session_name}:#{window_index}.#{pane_index}|#{pane_title}' 2>/dev/null | \
+    # tmuxのpane一覧からTTYでマッチ。TUIOS内ではtmux互換で全sessionを見る
+    local -a tmux_cmd=(tmux)
+    if [[ -z "${TMUX:-}" && -n "${TUIOS_SESSION:-}" ]] && command -v tuios >/dev/null; then
+        tmux_cmd=(env -u TUIOS_SESSION -u TUIOS_PANE_ID tuios tmux)
+    fi
+    "${tmux_cmd[@]}" list-panes -a -F '#{pane_tty}|#{session_name}:#{window_index}.#{pane_index}|#{pane_title}' 2>/dev/null | \
         grep "/dev/tty${tty}" | head -1 | cut -d'|' -f2,3 | tr '|' ' ' || echo "(not in tmux)"
 }
 
