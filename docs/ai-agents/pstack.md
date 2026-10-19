@@ -1,20 +1,22 @@
 # pstack
 
-> **由来:** **Plugin** [pstack](https://github.com/cursor/plugins/tree/main/pstack)（Cursor）/ [pstack-claude](https://github.com/michael-denyer/pstack-claude)（Claude Code）/ [oh-my-pstack](https://github.com/shrimpwtf/oh-my-pstack)（Pi）/ **Configuration** `rules/pstack.*`・`pstack-models.md`・Pi `AGENTS.md`・`scripts/install-common.sh`（[区分](../provenance.md#区分)）
+> **由来:** **Plugin** [pstack](https://github.com/cursor/plugins/tree/main/pstack)（Cursor / Claude Code）/ [oh-my-pstack](https://github.com/shrimpwtf/oh-my-pstack)（Pi）/ **Configuration** `rules/pstack.*`・Pi `AGENTS.md`・`scripts/install-common.sh`（[区分](../provenance.md#区分)）
 
-poteto（Lauren Tan）の skill 集。入口の `poteto-mode` がタスクを playbook（bug fix、feature、refactoring、shipping など）に振り分け、`how` / `why` / `architect` / `arena` / `swarm` / `interrogate` / `tdd` などを呼ぶ。Claude Code と Pi は非公式の移植版を使う。
+poteto（Lauren Tan）の skill 集。入口の `poteto-mode` がタスクを playbook（bug fix、feature、refactoring、shipping など）に振り分け、`how` / `why` / `architect` / `arena` / `swarm` / `interrogate` / `tdd` などを呼ぶ。Claude Code は同じ repo の生成ツリー `harness/pstack/claude-code` を使い、Pi は非公式の移植版を使う。
 
 ## 導入
 
 | ツール | 導入元 | 導入方法 | 呼び出し |
 | --- | --- | --- | --- |
 | Cursor | `cursor/plugins`（公式） | 手動で `/add-plugin pstack` | `/poteto-mode` |
-| Claude Code | `michael-denyer/pstack-claude` | `install_pstack`（`scripts/install-common.sh`） | `/pstack:poteto-mode` |
+| Claude Code | `cursor/plugins`（公式） | `install_pstack`（`scripts/install-common.sh`） | `/pstack:poteto-mode` |
 | Pi | `shrimpwtf/oh-my-pstack` | `settings.json` の `packages` | `/skill:poteto-mode` |
 
 Cursor の marketplace plugin は CLI・設定ファイルから導入できないため `install.sh` の対象外とする。Cursor IDE か CLI の `/plugin` で導入し、`/setup-pstack` でモデル割当を決める。
 
-Claude Code 版の SessionStart hook は全セッションで `poteto-mode` へ誘導するため、`common/claude/.claude/pstack-models.md` の `session hook: off` で無効化している。モデル割当を変える場合は `/pstack:setup-pstack` がこのファイルを書き換える。
+Claude Code 版は Cursor の用語を同梱の `docs/harness/claude-code.md` で読み替える。hook は持たない。第三者 marketplace は自動更新されないため、`install_pstack` は導入済みなら `claude plugin update` を実行する。旧非公式版 `pstack@pstack-claude` が残っていれば削除する。
+
+`/pstack:setup-pstack` はモデル割当を `~/.claude/rules/pstack-models.md` に書く。dotfiles では管理せず、既定値のまま使う。
 
 ## ルールの優先順位
 
@@ -29,6 +31,6 @@ Claude Code 版の SessionStart hook は全セッションで `poteto-mode` へ�
 ## 確認
 
 ```bash
-claude plugin list | grep pstack@pstack-claude
+claude plugin list | grep pstack@cursor-plugins
 pi list | grep oh-my-pstack
 ```
