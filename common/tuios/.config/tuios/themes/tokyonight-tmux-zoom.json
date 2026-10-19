@@ -1,0 +1,11 @@
+{
+  "id": "tokyonight-tmux-zoom",
+  "base": "tokyonight",
+  "chrome": {
+    "success": "#bb9af7",
+    "border": {
+      "copy": "#f7768e",
+      "multifocus": "#73daca"
+    }
+  }
+}

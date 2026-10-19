@@ -11,6 +11,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -213,6 +214,33 @@ def confirm(target):
         run("tuios", *command, "-s", session, capture_output=True)
 
 
+MODE_THEME = "tokyonight-tmux"
+
+
+def herdr_zoomed(pane):
+    # Shell commands run outside a pane, so name the herdr socket next to tuios's.
+    socket = os.environ["TUIOS_SOCKET"]
+    herdr = str(Path(socket).parent / "herdr/bin/herdr")
+    out = run(herdr, "pane", "layout", "--pane", pane, capture_output=True, text=True,
+              env={**os.environ, "HERDR_SOCKET_PATH": socket + ".herdr"}).stdout
+    return json.loads(out)["result"]["layout"]["zoomed"]
+
+
+def mode(action):
+    # tmux pane-active-border-style の zoom (紫) / reload (橙)。TUIOS 0.10.1 は枠線色を
+    # mode で変えられないため、focus 枠線の色だけ違う theme を client へ一時適用する。
+    # ponytail: zoom を他の経路 (Window mode z、pane を閉じる) で解いた時は次の zoom / reload まで紫のまま
+    session = os.environ["TUIOS_SESSION"]
+    if action == "zoom":
+        run("tuios", "run-command", "-s", session, "prefix_fullscreen", capture_output=True)
+    else:
+        run("tuios", "run-command", "-s", session, "SetTheme", f"{MODE_THEME}-reload", capture_output=True)
+        time.sleep(0.3)
+        run("tuios", "run-command", "-s", session, "reload_config", capture_output=True)
+    zoomed = herdr_zoomed(os.environ["TUIOS_ACTIVE_PANE_ID"])
+    run("tuios", "run-command", "-s", session, "SetTheme", f"{MODE_THEME}-zoom" if zoomed else MODE_THEME, capture_output=True)
+
+
 def level(percent, steps):
     # tmux status pillsと同じtokyonightの閾値色。steps は (下限, 色) の降順。
     color = next((c for floor, c in steps if percent >= floor), "#9ece6a")
@@ -317,6 +345,8 @@ def main():
     nav = sub.add_parser("space-nav")
     nav.add_argument("direction", choices=("next", "prev"))
     nav.add_argument("client_pid", type=int)
+    mode_action = sub.add_parser("mode")
+    mode_action.add_argument("action", choices=("zoom", "reload"))
     confirm_target = sub.add_parser("confirm")
     confirm_target.add_argument("target", choices=("pane", "workspace"))
     dock_item = sub.add_parser("dock")
@@ -349,6 +379,8 @@ def main():
             theme()
         elif args.command == "swap":
             swap()
+        elif args.command == "mode":
+            mode(args.action)
         elif args.command == "confirm":
             confirm(args.target)
         elif args.command == "dock":
