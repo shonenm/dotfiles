@@ -11,6 +11,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 
 def run(*args, **kwargs):
@@ -215,6 +216,48 @@ def gpu_percent():
     return None
 
 
+USAGE_COLORS = {"claude": (255, 102, 0), "codex": (125, 211, 252), "gemini": (66, 133, 244), "cursor": (255, 255, 255), "grok": (94, 234, 212)}
+USAGE_WINDOWS = {"current": 18000, "weekly": 604800, "monthly": 2592000, "cursor": 2592000, "other": 2592000}
+
+
+def pace_color(pct, label, rem):
+    # tmux-agent-sidebar.sh の sb_pace_color と同じ消化ペースの推定色。
+    window = USAGE_WINDOWS.get(label) or (int(label[:-1]) * 86400 if re.fullmatch(r"\d+d", label) else None)
+    left = sum(int(n) * unit for n, unit in ((m.group(1), {"d": 86400, "h": 3600, "m": 60}[m.group(2)]) for m in re.finditer(r"(\d+)([dhm])", rem)))
+    if window is None or left <= 0 or (window - left) * 20 < window:
+        return ""
+    if pct >= 100:
+        return "\033[38;5;39m"
+    projected = pct * window // (window - left)
+    return next(f"\033[38;5;{c}m" for floor, c in ((95, 114), (80, 220), (50, 208), (0, 203)) if projected >= floor)
+
+
+def ai_usage(provider):
+    # ai-usage は ~/.local/bin。各 provider は内部でキャッシュと backoff を持つ。
+    binary = shutil.which("ai-usage") or str(Path.home() / ".local/bin/ai-usage")
+    try:
+        return subprocess.run([binary, provider], capture_output=True, text=True, timeout=2.5).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def usage():
+    # Rows for the rail's custom section, as tmux-agent-sidebar.sh draws them.
+    with ThreadPoolExecutor() as pool:
+        outputs = list(pool.map(ai_usage, USAGE_COLORS))
+    for (provider, (r, g, b)), out in zip(USAGE_COLORS.items(), outputs):
+        color = f"\033[38;2;{r};{g};{b}m"
+        for i, record in enumerate(line.split("\x1f") for line in out.splitlines() if line):
+            head = f"{color}{record[0]}\033[0m " if i == 0 else "  "
+            if len(record) < 5:
+                print(f"{head}\033[2m--\033[0m")
+                continue
+            _, label, gauge, pct, rem = record[:5]
+            pace = "" if f"{provider} {label}" in ("claude current", "grok extra") else pace_color(int(pct.rstrip("%") or 0), label, rem)
+            print(f"{head}\033[2m{label}\033[0m")
+            print(f"  {color}{gauge} {pct}\033[0m  {pace or chr(27) + '[2m'}{rem}\033[0m" + (f" {pace}●\033[0m" if pace else ""))
+
+
 def dock(item):
     # Cells for [dock.custom.*]. GPUや表示対象がない環境では何も出さず、cellを隠す。
     if item == "gpu":
@@ -255,7 +298,7 @@ def dev():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command")
-    for name in ("pick", "space", "root", "dev", "theme", "swap"):
+    for name in ("pick", "space", "root", "dev", "theme", "swap", "usage"):
         sub.add_parser(name)
     nav = sub.add_parser("space-nav")
     nav.add_argument("direction", choices=("next", "prev"))
@@ -284,6 +327,8 @@ def main():
             navigate_space(args.direction, args.client_pid)
         elif args.command == "rcon":
             rcon(args.target)
+        elif args.command == "usage":
+            usage()
         elif args.command == "theme":
             theme()
         elif args.command == "swap":
