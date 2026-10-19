@@ -137,17 +137,19 @@ class SessionTests(unittest.TestCase):
 
     def test_swap_offers_tiled_panes_of_the_active_workspace_by_title_index(self):
         windows = [
-            {"window_id": "a", "index": 0, "title": "~/src", "display_name": "editor", "workspace": 1},
-            {"window_id": "b", "index": 1, "title": "shell", "workspace": 1},
-            {"window_id": "m", "index": 4, "title": "hidden", "workspace": 1, "minimized": True},
-            {"window_id": "c", "index": 2, "title": "other", "workspace": 2},
-            {"window_id": "popup", "index": 3, "title": "Swap", "workspace": 1, "floating": True},
+            {"window_id": "scratch", "index": 0, "title": "scratch", "workspace": 1000},
+            {"window_id": "a", "index": 1, "title": "~/src", "display_name": "editor", "workspace": 1},
+            {"window_id": "m", "index": 2, "title": "hidden", "workspace": 1, "minimized": True},
+            {"window_id": "c", "index": 3, "title": "other", "workspace": 2},
+            {"window_id": "b", "index": 4, "title": "shell", "workspace": 1},
+            {"window_id": "d", "index": 5, "title": "logs", "workspace": 1},
+            {"window_id": "popup", "index": 6, "title": "Swap", "workspace": 1, "floating": True},
         ]
         listing = subprocess.CompletedProcess([], 0, json.dumps({"windows": windows}))
         env = {"TUIOS_ACTIVE_PANE_ID": "b", "TUIOS_SESSION": "work", "HERDR_BIN_PATH": "/herdr"}
         with patch.dict(os.environ, env), patch.object(tui, "run", return_value=listing) as run, patch.object(tui, "choose", return_value="a") as choose:
             tui.swap()
-        choose.assert_called_once_with(["a\t1: editor"], "swap")
+        choose.assert_called_once_with(["a\t1: editor", "d\t3: logs"], "swap")
         run.assert_called_with("/herdr", "pane", "swap", "--source-pane", "b", "--target-pane", "a")
 
     def test_dock_branch_follows_focused_pane_of_client_session(self):
