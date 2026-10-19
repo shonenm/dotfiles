@@ -4,6 +4,14 @@
 # Not accessible + nix-user-chroot present → enter chroot first.
 # User tools are needed even when SSH starts the daemon with a system-only PATH.
 export PATH="$HOME/.local/bin:$HOME/.pixi/bin:$HOME/.local/share/mise/shims:$PATH"
+# A TUIOS session registered by `tui rcon` opens each pane shell in its container.
+# REVIEW: rcon check runs before the ralph-crew resume rewrite, so a restored pane in an rcon session enters the container and skips the resume file.
+if [ $# -eq 0 ] && [ -z "${TMUX:-}" ] && [ -n "${TUIOS_SESSION:-}" ]; then
+  _rcon="${XDG_STATE_HOME:-$HOME/.local/state}/tuios-rcon/$TUIOS_SESSION"
+  if [ -r "$_rcon" ]; then
+    exec "$(dirname "$0")/tmux-docker-enter" "$(cat "$_rcon")"
+  fi
+fi
 # A TUIOS-restored pane resumes what ralph-crew daemon recorded for it
 # (tmux @resurrect-processes equivalent), then stays an interactive shell.
 _resume="${XDG_STATE_HOME:-$HOME/.local/state}/ralph-crew/tuios-resume/${TUIOS_PANE_ID:-}"

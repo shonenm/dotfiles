@@ -1,6 +1,6 @@
 # TUIOS
 
-> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space設定と巡回・sidebar overview・theme / pane入替picker・dock status・Neovim navigation・ssh/fzf/tmuxへのキー委譲（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [TUIOS](https://github.com/Gaurav-Gosain/tuios) / **Configuration** `common/tuios/`・`mac/tuios/` / **Custom** `scripts/tui`のproject picker・space設定と巡回・sidebar overview・theme / pane入替picker・dock status・Neovim navigation・ssh/fzf/tmuxへのキー委譲・`tui rcon` container session（[区分](../provenance.md#区分)）
 
 TUIOS 0.10.1の標準機能を中心に、local / remote session、layout、AI表示、復元を管理する。既存tmuxは引き続き利用できる。
 
@@ -147,7 +147,25 @@ tuios attach --host ailab work         # 既存remote sessionを表示
 
 長時間のClaude / Piはremote側のsessionへ置く。Macの端末を閉じてもremoteで実行が続く。local sessionへremote paneを混ぜる`new-window --host`は、一時的に並べる用途に使う。混在paneの切断保持は既定10分で、local daemon再起動後の復元先はlocal shellになる。
 
-従来の`rcon`は[tmux + Docker経路](../infrastructure/rcon.md)として維持する。containerへの自動入場・cwd継承はこの経路を利用する。TUIOSのhost登録はSSHホストが対象。
+TUIOSのhost登録はSSHホストが対象。Docker containerへ入るsessionは`tui rcon`で作る。
+
+## Container session
+
+`tui rcon`は`~/.config/rcon/targets`（`host:container`形式）からfzfで選ぶ。`tui rcon ailab:myproject-dev`のように直接指定もできる。このマシンのcontainerは`local:<container>`と書く。containerなしの`host`は、そのホストの`main` sessionを開く。
+
+- container名（`:` `.`は`-`）のsessionを作成・表示する。作成前に、sessionのホストの`${XDG_STATE_HOME:-~/.local/state}/tuios-rcon/<session>`へcontainer名を書く。remoteへは`[hosts]`の`addr`でSSHして書く。
+- pane shell（`tmux-default-shell`）はこのファイルがあると`tmux-docker-enter`で入る。分割・新規pane・daemon再起動後の復元も同じ。containerが停止中ならホストshellになる。
+- 新規paneのcwdは、同じsessionで最後にpromptを出したpaneのcontainer内cwdを使う。container側zshrcのhookがpaneごとのcwdを`tmux-pane-state`へ書く（[前提](../infrastructure/rcon.md#cwd-引き継ぎの前提条件)）。別paneへfocusを移しただけで分割すると、直前にpromptを出したpaneのcwdになる。
+- `g` / `G` / `P` / `Q`のpopupは、focus中paneのcontainer内cwdで`tmux-popup-in-container`から実行する。
+
+登録の解除はstate fileを削除する。session名を変えると登録は外れる。
+
+TUIOS 0.10.1未対応のため、次の部分をhelperで補う。
+
+- session単位のdefault command・user optionがない。登録はstate fileに置く。
+- 新規paneのshell起動時には新しいpaneへfocusが移っており、分割元paneを取得できない。cwdの継承はprocessのcwdを使うため、container内のcdは反映されない。
+
+従来の`rcon`は[tmux + Docker経路](../infrastructure/rcon.md)として引き続き使える。
 
 ## Layout・プロジェクト起動
 
@@ -191,7 +209,7 @@ native daemonがsession、space、layout、cwd、履歴を保存する。`resume
 
 `j`はscratch shell、`g`はlazygit、`k`は`nvim .`、`G`はlive-pr、`P`はpgcli、`Q`はquay、`Space`はnative file search。
 
-scratchは同じキーで表示を切り替え、processを保持する。cwdは最初に開いた位置を使う。remote sessionではそのホスト上で実行する。
+scratchは同じキーで表示を切り替え、processを保持する。cwdは最初に開いた位置を使う。remote sessionではそのホスト上で実行する。[container session](#container-session)では`g` / `G` / `P` / `Q`をcontainer内で実行する。
 
 ## 検証
 

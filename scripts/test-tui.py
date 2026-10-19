@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
 import unittest
 from unittest.mock import patch
@@ -200,6 +201,35 @@ class SessionTests(unittest.TestCase):
             "work 4 \033[35m●\033[0m\033[33m●\033[0m\033[90m●\033[0m\033[33m●\033[0m",
         ])
 
+    def test_rcon_registers_container_before_creating_the_session(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, XDG_STATE_HOME=temp), patch.object(tui, "switch_session") as switch:
+            switch.side_effect = lambda *args: self.assertEqual((Path(temp) / "tuios-rcon/my-app-dev").read_text(), "my.app:dev\n")
+            tui.rcon("local:my.app:dev")
+        switch.assert_called_once_with("--create", "my-app-dev")
+
+    def test_rcon_registers_on_the_host_over_its_ssh_address(self):
+        hosts = subprocess.CompletedProcess([], 0, json.dumps({"hosts": [{"host": "lab", "addr": "lab.example"}]}))
+        with patch.object(tui, "run", return_value=hosts) as run, patch.object(tui, "switch_session") as switch:
+            tui.rcon("lab:web 1")
+        ssh = run.call_args_list[-1].args
+        self.assertEqual(ssh[:2], ("ssh", "lab.example"))
+        switch.assert_called_once_with("--create", "lab:web 1")
+        with tempfile.TemporaryDirectory() as temp:
+            # The remote shell receives one command line; run it here as ssh would.
+            subprocess.run(["sh", "-c", ssh[2]], env={**os.environ, "XDG_STATE_HOME": temp}, check=True)
+            self.assertEqual((Path(temp) / "tuios-rcon/web 1").read_text(), "web 1\n")
+
+    def test_rcon_without_container_opens_main_and_unknown_host_fails(self):
+        with patch.object(tui, "switch_session") as switch:
+            tui.rcon("lab")
+            tui.rcon("local")
+        self.assertEqual([c.args for c in switch.call_args_list], [("--create", "lab:main"), ("--create", "main")])
+        none = subprocess.CompletedProcess([], 0, json.dumps({"hosts": []}))
+        with patch.object(tui, "run", return_value=none), patch.object(tui, "switch_session") as switch:
+            with self.assertRaisesRegex(RuntimeError, "not in the \\[hosts\\]"):
+                tui.rcon("lab:web")
+        switch.assert_not_called()
+
     def test_space_navigation_command_passes_direction_and_client_pid(self):
         with patch.object(sys, "argv", ["tui", "space-nav", "next", "42"]), patch.object(tui, "navigate_space") as navigate:
             self.assertEqual(tui.main(), 0)
@@ -256,6 +286,70 @@ class ShellTests(unittest.TestCase):
                     prefix = [str(home / ".nix-store/nix"), str(home / ".nix-profile/bin/zsh")] if kind == "chroot" else []
                     self.assertEqual((home / "args").read_text().splitlines(), prefix + args)
                     self.assertEqual((home / "path").read_text().split(":")[:3], [str(home / ".local/bin"), str(home / ".pixi/bin"), str(home / ".local/share/mise/shims")])
+
+
+class RconContainerTests(unittest.TestCase):
+    """The tmux rcon helpers in a TUIOS session, against fake docker/tuios/tmux."""
+
+    def setUp(self):
+        self.temp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.temp)
+        self.bin = self.temp / "bin"
+        self.bin.mkdir()
+        self.log = self.temp / "log"
+        # docker answers `exec C test -d X` only for folders under exists/.
+        self.fake("docker", 'echo "docker $*" >> "$LOG"\n[ "$2 $3" = "rcon true" ] && exit 0\n[ "$3" = test ] && case "$5" in "$TEMP"/exists*) exit 0;; esac\n[ "$1" = inspect ] && { echo /work; exit 0; }\n[ "$1 $2" = "exec -it" ] && exit 0\nexit 1')
+        self.fake("tmux", 'echo "tmux $*" >> "$LOG"; exit 1')
+        self.fake("tuios", 'printf \'{"windows":[{"window_id":"old"},{"window_id":"used"},{"window_id":"new"}]}\'')
+        self.state = self.temp / "home/.cache/tmux-pane-state-rcon"
+        self.state.mkdir(parents=True)
+        (self.temp / "state/tuios-rcon").mkdir(parents=True)
+        (self.temp / "state/tuios-rcon/work").write_text("rcon\n")
+        self.env = {key: value for key, value in os.environ.items() if not key.startswith(("TUIOS_", "TMUX"))}
+        self.env.update(PATH=f"{self.bin}:/usr/bin:/bin", HOME=str(self.temp / "home"), XDG_STATE_HOME=str(self.temp / "state"), LOG=str(self.log), TEMP=str(self.temp), TUIOS_SESSION="work")
+
+    def fake(self, name, body):
+        path = self.bin / name
+        path.write_text(f"#!/bin/sh\n{body}\n")
+        path.chmod(0o755)
+
+    def logged(self):
+        return self.log.read_text().splitlines() if self.log.exists() else []
+
+    def test_pane_shell_enters_registered_container_only_for_tuios_pane_shells(self):
+        shell = self.temp / "scripts/tmux-default-shell"
+        shell.parent.mkdir()
+        shutil.copy(ROOT / "scripts/tmux-default-shell", shell)
+        (shell.parent / "tmux-docker-enter").write_text('#!/bin/sh\necho "enter $*" >> "$LOG"\n')
+        (shell.parent / "tmux-docker-enter").chmod(0o755)
+        (self.temp / "home/.pixi/bin").mkdir(parents=True)
+        self.fake("zsh", 'echo "zsh $*" >> "$LOG"')
+        (self.temp / "home/.pixi/bin/zsh").symlink_to(self.bin / "zsh")
+        for extra, args in (({}, []), ({}, ["-lc", "lazygit"]), ({"TMUX": "/sock"}, []), ({"TUIOS_SESSION": "plain"}, [])):
+            subprocess.run(["bash", str(shell), *args], env={**self.env, **extra}, check=True)
+        self.assertEqual(self.logged(), ["enter rcon", "zsh -lc lazygit", "zsh ", "zsh "])
+
+    def test_pane_context_reads_registration_and_the_command_entry_pane(self):
+        (self.temp / "exists/sub").mkdir(parents=True)
+        (self.state / "cwd-used").write_text(f"{self.temp}/exists/sub\n")
+        env = {**self.env, "TUIOS_ACTIVE_PANE_ID": "used", "TUIOS_ACTIVE_PANE_CWD": "/host/only"}
+        out = subprocess.run([str(ROOT / "scripts/tmux-pane-context")], env=env, capture_output=True, text=True, check=True).stdout
+        self.assertIn("CONTAINER=rcon\n", out)
+        self.assertIn(f"CWD={self.temp}/exists/sub\n", out)
+        self.assertFalse([line for line in self.logged() if line.startswith("tmux")])
+        out = subprocess.run([str(ROOT / "scripts/tmux-pane-context")], env={**env, "TUIOS_SESSION": "plain"}, capture_output=True, text=True, check=True).stdout
+        self.assertIn("CONTAINER=''\nCWD=/host/only\n", out)
+
+    def test_new_pane_takes_cwd_of_the_session_pane_that_prompted_last(self):
+        for name, age in (("old", 30), ("used", 10), ("new", 0), ("other-session", 0)):
+            path = self.state / f"cwd-{name}"
+            path.write_text(f"{self.temp}/exists/{name}\n")
+            os.utime(path, (time.time() - age, time.time() - age))
+        env = {**self.env, "TUIOS_PANE_ID": "new"}
+        subprocess.run([str(ROOT / "scripts/tmux-docker-enter"), "rcon"], env=env, cwd=self.temp, check=True)
+        exec_line = self.logged()[-1]
+        self.assertIn(f"-w {self.temp}/exists/used rcon zsh", exec_line)
+        self.assertIn("-e RCON_PANE_ID=new", exec_line)
 
 
 class ConfigTests(unittest.TestCase):
