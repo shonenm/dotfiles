@@ -186,6 +186,19 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(tui.pace_color(10, "current", "1h"), "\033[38;5;203m")
         self.assertEqual(tui.pace_color(50, "unknown", "1h"), "")
 
+    def test_confirm_closes_only_after_yes(self):
+        windows = [{"window_id": "a", "title": "~/src", "display_name": "editor", "workspace": 3}]
+        listing = subprocess.CompletedProcess([], 0, json.dumps({"windows": windows}))
+        env = {"TUIOS_ACTIVE_PANE_ID": "a", "TUIOS_SESSION": "work"}
+        for target, answer, closed in (("pane", "y", ("tuios", "close-window", "a", "-s", "work")), ("workspace", "Y", ("tuios", "close-workspace", "3", "-s", "work")), ("pane", "n", None), ("workspace", "", None)):
+            with self.subTest(target=target, answer=answer), patch.dict(os.environ, env), patch.object(tui, "run", return_value=listing) as run, patch("builtins.input", return_value=answer) as ask:
+                tui.confirm(target)
+            ask.assert_called_once_with("kill-pane editor? (y/n) " if target == "pane" else "kill-workspace 3? (y/n) ")
+            if closed:
+                run.assert_called_with(*closed, capture_output=True)
+            else:
+                self.assertEqual(run.call_count, 1)
+
     def test_dock_branch_follows_focused_pane_of_client_session(self):
         with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as plain:
             subprocess.run(["git", "init", "-q", "-b", "live", repo], check=True)
@@ -415,7 +428,11 @@ class ConfigTests(unittest.TestCase):
             self.assertNotIn(("global", key), bindings)
         self.assertEqual(bindings["prefix", "s"], "prefix_session_switcher")
         self.assertEqual(bindings["prefix", "tab"], "last_session")
-        self.assertEqual(bindings["prefix", "esc"], "prefix_exit_mode")
+        self.assertEqual(bindings["prefix", "esc"], "command:prefix-escape-noop")
+        self.assertEqual(bindings["prefix", "x"], "command:kill-pane")
+        self.assertEqual(bindings["prefix", "X"], "command:kill-workspace")
+        for key in ("w", "x"):
+            self.assertNotEqual(bindings.get(("window", key)), "close_window")
         self.assertEqual(bindings["window", "s"], "focus_sidebar")
         self.assertEqual(bindings["prefix", "ctrl+s"], "command:session-space")
         self.assertNotIn(("prefix", "ctrl+g"), bindings)
