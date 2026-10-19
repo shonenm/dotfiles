@@ -273,6 +273,25 @@ if command -v sesh &>/dev/null && command -v fzf &>/dev/null; then
   bindkey '\es' sesh-sessions  # Alt-s (ESC + s)
 fi
 
+# --- TUIOS: Ctrl+h/j/k/l を ssh / fzf / tmux へ渡す ---
+# tmux の @vim_navigator_pattern 相当。TUIOS の nvim navigator 状態を実行中だけ active にする。
+# 端での返却はないため、TUIOS の pane 移動は終了後か prefix で行う。
+if [[ "${TUIOS_ENV:-}" == 1 ]]; then
+  autoload -Uz add-zsh-hook
+  _tuios_nav_preexec() {
+    [[ "${${(z)1}[1]:t}" == (ssh|fzf|tmux) ]] || return
+    printf '\e]7777;tuios-nvim-navigator;state;active\a'
+    _tuios_nav_owned=1
+  }
+  _tuios_nav_precmd() {
+    (( ${_tuios_nav_owned:-0} )) || return
+    printf '\e]7777;tuios-nvim-navigator;state;inactive\a'
+    _tuios_nav_owned=0
+  }
+  add-zsh-hook preexec _tuios_nav_preexec
+  add-zsh-hook precmd _tuios_nav_precmd
+fi
+
 # --- Claude Code fallback wrapper ---
 # Anthropic API障害時にOpenRouter経由で動作させる
 # 切替: claude-fallback.sh on/off
