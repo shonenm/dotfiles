@@ -33,14 +33,8 @@ show_clock = true
 [appearance.sidebar]
 position = "left"
 width = 32
-sections = "sessions,custom,agents"
+sections = "sessions,agents"
 show_agents = true
-
-# tmux sidebar 相当の session ごとの agent 数と branch。
-[appearance.sidebar.custom]
-title = "overview"
-command = "~/dotfiles/scripts/tui rail"
-refresh = "3s"
 
 # tmux.expose 相当。pane navigator を画面カード一覧で開く。
 [panes]
@@ -48,7 +42,7 @@ navigator_layout = "cards"
 
 # tmux status-right 相当。mode・prefix・copy表示はdock標準のpillを使う。
 [dock]
-right = ["transfers", "notifications", "copy-help", "cpu", "ram", "custom/gpu", "custom/storage", "custom/branch", "clock", "custom/host", "session-controls"]
+right = ["transfers", "notifications", "copy-help", "cpu", "ram", "custom/gpu", "custom/storage", "custom/agents", "custom/branch", "clock", "custom/host", "session-controls"]
 
 [dock.clock]
 format = "01/02 15:04"
@@ -60,6 +54,11 @@ refresh = "5s"
 [dock.custom.storage]
 command = "~/dotfiles/scripts/tui dock storage"
 refresh = "60s"
+
+# tmux の Claude badge / hang 表示相当。表示中 session の agent 数と状態色。
+[dock.custom.agents]
+command = "~/dotfiles/scripts/tui dock agents"
+refresh = "3s"
 
 [dock.custom.branch]
 command = "~/dotfiles/scripts/tui dock branch"

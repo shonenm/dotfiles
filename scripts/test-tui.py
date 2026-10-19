@@ -137,8 +137,9 @@ class SessionTests(unittest.TestCase):
 
     def test_swap_offers_tiled_panes_of_the_active_workspace_by_title_index(self):
         windows = [
-            {"window_id": "a", "index": 0, "title": "editor", "workspace": 1},
+            {"window_id": "a", "index": 0, "title": "~/src", "display_name": "editor", "workspace": 1},
             {"window_id": "b", "index": 1, "title": "shell", "workspace": 1},
+            {"window_id": "m", "index": 4, "title": "hidden", "workspace": 1, "minimized": True},
             {"window_id": "c", "index": 2, "title": "other", "workspace": 2},
             {"window_id": "popup", "index": 3, "title": "Swap", "workspace": 1, "floating": True},
         ]
@@ -168,38 +169,24 @@ class SessionTests(unittest.TestCase):
             tui.dock("storage")
         self.assertEqual(out.getvalue(), " \033[38;2;224;175;104m92%\033[0m\n")
 
-    def test_rail_counts_agents_and_reads_live_branch_of_focused_pane(self):
-        with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as plain:
-            subprocess.run(["git", "init", "-q", "-b", "live", repo], check=True)
-            panes = [
-                {"session": "work", "focused": False, "cwd": plain, "state": "none", "harness_id": ""},
-                {"session": "work", "focused": True, "cwd": repo, "state": "working", "harness_id": "claude-code"},
-                {"session": "work", "focused": False, "cwd": repo, "state": "needs_input", "harness_id": "pi"},
-                {"session": "idle", "focused": True, "cwd": plain, "state": "none", "harness_id": ""},
-            ]
-            rows = [{"name": "work", "branch": "stale"}, {"name": "idle"}]
-            listing = subprocess.CompletedProcess([], 0, json.dumps({"agents": panes}))
-            with patch.object(tui, "sessions", return_value=rows), patch.object(tui, "run", return_value=listing), patch("sys.stdout", new_callable=io.StringIO) as out:
-                tui.rail()
-        self.assertEqual(out.getvalue().splitlines(), [
-            "idle",
-            "work 2 \033[33m●\033[0m\033[31m●\033[0m",
-            "  \033[90m└ live\033[0m",
-        ])
-
-    def test_rail_marks_working_agent_without_recent_report_as_hang(self):
+    def test_dock_agents_counts_session_agents_and_marks_hang(self):
         panes = [
-            {"session": "work", "focused": True, "cwd": "", "state": "working", "harness_id": "claude-code", "evidence_age_ms": 120_000},
-            {"session": "work", "focused": False, "cwd": "", "state": "working", "harness_id": "pi", "evidence_age_ms": 119_999},
-            {"session": "work", "focused": False, "cwd": "", "state": "idle", "harness_id": "pi", "evidence_age_ms": 999_999},
-            {"session": "work", "focused": False, "cwd": "", "state": "working", "harness_id": "pi", "evidence_age_ms": None},
+            {"state": "working", "harness_id": "claude-code", "evidence_age_ms": 120_000},
+            {"state": "working", "harness_id": "pi", "evidence_age_ms": 119_999},
+            {"state": "needs_input", "harness_id": "pi", "evidence_age_ms": 999_999},
+            {"state": "none", "harness_id": "", "evidence_age_ms": None},
         ]
         listing = subprocess.CompletedProcess([], 0, json.dumps({"agents": panes}))
-        with patch.object(tui, "sessions", return_value=[{"name": "work"}]), patch.object(tui, "run", return_value=listing), patch("sys.stdout", new_callable=io.StringIO) as out:
-            tui.rail()
-        self.assertEqual(out.getvalue().splitlines(), [
-            "work 4 \033[35m●\033[0m\033[33m●\033[0m\033[90m●\033[0m\033[33m●\033[0m",
-        ])
+        with patch.dict(os.environ, TUIOS_SESSION="work"), patch.object(tui, "run", return_value=listing) as run, patch("sys.stdout", new_callable=io.StringIO) as out:
+            tui.dock("agents")
+        run.assert_called_once_with("tuios", "list-agents", "--all", "-s", "work", "--json", capture_output=True, text=True)
+        self.assertEqual(out.getvalue(), "󰚩 3 \033[35m●\033[0m\033[33m●\033[0m\033[31m●\033[0m\n")
+
+    def test_dock_agents_hides_cell_without_agents(self):
+        listing = subprocess.CompletedProcess([], 0, json.dumps({"agents": [{"state": "none", "harness_id": ""}]}))
+        with patch.dict(os.environ, TUIOS_SESSION="work"), patch.object(tui, "run", return_value=listing), patch("sys.stdout", new_callable=io.StringIO) as out:
+            tui.dock("agents")
+        self.assertEqual(out.getvalue(), "")
 
     def test_rcon_registers_container_before_creating_the_session(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, XDG_STATE_HOME=temp), patch.object(tui, "switch_session") as switch:
