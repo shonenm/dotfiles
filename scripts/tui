@@ -199,6 +199,20 @@ def swap():
         run("tuios", "focus-window", "-s", os.environ["TUIOS_SESSION"], active, capture_output=True)
 
 
+def confirm(target):
+    # tmux confirm-before for the close keys TUIOS runs without asking.
+    session, active = os.environ["TUIOS_SESSION"], os.environ["TUIOS_ACTIVE_PANE_ID"]
+    windows = json.loads(run("tuios", "list-windows", "-s", session, "--json", capture_output=True, text=True).stdout)["windows"]
+    pane = next(w for w in windows if w["window_id"] == active)
+    if target == "pane":
+        question, command = f"kill-pane {pane.get('display_name') or pane['title']}?", ("close-window", active)
+    else:
+        question, command = f"kill-workspace {pane['workspace']}?", ("close-workspace", str(pane["workspace"]))
+    answer = input(f"{question} (y/n) ").strip().lower()
+    if answer == "y":
+        run("tuios", *command, "-s", session, capture_output=True)
+
+
 def level(percent, steps):
     # tmux status pillsと同じtokyonightの閾値色。steps は (下限, 色) の降順。
     color = next((c for floor, c in steps if percent >= floor), "#9ece6a")
@@ -303,6 +317,8 @@ def main():
     nav = sub.add_parser("space-nav")
     nav.add_argument("direction", choices=("next", "prev"))
     nav.add_argument("client_pid", type=int)
+    confirm_target = sub.add_parser("confirm")
+    confirm_target.add_argument("target", choices=("pane", "workspace"))
     dock_item = sub.add_parser("dock")
     dock_item.add_argument("item", choices=("gpu", "storage", "agents", "branch"))
     rcon_parser = sub.add_parser("rcon")
@@ -333,6 +349,8 @@ def main():
             theme()
         elif args.command == "swap":
             swap()
+        elif args.command == "confirm":
+            confirm(args.target)
         elif args.command == "dock":
             dock(args.item)
         elif args.command == "root":
