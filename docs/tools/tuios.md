@@ -39,7 +39,7 @@ prefixは`Ctrl+Space`。表はprefixの後に押すキー。
 | `1`〜`8` | workspaceを選択 |
 | `9` | Gitルートのproject sessionへ |
 | `T` / `t` | workspace名 / pane名を変更 |
-| `X` / `x` | workspace / paneを閉じる。tmuxの`confirm-before`と同じく`y`で確定し、それ以外は閉じない |
+| `X` / `x` | workspace / paneを閉じる。tmuxの`confirm-before`と同じく`y`の1キーで確定し、それ以外は閉じない。remote sessionではpopupがそのホストの`~/dotfiles`で動くため、ホスト側も`git pull`（`dotsync`）で揃える |
 | `\|` / `-` | 左右 / 上下に分割 |
 | `H` / `J` / `K` / `L` | paneを5セル単位でリサイズ |
 | `z`、prefix不要の`Ctrl+z` | sidebarを残してzoom。zoom中はfocus枠線が紫 |

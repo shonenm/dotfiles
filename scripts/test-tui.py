@@ -191,7 +191,7 @@ class SessionTests(unittest.TestCase):
         listing = subprocess.CompletedProcess([], 0, json.dumps({"windows": windows}))
         env = {"TUIOS_ACTIVE_PANE_ID": "a", "TUIOS_SESSION": "work"}
         for target, answer, closed in (("pane", "y", ("tuios", "close-window", "a", "-s", "work")), ("workspace", "Y", ("tuios", "close-workspace", "3", "-s", "work")), ("pane", "n", None), ("workspace", "", None)):
-            with self.subTest(target=target, answer=answer), patch.dict(os.environ, env), patch.object(tui, "run", return_value=listing) as run, patch("builtins.input", return_value=answer) as ask:
+            with self.subTest(target=target, answer=answer), patch.dict(os.environ, env), patch.object(tui, "run", return_value=listing) as run, patch.object(tui, "read_key", return_value=answer) as ask:
                 tui.confirm(target)
             ask.assert_called_once_with("kill-pane editor? (y/n) " if target == "pane" else "kill-workspace 3? (y/n) ")
             if closed:

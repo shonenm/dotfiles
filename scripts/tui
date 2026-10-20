@@ -200,6 +200,22 @@ def swap():
         run("tuios", "focus-window", "-s", os.environ["TUIOS_SESSION"], active, capture_output=True)
 
 
+def read_key(prompt):
+    # tmux confirm-before と同じく Enter を待たず 1 キーで答える。
+    print(prompt, end="", flush=True)
+    if not sys.stdin.isatty():
+        return sys.stdin.readline().strip()
+    import termios
+    import tty
+    fd = sys.stdin.fileno()
+    saved = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        return sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+
+
 def confirm(target):
     # tmux confirm-before for the close keys TUIOS runs without asking.
     session, active = os.environ["TUIOS_SESSION"], os.environ["TUIOS_ACTIVE_PANE_ID"]
@@ -209,8 +225,7 @@ def confirm(target):
         question, command = f"kill-pane {pane.get('display_name') or pane['title']}?", ("close-window", active)
     else:
         question, command = f"kill-workspace {pane['workspace']}?", ("close-workspace", str(pane["workspace"]))
-    answer = input(f"{question} (y/n) ").strip().lower()
-    if answer == "y":
+    if read_key(f"{question} (y/n) ").lower() == "y":
         run("tuios", *command, "-s", session, capture_output=True)
 
 
