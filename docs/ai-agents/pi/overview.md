@@ -163,6 +163,8 @@ dotfiles の拡張により Web Research Layer が利用可能。通常はSearXN
 
 ### モデル選択を変更する
 
+新規セッションの既定は `openai/gpt-6-astra`、thinking level（effort）は `low`。`common/pi/.pi/agent/settings.json` の `defaultProvider` / `defaultModel` / `defaultThinkingLevel` で管理する。起動時の明示指定やproject設定が優先され、既存セッションの再開時は保存済みのモデル・thinking levelが復元される。
+
 `subagent` の既定モデルは `common/pi/.pi/agent/settings.json` の `subagents.defaultModel` / `defaultThinking` / `modelScope.allow`、`workflow` は `common/pi/.pi/workflows/model-tiers.json` の全tierで管理する。両方の既定モデルは `openai/gpt-5.6-luna` で、通常の呼び出しでは `model` を指定しない。変更する場合は現在のregistryに存在する `provider/model` を設定し、piを再起動する。許可リストへの追加だけではモデルは登録されず、registryへの登録も現在の認証での利用を保証しない。モデル指定なしの子起動で応答まで検証する。
 
 pueue用の `delegate_agent` だけは独立しているため、必要なら `common/pi/.pi/agent/extensions/agent-delegation.ts` の `MODEL_TIERS` を編集する。runtimeの利用方針は `AGENTS.md` に記載する。
