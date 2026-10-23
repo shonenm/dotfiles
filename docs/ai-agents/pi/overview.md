@@ -18,7 +18,7 @@
 | pi-better-openai | `/fast`でOpenAIの優先処理を切り替え、初期OFF | `npm:pi-better-openai@0.1.22` + `extensions/pi-better-openai.json` |
 | 標準 MCP | 共有server設定、codemode / tool_search、`/mcp` | `~/.pi/agent/mcp.json` → 共有設定へのlink |
 | pi-remote-control | Pi Relayとのremote操作 | `settings.json` の `npm:pi-remote-control@1.0.7` |
-| pi-hermes-memory | 明示opt-inのmemory / session検索 | upstream依存修正版 `git:github.com/chandra447/pi-hermes-memory@b42abd3` + `hermes-memory-config.json` |
+| pi-hermes-memory | 明示opt-inのmemory / session検索 | upstream依存修正版 `git:github.com/chandra447/pi-hermes-memory@b42abd3bc77f7413e445e7ed189706130abf953c` + `hermes-memory-config.json` |
 | UI比較package | header / footer / editor / theme / browser workspaceを実機比較 | `settings.json` の `packages`（下記参照） |
 | oh-my-pstack | pstack の Pi 移植。[pstack](../pstack.md) | `settings.json` の `packages` |
 | AGENTS.md | グローバル指示書 | `common/pi/.pi/agent/AGENTS.md` → `~/.pi/agent/AGENTS.md` |
@@ -199,7 +199,7 @@ Cursor上限、YOLO、package数 / auto-update、TOK / COST / WEB / MCPはfooter
 | `git:github.com/kostyay/pi-k-excalidraw` | `/excalidraw` で Glimpse 窓に手描きキャンバス。`glimpseui` は package の npm 依存 |
 | `pi-extmgr` | package管理overlayを有効 |
 | `pi-beautiful-tui` | install維持、UI entrypointはfilter |
-| `pi-agent-extensions` | 依存宣言修正PR版 `git:github.com/meirm/pi-agent-extensions@2f55903` を使用。ask-user / todo / control / sessions等を保持。footer / whimsical / workflow / loopは既存ownerとの競合を避けてfilter |
+| `pi-agent-extensions` | 依存宣言修正PR版 `git:github.com/meirm/pi-agent-extensions@2f5590301150411c56ffc3cd42e9934dfeaa1511` を使用。ask-user / todo / control / sessions等を保持。footer / whimsical / workflow / loopは既存ownerとの競合を避けてfilter |
 | `pi-system-theme` | Tokyo Night固定と競合するためentrypointをfilter |
 | `git:github.com/tomsej/pi-ext` | sem / vcc / tool-trim / wf-gateを保持し、skillはsemのみ。重複するreview / handoff / UI等と他のskills・promptsは読み込まない。依存宣言警告は未解消だが、host aliasとsem / vccの実動作は検証済み |
 

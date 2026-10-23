@@ -95,7 +95,7 @@
     "npm:@quintinshaw/pi-dynamic-workflows",
     "npm:@trevonistrevon/pi-loop",
     "npm:@narumitw/pi-goal",
-    "git:github.com/chandra447/pi-hermes-memory@b42abd3",
+    "git:github.com/chandra447/pi-hermes-memory@b42abd3bc77f7413e445e7ed189706130abf953c",
     "npm:pi-remote-control@1.0.7",
     "npm:pi-cursor-agent",
     "npm:pi-permission-system",
@@ -117,7 +117,7 @@
       ]
     },
     {
-      "source": "git:github.com/meirm/pi-agent-extensions@2f55903",
+      "source": "git:github.com/meirm/pi-agent-extensions@2f5590301150411c56ffc3cd42e9934dfeaa1511",
       "extensions": [
         "!extensions/powerline-footer/index.ts",
         "!extensions/whimsical/index.ts",
