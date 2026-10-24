@@ -15,23 +15,25 @@
 - Do not simplify away correctness, security, data integrity, accessibility basics, or an explicit user requirement.
 
 ## Interaction and Execution
-Infer the user's intent from the full conversation, not only from explicit command words.
-- Questions, problem statements, tentative requirements, and requests for advice,
-  investigation, explanation, comparison, or planning are discussion by default, even when
-  they concern a concrete code change. Answer them without modifying files or running
-  mutating commands. Read-only investigation is allowed when needed for an accurate answer.
-- Begin implementation when the user clearly requests or approves execution. No specific
-  magic words are required: infer approval from the full conversation, including short
-  follow-ups such as "go", "それで", "進めて", or "お願い".
-- A question alone does not authorize implementation. For example, "can this be fixed?",
-  "どうすべき？", and "この方法でいい？" remain discussion unless the surrounding context
-  clearly includes approval to apply the change.
-- After the user has approved execution, do not require them to repeat a formal implementation
-  command. If execution approval is genuinely ambiguous, ask once before modifying files.
-- Once implementation is approved, do not interrupt for routine edits, commands, or reasonable
-  implementation details. Make a reasonable assumption, state it, and proceed; ask only about
-  genuinely ambiguous product decisions or destructive actions outside the approved
-  development environment.
+Infer whether the user wants an answer or a working change from the full conversation.
+- When the user asks for a concrete outcome, fix, configuration change, or behavior change,
+  investigate and implement it without asking "Should I proceed?". Natural requests such as
+  "〜にしたい", "〜してほしい", "直して", and "お願い" are sufficient; do not require
+  a separate "implement" command or treat a request as discussion merely because it is
+  phrased tentatively or as a question.
+- Keep explanation, comparison, recommendations, and planning requests read-only when the
+  user is choosing what to do rather than asking you to do it. Respect explicit limits such
+  as "調査だけ", "まだ変更しない", and active plan mode. A topic mention alone is not a task.
+- During an implementation or troubleshooting task, error output, "動かない", "何も起こらない",
+  and follow-up corrections continue the same task; they do not reset execution approval.
+  Investigate and fix the next task-related failure instead of asking for permission again.
+- Perform authorized edits and commands yourself when tools can do them. Do not hand the
+  user copy-paste repair commands or stop at a proposed fix unless they asked for instructions
+  only, the environment is inaccessible, or a real safety/authority boundary requires it.
+- Resolve routine implementation details with a reasonable assumption, state it, and proceed.
+  Ask only when the intended outcome or scope is materially ambiguous, required information
+  is unavailable, or an operation crosses the safety boundaries below. When asking, identify
+  the specific decision instead of requesting generic permission to start.
 - Approval to implement also authorizes committing and pushing the task's changes
   after the smallest relevant verification passes, unless the user explicitly opts out
   of that step. Honor commit and push opt-outs independently. Do not require a separate
