@@ -26,7 +26,7 @@
 
 ## 対話・Plan・Goalの使い分け
 
-通常対話では、質問・課題感・暫定要件を実装依頼として扱わない。`実装して`などの明示後に変更を開始し、動作するfirst implementationと最小の関連検証まで進める。利用者が止めた操作を除き、今回の変更だけをcommit・pushしてから制御を返す。commit・pushの追加指示や確認は求めないが、全差分や現在のbranchへの包括的な投入許可とは扱わない。実装前とcommit前にbranchの履歴・PR / issueの目的、staged / unstaged diffを確認し、今回の作業かつ投入先branchに属する変更だけを含める。別branchへの分離とbaseが自明なら、無関係なcommitを継承しない適切なbaseから同じworking treeで作業branchを作る。帰属・base・安全な分離が曖昧なら、変更・stage・commit前に利用者へ確認し、既存の変更とstage状態を保持する。既定branch上でも作業branchを作成して通常pushする。無関係な変更の取り込み、force push、既定branchへの直接push、PRの自動作成は行わない。認証・push先・関連検証・安全機構に問題があれば変更を保持して報告する。正本は `common/pi/.pi/agent/APPEND_SYSTEM.md`。実装中の通常のedit/bashはYOLO modeで止めず、方針変更や節目を自然言語で報告する。
+通常対話では、会話全体から「説明を求めているか、動く変更を求めているか」を判断する。具体的な変更要望は`〜にしたい`・`〜してほしい`でも着手し、`実装して`の言い直しや「進めてよいか」の確認を求めない。実装・復旧中のエラー報告や`動かない`・`何も起こらない`は同じ作業の続きとして調査・修正し、toolで実行できる承認済み操作を利用者へのコピペ手順に置き換えない。説明・比較・おすすめ・計画だけの依頼や`調査だけ`・`まだ変更しない`はread-onlyを維持する。確認は目的・範囲の実質的な曖昧さ、必須情報の不足、安全・権限境界に限り、通常の実装詳細は妥当な仮定を伝えて進める。動作するfirst implementationと最小の関連検証まで進める。利用者が止めた操作を除き、今回の変更だけをcommit・pushしてから制御を返す。commit・pushの追加指示や確認は求めないが、全差分や現在のbranchへの包括的な投入許可とは扱わない。実装前とcommit前にbranchの履歴・PR / issueの目的、staged / unstaged diffを確認し、今回の作業かつ投入先branchに属する変更だけを含める。別branchへの分離とbaseが自明なら、無関係なcommitを継承しない適切なbaseから同じworking treeで作業branchを作る。帰属・base・安全な分離が曖昧なら、変更・stage・commit前に利用者へ確認し、既存の変更とstage状態を保持する。既定branch上でも作業branchを作成して通常pushする。無関係な変更の取り込み、force push、既定branchへの直接push、PRの自動作成は行わない。認証・push先・関連検証・安全機構に問題があれば変更を保持して報告する。正本は `common/pi/.pi/agent/APPEND_SYSTEM.md`。実装中の通常のedit/bashはYOLO modeで止めず、方針変更や節目を自然言語で報告する。
 
 `APPEND_SYSTEM.md` の `Scope and Simplicity` を全coding taskの上位方針とする。要求された挙動に必要な最小変更を選び、既存実装・stdlib・native機能を優先する。将来用の抽象化、設定、fallback、feature flag、追加ファイルは、現在の具体的要件がない限り作らない。Ponytail packageによる長い毎turn prompt注入は使用しない。
 
@@ -231,7 +231,7 @@ command ownershipは `/btw`・`/sessions`・`/review`・`/handoff` がagent-exte
 
 ### Permission gate
 
-`permission-system.json`の`yoloMode`と`settings.json`の`hideThinkingBlock`は有効のままにする。対話の承認境界はwrite permissionではなく、明示的な実装指示と`/plan`で管理する。実装の承認は、必要な編集・削除・検証・既存lockfileからの依存同期・再生成可能な割当開発環境の復旧を含む。開発用DBのreset/seedやmigration再適用、service再起動/再作成、一時ファイル削除は、repoの規則に従って実際の対象と影響を確認し、報告して続行する。本番、他者が利用中の共有resource、再生成できないデータ、無関係な未commit変更への破壊的操作は別途承認する。利用者の明示した除外は維持し、計画・Issue・引き継ぎへ通常復旧の追加承認条件を勝手に書かない。正本は`common/pi/.pi/agent/APPEND_SYSTEM.md`。
+`permission-system.json`の`yoloMode`と`settings.json`の`hideThinkingBlock`は有効のままにする。対話の承認境界はwrite permissionではなく、会話から判断した実行意図、利用者の明示的な制限と`/plan`で管理する。実装の承認は、必要な編集・削除・検証・既存lockfileからの依存同期・再生成可能な割当開発環境の復旧を含む。開発用DBのreset/seedやmigration再適用、service再起動/再作成、一時ファイル削除は、repoの規則に従って実際の対象と影響を確認し、報告して続行する。本番、他者が利用中の共有resource、再生成できないデータ、無関係な未commit変更への破壊的操作は別途承認する。利用者の明示した除外は維持し、計画・Issue・引き継ぎへ通常復旧の追加承認条件を勝手に書かない。正本は`common/pi/.pi/agent/APPEND_SYSTEM.md`。
 
 `common/pi/.pi/agent/extensions/permission-gate.ts`はYOLO無効時にdangerous shell commandを実行前に確認する。YOLO有効時は通常の確認を省くが、hard denyは維持する。agentはセッション開始時のmain repositoryまたは既存worktreeで実装し、利用者の明示なしに別worktreeへ移動しない。worktree capacity追加は確認対象ではなくhard denyし、`git worktree add`と`pnpm wt provision`は実行しない。利用者が明示した既存pooled slotのclaim/listは許可する。capacity追加が必要な場合は利用者がpi外のterminalから実行する。
 
