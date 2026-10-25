@@ -56,7 +56,7 @@ install = (root / "install.sh").read_text()
 assert "materialize_mise_lock" in install
 assert r"mise\.lock" in (root / "common/mise/.stow-local-ignore").read_text()
 
-# Run the updater outside its repo. A global lock must not resolve caller project tools.
+# Keep TMPDIR below a caller project, like ~/.cache/tmp below a home mise.toml.
 with tempfile.TemporaryDirectory() as directory:
     sandbox = pathlib.Path(directory)
     fixture = sandbox / "repo"
@@ -67,6 +67,8 @@ with tempfile.TemporaryDirectory() as directory:
     caller = sandbox / "project"
     caller.mkdir()
     (caller / "mise.toml").write_text('[tools]\n"github:Gaurav-Gosain/tuios" = "0.10.0"\n')
+    temp_root = caller / ".cache/tmp"
+    temp_root.mkdir(parents=True)
     bin_dir = sandbox / "bin"
     bin_dir.mkdir()
     fake_mise = bin_dir / "mise"
@@ -76,6 +78,9 @@ import os, pathlib, re, sys
 config_home = pathlib.Path(os.environ["XDG_CONFIG_HOME"])
 assert pathlib.Path.cwd() == config_home, "caller project config leaks into global lock"
 assert config_home == config_home.resolve(), "temp config path is not canonical"
+assert config_home.parent == pathlib.Path(os.environ["TMPDIR"]).resolve()
+assert os.environ.get("MISE_CEILING_PATHS") == str(config_home), "parent project config leaks into global lock"
+assert os.environ.get("MISE_TRUSTED_CONFIG_PATHS") == str(config_home / "mise"), "only copied configs should be trusted"
 assert sys.argv[1:3] == ["lock", "-g"]
 text = pathlib.Path({str(source_lock)!r}).read_text()
 if os.environ.get("TEST_OMIT_TUIOS"):
@@ -86,7 +91,11 @@ if os.environ.get("TEST_OMIT_TUIOS"):
     fake_gh = bin_dir / "gh"
     fake_gh.write_text("#!/bin/sh\nexit 1\n")
     fake_gh.chmod(0o755)
-    env = dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    # macOS mktemp without a template ignores TMPDIR; force the Linux placement here.
+    fake_mktemp = bin_dir / "mktemp"
+    fake_mktemp.write_text(f'#!/bin/sh\nexec "{shutil.which("mktemp")}" -d "$TMPDIR/lock.XXXXXX"\n')
+    fake_mktemp.chmod(0o755)
+    env = dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}", TMPDIR=str(temp_root))
     command = ["bash", str(fixture / "scripts/update-mise-lock")]
     result = subprocess.run(command, cwd=caller, env=env, capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
