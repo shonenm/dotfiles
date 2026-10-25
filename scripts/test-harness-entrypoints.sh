@@ -12,7 +12,7 @@ if "$root/scripts/dots" unknown >/dev/null 2>&1; then
 fi
 
 python3 - "$root" <<'PY'
-import pathlib, sys, tomllib
+import os, pathlib, shutil, subprocess, sys, tempfile, tomllib
 root = pathlib.Path(sys.argv[1])
 dots = (root / "scripts/dots").read_text()
 update_case = dots.split("  update)\n", 1)[1].split("    ;;\n", 1)[0]
@@ -55,6 +55,48 @@ for line in (root / "config/packages.npm.txt").read_text().splitlines():
 install = (root / "install.sh").read_text()
 assert "materialize_mise_lock" in install
 assert r"mise\.lock" in (root / "common/mise/.stow-local-ignore").read_text()
+
+# Run the updater outside its repo. A global lock must not resolve caller project tools.
+with tempfile.TemporaryDirectory() as directory:
+    sandbox = pathlib.Path(directory)
+    fixture = sandbox / "repo"
+    for relative in ("scripts/update-mise-lock", "common/mise/.config/mise/config.toml", "config/mise-linux.toml"):
+        target = fixture / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(root / relative, target)
+    caller = sandbox / "project"
+    caller.mkdir()
+    (caller / "mise.toml").write_text('[tools]\n"github:Gaurav-Gosain/tuios" = "0.10.0"\n')
+    bin_dir = sandbox / "bin"
+    bin_dir.mkdir()
+    fake_mise = bin_dir / "mise"
+    source_lock = root / "common/mise/.config/mise/mise.lock"
+    fake_mise.write_text(f'''#!/usr/bin/env python3
+import os, pathlib, re, sys
+config_home = pathlib.Path(os.environ["XDG_CONFIG_HOME"])
+assert pathlib.Path.cwd() == config_home, "caller project config leaks into global lock"
+assert config_home == config_home.resolve(), "temp config path is not canonical"
+assert sys.argv[1:3] == ["lock", "-g"]
+text = pathlib.Path({str(source_lock)!r}).read_text()
+if os.environ.get("TEST_OMIT_TUIOS"):
+    text = re.sub(r'\\n\\[\\[tools\\."github:Gaurav-Gosain/tuios"\\]\\].*?(?=\\n\\[\\[tools\\.|\\Z)', '\\n', text, flags=re.S)
+(config_home / "mise/mise.lock").write_text(text)
+''')
+    fake_mise.chmod(0o755)
+    fake_gh = bin_dir / "gh"
+    fake_gh.write_text("#!/bin/sh\nexit 1\n")
+    fake_gh.chmod(0o755)
+    env = dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    command = ["bash", str(fixture / "scripts/update-mise-lock")]
+    result = subprocess.run(command, cwd=caller, env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    destination = fixture / "common/mise/.config/mise/mise.lock"
+    verified = destination.read_bytes()
+    assert "github:Gaurav-Gosain/tuios" in tomllib.loads(verified.decode())["tools"]
+    result = subprocess.run(command, cwd=caller, env=dict(env, TEST_OMIT_TUIOS="1"), capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "mise lockfile is missing github:Gaurav-Gosain/tuios" in result.stderr, result.stderr
+    assert destination.read_bytes() == verified, "invalid generation replaced the existing lockfile"
 PY
 
 echo "harness entrypoint tests: OK"
