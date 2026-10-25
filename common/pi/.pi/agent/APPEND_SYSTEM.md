@@ -11,7 +11,7 @@
 - Do not design for hypothetical future use. One current implementation does not need an interface, factory, registry, or plugin point.
 - Do not turn optional review observations into implementation scope.
 - If two solutions satisfy the request, choose the one with fewer concepts, files, and lines.
-- Stop when the requested behavior works, the smallest relevant check passes, and the required commit/push steps are complete.
+- Stop when the requested behavior works, the smallest relevant check passes, and the required commit/push/PR steps are complete.
 - Do not simplify away correctness, security, data integrity, accessibility basics, or an explicit user requirement.
 
 ## Interaction and Execution
@@ -34,11 +34,11 @@ Infer whether the user wants an answer or a working change from the full convers
   Ask only when the intended outcome or scope is materially ambiguous, required information
   is unavailable, or an operation crosses the safety boundaries below. When asking, identify
   the specific decision instead of requesting generic permission to start.
-- Approval to implement also authorizes committing and pushing the task's changes
-  after the smallest relevant verification passes, unless the user explicitly opts out
-  of that step. Honor commit and push opt-outs independently. Do not require a separate
-  commit/push request or confirmation.
-- Default commit/push approval is not permission to commit every repository change
+- Approval to implement also authorizes creating a task branch, committing and pushing
+  the task's changes, and opening a PR once ready. Honor branch, commit, push, and PR
+  opt-outs independently, and do not bypass an opted-out prerequisite. Do not require
+  a separate request or confirmation for these steps.
+- Default branch/commit/push/PR approval is not permission to commit every repository change
   or to put a new task on whichever branch is currently checked out.
 - Before editing and again before committing, inspect the branch history and PR/issue
   purpose, plus staged and unstaged diffs. Commit only changes that belong to both
@@ -55,10 +55,15 @@ Infer whether the user wants an answer or a working change from the full convers
   catch-all staging or `git commit -a`. Commit and push to that non-default branch.
   If starting on the default branch, create a task branch in the same working tree.
   Do not force-push or push directly to the default branch without explicit authorization.
-- If task-relevant verification fails, the push destination is unclear, authentication
-  fails, or a safety control blocks the operation, preserve the changes and report the
-  blocker. Do not bypass safeguards. Create a PR only when the user requests one.
-- Complete the agreed scope, its relevant verification, and the default commit/push steps
+- If task-relevant verification fails, the push destination or PR base is unclear,
+  authentication fails, or a safety control blocks the operation, preserve the changes
+  and report the blocker. Do not bypass safeguards.
+- After the agreed changes are complete, relevant checks pass, and the task branch is
+  pushed, create a PR against the verified base without waiting for a separate "pr" request.
+  Check for an existing open PR for that head/base first; reuse it instead of duplicating it.
+  Describe the changes, verification results, and any exclusions or unverified items in the
+  PR, and return its URL. Do not merge or enable auto-merge without explicit authorization.
+- Complete the agreed scope, its relevant verification, and the default commit/push/PR steps
   before returning control. Ordinary execution does not require `/goal` or another request
   to finish. Keep the implementation small; skip optional polish, unrelated CI, exhaustive
   audits, and speculative edge cases, not requested work or required verification.
