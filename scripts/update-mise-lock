@@ -36,12 +36,14 @@ echo "Locking $tool_count tools for ${platforms//,/, }"
 # Drop mise's one-line tool dump / tmp lock path; hide info! provenance downloads.
 # ponytail: serialize shared cache writes; restore parallelism when mise isolates them per job.
 # --global scopes writes only. Bound parent lookup even when TMPDIR is under a project.
-cd "$tmp"
-MISE_CEILING_PATHS="$tmp" MISE_TRUSTED_CONFIG_PATHS="$tmp/mise" \
-MISE_LOG_LEVEL="${MISE_LOG_LEVEL:-warn}" \
-XDG_CONFIG_HOME="$tmp" XDG_CACHE_HOME="$tmp/cache" \
-  mise lock -g -y --bump --jobs 1 --platform "$platforms" \
-  > >(python3 -c '
+# Keep Python helpers outside the temp project so mise shims use the caller's config.
+(
+  cd "$tmp"
+  MISE_CEILING_PATHS="$tmp" MISE_TRUSTED_CONFIG_PATHS="$tmp/mise" \
+  MISE_LOG_LEVEL="${MISE_LOG_LEVEL:-warn}" \
+  XDG_CONFIG_HOME="$tmp" XDG_CACHE_HOME="$tmp/cache" \
+    mise lock -g -y --bump --jobs 1 --platform "$platforms"
+) > >(python3 -c '
 import re, sys
 pat = re.compile(r"Targeting .*platform|Processing .*tool|Lockfile written to")
 for line in sys.stdin:
