@@ -162,6 +162,8 @@ Press `alt+shift+/` to show a popup of all workspaces:
 |-----|--------|
 | `alt+1-9` | Move to workspace 1-9 |
 | `alt+t/c/f/g/b/v` | Move to workspace T/C/F/G/B/V |
+| `alt+r` | Move to workspace R (Rex) |
+| `alt+shift+r` | Move window to workspace R |
 | `alt+h/j/k/l` | Move focus (left/down/up/right) |
 | `alt+shift+h/j/k/l` | Move window |
 | `alt+shift+1-9` | Move window to workspace |
@@ -172,6 +174,8 @@ Press `alt+shift+/` to show a popup of all workspaces:
 | `alt+shift+;` | Enter Service Mode |
 | `alt+shift+p` | Enter Pomodoro Mode |
 | `ctrl+alt+←/→` | Move between non-empty workspaces |
+
+Rex windows (`com.superlogical.rex`, including Rex Beta) are automatically assigned to workspace R.
 
 ### Service Mode
 
