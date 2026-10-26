@@ -73,7 +73,7 @@ with tempfile.TemporaryDirectory() as directory:
     bin_dir.mkdir()
     fake_mise = bin_dir / "mise"
     source_lock = root / "common/mise/.config/mise/mise.lock"
-    fake_mise.write_text(f'''#!/usr/bin/env python3
+    fake_mise.write_text(f'''#!{sys.executable}
 import os, pathlib, re, sys
 config_home = pathlib.Path(os.environ["XDG_CONFIG_HOME"])
 assert pathlib.Path.cwd() == config_home, "caller project config leaks into global lock"
@@ -88,6 +88,16 @@ if os.environ.get("TEST_OMIT_TUIOS"):
 (config_home / "mise/mise.lock").write_text(text)
 ''')
     fake_mise.chmod(0o755)
+    # A Python mise shim must not discover the untrusted temporary project.
+    fake_python = bin_dir / "python3"
+    fake_python.write_text(f'''#!/bin/sh
+if [ -f mise/config.toml ]; then
+    echo "Python shim encountered untrusted temporary mise config" >&2
+    exit 1
+fi
+exec "{sys.executable}" "$@"
+''')
+    fake_python.chmod(0o755)
     fake_gh = bin_dir / "gh"
     fake_gh.write_text("#!/bin/sh\nexit 1\n")
     fake_gh.chmod(0o755)
