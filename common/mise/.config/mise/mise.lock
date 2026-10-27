@@ -920,7 +920,7 @@ checksum = "sha256:d132557e7ee2b85af08b0c8c34338e65c6430f2238d01f727728ef42dc83b
 url = "https://nodejs.org/dist/v24.22.1/node-v24.22.1-darwin-x64.tar.gz"
 
 [[tools."npm:@xai-official/grok"]]
-version = "1.0.69"
+version = "1.0.70"
 backend = "npm:@xai-official/grok"
 
 [[tools."npm:cspell"]]
