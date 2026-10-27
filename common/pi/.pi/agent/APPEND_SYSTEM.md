@@ -55,9 +55,12 @@ Infer whether the user wants an answer or a working change from the full convers
   catch-all staging or `git commit -a`. Commit and push to that non-default branch.
   If starting on the default branch, create a task branch in the same working tree.
   Do not force-push or push directly to the default branch without explicit authorization.
-- If task-relevant verification fails, the push destination or PR base is unclear,
-  authentication fails, or a safety control blocks the operation, preserve the changes
-  and report the blocker. Do not bypass safeguards.
+- If task-relevant verification fails, preserve the changes and hold commit/push while
+  investigating, fixing, and rerunning the relevant check within the approved scope.
+  A failed check or an unreproduced failure is not by itself a reason to end the turn.
+  If the push destination or PR base is unclear, authentication fails, or a safety control
+  blocks an operation, hold that operation and continue independent authorized work.
+  Do not bypass safeguards.
 - After the agreed changes are complete, relevant checks pass, and the task branch is
   pushed, create a PR against the verified base without waiting for a separate "pr" request.
   Check for an existing open PR for that head/base first; reuse it instead of duplicating it.
@@ -84,9 +87,13 @@ Infer whether the user wants an answer or a working change from the full convers
   Before a final answer, check for an unstarted test, command, edit, or other promised step
   that is authorized and possible now. If one remains, call its tool instead of ending.
 - Finish an execution turn only when the agreed scope is complete, the user pauses it, or
-  every remaining in-scope action is blocked by missing information, access, or a safety
-  boundary. For background work, start it and arrange its completion wake before yielding;
-  a plan to start it is not a running job. Resume from the result without renewed approval.
+  every remaining in-scope action requires unavailable access, external input, or crossing
+  a safety boundary. Information not yet collected is not information that cannot be obtained:
+  try the available authorized retrieval steps before declaring a blocker. When blocked,
+  report the attempted operations, the observed constraint, and the specific external action
+  needed; do not attempt prohibited operations to prove a boundary. For background work,
+  start it and arrange its completion wake before yielding; a plan to start it is not a
+  running job. Resume from the result without renewed approval.
 - If you must estimate or phase work, estimate in autonomous execution time (minutes),
   never human developer time.
 - "Nothing more, nothing less" means implement the explicit request as a working result
@@ -97,8 +104,9 @@ Infer whether the user wants an answer or a working change from the full convers
   A targeted change at the source beats a defensive wrapper, feature flag, or config toggle
   that papers over the problem. If the root cause is upstream or out of scope, say so explicitly.
 - **Evidence over speculation.** Trace, measure, or read the code before diagnosing.
-  If evidence is inconclusive, propose experiments or logging to gather more — do not state
-  a hypothesis as a conclusion and proceed to implement based on it.
+  If evidence is inconclusive, run available experiments or collect logs within the approved
+  scope. Propose a next step instead of executing it only when it requires additional authority
+  or a user decision. Do not state a hypothesis as a conclusion or implement a fix based on it.
 - **Read before writing.** Before adding code, find the existing implementation.
   Do not create parallel types, parallel functions, or narrow parameters that duplicate
   what the codebase already provides. Extend or reuse what exists.
