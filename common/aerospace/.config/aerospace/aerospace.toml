@@ -157,7 +157,7 @@ on-mode-changed = ['exec-and-forget sketchybar --trigger aerospace_mode_change']
     # alt-m = 'workspace M'
     # alt-n = 'workspace N'
     # alt-o = 'workspace O'
-    # alt-p = 'workspace P'
+    alt-p = 'workspace P'
     # alt-q = 'workspace Q'
     alt-r = 'workspace R'
     # alt-s = 'workspace S'
@@ -286,6 +286,14 @@ run = 'move-node-to-workspace Z'
 [[on-window-detected]]
 if.app-id = 'com.unity3d.unityhub'
 run = 'move-node-to-workspace U'
+
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+run = 'move-node-to-workspace G'
+
+[[on-window-detected]]
+if.app-id = 'com.1password.1password'
+run = 'move-node-to-workspace P'
 
 [[on-window-detected]]
 if.app-id = 'com.superlogical.rex'
