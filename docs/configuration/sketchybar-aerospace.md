@@ -161,7 +161,7 @@ Press `alt+shift+/` to show a popup of all workspaces:
 | Key | Action |
 |-----|--------|
 | `alt+1-9` | Move to workspace 1-9 |
-| `alt+t/c/f/g/b/v` | Move to workspace T/C/F/G/B/V |
+| `alt+t/c/f/b/v` | Move to workspace T/C/F/B/V |
 | `alt+r` | Move to workspace R (Rex) |
 | `alt+shift+r` | Move window to workspace R |
 | `alt+h/j/k/l` | Move focus (left/down/up/right) |
@@ -176,6 +176,8 @@ Press `alt+shift+/` to show a popup of all workspaces:
 | `ctrl+alt+←/→` | Move between non-empty workspaces |
 
 Rex windows (`com.superlogical.rex`, including Rex Beta) are automatically assigned to workspace R.
+Ghostty windows (`com.mitchellh.ghostty`) are automatically assigned to workspace G, and 1Password windows (`com.1password.1password`) to workspace P.
+`alt+g` and `alt+p` are unbound so applications can use them. Use SketchyBar or `ctrl+alt+←/→` to switch to these workspaces. `alt+shift+g` still moves windows to G, and `alt+shift+p` still enters Pomodoro Mode.
 
 ### Service Mode
 
