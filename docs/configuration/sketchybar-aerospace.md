@@ -177,7 +177,7 @@ Press `alt+shift+/` to show a popup of all workspaces:
 
 Rex windows (`com.superlogical.rex`, including Rex Beta) are automatically assigned to workspace R.
 Ghostty windows (`com.mitchellh.ghostty`) are automatically assigned to workspace G, and 1Password windows (`com.1password.1password`) to workspace P.
-`alt+g` and `alt+p` are unbound so applications can use them. Use SketchyBar or `ctrl+alt+←/→` to switch to these workspaces. `alt+shift+g` still moves windows to G, and `alt+shift+p` still enters Pomodoro Mode.
+Use `alt+g` to switch to workspace G and `alt+p` to switch to workspace P. `alt+shift+g` still moves windows to G, and `alt+shift+p` still enters Pomodoro Mode.
 
 ### Service Mode
 
