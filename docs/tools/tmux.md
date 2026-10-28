@@ -218,6 +218,8 @@ Prefix (`Ctrl+Space`) 押下時、ステータスバー右側全体がキーバ�
 ### Terminal 互換性
 
 - **RGB**: `xterm-256color:RGB` で True Color 対応
+- **sync**: `xterm-256color:sync` で同期出力 (DEC 2026) を有効化。rcon は Ghostty でも `TERM=xterm-256color` で attach するため自動検出されず、全画面再描画の途中経過がチラつく
+- `terminal-features` / `terminal-overrides` は追記系のため、reload で重複しないよう `set -su` で既定値へ戻してから追記する
 - **Undercurl**: `Smulx` + `Setulc` オーバーライドで波線下線対応
 - `$TERM` / `$TERM_PROGRAM` を環境変数として更新
 
@@ -377,6 +379,8 @@ client-session-changed → tmux-claude-focus.sh
 | キャッシュ場所 | `${XDG_CACHE_HOME:-$HOME/.cache}/tmux/sysstat/` | XDG キャッシュに統一 |
 
 status-right は server option を参照し、再描画ごとに CPU/RAM/GPU/Storage/Git の外部コマンドを fork しない。
+
+tmux は `set-option` の度に（`@` option でも）全 client を全画面再描画する。daemon は現在値と比較し、変化した option だけを書く。
 
 ## テーマ再生成
 
