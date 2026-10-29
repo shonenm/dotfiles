@@ -364,6 +364,8 @@ def main():
         project(args.client)
     elif args.kind == "layout":
         layouts(args.session, args.block)
+    elif args.kind == "dev":
+        template(args.session, origin(args.session, args.block))
     else:
         key = curses.wrapper(screen, args.kind, args.session, args.block)
         if args.kind == "prefix":
