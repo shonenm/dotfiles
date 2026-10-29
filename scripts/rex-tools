@@ -296,7 +296,8 @@ def screen(stdscr, kind, session, block):
         while True:
             draw(stdscr, lines)
             key = stdscr.getch()
-            if key != -1:
+            # floating layer の初期サイズ通知は操作キーではない。
+            if key not in (-1, curses.KEY_RESIZE):
                 return key
     # API / usage の取得中も q / Esc で閉じられる。
     with ThreadPoolExecutor(max_workers=1) as pool:

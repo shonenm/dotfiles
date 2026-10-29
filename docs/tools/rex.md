@@ -99,4 +99,4 @@ scripts/check-markdown-links.py
 scripts/check-package-duplication.sh
 ```
 
-integration test は scratch の block ID / PID が toggle 後も一致することと、layout の比率往復を確認する。ユーザーの session へ入力しない。GUI の表示、キー入力、Remote Control を必要とする client action は実画面でも確認する。
+integration test は scratch の block ID / PID が toggle 後も一致すること、layout の比率往復、PREFIX がサイズ変更通知（SIGWINCH）で終了せず Esc で終了することを確認する。ユーザーの session へ入力しない。GUI の表示、キー入力、Remote Control を必要とする client action は実画面でも確認する。

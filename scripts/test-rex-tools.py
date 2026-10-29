@@ -4,10 +4,11 @@ import copy
 import importlib.machinery
 import importlib.util
 import os
+import signal
 import time
 from pathlib import Path
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import uuid
 
 loader = importlib.machinery.SourceFileLoader("rex_tools", str(Path(__file__).with_name("rex-tools")))
@@ -22,6 +23,15 @@ def split(a="a", b="b", ratio=.6):
 
 
 class UnitTests(unittest.TestCase):
+    def test_prefix_ignores_resize_until_user_key(self):
+        for key in (27, ord("g")):
+            with self.subTest(key=key):
+                screen = Mock()
+                screen.getch.side_effect = [-1, tool.curses.KEY_RESIZE, tool.curses.KEY_RESIZE, key]
+                with patch.object(tool.curses, "curs_set"), patch.object(tool, "draw") as draw:
+                    self.assertEqual(tool.screen(screen, "prefix", "s", "b"), key)
+                self.assertEqual(draw.call_count, 4)
+
     def test_plain_removes_terminal_and_tmux_controls(self):
         self.assertEqual(tool.plain("\x1b[31mred\x1b[0m#[fg=red]\x1f20%\x07"), "red  20%")
 
@@ -129,6 +139,12 @@ class IntegrationTests(unittest.TestCase):
                     break
                 time.sleep(.05)
             self.assertIn("PREFIX", captured)
+            # GUI が popup の寸法を通知したときと同じ resize signal。
+            menu_pid = tool.terminal(session, menu["block_id"], "process")["child"]["pid"]
+            os.kill(menu_pid, signal.SIGWINCH)
+            waiting = tool.run([tool.rex_binary(), "wait", menu["block_id"], "-s", session, "--for", "300ms"])
+            self.assertIn("wait timed out", waiting.stderr)
+            self.assertTrue(any(b["block_id"] == menu["block_id"] for b in tool.blocks(session)))
             tool.rex("send-key", "-s", session, "-b", menu["block_id"], "escape")
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
