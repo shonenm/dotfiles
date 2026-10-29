@@ -17,6 +17,7 @@
   - [ローカルパッチ一覧](tools/neovim/patches/README.md)
 - [tmux](tools/tmux.md)
 - [TUIOS](tools/tuios.md)
+- [Rex](tools/rex.md)
 - [sesh](tools/sesh.md)
 - [Starship](tools/starship.md)
 - [Ghostty](tools/ghostty.md)
