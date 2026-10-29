@@ -13,6 +13,8 @@ import shutil
 import subprocess
 import sys
 import time
+import tempfile
+import unicodedata
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent
@@ -242,45 +244,187 @@ def template(session, block):
     api(session, "session.new_window", layout=layout)
 
 
-def command_text(argv):
+def command_text(argv, raw=False):
     try:
         result = run(argv, timeout=6)
-        return plain(result.stdout.strip()) if result.returncode == 0 else "取得失敗"
+        if result.returncode:
+            return "取得失敗"
+        return result.stdout.rstrip("\r\n") if raw else plain(result.stdout.strip())
     except (OSError, subprocess.TimeoutExpired):
         return "未取得"
 
 
+def usage_rows(provider):
+    binary = shutil.which("ai-usage") or str(Path.home() / ".local/bin/ai-usage")
+    output = command_text([binary, provider], raw=True)
+    rows = []
+    for line in output.splitlines():
+        fields = line.split("\x1f")
+        if len(fields) >= 5:
+            _, window, _, percent, reset = fields[:5]
+            rows.append({"provider": provider, "window": plain(window),
+                         "percent": plain(percent), "reset": plain(reset)})
+    return rows or [{"provider": provider, "window": "", "percent": "未取得", "reset": ""}]
+
+
 def metadata(session, block):
     cwd = cwd_for(session, block)
-    view = api(session, "session.view")
+    sessions = rex("ls", "--json")["sessions"]
     jobs = [("CPU", [str(ROOT / "tmux-cpu.sh")]), ("RAM", [str(ROOT / "tmux-ram.sh")]),
             ("GPU", [str(ROOT / "tmux-gpu.sh")]), ("Disk", [str(ROOT / "tmux-storage.sh")]),
             ("Git", [str(ROOT / "tmux-git-status.sh"), cwd])]
-    with ThreadPoolExecutor(max_workers=6) as pool:
-        values = list(pool.map(command_text, [command for _, command in jobs]))
-        usage = list(pool.map(command_text, [[shutil.which("ai-usage") or str(Path.home() / ".local/bin/ai-usage"), p]
-                                            for p in ("claude", "codex", "gemini", "cursor", "grok")]))
-    lines = ["REX METADATA   " + datetime.now().strftime("%H:%M:%S"),
-             "Host: " + os.uname().nodename, "Session: " + plain(view["label"]),
-             "Pane: " + block, "CWD: " + plain(cwd), ""]
-    lines += [name + ": " + (value or "表示対象なし") for (name, _), value in zip(jobs, values)]
-    lines += ["", "AI USAGE (取得時点の値)"]
-    for provider, value in zip(("Claude", "Codex", "Gemini", "Cursor", "Grok"), usage):
-        lines += [provider + ":", *(value or "未取得").splitlines()]
-    lines += ["", "全 local session の program status (native の補足)"]
-    for s in rex("ls", "--json")["sessions"]:
+    # system/Git と provider は同時に取得。既存 command 内の cache も再利用する。
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        stats = [pool.submit(command_text, command) for _, command in jobs]
+        usage = [pool.submit(usage_rows, p) for p in ("claude", "codex", "gemini", "cursor", "grok")]
+        values = {name: future.result() for (name, _), future in zip(jobs, stats)}
+        usage = [row for future in usage for row in future.result()]
+    agents = []
+    for s in sessions:
         try:
             for b in blocks(s["session_id"]):
                 if b.get("label", "").startswith(TAG):
                     continue
                 for record in terminal(s["session_id"], b["block_id"], "program_status")["records"]:
-                    lines.append(plain(f"{s['label']} / {b.get('label', b['block_id'])}: {record.get('app', '')} {record['state']} {record.get('kind', '')} {record.get('msg', '')}"))
-                    lines.append("  reported: " + plain(record["updated_at"]))
+                    agents.append({"session": plain(s["label"]), "app": plain(record.get("app", "")),
+                                   "state": plain(record["state"]),
+                                   "message": plain(" ".join(filter(None, (record.get("kind", ""), record.get("msg", ""))))),
+                                   "updated": plain(record["updated_at"])})
         except RuntimeError:
-            lines.append(plain(s["label"]) + ": 取得失敗 (session/pane が閉じた可能性)")
-    lines += ["", "未対応: group/space・container 内 cwd・heartbeat に基づく hang・agent resume",
-              "tmux 固有の COPY/SYNC/PREFIX 状態は Rex の状態として表示しません。"]
-    return lines
+            agents.append({"session": plain(s["label"]), "app": "", "state": "取得失敗",
+                           "message": "", "updated": ""})
+    return {"version": 1, "updated": time.time(), "cwd": cwd, "host": os.uname().nodename,
+            "session": next((s["label"] for s in sessions if s["session_id"] == session), session),
+            "stats": values, "usage": usage, "agents": agents}
+
+
+def metadata_cache(session, block):
+    key = hashlib.sha256((session + "\0" + block + "\0" + os.getcwd()).encode()).hexdigest()
+    return Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "rex/metadata" / (key + ".json")
+
+
+def read_metadata_cache(path):
+    try:
+        data = json.loads(path.read_text())
+        if (data.get("version") == 1 and isinstance(data["updated"], (int, float))
+                and 0 < data["updated"] <= time.time() + 30
+                and all(isinstance(data[k], str) for k in ("cwd", "host", "session"))
+                and isinstance(data["stats"], dict)
+                and all(isinstance(v, str) for v in data["stats"].values())
+                and isinstance(data["usage"], list) and isinstance(data["agents"], list)
+                and all(all(isinstance(row[k], str) for k in ("provider", "window", "percent", "reset")) for row in data["usage"])
+                and all(all(isinstance(row[k], str) for k in ("session", "app", "state", "message", "updated")) for row in data["agents"])):
+            return data
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    return None
+
+
+def save_metadata_cache(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, delete=False) as handle:
+            temporary = Path(handle.name)
+            json.dump(data, handle)
+        temporary.replace(path)
+    finally:
+        if temporary and temporary.exists():
+            temporary.unlink()
+
+
+def refresh_metadata(session, block, path):
+    data = metadata(session, block)
+    try:
+        save_metadata_cache(path, data)
+    except OSError:
+        pass  # cache が書けなくても表示する。
+    return data
+
+
+def cell(text, width):
+    # 日本語・全角の列幅を考慮する。control sequence は表示しない。
+    out, used = "", 0
+    for char in plain(text).replace("\n", " "):
+        size = 0 if unicodedata.combining(char) else (2 if unicodedata.east_asian_width(char) in ("W", "F") else 1)
+        if used + size > width:
+            break
+        out, used = out + char, used + size
+    return out + " " * max(0, width - used)
+
+
+def metadata_rows(data, width, details=False):
+    if not data:
+        return [("SYSTEM / GIT / AI USAGE / AGENTS", "heading"), ("初回取得中…", "muted")]
+    stats = data["stats"]
+    rows = [("GIT", "heading"), (stats.get("Git") or "表示対象なし", ""),
+            ("", ""), ("SYSTEM", "heading")]
+    system = [name + " " + (re.search(r"\d+%", stats.get(name, ""))[0]
+              if re.search(r"\d+%", stats.get(name, "")) else stats.get(name) or "—")
+              for name in ("CPU", "RAM", "GPU", "Disk")]
+    rows += [(("    ".join(system)), "")] if width >= 65 else [(item, "") for item in system]
+    rows += [("", ""), ("AI USAGE", "heading")]
+    if width >= 65:
+        rows.append((cell("PROVIDER / WINDOW", 29) + cell("USAGE", 22) + "RESET", "muted"))
+    for row in data["usage"]:
+        percent = row["percent"]
+        match = re.fullmatch(r"(\d+(?:\.\d+)?)%", percent)
+        gauge, role = percent, "muted"
+        if match:
+            value = float(match[1])
+            filled = min(10, max(0, round(value / 10)))
+            gauge = "[" + "#" * filled + "-" * (10 - filled) + "] " + percent
+            role = "warning" if value >= 80 else "good"
+        label = row["provider"].capitalize() + " · " + row["window"]
+        if width >= 65:
+            rows.append((cell(label, 29) + cell(gauge, 22) + (row["reset"] or "—"), role))
+        else:
+            rows += [(label, ""), ("  " + gauge + "  " + (row["reset"] or "—"), role)]
+    rows += [("", ""), ("AGENTS", "heading")]
+    if not data["agents"]:
+        rows.append(("報告なし", "muted"))
+    priority = {"waiting": 0, "working": 1, "done": 2}
+    for agent in sorted(data["agents"], key=lambda a: priority.get(a["state"], 3)):
+        role = {"waiting": "warning", "working": "heading", "done": "good"}.get(agent["state"], "muted")
+        label = agent["session"] + " / " + agent["app"]
+        if width >= 65:
+            rows.append((cell(label, 29) + cell(agent["state"], 12) + agent["message"], role))
+        else:
+            rows += [(label, role), ("  " + agent["state"] + "  " + agent["message"], "")]
+        if details:
+            rows.append(("  reported: " + agent["updated"], "muted"))
+    if details:
+        rows += [("", ""), ("未対応: container cwd / group・space / heartbeat hang / resume", "muted")]
+    return rows
+
+
+def draw_metadata(stdscr, data, pending, error, offset, details, colors):
+    height, width = stdscr.getmaxyx()
+    timestamp = datetime.fromtimestamp(data["updated"]).strftime("%H:%M:%S") if data else "—"
+    age = max(0, int(time.time() - data["updated"])) if data else 0
+    status = ("更新中" if pending else "取得失敗" if error else "snapshot")
+    header = [("STATUS  " + timestamp + "  " + str(age) + "s ago · " + status, "heading"),
+              ((data["session"] + " · " + data["host"]) if data else "REX METADATA", ""),
+              (data["cwd"] if data else "", "muted")]
+    body = metadata_rows(data, width, details)
+    if error:
+        body = [("更新失敗: " + plain(error), "warning"), *body]
+    count = max(0, height - 5)
+    offset = min(offset, max(0, len(body) - max(1, count)))
+    rows = header + [("", "")] + body[offset:offset + count]
+    stdscr.erase()
+    for y, (text, role) in enumerate(rows[:max(0, height - 1)]):
+        try:
+            stdscr.addstr(y, 0, cell(text, max(0, width - 1)), colors.get(role, 0))
+        except curses.error:
+            pass
+    if height:
+        try:
+            stdscr.addstr(height - 1, 0, cell("q close · r refresh · j/k scroll · d details", max(0, width - 1)), curses.A_DIM)
+        except curses.error:
+            pass
+    stdscr.refresh()
+    return offset
 
 
 def screen(stdscr, kind, session, block):
@@ -299,22 +443,33 @@ def screen(stdscr, kind, session, block):
             # floating layer の初期サイズ通知は操作キーではない。
             if key not in (-1, curses.KEY_RESIZE):
                 return key
-    # API / usage の取得中も q / Esc で閉じられる。
+    colors = {"heading": curses.A_BOLD, "muted": curses.A_DIM}
+    if curses.has_colors():
+        curses.start_color()
+        curses.use_default_colors()
+        for index, (role, color) in enumerate((("heading", curses.COLOR_CYAN), ("good", curses.COLOR_GREEN), ("warning", curses.COLOR_YELLOW)), 1):
+            curses.init_pair(index, color, -1)
+            colors[role] = curses.color_pair(index) | curses.A_BOLD
+    path = metadata_cache(session, block)
+    data = read_metadata_cache(path)
+    offset, details, error = 0, False, ""
+    # 保存済み snapshot は取得処理より先に描画する。
+    draw_metadata(stdscr, data, False, error, offset, details, colors)
     with ThreadPoolExecutor(max_workers=1) as pool:
-        pending = pool.submit(metadata, session, block)
-        lines, offset = ["REX METADATA — loading…"], 0
-        refreshed = time.monotonic()
+        pending = None
+        refreshed = data["updated"] if data else 0
         while True:
             if pending and pending.done():
                 try:
-                    lines = pending.result()
+                    data = pending.result()
+                    error = ""
                 except Exception as exc:
-                    lines = ["取得失敗: " + plain(exc)]
+                    error = str(exc)  # 前回の結果を消さない。
                 pending = None
-                refreshed = time.monotonic()
-            if pending is None and time.monotonic() - refreshed >= 30:
-                pending = pool.submit(metadata, session, block)
-            draw(stdscr, ["q/Esc close · r refresh · j/k scroll", "", *lines[offset:]])
+                refreshed = time.time()
+            if pending is None and (time.time() - refreshed >= 30 or refreshed > time.time()):
+                pending = pool.submit(refresh_metadata, session, block, path)
+            offset = draw_metadata(stdscr, data, pending is not None, error, offset, details, colors)
             key = stdscr.getch()
             if key in (27, ord("q")):
                 # 取得中でも画面は先に閉じる。worker は timeout 後に終了する。
@@ -324,9 +479,11 @@ def screen(stdscr, kind, session, block):
                 api(session, "session.focus_block", block_id=block)
                 return
             if key == ord("r") and pending is None:
-                pending = pool.submit(metadata, session, block)
+                pending = pool.submit(refresh_metadata, session, block, path)
+            if key == ord("d"):
+                details = not details
             if key in (ord("j"), curses.KEY_DOWN):
-                offset = min(max(0, len(lines) - 1), offset + 1)
+                offset += 1
             if key in (ord("k"), curses.KEY_UP):
                 offset = max(0, offset - 1)
 
@@ -359,7 +516,9 @@ def main():
     if args.command == "popup":
         popup(args.kind, args.session, args.block, args.client)
     elif args.command == "metadata":
-        print("\n".join(metadata(args.session, args.block)))
+        data = metadata(args.session, args.block)
+        print(data["session"] + " · " + data["cwd"])
+        print("\n".join(text for text, _ in metadata_rows(data, 100, details=True)))
     elif args.kind == "project":
         project(args.client)
     elif args.kind == "layout":

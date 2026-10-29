@@ -66,7 +66,15 @@ block の識別は `dotfiles-popup/<kind>/<呼出元block ID>` という label �
 
 ## メタデータ一覧
 
-`prefix A`、または command palette の **Dotfiles: Metadata**。`q` / Esc で閉じ、`r` で手動更新、`j/k` で scroll。表示中は取得完了から30秒ごとに更新する。専用 daemon は起動しない。取得中に閉じた場合は先に pane を隠し、実行中の取得処理が timeout / 完了すると process も終了する。
+`prefix A`、または command palette の **Dotfiles: Metadata**。固定 header に project / host / cwd / 取得時刻を表示し、本文を **GIT / SYSTEM / AI USAGE / AGENTS** に分ける。使用量は列揃えした数値とバー、agent は状態別の色で表示する。狭い画面では縦並び。色が使えなくてもラベルと数値は残る。
+
+`q` / Esc で閉じ、`r` で手動更新、`j/k` で本文を scroll。`d` で agent の報告時刻と未対応項目の説明を表示する。内部 block ID は通常画面に出さない。
+
+再表示時は snapshot cache を最初に描画する。30秒以内なら再取得せず、古ければ前回値を残して裏で更新する。header の経過秒数・更新中・取得失敗表示で鮮度を区別し、失敗しても前回値を消さない。初回だけは取得中表示になる。表示中は30秒間隔、または `r` で更新し、system / Git / provider の取得は並列に行う。既存 helper 自身の cache も引き続き使う。
+
+snapshot は `$XDG_CACHE_HOME/rex/metadata/`（既定 `~/.cache/rex/metadata/`）に session / 呼出元 block / popup 起動 cwd ごとに保存する。private なファイル権限（0600）で atomic に置き換え、Stow / Git の対象にしない。30秒以内の再表示は snapshot なので、その間の呼出元 cwd 変更などをすぐ反映したい場合は `r` を押す。
+
+専用 daemon は起動しない。取得中に閉じた場合は先に pane を隠し、実行中の取得処理が timeout / 完了すると process も終了する。
 
 | tmux header / sidebar の情報 | Rex での扱い |
 |---|---|
@@ -75,10 +83,10 @@ block の識別は `dotfiles-popup/<kind>/<呼出元block ID>` という label �
 | CPU / RAM / GPU / disk | 既存 `tmux-*.sh` の結果から tmux 書式を除いて表示 |
 | branch・ahead/behind・変更ファイル数・追加削除行 | 既存 `tmux-git-status.sh` を再利用。untracked は含まない |
 | AI 使用量 | 既存 `ai-usage` の Claude / Codex / Gemini / Cursor / Grok 出力を再利用 |
-| program status の補足 | 全 local session の OSC 7501 state・kind・message・報告時刻 |
-| group / space | 未対応と表示 |
-| container 内 cwd | 未対応と表示 |
-| heartbeat hang / agent resume | 未対応と表示。古い status を hang と断定しない |
+| program status の補足 | 全 local session の OSC 7501 state・kind・message。報告時刻は `d` |
+| group / space | 詳細画面で未対応と表示 |
+| container 内 cwd | 詳細画面で未対応と表示 |
+| heartbeat hang / agent resume | 詳細画面で未対応と表示。古い status を hang と断定しない |
 | COPY / SYNC 等の tmux mode | Rex の状態として表示しない。PREFIX 待機の自動表示はしない |
 
 統計はこの Mac 全体の値。Git は一覧 popup でなく呼出元 pane の cwd。取得失敗や値がない項目は0にしない。GPU 等は既存 helper が値を返さなければ表示対象なし。秘密情報や token を一覧へ出さず、使用量取得の認証処理は既存 command に任せる。
