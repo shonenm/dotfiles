@@ -39,19 +39,27 @@ render_sysstat() {
     "$SEP_FG" "$BG" "$cpu" "$SEP_FG" "$BG" "$ram" "$gpu" "$sto"
 }
 
+# tmux は set-option の度に(@ option でも)全 client を全画面再描画する。
+# 同期出力の無い端末ではそれがチラつきになるため、値が変わった時だけ書く。
 tick() {
   # sysstat is host-wide -> one server option. Failure here means the server is
   # gone, so propagate it to stop the loop.
-  tmux set-option -g @sysstat "$(render_sysstat)" 2>/dev/null || return 1
+  local cur new
+  cur=$(tmux show-options -gqv @sysstat 2>/dev/null) || return 1
+  new=$(render_sysstat)
+  if [ "$new" != "$cur" ]; then
+    tmux set-option -g @sysstat "$new" 2>/dev/null || return 1
+  fi
 
   # git branch is per-pane -> only compute for the active pane of each active
   # window (the panes a status bar can actually display).
   tmux list-panes -a -f '#{&&:#{window_active},#{pane_active}}' \
-      -F '#{pane_id}	#{pane_current_path}' 2>/dev/null |
-  while IFS=$'\t' read -r pane path; do
+      -F '#{pane_id}	#{pane_current_path}	#{@git_branch}' 2>/dev/null |
+  while IFS=$'\t' read -r pane path cur; do
     [ -n "$pane" ] || continue
     br=$(git -C "$path" branch --show-current 2>/dev/null)
     [ -n "$br" ] || br='-'
+    [ "$br" = "$cur" ] && continue
     tmux set-option -p -t "$pane" @git_branch "$br" 2>/dev/null || true
   done
   return 0
