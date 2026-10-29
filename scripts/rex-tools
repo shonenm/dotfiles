@@ -1,0 +1,396 @@
+#!/usr/bin/env python3
+"""Rex の floating popup と、標準 UI に足りないメタデータ。"""
+import argparse
+from concurrent.futures import ThreadPoolExecutor
+import curses
+from datetime import datetime
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import time
+from urllib.parse import unquote, urlsplit
+
+ROOT = Path(__file__).resolve().parent
+SELF = str(Path(__file__).resolve())
+TAG = "dotfiles-popup/"
+TERMINAL = "com.superlogical.terminal"
+SIZES = {"editor": (.9, .9), "pr": (.85, .85), "prefix": (.65, .55),
+         "project": (.7, .7), "layout": (.7, .6)}
+POPUPS = {"g": "git", "G": "pr", "k": "editor", "P": "database",
+          "Q": "ports", "j": "scratch", "A": "metadata", "F": "project", "l": "layout"}
+ACTIONS = {"c": ("client.tab.new", {}), "n": ("client.tab.next", {}),
+           "p": ("client.tab.previous", {}), "z": ("pane.zoom", {}),
+           "s": ("session.switch", {}), "f": ("session.switch", {}),
+           "a": ("client.sidebar.activity.toggle", {}),
+           "|": ("pane.split", {"direction": "right"}),
+           "-": ("pane.split", {"direction": "down"}),
+           "h": ("pane.focus", {"direction": "left"}),
+           "H": ("pane.resize", {"direction": "left", "amount": 2}),
+           "J": ("pane.resize", {"direction": "down", "amount": 2}),
+           "K": ("pane.resize", {"direction": "up", "amount": 2}),
+           "L": ("pane.resize", {"direction": "right", "amount": 2}),
+           "r": ("client.config.reload", {})}
+
+
+def run(argv, timeout=10, **kwargs):
+    return subprocess.run(argv, text=True, capture_output=True, timeout=timeout, **kwargs)
+
+
+def rex_binary():
+    binary = shutil.which("rex")
+    if not binary:
+        binary = str(Path.home() / "Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex")
+    if not os.access(binary, os.X_OK):
+        raise RuntimeError("Rex CLI が見つかりません。Rex の terminal 内で実行してください")
+    return binary
+
+
+def rex(*args):
+    result = run([rex_binary(), "--autostart=false", *args])
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or "Rex command failed")
+    return json.loads(result.stdout) if result.stdout.strip() else {}
+
+
+def api(session, method, **args):
+    return rex("api", "call", "-s", session, method, json.dumps(args))
+
+
+def terminal(session, block, method):
+    return api(session, TERMINAL + "." + method, block_id=block, args={})
+
+
+def plain(value):
+    text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]|#\[[^]]*\]", "", str(value).replace("\x1f", "  "))
+    return "".join(c for c in text if c.isprintable() or c == "\n")
+
+
+def cwd_for(session, block):
+    pwd = terminal(session, block, "pwd").get("pwd", "")
+    if pwd.startswith("file://"):
+        pwd = unquote(urlsplit(pwd).path)
+    if not pwd:
+        process = terminal(session, block, "process")
+        pwd = (process.get("foreground") or {}).get("cwd", "")
+    if not pwd or not Path(pwd).is_dir():
+        raise RuntimeError("呼出元の local cwd を取得できません。remote/container は未対応です")
+    return pwd
+
+
+def blocks(session):
+    return api(session, "session.list_blocks")["blocks"]
+
+
+def origin(session, block):
+    entry = next((b for b in blocks(session) if b["block_id"] == block), None)
+    if not entry:
+        raise RuntimeError("呼出元 pane がなくなりました")
+    label = entry.get("label", "")
+    return label.split("/", 2)[2] if label.startswith(TAG) else block
+
+
+def bounds(kind):
+    width, height = SIZES.get(kind, (.8, .8))
+    return [(1 - width) / 2, (1 - height) / 2, width, height]
+
+
+def popup(kind, session, block, client=None):
+    if kind not in {*POPUPS.values(), "prefix"}:
+        raise RuntimeError("不明な popup: " + kind)
+    anchor = origin(session, block)
+    entries = blocks(session)
+    source = next((b for b in entries if b["block_id"] == anchor), None)
+    if not source or source["placement"] != "placed":
+        raise RuntimeError("呼出元 pane が表示されていません")
+    label = TAG + kind + "/" + anchor
+    existing = next((b for b in entries if b.get("label") == label), None)
+    if existing:
+        bid = existing["block_id"]
+        if kind == "prefix":
+            # global binding が2回目も拾うため、menu の stdin ではなくここで送信する。
+            api(session, "block.close", block_id=bid)
+            api(session, "session.focus_block", block_id=anchor)
+            if block == bid:
+                rex("send-key", "-s", session, "-b", anchor, "ctrl+space")
+        elif existing["placement"] == "placed":
+            # 同じキーは隠すだけ。editor の未保存内容も終了させない。
+            api(session, "session.detach_block", block_id=bid)
+            api(session, "session.focus_block", block_id=anchor)
+        else:
+            api(session, "session.move_block", block_id=bid, anchor_block_id=anchor)
+            api(session, "session.float_block", block_id=bid, bounds=bounds(kind))
+            api(session, "session.focus_block", block_id=bid)
+        return
+    cwd = cwd_for(session, anchor)
+    commands = {"git": ["lazygit"], "pr": ["live-pr"], "editor": ["nvim", "."],
+                "ports": ["quay"], "database": ["sh", "-c", 'exec pgcli "${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/postgres}"']}
+    if kind in ("prefix", "metadata", "project", "layout"):
+        command = [SELF, "view", kind, "--session", session, "--block", anchor]
+        if client:
+            command += ["--client", client]
+    else:
+        command = commands.get(kind)
+    options = {"cwd": cwd}
+    if command:
+        options["command"] = command
+    api(session, "session.new_layer", window_id=source["window_id"],
+        bounds=bounds(kind), focus=True,
+        layout={"block": {"flavor": TERMINAL + ".shell", "label": label, "options": options}})
+
+
+def client_action(client, name, args):
+    argv = (["-C", client] if client else []) + ["do", name, "--args", json.dumps(args)]
+    rex(*argv)
+
+
+def choose(lines, header):
+    result = subprocess.run(["fzf", "--reverse", "--header", header],
+                            input="\n".join(lines), text=True, stdout=subprocess.PIPE)
+    if result.returncode in (1, 130):
+        return None
+    if result.returncode:
+        raise RuntimeError("fzf failed")
+    return result.stdout.strip()
+
+
+def project(client):
+    candidates = [str(Path.home()), str(ROOT.parent)]
+    for command in (["ghq", "list", "-p"], ["zoxide", "query", "-l"]):
+        if shutil.which(command[0]):
+            result = run(command)
+            if result.returncode == 0:
+                candidates += result.stdout.splitlines()
+    selected = choose(sorted(set(p for p in candidates if Path(p).is_dir())), "Project → Rex session")
+    if not selected:
+        return
+    label = Path(selected).name + "-" + hashlib.sha256(selected.encode()).hexdigest()[:8]
+    sessions = rex("ls", "--json")["sessions"]
+    session = next((s["session_id"] for s in sessions if s.get("label") == label), None)
+    if not session:
+        session = rex("new", label, "--cwd", selected, "--json")["session_id"]
+    client_action(client, "session.select", {"session_id": session})
+
+
+def tiled_layout(session, block):
+    view = api(session, "session.view")
+    for window in view["windows"]:
+        for layer in window["layers"]:
+            if layer["kind"] == "tiled" and any(b["block_id"] == block for b in layer["blocks"]):
+                return layer["layout"]
+    raise RuntimeError("呼出元が tiled pane ではありません")
+
+
+def shape(node):
+    if "block_id" in node:
+        return "block"
+    split = node["split"]
+    return [split["direction"], shape(split["before"]), shape(split["after"])]
+
+
+def leaf(node):
+    return node["block_id"] if "block_id" in node else leaf(node["split"]["before"])
+
+
+def restore_layout(session, current, saved):
+    if shape(current) != shape(saved):
+        raise RuntimeError("分割構造が異なります。pane の作成・破棄は行いません")
+    if "block_id" in current:
+        return
+    c, s = current["split"], saved["split"]
+    api(session, "session.resize_pane", direction=c["direction"],
+        before_block_id=leaf(c["before"]), after_block_id=leaf(c["after"]), ratio=s["ratio"])
+    restore_layout(session, c["before"], s["before"])
+    restore_layout(session, c["after"], s["after"])
+
+
+def layouts(session, block):
+    directory = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "rex/layouts"
+    files = sorted(directory.glob("*.json"))
+    choice = choose(["<save current layout>", *[p.stem for p in files]], "Layout: 同じ分割構造のサイズを復元")
+    if not choice:
+        return
+    current = tiled_layout(session, block)
+    if choice == "<save current layout>":
+        name = input("Preset name: ").strip()
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+            raise RuntimeError("名前は英数字・_・-のみ")
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / (name + ".json")
+        with path.open("x") as handle:
+            json.dump(current, handle)
+    else:
+        saved = json.loads((directory / (choice + ".json")).read_text())
+        restore_layout(session, current, saved)
+
+
+def template(session, block):
+    cwd = cwd_for(session, block)
+    def pane(label, command=None):
+        options = {"cwd": cwd}
+        if command:
+            options["command"] = command
+        return {"block": {"flavor": TERMINAL + ".shell", "label": label, "options": options}}
+    layout = {"split": {"direction": "horizontal", "ratio": .6,
+              "before": pane("editor", ["nvim", "."]),
+              "after": {"split": {"direction": "vertical", "ratio": .65,
+                         "before": pane("agent", ["claude"]), "after": pane("shell")}}}}
+    api(session, "session.new_window", layout=layout)
+
+
+def command_text(argv):
+    try:
+        result = run(argv, timeout=6)
+        return plain(result.stdout.strip()) if result.returncode == 0 else "取得失敗"
+    except (OSError, subprocess.TimeoutExpired):
+        return "未取得"
+
+
+def metadata(session, block):
+    cwd = cwd_for(session, block)
+    view = api(session, "session.view")
+    jobs = [("CPU", [str(ROOT / "tmux-cpu.sh")]), ("RAM", [str(ROOT / "tmux-ram.sh")]),
+            ("GPU", [str(ROOT / "tmux-gpu.sh")]), ("Disk", [str(ROOT / "tmux-storage.sh")]),
+            ("Git", [str(ROOT / "tmux-git-status.sh"), cwd])]
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        values = list(pool.map(command_text, [command for _, command in jobs]))
+        usage = list(pool.map(command_text, [[shutil.which("ai-usage") or str(Path.home() / ".local/bin/ai-usage"), p]
+                                            for p in ("claude", "codex", "gemini", "cursor", "grok")]))
+    lines = ["REX METADATA   " + datetime.now().strftime("%H:%M:%S"),
+             "Host: " + os.uname().nodename, "Session: " + plain(view["label"]),
+             "Pane: " + block, "CWD: " + plain(cwd), ""]
+    lines += [name + ": " + (value or "表示対象なし") for (name, _), value in zip(jobs, values)]
+    lines += ["", "AI USAGE (取得時点の値)"]
+    for provider, value in zip(("Claude", "Codex", "Gemini", "Cursor", "Grok"), usage):
+        lines += [provider + ":", *(value or "未取得").splitlines()]
+    lines += ["", "全 local session の program status (native の補足)"]
+    for s in rex("ls", "--json")["sessions"]:
+        try:
+            for b in blocks(s["session_id"]):
+                if b.get("label", "").startswith(TAG):
+                    continue
+                for record in terminal(s["session_id"], b["block_id"], "program_status")["records"]:
+                    lines.append(plain(f"{s['label']} / {b.get('label', b['block_id'])}: {record.get('app', '')} {record['state']} {record.get('kind', '')} {record.get('msg', '')}"))
+                    lines.append("  reported: " + plain(record["updated_at"]))
+        except RuntimeError:
+            lines.append(plain(s["label"]) + ": 取得失敗 (session/pane が閉じた可能性)")
+    lines += ["", "未対応: group/space・container 内 cwd・heartbeat に基づく hang・agent resume",
+              "tmux 固有の COPY/SYNC/PREFIX 状態は Rex の状態として表示しません。"]
+    return lines
+
+
+def screen(stdscr, kind, session, block):
+    curses.curs_set(0)
+    stdscr.timeout(100)
+    if kind == "prefix":
+        lines = ["PREFIX — Ctrl+Space / Esc: cancel", "",
+                 "g lazygit   G live-pr   k nvim   P pgcli   Q quay",
+                 "j scratch   A metadata   F project   l layout   N dev template",
+                 "c new tab   n/p next/previous tab   z zoom   |/- split",
+                 "Ctrl+h/j/k/l focus   H/J/K/L resize   s/f sessions   a activity   r reload",
+                 "Ctrl+Space: send Ctrl+Space to terminal"]
+        while True:
+            draw(stdscr, lines)
+            key = stdscr.getch()
+            # floating layer の初期サイズ通知は操作キーではない。
+            if key not in (-1, curses.KEY_RESIZE):
+                return key
+    # API / usage の取得中も q / Esc で閉じられる。
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        pending = pool.submit(metadata, session, block)
+        lines, offset = ["REX METADATA — loading…"], 0
+        refreshed = time.monotonic()
+        while True:
+            if pending and pending.done():
+                try:
+                    lines = pending.result()
+                except Exception as exc:
+                    lines = ["取得失敗: " + plain(exc)]
+                pending = None
+                refreshed = time.monotonic()
+            if pending is None and time.monotonic() - refreshed >= 30:
+                pending = pool.submit(metadata, session, block)
+            draw(stdscr, ["q/Esc close · r refresh · j/k scroll", "", *lines[offset:]])
+            key = stdscr.getch()
+            if key in (27, ord("q")):
+                # 取得中でも画面は先に閉じる。worker は timeout 後に終了する。
+                own = os.environ.get("REX_BLOCK")
+                if own:
+                    api(session, "session.detach_block", block_id=own)
+                api(session, "session.focus_block", block_id=block)
+                return
+            if key == ord("r") and pending is None:
+                pending = pool.submit(metadata, session, block)
+            if key in (ord("j"), curses.KEY_DOWN):
+                offset = min(max(0, len(lines) - 1), offset + 1)
+            if key in (ord("k"), curses.KEY_UP):
+                offset = max(0, offset - 1)
+
+
+def draw(stdscr, lines):
+    stdscr.erase()
+    height, width = stdscr.getmaxyx()
+    for y, line in enumerate(lines[:height - 1]):
+        try:
+            stdscr.addnstr(y, 0, plain(line), max(0, width - 1))
+        except curses.error:
+            pass
+    stdscr.refresh()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("command", choices=("popup", "view", "metadata"))
+    parser.add_argument("kind", nargs="?", default="metadata")
+    parser.add_argument("--session", default=os.environ.get("REX_SESSION"))
+    parser.add_argument("--block", default=os.environ.get("REX_BLOCK"))
+    parser.add_argument("--client", default=os.environ.get("REX_CLIENT"))
+    args = parser.parse_args()
+    if not args.session or not args.block:
+        parser.error("Rex terminal 内で実行するか --session と --block を指定してください")
+    # この helper はローカル専用。remote server への暗黙の API 呼出をしない。
+    address = os.environ.get("REX_SERVER", "")
+    if address and not address.startswith(("unix://", "/")):
+        parser.error("remote Rex は未対応です")
+    if args.command == "popup":
+        popup(args.kind, args.session, args.block, args.client)
+    elif args.command == "metadata":
+        print("\n".join(metadata(args.session, args.block)))
+    elif args.kind == "project":
+        project(args.client)
+    elif args.kind == "layout":
+        layouts(args.session, args.block)
+    else:
+        key = curses.wrapper(screen, args.kind, args.session, args.block)
+        if args.kind == "prefix":
+            # 自身は隠してから操作する。終了すると Rex が block/layer を片付ける。
+            own = os.environ.get("REX_BLOCK")
+            if own:
+                api(args.session, "session.detach_block", block_id=own)
+            api(args.session, "session.focus_block", block_id=args.block)
+            char = chr(key) if key is not None and 0 <= key < 256 else ""
+            if char in POPUPS:
+                popup(POPUPS[char], args.session, args.block, args.client)
+            elif char == "N":
+                template(args.session, args.block)
+            elif key == 0:
+                rex("send-key", "-s", args.session, "-b", args.block, "ctrl+space")
+            elif key in (8, 10, 11, 12):
+                client_action(args.client, "pane.focus", {"direction": {8: "left", 10: "down", 11: "up", 12: "right"}[key]})
+            elif char in ACTIONS:
+                name, values = ACTIONS[char]
+                client_action(args.client, name, values)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (RuntimeError, OSError, subprocess.TimeoutExpired, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        if sys.stdin.isatty() and len(sys.argv) > 1 and sys.argv[1] == "view":
+            input("Enter to close")
+        sys.exit(1)
