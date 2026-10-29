@@ -5,7 +5,9 @@ import importlib.machinery
 import importlib.util
 import os
 import signal
+import tempfile
 import time
+from concurrent.futures import Future
 from pathlib import Path
 import unittest
 from unittest.mock import Mock, patch
@@ -23,6 +25,74 @@ def split(a="a", b="b", ratio=.6):
 
 
 class UnitTests(unittest.TestCase):
+    def snapshot(self):
+        return {"version": 1, "updated": time.time(), "cwd": "/tmp/project", "host": "local", "session": "project",
+                "stats": {"CPU": "25%", "RAM": "82%", "GPU": "", "Disk": "11%", "Git": "main +42/-18"},
+                "usage": [{"provider": "claude", "window": "weekly", "percent": "0%", "reset": ""},
+                          {"provider": "codex", "window": "", "percent": "未取得", "reset": ""}],
+                "agents": [{"session": "test", "app": "pi", "state": "working", "message": "テスト中", "updated": "yesterday"}]}
+
+    def test_metadata_cache_roundtrip_and_permissions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "cache/data.json"
+            data = self.snapshot()
+            tool.save_metadata_cache(path, data)
+            self.assertEqual(tool.read_metadata_cache(path), data)
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            path.write_text('{"version":1}')
+            self.assertIsNone(tool.read_metadata_cache(path))
+            path.write_text('not json')
+            self.assertIsNone(tool.read_metadata_cache(path))
+
+    def test_metadata_cache_is_scoped_to_origin(self):
+        self.assertNotEqual(tool.metadata_cache("s", "a"), tool.metadata_cache("s", "b"))
+        self.assertNotEqual(tool.metadata_cache("s", "a"), tool.metadata_cache("t", "a"))
+
+    def test_usage_keeps_zero_separate_from_missing(self):
+        with patch.object(tool, "command_text", return_value="icon\x1fweekly\x1fgauge\x1f0%\x1f2d"):
+            self.assertEqual(tool.usage_rows("claude")[0]["percent"], "0%")
+        with patch.object(tool, "command_text", return_value="icon\x1f--"):
+            self.assertEqual(tool.usage_rows("claude")[0]["percent"], "未取得")
+
+    def test_panel_narrow_layout_details_and_bar(self):
+        data = self.snapshot()
+        wide = tool.metadata_rows(data, 90)
+        narrow = tool.metadata_rows(data, 40)
+        self.assertGreater(len(narrow), len(wide))
+        text = "\n".join(t for t, _ in wide)
+        self.assertIn('[----------] 0%', text)
+        self.assertIn('未取得', text)
+        self.assertNotIn('yesterday', text)
+        self.assertIn('yesterday', str(tool.metadata_rows(data, 90, True)))
+        self.assertEqual(tool.cell('日本abc', 5), '日本a')
+
+    def test_fresh_cache_draws_without_collecting(self):
+        screen = Mock()
+        screen.getch.return_value = ord('q')
+        with patch.object(tool.curses, "curs_set"), patch.object(tool.curses, "has_colors", return_value=False), \
+             patch.object(tool, "read_metadata_cache", return_value=self.snapshot()), \
+             patch.object(tool, "draw_metadata", return_value=0) as draw, \
+             patch.object(tool, "refresh_metadata") as collect, patch.object(tool, "api"):
+            tool.screen(screen, "metadata", "s", "b")
+        self.assertIsNotNone(draw.call_args_list[0].args[1])
+        collect.assert_not_called()
+
+    def test_failed_refresh_preserves_previous_snapshot(self):
+        data = self.snapshot()
+        data['updated'] -= 60
+        future = Future()
+        future.set_exception(RuntimeError('offline'))
+        screen = Mock()
+        screen.getch.side_effect = [-1, ord('q')]
+        with patch.object(tool.curses, "curs_set"), patch.object(tool.curses, "has_colors", return_value=False), \
+             patch.object(tool, "read_metadata_cache", return_value=data), \
+             patch.object(tool, "draw_metadata", return_value=0) as draw, \
+             patch.object(tool, "ThreadPoolExecutor") as pool, patch.object(tool, "api"):
+            pool.return_value.__enter__.return_value.submit.return_value = future
+            tool.screen(screen, "metadata", "s", "b")
+        self.assertEqual(draw.call_args.args[1], data)
+        self.assertEqual(draw.call_args.args[3], 'offline')
+
     def test_dev_action_dispatches_without_prefix_menu(self):
         with patch.object(tool.sys, "argv", ["rex-tools", "view", "dev", "--session", "s", "--block", "b"]), \
              patch.dict(os.environ, {"REX_SERVER": ""}), \
