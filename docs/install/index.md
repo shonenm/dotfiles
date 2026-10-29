@@ -92,6 +92,7 @@ dots lock              # maintainer向け: mise lockfileを更新
 
 - mise tool: `common/mise/.config/mise/mise.lock`にmacOS / Linux、x86_64 / arm64のversion・download URL・checksumを固定
 - npm CLI: `config/packages.npm.txt`にversionを固定
+- Claude Code: ネイティブ版を自動更新に任せ、versionを固定しない（[Install](../ai-agents/claude/claude-development.md#install)）
 - GitHub Actions: commit SHAを固定
 - 更新: `dots update`はfast-forward後にmise.lockを更新し、変わった場合はmise.lockだけをcommitする（pushしない）。`dots lock`はlock更新のみ。週次workflowもlockfileを更新する。原則3日以上経過したreleaseだけを対象とし、自作toolはtool単位で待機期間を無効化する
 - lock生成は設定をコピーした一時ディレクトリ内で実行し、`MISE_CEILING_PATHS`で親ディレクトリの設定探索を止める。`TMPDIR`が`~/.cache/tmp`などproject配下の場合は`cd`だけでは隔離できず、旧miseのversion解決に親の設定が影響して固定版toolが欠落することがある。コピーした設定ディレクトリだけを`MISE_TRUSTED_CONFIG_PATHS`で信頼し、対話確認を不要にする。全tool・対応platformの検証が通った場合だけ既存lockfileを置き換える

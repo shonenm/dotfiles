@@ -630,6 +630,7 @@ run_step install_tmux_source
 run_step install_modern_tools
 run_step install_bun
 run_step install_npm_packages
+run_step install_claude_code
 run_step install_claude_mem
 run_step install_serena
 run_step install_context_mode
