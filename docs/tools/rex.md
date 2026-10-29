@@ -18,18 +18,21 @@ rex config reload
 
 正本は `common/rex/.config/rex/init.lua`。既存の独自 `~/.config/rex/init.lua` がある場合は、上書きせず内容を統合する。`rex-tools` は `~/dotfiles/scripts` から実行する。Python 3 と、各 popup の対象 command が必要。project / layout picker は既存の fzf を使う。
 
-session 切替などの client action を prefix menu から実行するには、Rex Settings → Rex Server → **Remote Control** を有効にする必要がある。dotfiles はこの許可を自動変更しない。無効でも server API を使う popup 作成・scratch toggle は動く。
+通常の prefix 操作は Rex client が直接実行する。補助の操作一覧 menu や project picker から CLI 経由で session 切替などを実行する場合は、Rex Settings → Rex Server → **Remote Control** が必要。dotfiles はこの許可を自動変更しない。
 
 remote Rex は対象外。helper はネットワークの `REX_SERVER` を拒否する。別ホストの cwd をローカル cwd とみなしたり、ローカルの統計を remote の値として表示したりしない。
 
-## Prefix は表示付き popup
+## Prefix は Rex 標準キーシーケンス
 
-`Ctrl+Space` で `PREFIX` とキー一覧の floating menu を表示する。Rex のキーシーケンス待機状態を監視する方式ではない。1キーで実行して閉じる。Esc または未割当キーはキャンセルし、terminal へそのキーを送らない。
+`Ctrl+Space` と次のキーは Rex client 内で受け取る。prefix のたびに Python / terminal popup を起動しないため、その起動待ちによる連続入力の取りこぼしを避ける。Esc で待機を解除する。popup command 自体の起動時間は残る。
 
-menu 中の `Ctrl+Space` は呼出元 terminal に Ctrl+Space を送る。tmux / TUIOS を内側に置く場合は prefix が競合するので、この送信操作を使う。
+`Ctrl+Space` を2回押すと terminal に Ctrl+Space を送る。tmux / TUIOS を内側に置く場合はこの送信操作を使う。
+
+操作一覧は `Ctrl+Space → ?` または command palette の **Dotfiles: Prefix Menu** で開く。prefix 待機の自動表示は行わない。Rex は同じキーで sequence 開始と即時 action 実行を両立できないため、一覧 popup の表示を通常の入力経路から外している（[公式仕様](https://www.superlogical.com/rex/docs/customize/key-sequences)）。
 
 | prefix 後のキー | 動作 |
 |---|---|
+| `?` | 操作一覧 popup（通常操作には不要） |
 | `g` | lazygit、80% × 80% |
 | `G` | live-pr、85% × 85% |
 | `k` | `nvim .`、90% × 90% |
@@ -76,7 +79,7 @@ block の識別は `dotfiles-popup/<kind>/<呼出元block ID>` という label �
 | group / space | 未対応と表示 |
 | container 内 cwd | 未対応と表示 |
 | heartbeat hang / agent resume | 未対応と表示。古い status を hang と断定しない |
-| COPY / SYNC 等の tmux mode | Rex の状態として表示しない。PREFIX は専用 menu で示す |
+| COPY / SYNC 等の tmux mode | Rex の状態として表示しない。PREFIX 待機の自動表示はしない |
 
 統計はこの Mac 全体の値。Git は一覧 popup でなく呼出元 pane の cwd。取得失敗や値がない項目は0にしない。GPU 等は既存 helper が値を返さなければ表示対象なし。秘密情報や token を一覧へ出さず、使用量取得の認証処理は既存 command に任せる。
 
@@ -92,11 +95,11 @@ layout preset は `$XDG_DATA_HOME/rex/layouts/`、未設定なら `~/.local/shar
 
 ```bash
 python3 scripts/test-rex-tools.py
-# 稼働中の local Rex server に一意名の検証 session を作成し、最後に削除する
+# この設定を reload 済みの local Rex で keymap を検査し、専用 session を作成・削除する
 REX_TEST_INTEGRATION=1 python3 scripts/test-rex-tools.py
 rex config check ~/dotfiles/common/rex/.config/rex/init.lua
 scripts/check-markdown-links.py
 scripts/check-package-duplication.sh
 ```
 
-integration test は scratch の block ID / PID が toggle 後も一致すること、layout の比率往復、PREFIX がサイズ変更通知（SIGWINCH）で終了せず Esc で終了することを確認する。ユーザーの session へ入力しない。GUI の表示、キー入力、Remote Control を必要とする client action は実画面でも確認する。
+integration test は読み込み済みの native prefix keymap（単独 prefix の popup binding がないことを含む）、scratch の block ID / PID が toggle 後も一致すること、layout の比率往復、PREFIX がサイズ変更通知（SIGWINCH）で終了せず Esc で終了することを確認する。ユーザーの session へ入力しない。GUI の表示、キー入力、Remote Control を必要とする client action は実画面でも確認する。
