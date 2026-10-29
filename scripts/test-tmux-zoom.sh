@@ -27,11 +27,11 @@ source "$ROOT/scripts/tmux-zoom-lib.sh"
 tmux -f /dev/null new-session -d -s zoom -x 200 -y 50
 WIN=$(tmux display-message -t zoom:1 -p '#{window_id}')
 SB=$(tmux display-message -t zoom:1 -p '#{pane_id}')
-# probe: WINCH を記録する。他 pane は寝かせるだけ。
-PROBE=$(tmux split-window -h -t "$SB" -P -F '#{pane_id}' \
-  "bash -c 'trap \"echo winch >> $LOG\" WINCH; while :; do sleep 0.2; done'")
-TOP=$(tmux split-window -h -t "$PROBE" -P -F '#{pane_id}' 'exec sleep 600')
-BOTTOM=$(tmux split-window -v -t "$TOP" -P -F '#{pane_id}' 'exec sleep 600')
+# 各 pane は受けた WINCH を自分の pane id 付きで記録する。
+probe_cmd="bash -c 'trap \"echo \\\$TMUX_PANE >> $LOG\" WINCH; while :; do sleep 0.2; done'"
+PROBE=$(tmux split-window -h -t "$SB" -P -F '#{pane_id}' "$probe_cmd")
+TOP=$(tmux split-window -h -t "$PROBE" -P -F '#{pane_id}' "$probe_cmd")
+BOTTOM=$(tmux split-window -v -t "$TOP" -P -F '#{pane_id}' "$probe_cmd")
 tmux resize-pane -t "$SB" -x 40
 tmux set-option -w -t "$WIN" @agent_sidebar_pane "$SB"
 sleep 1
@@ -41,7 +41,7 @@ geometry() {
   tmux list-panes -t "$WIN" -F '#{pane_top}:#{pane_left}:#{pane_id}:#{pane_width}x#{pane_height}' \
     | sort -t: -k1,1n -k2,2n | paste -sd, -
 }
-layout() { tmux display-message -t "$WIN" -p '#{window_layout}'; }
+layout() { tmux display-message -t "$WIN" -p '#{window_layout}' | pzoom_shape; }
 
 for target in "$PROBE" "$TOP" "$BOTTOM"; do
   before_geo=$(geometry); before_layout=$(layout)
@@ -53,6 +53,11 @@ for target in "$PROBE" "$TOP" "$BOTTOM"; do
 
   zoom_w=$(tmux display-message -t "$target" -p '#{pane_width}')
   [[ "$zoom_w" -gt 100 ]] || fail "$target did not expand (width=$zoom_w)"
+  # 全退避 pane に戻し先の兄弟が記録されていること(空 = select-layout 頼みの再配分)
+  hidden=$(tmux show-options -w -t "$WIN" -qv @pzoom_hidden)
+  for entry in $hidden; do
+    [[ -n "${entry##*:}" ]] || fail "no sibling recorded zooming $target: $entry"
+  done
   narrow=$(tmux list-panes -t "$WIN" -F '#{pane_id} #{pane_width}' | awk '$2 <= 2 {print $1}')
   [[ -z "$narrow" ]] || fail "sibling crushed instead of stashed: $narrow"
 
@@ -63,10 +68,15 @@ for target in "$PROBE" "$TOP" "$BOTTOM"; do
   [[ "$(layout)" == "$before_layout" ]] || fail "layout changed zooming $target"
   tmux list-windows -t zoom -F '#{window_name}' | grep -qxF _pzoom && fail "stash window left behind"
 
-  if [[ "$target" != "$PROBE" ]]; then
-    winches=$(wc -l < "$LOG" | tr -d ' ')
-    [[ "$winches" -le 2 ]] || fail "stashed pane got $winches SIGWINCH zooming $target (want <= 2)"
-  fi
+  # 退避 pane は退避と復帰の 1 回ずつ。先に退避した兄弟の領域を引き取った回数だけ
+  # 拡大と縮小の 2 回が加わる。方向を取り違えると潰れて再配分され、これを超える。
+  for p in "$PROBE" "$TOP" "$BOTTOM"; do
+    [[ "$p" == "$target" ]] && continue
+    absorbed=$(tr ' ' '\n' <<< "$hidden" | grep -c ":${p}\$" || true)
+    want=$(( 2 + 2 * absorbed ))
+    winches=$(grep -cxF "$p" "$LOG" || true)
+    [[ "$winches" -le "$want" ]] || fail "stashed pane $p got $winches SIGWINCH zooming $target (want <= $want)"
+  done
 done
 
 echo "tmux pseudo-zoom: OK"
