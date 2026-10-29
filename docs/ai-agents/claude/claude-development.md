@@ -14,6 +14,10 @@ Claude Code の開発環境設定、カスタムスキル、フック、エー�
 - **Rules** - グローバルルール（問題解決、実装方針、コミュニケーション、自律性）
 - **Scripts** - セッション管理、ワークツリー管理等のユーティリティ
 
+## Install
+
+Claude Code 本体は `install_claude_code`（`scripts/install-common.sh`）が公式ネイティブインストーラで `~/.local/bin/claude` に入れ、更新は Claude Code の自動更新に任せる。npm global は mise の Node ごとに別 version が残り shell ごとに version がずれるため使わず、残っていれば同関数が削除する。
+
 ## File Structure
 
 ```

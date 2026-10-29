@@ -116,6 +116,24 @@ install_npm_packages() {
   "$DOTFILES_DIR/scripts/patch-pi-cursor-agent.sh" || true
 }
 
+# ネイティブ版は ~/.local/bin/claude の 1 箇所に入り自動更新される。
+# npm global は mise の Node ごとに別 version が残るため使わない。
+install_claude_code() {
+  if command_exists npm && npm ls -g --depth=0 @anthropic-ai/claude-code &>/dev/null; then
+    log_info "Removing npm-global Claude Code..."
+    npm uninstall -g @anthropic-ai/claude-code
+  fi
+
+  if [[ -x "$HOME/.local/bin/claude" ]]; then
+    log_success "Claude Code (native) already installed"
+    return
+  fi
+
+  log_info "Installing Claude Code (native)..."
+  curl -fsSL https://claude.ai/install.sh | bash
+  log_success "Claude Code installed"
+}
+
 install_claude_mem() {
   if ! command_exists npx; then
     log_warn "npx not found, skipping claude-mem"
