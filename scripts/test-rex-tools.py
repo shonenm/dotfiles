@@ -23,6 +23,13 @@ def split(a="a", b="b", ratio=.6):
 
 
 class UnitTests(unittest.TestCase):
+    def test_dev_action_dispatches_without_prefix_menu(self):
+        with patch.object(tool.sys, "argv", ["rex-tools", "view", "dev", "--session", "s", "--block", "b"]), \
+             patch.dict(os.environ, {"REX_SERVER": ""}), \
+             patch.object(tool, "origin", return_value="anchor"), patch.object(tool, "template") as template:
+            tool.main()
+        template.assert_called_once_with("s", "anchor")
+
     def test_prefix_ignores_resize_until_user_key(self):
         for key in (27, ord("g")):
             with self.subTest(key=key):
@@ -106,6 +113,17 @@ class UnitTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get("REX_TEST_INTEGRATION") == "1", "opt-in Rex integration")
 class IntegrationTests(unittest.TestCase):
+    def test_loaded_native_prefix_keymap(self):
+        bindings = {tuple(b["keys"]): b for b in tool.rex("keymap", "--json")["bindings"]}
+        self.assertNotIn(("ctrl+space",), bindings)
+        for key, kind in tool.POPUPS.items():
+            key = "shift+" + key.lower() if key.isupper() else key
+            self.assertEqual(bindings[("ctrl+space", key)]["action"], "dotfiles_" + kind)
+        self.assertEqual(bindings[("ctrl+space", "c")]["action"], "client.tab.new")
+        self.assertEqual(bindings[("ctrl+space", "shift+/")]["action"], "dotfiles_prefix")
+        self.assertEqual(bindings[("ctrl+space", "ctrl+space")]["args"], {"key": "ctrl+space"})
+        self.assertEqual(bindings[("ctrl+space", "shift+n")]["action"], "dotfiles_dev")
+
     def test_lifecycle_and_layout(self):
         created = tool.rex("new", "dotfiles-rex-test-" + uuid.uuid4().hex[:8], "--cwd", "/tmp", "--json")
         session = created["session_id"]
