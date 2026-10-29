@@ -192,6 +192,7 @@ install_cursor_cli() {
 run_step install_brew_bundle
 run_step install_mise_tools
 run_step install_npm_packages
+run_step install_claude_code
 run_step install_claude_mem
 run_step install_serena
 run_step install_context_mode
