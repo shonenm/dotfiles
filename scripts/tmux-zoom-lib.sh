@@ -154,7 +154,7 @@ pzoom_apply() {   # $1=win $2=pane
 }
 
 pzoom_restore() {   # $1=win
-    local layout hidden entry p sess zoom_pane order dst dir len before sib rev wid
+    local layout hidden entry p zoom_pane order dst dir len before sib rev
     local -a args
     layout=$(tmux show-options -w -t "$1" -qv @pzoom_layout 2>/dev/null)
     [ -n "$layout" ] || return 1
@@ -163,7 +163,6 @@ pzoom_restore() {   # $1=win
     pzoom_lock "$1"
     hidden=$(tmux show-options -w -t "$1" -qv @pzoom_hidden 2>/dev/null)
     order=$(tmux show-options -w -t "$1" -qv @pzoom_order 2>/dev/null)
-    sess=$(tmux display-message -t "$1" -p '#{session_name}' 2>/dev/null)
     zoom_pane=$(tmux show-options -w -t "$1" -qv @pzoom_pane 2>/dev/null)
 
     dst="$1"
@@ -201,11 +200,7 @@ pzoom_restore() {   # $1=win
     if [ -n "$zoom_pane" ]; then
         tmux select-pane -t "$zoom_pane" 2>/dev/null || true
     fi
-    # 戻し損ねた退避 window が残っていたら畳む(通常は最後の pane が戻った時点で消える)
-    if [ -n "$sess" ]; then
-        for wid in $(tmux list-windows -t "$sess" -F '#{window_id} #{window_name}' 2>/dev/null | awk '$2 == "_pzoom" { print $1 }'); do
-            tmux kill-window -t "$wid" 2>/dev/null || true
-        done
-    fi
+    # 退避 window は最後の pane を join すると自動で消える。
+    # 同じ session の別 window が zoom 中の場合もあるため、名前で一括削除しない。
     pzoom_unlock "$1"
 }
