@@ -466,12 +466,12 @@ AI エージェント状態監視（自前スクリプト）:
 - サイドバー下部に Claude / Codex / Gemini / Cursor / Grok の使用量を表示。Codex / Grok は OAuth token を自前で refresh する（refresh token 自体が invalidated の場合のみ `codex login` / `grok login` が必要）。行のラベルは provider 既定だが、Codex は plan により枠構成が変わる（Plus は 5h + 7d、free は 30d のみ）ため API の window 長からラベルを決め、存在しない枠は行を出さない
 - Codex は `~/.codex/auth.json`、Grok は `~/.grok/auth.json` を `${XDG_CACHE_HOME:-~/.cache}/tmux/*_usage.refresh.lock` の排他下で atomic に更新する。Grok の session token は寿命 6h しかないため、CLI を起動していない間も表示を維持するには ai-usage 側の refresh が必要
 - サイドバーがある window では `prefix z` / `prefix Z` が native zoom ではなく擬似 zoom になる。layout を保存したうえで対象以外の pane を session 内 `_pzoom` ウィンドウへ `break-pane` 退避し、サイドバーを残したまま対象を最大化する。以前の resize 潰しは sibling の cursor-agent 等が 1 列になり再描画を連打して外側端末全体がスクロールし続けるため廃止。`prefix C-z` は常に native zoom（サイドバーごと全画面）
-- 退避は pane ごとに別 `_pzoom` ウィンドウへ分ける。1 つに集めると後続の退避が先に退避した pane を分割してリサイズし、その TUI が再描画する
+- 退避は pane ごとに別 `_pzoom` ウィンドウへ分ける。1 つに集めると後続の退避が先に退避した pane を分割してリサイズし、その TUI が再描画する。退避 window は pane を戻すと自動で消える。同じ session の別 window も zoom 中の場合があるため、`_pzoom` という名前で一括削除しない
 - 退避で空いた領域を引き取った pane（layout 上の兄弟）を実測し、`@pzoom_hidden` に `pane_id:dir:len:before:sibling` で記録する。復元は退避の逆順にその兄弟へ `join-pane` する（close の逆操作）ため、入れ子の layout でも元の寸法に戻り、`select-layout` による再配分が要らない。zoom 対象との位置関係で方向を決める方式は、先の退避で位置がずれると上下の pane を左右として戻し、1 列に潰していた
 - 引き取る兄弟は tmux 3.8 以降は直後、それより前は直前の cell。退避順はその側に同じ辺の長さで接する pane（= 引き取り手が葉）を優先する。兄弟が subtree で引き取り手が複数になった時だけ sibling を空にし、最後の `select-layout` で補正する
 - 退避 pane が受ける SIGWINCH は退避時と復帰時の 1 回ずつで、先に退避した兄弟の領域を引き取った pane だけ拡大・縮小の 2 回が加わる。長い履歴を持つ TUI は 1 回のリサイズで全体を折り返し直すため、この回数が体感 CPU に直結する
 - tmux 3.8 以降の `#{window_layout}` は JSON で active pane（`"a"`）と最終使用順（`"l"`）を含むため、配置の比較ではこれらを除く
-- `scripts/test-tmux-zoom.sh` が専用 socket 上で往復を検証する（配置・layout の一致、兄弟の記録、pane ごとの SIGWINCH 回数）。tmux が無い CI では `scripts/check` がスキップする
+- `scripts/test-tmux-zoom.sh` が専用 socket 上で往復を検証する（配置・layout の一致、兄弟の記録、pane ごとの SIGWINCH 回数、複数 window の zoom 解除で他方の退避 pane と配置が保たれること）。tmux が無い CI では `scripts/check` がスキップする
 - 擬似 zoom 中は `window_zoomed_flag` が立たないため、status-right のモード表示と `pane-active-border-style` は `@pzoom_pane` も見て ZOOM を表示する（`regenerate-tmux-theme.sh` が正本）。sidebar の幅補正は `@pzoom_pane` の空判定で止め、pane id 文字列を `grep 1` しない
 - 詳細は[AI agent状態管理](../specs/agent-stop-notification.md)を参照
 

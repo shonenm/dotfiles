@@ -79,4 +79,23 @@ for target in "$PROBE" "$TOP" "$BOTTOM"; do
   done
 done
 
+# 同じ session の別 window も zoom 中なら、その退避 pane を削除してはいけない。
+FIRST_WIN=$WIN
+OTHER_WIN=$(tmux new-window -d -t zoom -P -F '#{window_id}')
+OTHER_SB=$(tmux display-message -t "$OTHER_WIN" -p '#{pane_id}')
+OTHER_TARGET=$(tmux split-window -h -t "$OTHER_SB" -P -F '#{pane_id}')
+OTHER_HIDDEN=$(tmux split-window -v -t "$OTHER_TARGET" -P -F '#{pane_id}')
+tmux set-option -w -t "$OTHER_WIN" @agent_sidebar_pane "$OTHER_SB"
+first_geo=$(geometry)
+other_geo=$(WIN=$OTHER_WIN geometry)
+pzoom_apply "$OTHER_WIN" "$OTHER_TARGET" || fail "other window apply failed"
+pzoom_apply "$FIRST_WIN" "$TOP" || fail "first window apply failed"
+pzoom_restore "$FIRST_WIN" || fail "first window restore failed"
+[[ "$(geometry)" == "$first_geo" ]] || fail "first window geometry changed"
+tmux list-panes -a -F '#{pane_id}' | grep -qxF "$OTHER_HIDDEN" \
+  || fail "restoring first window destroyed another window's hidden pane"
+pzoom_restore "$OTHER_WIN" || fail "other window restore failed"
+[[ "$(WIN=$OTHER_WIN geometry)" == "$other_geo" ]] || fail "other window geometry changed"
+tmux list-windows -t zoom -F '#{window_name}' | grep -qxF _pzoom && fail "stash window left behind"
+
 echo "tmux pseudo-zoom: OK"
