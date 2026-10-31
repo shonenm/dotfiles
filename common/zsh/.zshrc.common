@@ -217,7 +217,6 @@ setopt SHARE_HISTORY
 setopt EXTENDED_HISTORY
 
 # --- Zsh Options ---
-setopt CORRECT          # Spell check for commands
 setopt AUTO_CD          # Type directory name to cd into it
 setopt NO_FLOW_CONTROL  # Disable Ctrl+S/Ctrl+Q flow control
 
