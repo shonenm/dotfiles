@@ -121,7 +121,8 @@ pzoom_stash_others() {   # $1=win $2=keep_pane $3=sidebar
             if [ "${grown##* }" = "$(awk -v q="$q" '$1 == q { print $5 }' <<< "$before_geo")" ]; then
                 dir=h; len=$pw; [ "$pl" -lt "$ql" ] && before=b
             else
-                dir=v; len=$ph; [ "$pt" -lt "$qt" ] && before=b
+                # pane_top includes a top status line, while pane_height excludes it.
+                dir=v; len=$(( ph + (pt == 1) )); [ "$pt" -lt "$qt" ] && before=b
             fi
         fi
         hidden="${hidden}${hidden:+ }${p}:${dir}:${len}:${before}:${q}"

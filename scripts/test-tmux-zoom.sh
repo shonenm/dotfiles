@@ -98,4 +98,28 @@ pzoom_restore "$OTHER_WIN" || fail "other window restore failed"
 [[ "$(WIN=$OTHER_WIN geometry)" == "$other_geo" ]] || fail "other window geometry changed"
 tmux list-windows -t zoom -F '#{window_name}' | grep -qxF _pzoom && fail "stash window left behind"
 
+# Simulate a top status line. pane_top includes the status row, while pane_height excludes it.
+tmux new-session -d -s status-top -x 315 -y 68
+STATUS_WIN=$(tmux display-message -t status-top:1 -p '#{window_id}')
+STATUS_SB=$(tmux display-message -t "$STATUS_WIN" -p '#{pane_id}')
+STATUS_RIGHT=$(tmux split-window -h -l 118 -t "$STATUS_SB" -P -F '#{pane_id}')
+STATUS_BOTTOM=$(tmux split-window -v -l 33 -t "$STATUS_RIGHT" -P -F '#{pane_id}')
+tmux split-window -h -l 167 -t "$STATUS_SB" >/dev/null
+tmux resize-pane -t "$STATUS_SB" -x 28
+tmux set-option -w -t "$STATUS_WIN" @agent_sidebar_pane "$STATUS_SB"
+
+pzoom_geo() {
+  tmux list-panes -t "$1" -F '#{pane_id} #{pane_left} #{pane_top} #{pane_width} #{pane_height}' \
+    | awk '{ top=$3; height=$5; if (top == 0) { top=1; height-- }; printf "%s %s %d %s %d\n", $1, $2, top, $4, height }'
+}
+WIN=$STATUS_WIN
+SB=$STATUS_SB
+before_geo=$(geometry); before_layout=$(layout)
+pzoom_apply "$WIN" "$STATUS_BOTTOM" || fail "status-top apply failed"
+hidden=$(tmux show-options -w -t "$WIN" -qv @pzoom_hidden)
+grep -q ':v:34:' <<< "$hidden" || fail "top pane restore height did not include status row: $hidden"
+pzoom_restore "$WIN" || fail "status-top restore failed"
+[[ "$(geometry)" == "$before_geo" ]] || fail "status-top geometry changed"
+[[ "$(layout)" == "$before_layout" ]] || fail "status-top layout changed"
+
 echo "tmux pseudo-zoom: OK"
