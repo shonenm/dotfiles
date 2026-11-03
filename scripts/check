@@ -30,6 +30,9 @@ scripts/test-cursor-config.sh
 scripts/test-pi-permission-gate.sh
 scripts/test-pi-bash-timeout-cap.sh
 scripts/test-pi-agent-delegation.sh
+scripts/test-pi-prompt-stash.sh
+scripts/test-pi-prompt-shortcuts.sh
+node scripts/test-pi-protected-paths.mjs
 python3 scripts/test-dots-mise-return.py
 python3 scripts/test-tui.py
 python3 scripts/test-rex-tools.py

@@ -29,6 +29,19 @@ const HARD_DENY_PATTERNS = [
       /(?:^|[;&|]\s*)(?:sudo\s+)?(?:corepack\s+)?(?:\S*\/)?pnpm\b(?:\s+(?:(?:-C|--dir|--filter)\s+(?:"[^"]*"|'[^']*'|[^\s;&|]+)|(?:--dir|--filter)=(?:"[^"]*"|'[^']*'|[^\s;&|]+)|-w|--workspace-root|--silent))*\s+(?:run\s+)?wt\s+(?:--\s+)?provision\b/i,
     reason: "Agents may not add pooled worktree capacity; run pnpm wt provision manually if required",
   },
+  {
+    pattern: /\bgit\s+add\s+(?:[^;&|\n]*\s)?(?:-A|--all|-u|--update|-[a-zA-Z]*[Au][a-zA-Z]*|\.)(?=\s|$|[;&|])/,
+    reason: "Catch-all staging is not allowed; stage only task-owned paths or hunks",
+  },
+  {
+    pattern: /\bgit\s+commit\s+(?:[^;&|\n]*\s)?(?:--all|-[a-zA-Z]*a[a-zA-Z]*)(?=\s|$|[;&|])/,
+    reason: "git commit -a is not allowed; stage only task-owned paths or hunks",
+  },
+];
+
+// Outward-facing operations that need explicit approval even in YOLO mode.
+const ALWAYS_CONFIRM_PATTERNS = [
+  /\bgh\s+pr\s+merge\b/,
 ];
 
 const DANGEROUS_PATTERNS = [
@@ -102,8 +115,31 @@ async function isGitWorktree(cwd: string): Promise<boolean> {
   }
 }
 
+async function git(cwd: string, args: string[]): Promise<string | undefined> {
+  try {
+    return (await execFileAsync("git", ["-C", cwd, ...args])).stdout.trim();
+  } catch {
+    return undefined;
+  }
+}
+
+// ponytail: token heuristic, not a refspec parser; bypassable like the rest of this denylist.
+export async function isDefaultBranchPush(command: string, cwd: string): Promise<boolean> {
+  const match = command.match(/\bgit\s+push\b([^;&|\n]*)/);
+  if (!match) return false;
+  const originHead = await git(cwd, ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]);
+  const defaults = originHead ? [originHead.replace(/^origin\//, "")] : ["main", "master"];
+  const args = match[1].trim().split(/\s+/).filter((arg) => arg && !arg.startsWith("-"));
+  if (args.slice(1).some((ref) => defaults.includes(ref.replace(/^\+/, "").split(":").pop()!))) return true;
+  if (args.length > 1) return false;
+  const branch = await git(cwd, ["branch", "--show-current"]);
+  return branch !== undefined && defaults.includes(branch);
+}
+
 export function getHardDenyReason(command: string): string | undefined {
-  return HARD_DENY_PATTERNS.find(({ pattern }) => pattern.test(command))?.reason;
+  // Quoted arguments (commit messages, paths) must not trigger flag patterns.
+  const unquoted = command.replace(/"[^"]*"|'[^']*'/g, '""');
+  return HARD_DENY_PATTERNS.find(({ pattern }) => pattern.test(unquoted))?.reason;
 }
 
 export async function isTrustedGitProjectCommand(command: string, cwd: string): Promise<boolean> {
@@ -133,17 +169,20 @@ export default function (pi: ExtensionAPI) {
       return { block: true, reason: hardDenyReason };
     }
 
-    const matched = DANGEROUS_PATTERNS.find((p) => p.test(command));
-    if (!matched || isPermissionSystemYoloEnabled()) return;
-
-    if (await isTrustedGitProjectCommand(command, ctx.cwd)) return;
+    let matched = ALWAYS_CONFIRM_PATTERNS.find((p) => p.test(command))?.source;
+    if (!matched && await isDefaultBranchPush(command, ctx.cwd)) matched = "push to default branch";
+    if (!matched) {
+      matched = DANGEROUS_PATTERNS.find((p) => p.test(command))?.source;
+      if (!matched || isPermissionSystemYoloEnabled()) return;
+      if (await isTrustedGitProjectCommand(command, ctx.cwd)) return;
+    }
 
     pi.events.emit("agent-notify:permission", true);
     let ok = false;
     try {
       ok = await ctx.ui.confirm(
         "🛡️ Dangerous command detected",
-        `Allow this command?\n\n${command}\n\nPattern matched: ${matched.source}`
+        `Allow this command?\n\n${command}\n\nPattern matched: ${matched}`
       );
     } finally {
       pi.events.emit("agent-notify:permission", false);
