@@ -15,7 +15,17 @@
       "Read(~/.claude/.credentials.json)",
       "Read(~/.local/share/ai-notify/**)",
       "Read(**/*_webhook)",
-      "Read(**/credentials*)"
+      "Read(**/credentials*)",
+      "Bash(git add -A)",
+      "Bash(git add -A *)",
+      "Bash(git add --all)",
+      "Bash(git add --all *)",
+      "Bash(git add .)",
+      "Bash(git add -u)",
+      "Bash(git add -u *)",
+      "Bash(git commit -a *)",
+      "Bash(git commit -am *)",
+      "Bash(git commit --all *)"
     ],
     "allow": [
       "mcp__myproject__*",

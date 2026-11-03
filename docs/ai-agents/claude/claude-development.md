@@ -39,7 +39,7 @@ docs/ai-agents/ralph/       # Ralph利用文書
 
 ## Settings Configuration
 
-`~/.claude/settings.json`は`templates/claude-settings.json`を`install.sh`が既存設定へmergeする。共通hookは`UserPromptSubmit`、tool実行、permission、Stop/StopFailure、SessionEndをtmux状態へ正規化する。現在の対応表は[AI agent状態管理](../../specs/agent-stop-notification.md)を参照。
+`~/.claude/settings.json`は`templates/claude-settings.json`を`install.sh`が既存設定へmergeする。`permissions.deny`はsecretの読み取りとcatch-all staging（`git add -A` / `.` / `-u`、`git commit -a`）を拒否する。共通hookは`UserPromptSubmit`、tool実行、permission、Stop/StopFailure、SessionEndをtmux状態へ正規化する。現在の対応表は[AI agent状態管理](../../specs/agent-stop-notification.md)を参照。
 
 **Note**: skill frontmatter で定義された hooks (PreToolUse, PostToolUse, Stop) はグローバルにロードされます。
 
