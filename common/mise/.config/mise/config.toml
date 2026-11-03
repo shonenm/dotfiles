@@ -8,7 +8,7 @@ locked_verify_provenance = true
 [tools]
 node = "lts"
 python = "latest"
-"npm:pnpm" = "latest"
+"github:pnpm/pnpm" = "latest"
 deno = "latest"
 "npm:cspell" = "latest"
 "npm:@xai-official/grok" = "latest"

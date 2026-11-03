@@ -851,6 +851,34 @@ checksum = "sha256:c97188f4c09fb959ea0d3117781ae524431b62fcd8f1b8d19323550773cd4
 url = "https://github.com/ouch-org/ouch/releases/download/0.8.3/ouch-x86_64-apple-darwin.tar.gz"
 url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/561447589"
 
+[[tools."github:pnpm/pnpm"]]
+version = "12.16.1"
+backend = "github:pnpm/pnpm"
+
+[tools."github:pnpm/pnpm"."platforms.linux-arm64"]
+checksum = "sha256:f5847699e5d528f8f8e9bcfb385e58cb9fba7482af1b1aa7b70737be42277f81"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.16.1/pnpm-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/681916052"
+provenance = "github-attestations"
+
+[tools."github:pnpm/pnpm"."platforms.linux-x64"]
+checksum = "sha256:565ff81174a14f6f7bd5d84c1b17e51031a80230d370a1fe24be5d16bd02a825"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.16.1/pnpm-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/681916059"
+provenance = "github-attestations"
+
+[tools."github:pnpm/pnpm"."platforms.macos-arm64"]
+checksum = "sha256:6661212a6ec725634b0d3268e5bc9408e3152506dab5997891e38fa1ef22bf9c"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.16.1/pnpm-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/681916062"
+provenance = "github-attestations"
+
+[tools."github:pnpm/pnpm"."platforms.macos-x64"]
+checksum = "sha256:f2c52f20f631a31011a6e33e3812d136db89c4a5c1d23123b92cbe62ecec82a6"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.16.1/pnpm-darwin-x64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/681916060"
+provenance = "github-attestations"
+
 [[tools."github:shonenm/live-pr"]]
 version = "0.14.0"
 backend = "github:shonenm/live-pr"
@@ -927,9 +955,6 @@ backend = "npm:@xai-official/grok"
 version = "10.4.0"
 backend = "npm:cspell"
 
-[[tools."npm:pnpm"]]
-version = "12.15.0"
-backend = "npm:pnpm"
 
 [[tools.python]]
 version = "3.15.1"
