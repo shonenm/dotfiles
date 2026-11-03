@@ -129,32 +129,22 @@ Notes: ...
 
 グローバルルールは `~/.claude/rules/` に配置され、全セッションに適用されます。
 
-### problem-solving.md
+正本は `common/claude/.claude/rules/` の各ファイル。内容はここに複製しない。
 
-- 対症療法ではなく根本原因を特定して修正
-- ワークアラウンド追加前に根本原因を調査
-- 不確実な場合は Web 検索で最新のベストプラクティスを調査
-- 非推奨の機能や古いパターンを使用しない
+| ファイル | 関心事 |
+|---------|--------|
+| `autonomy.md` | 承認後の自律実行範囲、push 制限、終了条件、stage 範囲 |
+| `question-vs-action.md` | 質問と依頼の判別、作業中の補足依頼の扱い |
+| `implementation.md` | スコープ厳守、既存実装の再利用、レビュー提案の扱い |
+| `problem-solving.md` | 根本原因・証拠に基づく診断 |
+| `exploration.md` | grep 起点・呼び出し追跡によるコード探索 |
+| `verification.md` | 最小の関連チェック実行と失敗の扱い |
+| `communication.md` | 応答言語・書式、既存ドキュメントの言語維持 |
+| `filesystem.md` | 一時ファイル・XDG パス |
+| `harness-engineering.md` | ハーネス設計方針 |
+| `pstack.md` | poteto-mode 中の優先順位 |
 
-### implementation.md
-
-- 指定された範囲のみ実装。勝手な追加・改善は行わない
-- スコープ外の変更が必要な場合はユーザーに確認
-- 将来のための過剰設計・投機的抽象化は行わない
-- 後方互換性のためだけのフォールバック・ワークアラウンドは禁止
-
-### communication.md
-
-- 簡潔な応答・ステータス報告は日本語で行う
-- 絵文字を使用しない
-- 太字フォーマットを多用しない
-
-### autonomy.md
-
-- テスト・ビルド・デプロイスクリプトはユーザーの確認なく実行しない
-- git push はユーザーが明示的に要求しない限り実行しない
-
-**Note**: Ralph ループ内では autonomy.md の一部ルールが上書きされます（テスト・ビルドは自動実行）。
+pi の `APPEND_SYSTEM.md` と共通する原則はこちらにも反映する。
 
 ## Session Management (cs)
 
