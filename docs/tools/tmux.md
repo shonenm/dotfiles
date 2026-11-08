@@ -298,7 +298,7 @@ OFF 中の視覚的変化:
 (session-scoped) を唯一の真実とし、session 名は自由に付けられる。実装は
 `scripts/tmux-session-group.sh`。
 
-- 設定: `prefix C-g` の fzf popup で既存グループ選択 / 新規入力 / `(none)` で解除。
+- 設定: `prefix C-g` の fzf popup で既存グループ選択 / 新規入力 / `(none)` で解除。既存名に部分一致する新規名は `alt-enter` で入力文字列をそのまま採用する。
   CLI からは `tmux-session-group.sh set <group> [session]`（グループ名は `A-Za-z0-9_-` のみ）
 - 移動: `M-h/l` で同グループ内、`M-j/k` でグループ間（前述のキー表参照）
 - 一覧: `prefix s` がグループ menu → 選択グループのみの choose-tree という二段 picker になる。
