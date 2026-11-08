@@ -59,6 +59,18 @@
       "Bash(touch:*)",
       "Bash(cp:*)",
       "Bash(mv:*)"
+    ],
+    "ask": [
+      "Bash(gh pr merge *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f *)",
+      "Bash(git push * main)",
+      "Bash(git push * main *)",
+      "Bash(git push * HEAD:main*)",
+      "Bash(git push * master)",
+      "Bash(git push * master *)"
     ]
   },
   "hooks": {
