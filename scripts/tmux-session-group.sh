@@ -135,20 +135,24 @@ cmd_menu_popup() {
 
 # display-popup -E 内で実行される前提 (fzf が pty を要求するため)
 cmd_menu() {
-  local cur out rc sel
+  local cur out rc query key sel
   cur=$(sess_of "${1:-}")
   out=$(
     {
       echo "(none)"
       list_all | awk -F "$TAB" '$2 != "" { print $2 }' | sort -u
-    } | fzf --print-query \
+    } | fzf --print-query --expect=alt-enter \
         --prompt "group ($cur)> " \
-        --header "select / type new group / (none) clears"
+        --header "enter=select  alt-enter=use typed name  (none) clears"
   )
   rc=$?
   # 0=選択, 1=マッチなし (query を新規グループ名として採用), 130=abort
   [ $rc -ne 0 ] && [ $rc -ne 1 ] && return 0
-  sel=$(printf '%s' "$out" | tail -n 1)
+  # 出力: query / expect key / selection。既存名に部分一致する新規名は alt-enter で query を採用
+  query=$(printf '%s\n' "$out" | sed -n 1p)
+  key=$(printf '%s\n' "$out" | sed -n 2p)
+  sel=$(printf '%s\n' "$out" | sed -n 3p)
+  [ "$key" = "alt-enter" ] || [ -z "$sel" ] && sel=$query
   [ -z "$sel" ] && return 0
   if [ "$sel" = "(none)" ]; then
     cmd_unset "$cur"
