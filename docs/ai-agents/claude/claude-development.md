@@ -39,7 +39,7 @@ docs/ai-agents/ralph/       # Ralph利用文書
 
 ## Settings Configuration
 
-`~/.claude/settings.json`は`templates/claude-settings.json`を`install.sh`が既存設定へmergeする。`permissions.deny`はsecretの読み取りとcatch-all staging（`git add -A` / `.` / `-u`、`git commit -a`）を拒否する。共通hookは`UserPromptSubmit`、tool実行、permission、Stop/StopFailure、SessionEndをtmux状態へ正規化する。現在の対応表は[AI agent状態管理](../../specs/agent-stop-notification.md)を参照。
+`~/.claude/settings.json`は`templates/claude-settings.json`を`install.sh`が既存設定へmergeする。`permissions.deny`はsecretの読み取りとcatch-all staging（`git add -A` / `.` / `-u`、`git commit -a`）を拒否し、`permissions.ask`はmerge・force push・既定ブランチ名を指定したpushを確認する。共通hookは`UserPromptSubmit`、tool実行、permission、Stop/StopFailure、SessionEndをtmux状態へ正規化する。現在の対応表は[AI agent状態管理](../../specs/agent-stop-notification.md)を参照。
 
 **Note**: skill frontmatter で定義された hooks (PreToolUse, PostToolUse, Stop) はグローバルにロードされます。
 
@@ -133,7 +133,7 @@ Notes: ...
 
 | ファイル | 関心事 |
 |---------|--------|
-| `autonomy.md` | 承認後の自律実行範囲、push 制限、終了条件、stage 範囲 |
+| `autonomy.md` | 承認後の自律実行範囲（commit・push・PR 作成まで）、既定ブランチ push / merge の制限、終了条件、stage 範囲 |
 | `question-vs-action.md` | 質問と依頼の判別、作業中の補足依頼の扱い |
 | `implementation.md` | スコープ厳守、既存実装の再利用、レビュー提案の扱い |
 | `problem-solving.md` | 根本原因・証拠に基づく診断 |
