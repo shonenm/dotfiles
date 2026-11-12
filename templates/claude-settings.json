@@ -1,5 +1,10 @@
 {
   "tui": "fullscreen",
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
   "statusLine": {
     "type": "command",
     "command": "__HOME__/.claude/statusline-command.sh"
