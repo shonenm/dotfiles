@@ -18,3 +18,20 @@ methods = ["squash", "merge", "rebase"]
 server = "https://ci.syntopic.dev"
 cli_command = ["mise", "exec", "--", "woodpecker-cli"]
 token_command = ["sh", "-c", "awk '$1 == \"token:\" { print $2; exit }' \"${XDG_CONFIG_HOME:-$HOME/.config}/woodpecker-mcp/config.yaml\""]
+
+[[views]]
+name = "Needs me"
+query = "(review-requested:@me OR reviewed-by:@me OR assignee:@me OR author:@me)"
+
+[[views]]
+name = "Review requested"
+query = "review-requested:@me"
+
+[[views]]
+name = "All"
+query = ""
+
+[[views]]
+name = "Closed"
+query = "is:closed"
+
