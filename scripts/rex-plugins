@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Rex plugin を plugins.txt の commit に揃える / commit を更新する。
+set -euo pipefail
+
+MANIFEST="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/common/rex/.config/rex/plugins.txt"
+PLUGIN_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/rex/plugins"
+
+usage() {
+  echo "usage: rex-plugins sync | update [NAME...]" >&2
+  exit 2
+}
+
+entries() {
+  grep -v -E '^[[:space:]]*(#|$)' "$MANIFEST" || true
+}
+
+checkout() {
+  local name="$1" repo="$2" rev="$3" dir="$PLUGIN_DIR/$1"
+  if [[ ! -d "$dir/.git" ]]; then
+    git clone -q "https://github.com/$repo" "$dir"
+  fi
+  if ! git -C "$dir" cat-file -e "$rev^{commit}" 2>/dev/null; then
+    git -C "$dir" fetch -q origin
+  fi
+  git -C "$dir" checkout -q --detach "$rev"
+  echo "$name $rev"
+}
+
+sync() {
+  mkdir -p "$PLUGIN_DIR"
+  local name repo rev _
+  while read -r name repo rev _; do
+    checkout "$name" "$repo" "$rev"
+  done < <(entries)
+  # ponytail: manifest から外した plugin は消さない。手元の変更を失わないよう報告のみ。
+  for dir in "$PLUGIN_DIR"/*/; do
+    [[ -d "$dir" ]] || continue
+    name="$(basename "$dir")"
+    entries | awk -v n="$name" '$1 == n { found = 1 } END { exit !found }' ||
+      echo "unlisted: $dir" >&2
+  done
+}
+
+update() {
+  local name repo rev _ latest
+  while read -r name repo rev _; do
+    if (($#)) && [[ " $* " != *" $name "* ]]; then continue; fi
+    latest="$(git ls-remote "https://github.com/$repo" HEAD | cut -f1)"
+    [[ -n "$latest" ]] || { echo "HEAD not found: $repo" >&2; exit 1; }
+    if [[ "$latest" != "$rev" ]]; then
+      local tmp
+      tmp="$(mktemp)"
+      awk -v n="$name" -v old="$rev" -v new="$latest" \
+        '$1 == n && $3 == old { sub(old, new) } { print }' "$MANIFEST" >"$tmp"
+      cat "$tmp" >"$MANIFEST"
+      rm -f "$tmp"
+      echo "$name $rev -> $latest"
+    fi
+  done < <(entries)
+  sync
+}
+
+case "${1:-}" in
+  sync) sync ;;
+  update) shift; update "$@" ;;
+  *) usage ;;
+esac
