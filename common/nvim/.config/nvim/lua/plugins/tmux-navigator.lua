@@ -1,12 +1,22 @@
 local in_tuios = vim.env.TUIOS_ENV == "1"
+-- Rex 側の binding は vim-rex-navigator (common/rex)。
+local in_rex = not in_tuios and (vim.env.REX_SESSION or "") ~= ""
 
 local function tuios_report(verb, value)
   io.stdout:write("\027]7777;tuios-nvim-navigator;" .. verb .. ";" .. value .. "\007")
   io.stdout:flush()
 end
 
+local function outer_focus(direction)
+  if in_tuios then
+    tuios_report("focus", direction)
+  else
+    vim.system({ "rex", "focus", direction, "-s", vim.env.REX_SESSION })
+  end
+end
+
 local function navigate(key, direction, command)
-  if not in_tuios then
+  if not in_tuios and not in_rex then
     vim.cmd(command)
     return
   end
@@ -16,7 +26,7 @@ local function navigate(key, direction, command)
     vim.cmd("wincmd " .. key)
   end
   if explorer or vim.api.nvim_get_current_win() == window then
-    tuios_report("focus", direction)
+    outer_focus(direction)
   end
 end
 
@@ -50,13 +60,13 @@ return {
         if vim.bo.filetype == "snacks_picker_list" then
           vim.schedule(function()
             vim.keymap.set("n", "<C-h>", function()
-              if in_tuios then tuios_report("focus", "left") else vim.fn.system("tmux select-pane -L") end
+              if in_tuios or in_rex then outer_focus("left") else vim.fn.system("tmux select-pane -L") end
             end, { buffer = true })
             vim.keymap.set("n", "<C-j>", function()
-              if in_tuios then tuios_report("focus", "down") else vim.fn.system("tmux select-pane -D") end
+              if in_tuios or in_rex then outer_focus("down") else vim.fn.system("tmux select-pane -D") end
             end, { buffer = true })
             vim.keymap.set("n", "<C-k>", function()
-              if in_tuios then tuios_report("focus", "up") else vim.fn.system("tmux select-pane -U") end
+              if in_tuios or in_rex then outer_focus("up") else vim.fn.system("tmux select-pane -U") end
             end, { buffer = true })
           end)
         end
