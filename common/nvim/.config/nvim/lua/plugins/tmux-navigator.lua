@@ -33,6 +33,8 @@ end
 return {
   "christoomey/vim-tmux-navigator",
   lazy = false,  -- 常にロード（tmux検出に必要）
+  -- plugin 既定の <C-hjkl> が keys の navigate() を上書きしないようにする。
+  init = function() vim.g.tmux_navigator_no_mappings = 1 end,
   keys = {
     { "<C-h>", function() navigate("h", "left", "TmuxNavigateLeft") end, desc = "Navigate Left" },
     { "<C-j>", function() navigate("j", "down", "TmuxNavigateDown") end, desc = "Navigate Down" },
