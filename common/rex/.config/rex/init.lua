@@ -76,4 +76,17 @@ for _, entry in ipairs({ { "h", "left" }, { "j", "down" }, { "k", "up" }, { "l",
   rex.bind("ctrl+space>ctrl+" .. entry[1], "pane.focus", { direction = entry[2] })
   rex.bind("ctrl+space>shift+" .. entry[1], "pane.resize", { direction = entry[2], amount = 2 })
 end
--- Ctrl+h/j/k/l は Neovim の入力を奪わない。移動は native prefix 経由。
+-- Ctrl+h/j/k/l は vim-rex-navigator。vim/nvim が前面の pane では Neovim に渡す。
+-- plugin は渡す先を vim/nvim に固定しているため、ssh 先 (rcon の nvim / tmux) へ渡す判定を binding の前に挟む。
+local bind = rex.bind
+rex.bind = function(key, action, args)
+  if type(action) ~= "function" then return bind(key, action, args) end
+  return bind(key, function(ctx)
+    local process = rex.block.call("com.superlogical.terminal", "process", { block_id = ctx.block_id })
+    local fg = process and process.foreground
+    if fg and (fg.name == "ssh" or fg.argv0 == "ssh") then return false end
+    return action(ctx)
+  end, args)
+end
+plugin("vim-rex-navigator")
+rex.bind = bind
