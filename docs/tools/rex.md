@@ -1,6 +1,6 @@
 # Rex
 
-> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs) / **Configuration** `common/rex/` / **Custom** `scripts/rex-tools` の prefix menu・floating popup・メタデータ一覧・project picker・layout preset（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs) / **Configuration** `common/rex/` / **Custom** `scripts/rex-tools` の prefix menu・floating popup・メタデータ一覧・project picker・layout preset、`scripts/rex-plugins` の plugin 取得（[区分](../provenance.md#区分)）
 
 Mac の Rex native session 用。既存の tmux / TUIOS と remote 環境は変更しない。Rex Beta 0.1.0 build 1591 の server API で検証している。GUI の floating layer 描画は別途確認が必要。
 
@@ -99,6 +99,28 @@ layout preset は `$XDG_DATA_HOME/rex/layouts/`、未設定なら `~/.local/shar
 
 適用は tiled layer の分割構造が一致する場合だけ、比率を復元する。block ID が変わっていても構造が同じなら適用できる。pane の追加・破棄や command 再起動はしない。floating popup は保存対象外。
 
+## Plugin
+
+Rex に plugin manager はない。community の plugin は `init.lua` から `require` する Lua module として配布される。dotfiles では取得元と commit を manifest で固定する。
+
+| 対象 | 場所 |
+|---|---|
+| 正本（取得元・commit） | `common/rex/.config/rex/plugins.txt` |
+| 取得先（runtime、Stow / Git 対象外） | `$XDG_DATA_HOME/rex/plugins/<name>/`、未設定なら `~/.local/share/rex/plugins/` |
+| 読み込みと設定 | `common/rex/.config/rex/init.lua` の `plugin("<module>", opts)` |
+
+manifest は1行1 plugin で `name owner/repo commit [Lua ディレクトリ]`。Lua ディレクトリを省略すると repo 直下の `init.lua` を `name` で `require` する。`lua/<module>/init.lua` のような配置なら `lua` を指定する。
+
+```bash
+rex-plugins sync            # manifest の commit に揃える（install.sh も rex があれば実行）
+rex-plugins update [NAME]   # 既定ブランチ HEAD に manifest を更新して sync
+rex config reload
+```
+
+追加は manifest に1行足して `rex-plugins sync` し、`init.lua` に `plugin("<module>")` を書く。plugin の読み込みに失敗しても設定全体は止めず、Rex の log に警告して読み飛ばす。manifest から外した plugin の取得先は消さず、`sync` が `unlisted` と報告する。中身を確認してから手で削除する。
+
+plugin が別の binary を必要とする場合、binary は [新ツール追加時の登録先](../install/setup-new-environment.md#新ツール追加時の登録先) に従って登録する。manifest は Lua module だけを扱う。`leaf rex install` のように `~/.config/rex/init.lua` を書き換える installer は Stow 先の正本を変更するため使わない。
+
 ## 検証
 
 ```bash
@@ -110,4 +132,4 @@ scripts/check-markdown-links.py
 scripts/check-package-duplication.sh
 ```
 
-integration test は読み込み済みの native prefix keymap（単独 prefix の popup binding がないことを含む）、scratch の block ID / PID が toggle 後も一致すること、layout の比率往復、PREFIX がサイズ変更通知（SIGWINCH）で終了せず Esc で終了することを確認する。ユーザーの session へ入力しない。GUI の表示、キー入力、Remote Control を必要とする client action は実画面でも確認する。
+integration test は読み込み済みの native prefix keymap（単独 prefix の popup binding がないことを含む）、scratch の block ID / PID が toggle 後も一致すること、layout の比率往復、PREFIX がサイズ変更通知（SIGWINCH）で終了せず Esc で終了すること、manifest の plugin が `init.lua` から読み込まれ未取得 plugin で設定が止まらないことを確認する。ユーザーの session へ入力しない。GUI の表示、キー入力、Remote Control を必要とする client action は実画面でも確認する。

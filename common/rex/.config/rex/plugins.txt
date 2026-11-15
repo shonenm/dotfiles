@@ -1,0 +1,2 @@
+# Rex plugin の正本。scripts/rex-plugins sync が取得し、init.lua が package.path に加える。
+# name  owner/repo  commit  [Lua ディレクトリ。省略時は repo 直下の init.lua を name で require]
