@@ -1,6 +1,31 @@
 -- dotfiles: ローカル Rex の popup とメタデータ一覧。
 local helper = os.getenv("HOME") .. "/dotfiles/scripts/rex-tools"
 
+-- plugins.txt の plugin を scripts/rex-plugins sync の取得先から require できるようにする。
+-- package.path の先頭はこの設定ファイルのディレクトリ。
+local config_dir = package.path:match("^(.-)/%?%.lua;")
+local plugin_dir = (os.getenv("XDG_DATA_HOME") or os.getenv("HOME") .. "/.local/share") .. "/rex/plugins/"
+-- repo 直下の init.lua は repo 名で require する。
+package.path = plugin_dir .. "?/init.lua;" .. package.path
+for line in io.lines(config_dir .. "/plugins.txt") do
+  local name, luadir = line:match("^([^#%s]%S*)%s+%S+%s+%S+%s+(%S+)")
+  if name then
+    local root = plugin_dir .. name .. "/" .. luadir
+    package.path = root .. "/?.lua;" .. root .. "/?/init.lua;" .. package.path
+  end
+end
+
+-- 未取得の plugin で設定全体を失わないよう、警告して読み飛ばす。
+local function plugin(module, opts)
+  local ok, mod = pcall(require, module)
+  if not ok then
+    rex.log("warn", "plugin " .. module .. " を読み込めません。rex-plugins sync を実行してください: " .. tostring(mod))
+    return
+  end
+  if mod.setup then mod.setup(opts) end
+  return mod
+end
+
 local function action(name, title, command, kind)
   rex.action{
     name = name,

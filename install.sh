@@ -1206,6 +1206,11 @@ main() {
   # 3.7. Install TPM plugins and setup tmux-which-key
   setup_tmux_plugins
 
+  # 3.7.1. Pin Rex plugins to common/rex/.config/rex/plugins.txt
+  if command_exists rex; then
+    "$DOTFILES_DIR/scripts/rex-plugins" sync || { log_error "Rex plugin sync failed"; SETUP_FAILED=true; }
+  fi
+
   # 3.8. Link git hooks into .git/hooks (post-merge → tmux reload broadcast)
   setup_git_hooks
 
