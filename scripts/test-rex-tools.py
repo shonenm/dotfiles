@@ -194,6 +194,31 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(bindings[("ctrl+space", "ctrl+space")]["args"], {"key": "ctrl+space"})
         self.assertEqual(bindings[("ctrl+space", "shift+n")]["action"], "dotfiles_dev")
 
+    def test_config_loads_manifest_plugins(self):
+        source = Path(__file__).resolve().parent.parent / "common/rex/.config/rex/init.lua"
+        with tempfile.TemporaryDirectory() as tmp:
+            config, plugins = Path(tmp, "config"), Path(tmp, "rex/plugins")
+            config.mkdir()
+            (plugins / "root/").mkdir(parents=True)
+            (plugins / "nested/lua/nested").mkdir(parents=True)
+            body = 'return {{ setup = function() rex.bind("{}", "client.tab.new") end }}'
+            (plugins / "root/init.lua").write_text(body.format("ctrl+alt+1"))
+            (plugins / "nested/lua/nested/init.lua").write_text(body.format("ctrl+alt+2"))
+            (config / "plugins.txt").write_text("# comment\nroot o/root abc\nnested o/nested abc lua\n")
+
+            def bindings(extra):
+                (config / "init.lua").write_text(source.read_text() + extra)
+                result = tool.run([tool.rex_binary(), "config", "check", str(config / "init.lua")],
+                                  env={**os.environ, "XDG_DATA_HOME": tmp})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                return int(next(line.split()[1] for line in result.stdout.splitlines()
+                                if line.startswith("bindings:")))
+
+            base = bindings("")
+            # 未取得の plugin は警告だけで、設定全体は読み込まれる。
+            loaded = bindings('plugin("root")\nplugin("nested")\nplugin("missing")\n')
+            self.assertEqual(loaded, base + 2)
+
     def test_lifecycle_and_layout(self):
         created = tool.rex("new", "dotfiles-rex-test-" + uuid.uuid4().hex[:8], "--cwd", "/tmp", "--json")
         session = created["session_id"]
