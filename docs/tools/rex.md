@@ -48,11 +48,11 @@ remote Rex は対象外。helper はネットワークの `REX_SERVER` を拒否
 | `a` | Rex 標準 Activity の toggle |
 | `z` | zoom |
 | `\|` / `-` | 左右 / 上下分割 |
-| `Ctrl+h/j/k/l` | pane 移動 |
+| `Ctrl+h/j/k/l` | pane 移動（prefix なしでも可） |
 | `H/J/K/L` | pane resize |
 | `r` | 設定 reload |
 
-prefix 不要の `Ctrl+h/j/k/l` は設定しない。Neovim 内部 split を優先する既存 navigator は Rex 未対応なので、入力を奪わず prefix 経由で外側を移動する。
+prefix 不要の `Ctrl+h/j/k/l` は [vim-rex-navigator](https://github.com/paul-enz/vim-rex-navigator)（[Plugin](#plugin) で管理）で pane 移動する。前面が vim / nvim の pane ではキーを Neovim に渡し、Neovim は内部 split を先に移動して端で `rex focus` を呼ぶ（`common/nvim/.config/nvim/lua/plugins/tmux-navigator.lua`）。前面が ssh の pane（rcon のリモート nvim / tmux）でもキーを渡す。plugin は渡す先を vim / nvim に固定しているため、`init.lua` で binding の前にこの判定を挟んでいる。Rex 内でローカルの tmux / tuios を動かす運用は想定しない。plugin 同梱の Neovim 側 mapping は既存の tuios / snacks explorer 対応を上書きするため使わない。
 
 ## Popup の保持と終了
 

@@ -134,7 +134,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | プラグイン         | 役割                                        |
 | ------------------ | ------------------------------------------- |
 | toggleterm.nvim    | フローティングターミナル (lazygit/lazydocker)|
-| vim-tmux-navigator | Neovim ⇔ tmux シームレス移動                |
+| vim-tmux-navigator | Neovim ⇔ tmux / TUIOS / Rex シームレス移動  |
 | remote-nvim.nvim   | リモート/コンテナ開発（Dev Containers 相当） |
 
 ### Markdown
@@ -337,7 +337,7 @@ common/nvim/.config/nvim/lua/plugins/
 ├── session.lua            # セッション管理設定
 ├── solidity.lua           # Solidity 開発支援 (LSP, treesitter, forge fmt)
 ├── tiny-inline-diagnostic.lua # インライン診断表示 (virtual_text 置換)
-├── tmux-navigator.lua     # tmux 連携設定
+├── tmux-navigator.lua     # tmux / TUIOS / Rex 連携設定
 ├── typst.lua              # Typst LSP 設定 (Tinymist: exportPdf=onType)
 ├── typescript-enhanced.lua # tsgo (TypeScript 7 native LSP) + vtsls 無効化
 ├── dropbar.lua            # ブレッドクラムナビゲーション
