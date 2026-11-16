@@ -21,11 +21,8 @@ local function navigate(key, direction, command)
     return
   end
   local window = vim.api.nvim_get_current_win()
-  local explorer = vim.bo.filetype == "snacks_picker_list"
-  if not explorer then
-    vim.cmd("wincmd " .. key)
-  end
-  if explorer or vim.api.nvim_get_current_win() == window then
+  vim.cmd("wincmd " .. key)
+  if vim.api.nvim_get_current_win() == window then
     outer_focus(direction)
   end
 end
