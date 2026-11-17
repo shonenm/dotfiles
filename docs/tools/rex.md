@@ -51,6 +51,7 @@ remote Rex は対象外。helper はネットワークの `REX_SERVER` を拒否
 | `Ctrl+h/j/k/l` | pane 移動（prefix なしでも可） |
 | `H/J/K/L` | pane resize |
 | `r` | 設定 reload |
+| `[` | pane の scrollback を tmux の copy mode で開く（[rex-tmux-copy](https://github.com/tomarrell/rex-tmux-copy)、[Plugin](#plugin) で管理）。`v` / `V` / `Ctrl+v` で選択、`y` / `Enter` で OSC 52 にコピー、`q` で閉じる |
 
 prefix 不要の `Ctrl+h/j/k/l` は [vim-rex-navigator](https://github.com/paul-enz/vim-rex-navigator)（[Plugin](#plugin) で管理）で pane 移動する。前面が vim / nvim の pane ではキーを Neovim に渡し、Neovim は内部 split を先に移動して端で `rex focus` を呼ぶ（`common/nvim/.config/nvim/lua/plugins/tmux-navigator.lua`）。前面が ssh の pane（rcon のリモート nvim / tmux）でもキーを渡す。plugin は渡す先を vim / nvim に固定しているため、`init.lua` で binding の前にこの判定を挟んでいる。Rex 内でローカルの tmux / tuios を動かす運用は想定しない。plugin 同梱の Neovim 側 mapping は既存の tuios / snacks explorer 対応を上書きするため使わない。
 
@@ -118,6 +119,8 @@ rex config reload
 ```
 
 追加は manifest に1行足して `rex-plugins sync` し、`init.lua` に `plugin("<module>")` を書く。plugin の読み込みに失敗しても設定全体は止めず、Rex の log に警告して読み飛ばす。manifest から外した plugin の取得先は消さず、`sync` が `unlisted` と報告する。中身を確認してから手で削除する。
+
+copy mode は開いた時点の snapshot で、表示位置は scrollback の末尾から始まる。vim など全画面 program では現在の画面だけになる。pane の実行先 machine に tmux 3.2 以上が必要で、copy mode の追加設定はその machine の `~/.config/rex/tmux-copy.conf` に書く。
 
 plugin が別の binary を必要とする場合、binary は [新ツール追加時の登録先](../install/setup-new-environment.md#新ツール追加時の登録先) に従って登録する。manifest は Lua module だけを扱う。`leaf rex install` のように `~/.config/rex/init.lua` を書き換える installer は Stow 先の正本を変更するため使わない。
 
