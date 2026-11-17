@@ -22,9 +22,9 @@ when_to_use: "Use when the user wants to register a new rcon target (remote host
 ### 使用例
 
 ```
-/d-setup-rcon-target devhost
-/d-setup-rcon-target devhost:myproject-dev
-/d-setup-rcon-target devhost:another-container --apply
+/d-setup-rcon-target myhost
+/d-setup-rcon-target myhost:myproject-dev
+/d-setup-rcon-target myhost:another-container --apply
 ```
 
 ## 手順

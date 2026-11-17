@@ -2,8 +2,8 @@
 # tmux server restart with layout, session-group, container, and agent recovery.
 #
 # Usage:
-#   tmux-server-restart [host] [--yes]
-#   tmux-server-restart [host] --dry-run
+#   tmux-server-restart <host> [--yes]
+#   tmux-server-restart <host> --dry-run
 #
 # The local mode invokes the same script on the remote host, so the restart
 # happens outside tmux and the SSH tty can attach to the restored session.
@@ -17,12 +17,11 @@ DRY_RUN=false
 NO_ATTACH=false
 SNAPSHOT_DIR_ARG=""
 ATTACH_WINDOW=0
-HOST="devhost"
-HOST_SET=false
+HOST=""
 
 usage() {
   cat <<'EOF'
-Usage: tmux-server-restart [host] [options]
+Usage: tmux-server-restart <host> [options]
 
 Restart a remote tmux server and recover its saved layout, groups, containers,
 and AI agent sessions.
@@ -46,9 +45,8 @@ for arg in "$@"; do
     -h|--help) usage; exit 0 ;;
     --*) echo "Unknown option: $arg" >&2; usage >&2; exit 2 ;;
     *)
-      if [[ "$REMOTE" == false && "$HOST_SET" == false ]]; then
+      if [[ "$REMOTE" == false && -z "$HOST" ]]; then
         HOST="$arg"
-        HOST_SET=true
       else
         echo "Unexpected argument: $arg" >&2; usage >&2; exit 2
       fi
@@ -57,6 +55,7 @@ for arg in "$@"; do
 done
 
 if [[ "$REMOTE" == false ]]; then
+  [[ -n "$HOST" ]] || { echo "Missing host" >&2; usage >&2; exit 2; }
   if [[ "$ASSUME_YES" == false && "$DRY_RUN" == false ]]; then
     printf 'Restart tmux server on %s and restore its sessions? [y/N] ' "$HOST" >&2
     read -r answer
@@ -67,7 +66,7 @@ if [[ "$REMOTE" == false ]]; then
   [[ "$DRY_RUN" == true ]] && remote_args+=(--dry-run)
   [[ "$NO_ATTACH" == true ]] && remote_args+=(--no-attach)
   [[ -n "$SNAPSHOT_DIR_ARG" ]] && remote_args+=("--snapshot=$SNAPSHOT_DIR_ARG")
-  # rcon's PATH is required: /usr/bin/tmux on devhost is the incompatible 3.2a.
+  # rcon's PATH is required: /usr/bin/tmux on myhost is the incompatible 3.2a.
   remote_command="export PATH=\"\$HOME/.local/bin:\$HOME/.pixi/bin:\$PATH\"; export TERMINFO_DIRS=\"\$HOME/.terminfo:/usr/share/terminfo:/lib/terminfo\"; exec \"\$HOME/dotfiles/scripts/tmux-server-restart\""
   for remote_arg in "${remote_args[@]}"; do
     remote_command+=" $(printf '%q' "$remote_arg")"

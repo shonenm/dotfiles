@@ -15,7 +15,7 @@ TUIOSでは[native Remote hosts](../tools/tuios.md#remote-hosts)でホストの�
 
 ```bash
 rcon                      # fzf でターゲット選択
-rcon devhost:myproject-dev   # host:container 形式で直接指定
+rcon myhost:myproject-dev   # host:container 形式で直接指定
 rcon pi-500               # host のみ（コンテナなし）
 rcon pi-500 dev           # tmux セッション名を明示指定
 ```
@@ -25,8 +25,8 @@ rcon pi-500 dev           # tmux セッション名を明示指定
 `~/.config/rcon/targets` に1行1ターゲットで記載:
 
 ```
-devhost:myproject-dev
-devhost:another-container
+myhost:myproject-dev
+myhost:another-container
 pi-500
 ```
 

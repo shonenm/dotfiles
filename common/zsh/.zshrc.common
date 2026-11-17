@@ -451,7 +451,7 @@ rssh() {
 # リモート接続 (SSH + host tmux + Docker をワンコマンドで)
 # Usage: rcon [host:container | host] [tmux-session]
 #   rcon                      → fzf でターゲット選択
-#   rcon devhost:myproject-dev   → 直接指定 (host:container)
+#   rcon myhost:myproject-dev   → 直接指定 (host:container)
 #   rcon pi-500               → 直接指定 (host のみ)
 #   rcon pi-500 dev           → セッション名を明示指定
 # Targets for fzf: ~/.config/rcon/targets (1行1ターゲット: host:container or host)
@@ -522,7 +522,7 @@ rcon() {
     # Host-only: attach or create a plain host tmux session (no docker).
     # If the session name matches a directory under $HOME on the remote
     # host, use it as -c so the session opens at the project root. This
-    # makes `rcon devhost myproject` land in ~/myproject without manual cd.
+    # makes `rcon myhost myproject` land in ~/myproject without manual cd.
     local sess="${session:-main}"
     # PATH order: .local/bin BEFORE .pixi/bin so that the source-built
     # tmux 3.7b at ~/.local/bin/tmux wins over pixi's conda-forge tmux 3.6.
@@ -551,15 +551,16 @@ rcon() {
 }
 
 # ----------------------------------------------------------------------------
-# dotsync: push local dotfiles + pull on devhost in one shot
+# dotsync: push local dotfiles + pull on the remote host in one shot
 # ----------------------------------------------------------------------------
-# Mac is the source of truth; devhost is the only Linux git clone (containers
-# read devhost's clone via bind mount, no separate pull needed). post-merge
-# git hook on devhost broadcasts `tmux source-file` to all running servers, so
-# tmux config edits propagate without manual prefix+r on remote.
+# Mac is the source of truth; the remote host is the only Linux git clone
+# (containers read its clone via bind mount, no separate pull needed).
+# post-merge git hook there broadcasts `tmux source-file` to all running
+# servers, so tmux config edits propagate without manual prefix+r on remote.
+# The host's SSH alias lives outside git in ~/.config/dotsync/host.
 #
-# Usage: dotsync           # push current branch + devhost pull
-#        dotsync --no-pull # push only (skip devhost pull, useful when offline)
+# Usage: dotsync           # push current branch + remote pull
+#        dotsync --no-pull # push only (skip remote pull, useful when offline)
 dotsync() {
   local skip_pull=false
   [[ "$1" == "--no-pull" ]] && skip_pull=true
@@ -568,8 +569,15 @@ dotsync() {
   ( cd "$repo_dir" && git push ) || { echo "dotsync: push failed" >&2; return 1; }
 
   if [[ "$skip_pull" == "false" ]]; then
-    ssh -o ConnectTimeout=5 devhost 'cd ~/dotfiles && git pull --ff-only' \
-      || { echo "dotsync: devhost pull failed (push succeeded)" >&2; return 1; }
+    local host_file="${XDG_CONFIG_HOME:-$HOME/.config}/dotsync/host"
+    local host
+    [[ -r "$host_file" ]] && host="$(<"$host_file")"
+    if [[ -z "$host" ]]; then
+      echo "dotsync: $host_file not set, skipped remote pull" >&2
+      return 0
+    fi
+    ssh -o ConnectTimeout=5 "$host" 'cd ~/dotfiles && git pull --ff-only' \
+      || { echo "dotsync: $host pull failed (push succeeded)" >&2; return 1; }
   fi
 }
 

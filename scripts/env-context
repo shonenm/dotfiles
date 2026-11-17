@@ -18,7 +18,7 @@
 #   rcon (Mac) → ssh remote → docker exec (-e RCON_*)
 # The RCON_* env vars propagate the origin context into the container so
 # env-context inside the container can reconstruct "I am myproject-dev
-# on devhost, the tmux I should target is devhost's host tmux". Without those
+# on myhost, the tmux I should target is myhost's host tmux". Without those
 # vars (e.g. someone ran `docker exec` manually), env-context reports
 # `unknown` for the missing dimensions — tools should fail loudly rather
 # than silently guess.
@@ -75,7 +75,7 @@ elif [[ "$os_name" == "Darwin" ]]; then
   tmux_access_cmd="tmux"
   claude_projects_dir="$HOME/.claude/projects"
 
-# --- case: Linux host (e.g. devhost, run directly) ---
+# --- case: Linux host (e.g. myhost, run directly) ---
 else
   env_type="linux-host"
   host_machine="$(hostname -s 2>/dev/null || hostname || echo "unknown")"

@@ -153,7 +153,7 @@ remote（rcon 接続先のホストやコンテナ）でも dotfiles を stow �
 
 ```bash
 diff-explain-open <host>[:<container>]              # 最新の HTML を取得して開く
-diff-explain-open devhost:myproject-dev ~/.cache/diff-explain/x.html   # パス明示
+diff-explain-open myhost:myproject-dev ~/.cache/diff-explain/x.html   # パス明示
 ```
 
 `ssh`（コンテナ指定時は `docker exec` 経由）で HTML を吸い出し、ローカルの一時ディレクトリに置いて `open` / `xdg-open` します。ターゲット指定は rcon の `~/.config/rcon/targets` と同じ `host` / `host:container` 形式。単一 HTML なので転送はこれだけで完結します（`diff-explain render -o -` で stdout に出せるため、別の転送手段に差し替えることもできます）。
@@ -219,9 +219,9 @@ interests:
 ### 使い方
 
 ```
-/d-setup-rcon-target devhost
-/d-setup-rcon-target devhost:myproject-dev
-/d-setup-rcon-target devhost:another-container
+/d-setup-rcon-target myhost
+/d-setup-rcon-target myhost:myproject-dev
+/d-setup-rcon-target myhost:another-container
 ```
 
 ### 動作
