@@ -10,8 +10,8 @@
 
 ```
 Mac (Ghostty)
-  └─ ssh devhost
-      └─ host tmux server (devhost 上)
+  └─ ssh myhost
+      └─ host tmux server (myhost 上)
           ├─ session "myproject-dev"      → docker exec myproject-dev
           ├─ session "another-container" → docker exec another-container
           └─ session "main"              → host shell (container なし target)
@@ -27,7 +27,7 @@ Mac (Ghostty)
 | レイヤ | 何を設定するか |
 |-------|---------------|
 | Mac 側 | `~/.config/rcon/targets` に target を1行追加 |
-| リモートホスト (devhost等) | dotfiles install 済 + tmux 起動可 + docker CLI 利用可 |
+| リモートホスト (myhost等) | dotfiles install 済 + tmux 起動可 + docker CLI 利用可 |
 | Docker container | **volume mount** で `~/.claude` 等をホストと共有 |
 
 ## 1. Mac 側: target 追加
@@ -35,26 +35,26 @@ Mac (Ghostty)
 ```bash
 mkdir -p ~/.config/rcon
 cat >> ~/.config/rcon/targets <<'EOF'
-devhost
-devhost:myproject-dev
-devhost:another-container
+myhost
+myhost:myproject-dev
+myhost:another-container
 EOF
 ```
 
 形式: `<host>` または `<host>:<container>`。`<host>` は `~/.ssh/config` で解決可能な名前。コメントは `#` で開始。
 
-`rcon` (引数なし) で fzf 選択、`rcon devhost:myproject-dev` で直接指定。
+`rcon` (引数なし) で fzf 選択、`rcon myhost:myproject-dev` で直接指定。
 
-## 2. リモートホスト (devhost 等): 一度だけのセットアップ
+## 2. リモートホスト (myhost 等): 一度だけのセットアップ
 
 新しいリモートホストを使う初回:
 
 ```bash
 # Mac 側で SSH 公開鍵を配置 (パスワードなし接続)
-ssh-copy-id devhost
+ssh-copy-id myhost
 
 # リモート側で dotfiles を clone & install
-ssh devhost
+ssh myhost
 git clone git@github.com:shonenm/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./install.sh --no-sudo   # sudoless ホストの場合
@@ -68,8 +68,8 @@ mac のクリップボード読取・任意 URI open を許してしまうため
 
 ```bash
 mkdir -p ~/.ssh/config.d
-cat >> ~/.ssh/config.d/devhost.conf <<'EOF'
-Host devhost
+cat >> ~/.ssh/config.d/myhost.conf <<'EOF'
+Host myhost
   RemoteForward 2489 localhost:2489
 EOF
 ```
@@ -83,7 +83,7 @@ EOF
 
 確認:
 ```bash
-ssh devhost
+ssh myhost
 command -v tmux                              # no-sudoでは ~/.local/bin/tmux
 ls -la ~/dotfiles/scripts/tmux-docker-enter   # 実行可能
 ls ~/.tmux/plugins/tpm                         # TPM 展開済
@@ -148,10 +148,10 @@ docker run -d \
 
 ```bash
 # Mac 側で
-rcon devhost                    # host のみ (sanity check)
+rcon myhost                    # host のみ (sanity check)
 # → host tmux session "main" に attach
 
-rcon devhost:myproject-dev       # container 接続
+rcon myhost:myproject-dev       # container 接続
 # → host tmux session "myproject-dev" 作成、最初の pane が container 内 zsh
 
 # 動作確認
@@ -185,12 +185,12 @@ prefix+a   # agent status popup → ペインへジャンプ
 
 ```
 朝:
-  Mac: rcon devhost:myproject-dev
+  Mac: rcon myhost:myproject-dev
   作業 (nvim, server起動, claude起動 等)
   prefix+d で detach (tmux session は host 側で生き続ける)
 
 別 container に切替:
-  Mac: rcon devhost:another-container
+  Mac: rcon myhost:another-container
   または既存接続中なら prefix+s → 別 session 選択
 
 夜:
@@ -250,7 +250,7 @@ tmux 制限のため `rcon` 内で自動的に `-` に sanitize される (`mypr
 `/d-setup-rcon-target` skill を使うと target 追加 + 接続検証 + docker mount スニペット生成を半自動化できる。
 
 ```
-/d-setup-rcon-target devhost:new-container
+/d-setup-rcon-target myhost:new-container
 ```
 
 詳細はスキル定義 (`common/claude/.claude/skills/d-setup-rcon-target/SKILL.md`) 参照。

@@ -40,7 +40,7 @@ class SessionTests(unittest.TestCase):
         switch.assert_called_once_with("--create", "--cwd", "/tmp/a b;$x", "work")
 
     def test_remote_refusal_guides_user_to_native_picker(self):
-        refused = subprocess.CompletedProcess([], 1, "", "switch-session failed: refused: switch_session came from host devhost and would change this machine, not the session")
+        refused = subprocess.CompletedProcess([], 1, "", "switch-session failed: refused: switch_session came from host myhost and would change this machine, not the session")
         with patch.object(subprocess, "run", return_value=refused) as command, patch.object(tui, "run") as extra, patch.object(sys.stdin, "isatty", return_value=True), patch("builtins.print") as message, patch("builtins.input") as acknowledge:
             tui.switch_session("remote-work")
         command.assert_called_once_with(["tuios", "switch-session", "remote-work"], capture_output=True, text=True)
@@ -469,9 +469,6 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(command["type"], "shell")
             self.assertIn("client_pid=$PPID;", command["command"])
             self.assertIn(f"space-nav {direction} $client_pid", command["command"])
-        hosts = tomllib.loads((ROOT / "mac/tuios/.config/tuios/config.d/20-hosts.toml").read_text())["hosts"]
-        self.assertEqual(hosts["devhost"]["addr"], "devhost")
-        self.assertEqual(hosts["pi-500"]["addr"], "pi-500")
 
     @unittest.skipUnless(shutil.which("tuios"), "tuios not installed")
     def test_installer_preserves_tmux_hooks_and_is_idempotent(self):

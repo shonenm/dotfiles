@@ -136,13 +136,18 @@ spaceはホストごとの分類。同名spaceが複数ホストにあっても�
 
 ## Remote hosts
 
-Mac用の`20-hosts.toml`でSSH aliasの`devhost`と`pi-500`を登録する。native sidebar / switcherからlocalとremoteを同じ画面で管理する。
+接続先のSSH aliasはgit管理外の`~/.config/tuios/config.d/20-hosts.toml`に各マシンで書く。native sidebar / switcherからlocalとremoteを同じ画面で管理する。
+
+```toml
+[hosts.myhost]
+addr = "myhost"
+```
 
 ```bash
 tuios hosts                           # 接続状態とdaemon version
-tuios hosts sync devhost --start         # binaryを揃え、未起動daemonを開始
-tuios new --host devhost work            # remoteに永続sessionを作成して表示
-tuios attach --host devhost work         # 既存remote sessionを表示
+tuios hosts sync myhost --start         # binaryを揃え、未起動daemonを開始
+tuios new --host myhost work            # remoteに永続sessionを作成して表示
+tuios attach --host myhost work         # 既存remote sessionを表示
 ```
 
 `hosts sync --start`は既存daemonを維持する。更新済みbinaryへ切り替えるdaemon再起動は、そこで動く全paneのprogramを終了する操作なので、作業の切れ目に行う。
@@ -153,7 +158,7 @@ TUIOSのhost登録はSSHホストが対象。Docker containerへ入るsessionは
 
 ## Container session
 
-`tui rcon`は`~/.config/rcon/targets`（`host:container`形式）からfzfで選ぶ。`tui rcon devhost:myproject-dev`のように直接指定もできる。このマシンのcontainerは`local:<container>`と書く。containerなしの`host`は、そのホストの`main` sessionを開く。
+`tui rcon`は`~/.config/rcon/targets`（`host:container`形式）からfzfで選ぶ。`tui rcon myhost:myproject-dev`のように直接指定もできる。このマシンのcontainerは`local:<container>`と書く。containerなしの`host`は、そのホストの`main` sessionを開く。
 
 - container名（`:` `.`は`-`）のsessionを作成・表示する。作成前に、sessionのホストの`${XDG_STATE_HOME:-~/.local/state}/tuios-rcon/<session>`へcontainer名を書く。remoteへは`[hosts]`の`addr`でSSHして書く。
 - pane shell（`tmux-default-shell`）はこのファイルがあると`tmux-docker-enter`で入る。分割・新規pane・daemon再起動後の復元も同じ。containerが停止中ならホストshellになる。

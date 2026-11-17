@@ -6,7 +6,7 @@
 # without requiring manual prefix+r on each.
 #
 # This hook is OS-agnostic: works on both Mac (~/.tmux conf path) and
-# Linux (where devhost pulls dotfiles after `dotsync` is run from Mac).
+# Linux (where myhost pulls dotfiles after `dotsync` is run from Mac).
 #
 # Linked into .git/hooks/post-merge by install.sh.
 

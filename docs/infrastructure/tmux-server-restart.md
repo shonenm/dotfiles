@@ -3,7 +3,7 @@
 > **由来:** **Upstream** tmux / **Plugin** tmux-resurrect・tmux-continuum / **Configuration** 保存・復元設定 / **Custom** agent再接続手順（[区分](../provenance.md#区分)）
 
 長寿命 tmux server が重くなった時の再起動判断と、AI と協力してセッション・agent を
-復元する手順。実測は 2026-07-18 の devhost(devhost.example) 対応に基づく。
+復元する手順。実測は 2026-07-18 のリモートホスト対応に基づく。
 
 ## いつ再起動すべきか
 
@@ -60,8 +60,8 @@ hook で保存し、shell の pane へ resume コマンドを送る。`tmux-serv
 復元を手作業にしないため、推奨コマンドを用意している。
 
 ```bash
-tmux-server-restart devhost          # 確認後に再起動・復元・attach
-tmux-server-restart devhost --dry-run # 状態確認のみ
+tmux-server-restart myhost          # 確認後に再起動・復元・attach
+tmux-server-restart myhost --dry-run # 状態確認のみ
 ```
 
 このコマンドは次を自動化する:
@@ -98,12 +98,12 @@ tmux list-windows -a -F '#{session_name}|#{window_layout}' > ~/.cache/tmux-resto
 > - server env に `~/.pixi/bin`(zsh の場所)が無く、display-popup(prefix g/G/Q 等)が
 >   `zsh` を見失い全 popup が無反応になる。
 >
-> `rcon devhost`(host target)は `SHELL=zsh` + フル PATH + 正しい `default-command`
+> `rcon myhost`(host target)は `SHELL=zsh` + フル PATH + 正しい `default-command`
 > (`tmux-default-shell`)を設定してから起動するため、これらを全て回避できる。
 
 ```bash
 tmux kill-server        # 全 session 終了・断片化解放
-rcon devhost              # 正しい env で新サーバ起動 + attach
+rcon myhost              # 正しい env で新サーバ起動 + attach
 ```
 
 #### 3. 復元
@@ -127,11 +127,11 @@ rcon devhost              # 正しい env で新サーバ起動 + attach
   で server env の PATH を補い popup を復活(本来は rcon 起動で不要)。
 
 ## AI に依頼する時の指示例
-> devhost の tmux server が重い。fork レイテンシを診断して、重ければ resurrect で
+> myhost の tmux server が重い。fork レイテンシを診断して、重ければ resurrect で
 > レイアウト復元 + agent(claude は --resume、pi は --continue)を再起動して。
 > 起動は必ず rcon 経由。稼働中 agent を kill する前に resume ID を採取しておいて。
 
-## 実測(参考, 2026-07-18 devhost)
+## 実測(参考, 2026-07-18 myhost)
 | 指標 | before | after |
 |---|---|---|
 | fork コスト | 154ms | 8ms |
