@@ -27,10 +27,9 @@ local function plugin(module, opts)
 end
 
 -- remote host の session（ctx.server が host）では、手元の CLI から ssh で繋ぎ直さず
--- server の接続で host 側に popup を開き、host の dotfiles の rex-tools を動かす。
--- cwd を使う popup は手元のパスが前提なので swap だけ対応する。
-local function remote_popup(ctx, kind)
-  if kind ~= "swap" then error("remote host の session では swap のみ対応しています", 0) end
+-- server の接続で host 側に短命の pane を開き、host の dotfiles の rex-tools に popup を任せる。
+-- cwd や toggle の扱いは手元と同じ rex-tools の処理になる。
+local function remote_popup(ctx, command, kind)
   local server = rex.server(ctx.server)
   -- host への接続は session に attach しないと session の操作を受け付けない。
   assert(server.call("session.attach", { session_id = ctx.session_id }))
@@ -41,14 +40,13 @@ local function remote_popup(ctx, kind)
   end
   if not window then error("呼出元 pane が表示されていません", 0) end
   local _, err = server.call("session.new_layer", {
-    session_id = ctx.session_id, window_id = window, bounds = { .1, .3, .8, .4 }, focus = true,
-    layout = { block = { flavor = "com.superlogical.terminal.shell", label = "dotfiles-popup/swap/" .. ctx.block_id,
+    session_id = ctx.session_id, window_id = window, bounds = { .1, .4, .8, .2 }, focus = true,
+    -- dotfiles-popup/ の label にして、swap の候補や origin の解決で popup として扱わせる。
+    layout = { block = { flavor = "com.superlogical.terminal.shell", label = "dotfiles-popup/launcher/" .. ctx.block_id,
       options = {
-        -- host の login shell は profile が command を実行させないため通さない。
-        -- その分 PATH が最小になるので、mise の fzf / python3 を明示する。
-        login = false,
-        command = { "sh", "-c", 'PATH="$HOME/.local/share/mise/shims:$PATH" exec "$HOME/dotfiles/scripts/rex-tools" "$@"',
-          "rex-tools", "view", "swap", "--session", ctx.session_id, "--block", ctx.block_id },
+        -- 失敗したら閉じる前に理由を読めるようにする。
+        command = { "sh", "-c", '"$HOME/dotfiles/scripts/rex-tools" "$@" || read -r _',
+          "rex-tools", command, kind, "--session", ctx.session_id, "--block", ctx.block_id },
       } } },
   })
   if err then error(err, 0) end
@@ -60,7 +58,7 @@ local function action(name, title, command, kind)
     title = title,
     category = "Dotfiles",
     run = function(ctx)
-      if ctx.server then return remote_popup(ctx, kind) end
+      if ctx.server then return remote_popup(ctx, command, kind) end
       local argv = { helper, command, kind, "--session", ctx.session_id,
         "--block", ctx.block_id }
       if ctx.client_id then

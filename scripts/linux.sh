@@ -463,7 +463,19 @@ set_default_shell() {
   if [[ "$NO_SUDO" == "true" ]]; then
     local profile="$HOME/.profile"
     local marker='# dotfiles: exec zsh -l (no-sudo mode)'
-    if [[ -f "$profile" ]] && grep -qF "$marker" "$profile"; then
+    # `bash -l -c CMD`（Rex の floating pane 等）でも端末が付くため、-c の command を
+    # 捨てないよう BASH_EXECUTION_STRING が空のときだけ zsh へ移る。
+    # shellcheck disable=SC2016 # intentionally literal sh for ~/.profile
+    local old_cond='if [ -z "$ZSH_VERSION" ] && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then'
+    # shellcheck disable=SC2016 # intentionally literal sh for ~/.profile
+    local cond='if [ -z "$ZSH_VERSION" ] && [ -z "$BASH_EXECUTION_STRING" ] && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then'
+    if [[ -f "$profile" ]] && grep -qF "$old_cond" "$profile"; then
+      local tmp
+      tmp=$(mktemp)
+      awk -v old="$old_cond" -v new="$cond" '$0 == old { $0 = new } { print }' "$profile" >"$tmp" && cat "$tmp" >"$profile"
+      rm -f "$tmp"
+      log_success "Updated zsh exec condition in ~/.profile"
+    elif [[ -f "$profile" ]] && grep -qF "$marker" "$profile"; then
       log_success "zsh exec marker already present in ~/.profile"
     else
       # shellcheck disable=SC2016 # intentionally written as literal sh into ~/.profile
@@ -473,7 +485,7 @@ set_default_shell() {
         echo '# zsh is installed under ~/.pixi/bin in no-sudo mode; ensure it is on PATH'
         echo '# before the lookup so login bash hands off to zsh instead of staying put.'
         echo '[ -d "$HOME/.pixi/bin" ] && PATH="$HOME/.pixi/bin:$PATH"'
-        echo 'if [ -z "$ZSH_VERSION" ] && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then'
+        echo "$cond"
         echo '  exec zsh -l'
         echo 'fi'
       } >> "$profile"
