@@ -143,6 +143,16 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(choose.call_args_list[1].args[0], ["1* 60x100% @0,0  shell  zsh"])
         self.assertEqual(run.call_args.args[0][-5:], ["swap", "-s", "s", "b", "a"])
 
+    def test_tiled_layout_from_floating_pane_uses_its_window(self):
+        view = {"windows": [
+            {"layers": [{"kind": "tiled", "blocks": [{"block_id": "x"}], "layout": "other"}]},
+            {"layers": [{"kind": "tiled", "blocks": [{"block_id": "a"}], "layout": "mine"},
+                        {"kind": "floating", "blocks": [{"block_id": "f"}]}]}]}
+        with patch.object(tool, "api", return_value=view):
+            self.assertEqual(tool.tiled_layout("s", "f"), "mine")
+            with self.assertRaises(RuntimeError):
+                tool.tiled_layout("s", "missing")
+
     def test_cwd_decodes_osc7(self):
         with patch.object(tool, "terminal", return_value={"pwd": "file://localhost/tmp/a%20b"}), \
              patch.object(Path, "is_dir", return_value=True):

@@ -179,12 +179,14 @@ def project(client):
 
 
 def tiled_layout(session, block):
+    # floating pane から呼んだ場合は、同じ window の tiled layer を対象にする。
     view = api(session, "session.view")
     for window in view["windows"]:
-        for layer in window["layers"]:
-            if layer["kind"] == "tiled" and any(b["block_id"] == block for b in layer["blocks"]):
-                return layer["layout"]
-    raise RuntimeError("呼出元が tiled pane ではありません")
+        if any(b["block_id"] == block for layer in window["layers"] for b in layer["blocks"]):
+            for layer in window["layers"]:
+                if layer["kind"] == "tiled":
+                    return layer["layout"]
+    raise RuntimeError("呼出元の window に tiled pane がありません")
 
 
 def shape(node):
