@@ -90,5 +90,33 @@ rex.bind = function(key, action, args)
 end
 plugin("vim-rex-navigator")
 rex.bind = bind
--- Rex に copy mode がないため、prefix [ で pane の scrollback を tmux の copy mode で開く。
-plugin("rex-tmux-copy", { key = "ctrl+space>[" })
+-- Rex に copy mode がないため、prefix v / [ で pane の scrollback を tmux の copy mode で開く。
+-- copy mode 内の key は tmux-copy.conf。prefix C-u は tmux 時代と同じく半ページ戻った状態で開く。
+local copy_mode
+local define = rex.action
+rex.action = function(spec)
+  if spec.name == "tmux_copy_mode" then copy_mode = spec.run end
+  return define(spec)
+end
+plugin("rex-tmux-copy", { key = "ctrl+space>v" })
+rex.action = define
+if copy_mode then
+  rex.bind("ctrl+space>[", "tmux_copy_mode")
+  rex.action{
+    name = "dotfiles_copy_halfpage",
+    title = "Copy Mode (tmux): Half Page Up",
+    category = "Dotfiles",
+    run = function(ctx)
+      -- plugin は起動 command を受け取らないため、作成される block の command に印を付ける。
+      local block = rex.layout.block
+      rex.layout.block = function(spec)
+        spec.options.command = { "env", "REX_TMUX_COPY_HALFPAGE=1", unpack(spec.options.command) }
+        return block(spec)
+      end
+      local ok, err = pcall(copy_mode, ctx)
+      rex.layout.block = block
+      if not ok then error(err, 0) end
+    end,
+  }
+  rex.bind("ctrl+space>ctrl+u", "dotfiles_copy_halfpage")
+end
