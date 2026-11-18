@@ -131,17 +131,23 @@ class UnitTests(unittest.TestCase):
         layout = split()
         layout["split"]["before"]["rect"] = [0, 0, .6, 1]
         layout["split"]["after"]["rect"] = [.6, 0, .4, 1]
-        with patch.object(tool, "tiled_layout", return_value=layout), \
-             patch.object(tool, "blocks", return_value=[{"block_id": "a", "label": "shell"}]), \
+        popup = {"rect": [.1, .1, .8, .8], "block_id": "p"}
+        floating = {"rect": [.5, 0, .5, 1], "block_id": "f"}
+        layers = [{"layout": layout}, {"layout": floating}, {"layout": popup}]
+        with patch.object(tool, "window_layers", return_value=layers), \
+             patch.object(tool, "blocks", return_value=[{"block_id": "a", "label": "shell"},
+                                                        {"block_id": "p", "label": tool.TAG + "swap/a"}]), \
              patch.object(tool, "terminal", return_value={"foreground": {"name": "zsh"}}), \
              patch.object(tool, "choose", side_effect=lambda rows, header: rows[-1]) as choose, \
              patch.object(tool, "rex_binary", return_value="rex"), \
              patch.object(tool, "run", return_value=Mock(returncode=0)) as run:
             tool.swap("s", "a")
-        self.assertEqual(choose.call_args_list[0].args[0], ["1* 60x100% @0,0  shell  zsh", "2  40x100% @60,0    zsh"])
+        # floating pane は候補に含め、dotfiles の popup は除く。
+        self.assertEqual(choose.call_args_list[0].args[0], ["1* 60x100% @0,0  shell  zsh", "2  40x100% @60,0    zsh",
+                                                            "3  50x100% @50,0    zsh"])
         # 2回目は1回目の選択を除く。
-        self.assertEqual(choose.call_args_list[1].args[0], ["1* 60x100% @0,0  shell  zsh"])
-        self.assertEqual(run.call_args.args[0][-5:], ["swap", "-s", "s", "b", "a"])
+        self.assertEqual(choose.call_args_list[1].args[0], ["1* 60x100% @0,0  shell  zsh", "2  40x100% @60,0    zsh"])
+        self.assertEqual(run.call_args.args[0][-5:], ["swap", "-s", "s", "f", "b"])
 
     def test_tiled_layout_from_floating_pane_uses_its_window(self):
         view = {"windows": [

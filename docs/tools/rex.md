@@ -42,7 +42,7 @@ remote Rex は対象外。helper はネットワークの `REX_SERVER` を拒否
 | `A` | メタデータ一覧、80% × 80% |
 | `F` | ghq / zoxide / home / dotfiles から project 選択 |
 | `l` | layout の保存・適用 |
-| `m` | 同じ window の tiled pane を2つ fzf で選び、位置を入れ替える（tmux の `prefix m` と同じ）。floating pane から呼んだ場合も、その window の tiled pane が対象 |
+| `m` | 同じ window の pane を2つ fzf で選び、位置を入れ替える（tmux の `prefix m` と同じ）。floating layer の pane も候補に含め、dotfiles の popup は除く |
 | `N` | 新しい tab に Neovim / Claude / shell の雛形 |
 | `c` / `n` / `p` | 新規 / 次 / 前の tab |
 | `s` / `f` | Rex 標準 session picker |

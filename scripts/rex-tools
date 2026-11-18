@@ -178,14 +178,18 @@ def project(client):
     client_action(client, "session.select", {"session_id": session})
 
 
+def window_layers(session, block):
+    for window in api(session, "session.view")["windows"]:
+        if any(b["block_id"] == block for layer in window["layers"] for b in layer["blocks"]):
+            return window["layers"]
+    raise RuntimeError("呼出元 pane が表示されていません")
+
+
 def tiled_layout(session, block):
     # floating pane から呼んだ場合は、同じ window の tiled layer を対象にする。
-    view = api(session, "session.view")
-    for window in view["windows"]:
-        if any(b["block_id"] == block for layer in window["layers"] for b in layer["blocks"]):
-            for layer in window["layers"]:
-                if layer["kind"] == "tiled":
-                    return layer["layout"]
+    for layer in window_layers(session, block):
+        if layer["kind"] == "tiled":
+            return layer["layout"]
     raise RuntimeError("呼出元の window に tiled pane がありません")
 
 
@@ -239,10 +243,13 @@ def panes(node):
 
 
 def swap(session, block):
-    # tmux の prefix m と同じく、同じ window の tiled pane を2つ選んで中身を入れ替える。
+    # tmux の prefix m と同じく、同じ window の pane を2つ選んで中身を入れ替える。
+    # floating layer の pane も対象にし、dotfiles の popup は除く。
     labels = {b["block_id"]: b.get("label", "") for b in blocks(session)}
+    candidates = [pane for layer in window_layers(session, block) for pane in panes(layer["layout"])
+                  if not labels.get(pane[0], "").startswith(TAG)]
     rows = []
-    for index, (bid, (x, y, w, h)) in enumerate(panes(tiled_layout(session, block)), 1):
+    for index, (bid, (x, y, w, h)) in enumerate(candidates, 1):
         foreground = terminal(session, bid, "process").get("foreground") or {}
         command = Path(foreground.get("invoked_path") or foreground.get("name") or "-").name
         mark = "*" if bid == block else " "
