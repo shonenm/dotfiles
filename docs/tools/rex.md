@@ -77,9 +77,9 @@ block の識別は `dotfiles-popup/<kind>/<呼出元block ID>` という label �
 
 `q` / Esc で閉じ、`r` で手動更新、`j/k` で本文を scroll。`d` で agent の報告時刻と未対応項目の説明を表示する。内部 block ID は通常画面に出さない。
 
-再表示時は snapshot cache を最初に描画する。30秒以内なら再取得せず、古ければ前回値を残して裏で更新する。header の経過秒数・更新中・取得失敗表示で鮮度を区別し、失敗しても前回値を消さない。初回だけは取得中表示になる。表示中は30秒間隔、または `r` で更新し、system / Git / provider の取得は並列に行う。既存 helper 自身の cache も引き続き使う。
+再表示時は snapshot cache を最初に描画する。30秒以内なら再取得せず、古ければ前回値を残して裏で更新する。header の経過秒数・更新中・取得失敗表示で鮮度を区別し、失敗しても前回値を消さない。初回だけは取得中表示になる。表示中は30秒間隔、または `r` で更新し、system / Git / provider / agent の取得は並列に行う。agent は pane ごとの状態取得も並列にする。既存 helper 自身の cache も引き続き使う。
 
-snapshot は `$XDG_CACHE_HOME/rex/metadata/`（既定 `~/.cache/rex/metadata/`）に session / 呼出元 block / popup 起動 cwd ごとに保存する。private なファイル権限（0600）で atomic に置き換え、Stow / Git の対象にしない。30秒以内の再表示は snapshot なので、その間の呼出元 cwd 変更などをすぐ反映したい場合は `r` を押す。
+snapshot は `$XDG_CACHE_HOME/rex/metadata.json`（既定 `~/.cache/rex/metadata.json`）に host ごと1つ保存し、全 pane で共有する。初めて開く pane でも直前の snapshot を即座に描画し、header の cwd でどの pane の値か区別する。private なファイル権限（0600）で atomic に置き換え、Stow / Git の対象にしない。30秒以内の再表示は snapshot なので、その間の呼出元 cwd 変更などをすぐ反映したい場合は `r` を押す。
 
 専用 daemon は起動しない。取得中に閉じた場合は先に pane を隠し、実行中の取得処理が timeout / 完了すると process も終了する。
 
