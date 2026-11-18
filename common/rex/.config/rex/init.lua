@@ -38,6 +38,11 @@ local function action(name, title, command, kind)
         table.insert(argv, "--client")
         table.insert(argv, ctx.client_id)
       end
+      -- remote host の session では ctx.server に host が入る。
+      if ctx.server then
+        table.insert(argv, "--server")
+        table.insert(argv, ctx.server)
+      end
       local result, err = rex.exec(argv)
       if not result then error(err) end
       if not result.ok then error(result.stderr) end
