@@ -90,3 +90,5 @@ rex.bind = function(key, action, args)
 end
 plugin("vim-rex-navigator")
 rex.bind = bind
+-- Rex に copy mode がないため、prefix [ で pane の scrollback を tmux の copy mode で開く。
+plugin("rex-tmux-copy", { key = "ctrl+space>[" })
