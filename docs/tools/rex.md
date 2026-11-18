@@ -59,7 +59,7 @@ prefix 不要の `Ctrl+Option+h/l` は前後の tab、`Ctrl+Option+k/j` は前�
 
 prefix 不要の `Ctrl+h/j/k/l` は [vim-rex-navigator](https://github.com/paul-enz/vim-rex-navigator)（[Plugin](#plugin) で管理）で pane 移動する。前面が vim / nvim の pane ではキーを Neovim に渡し、Neovim は内部 split を先に移動して端で `rex focus` を呼ぶ（`common/nvim/.config/nvim/lua/plugins/tmux-navigator.lua`）。前面が ssh の pane（rcon のリモート nvim / tmux）でもキーを渡す。plugin は渡す先を vim / nvim に固定しているため、`init.lua` で binding の前にこの判定を挟んでいる。Rex 内でローカルの tmux / tuios を動かす運用は想定しない。plugin 同梱の Neovim 側 mapping は既存の tuios / snacks explorer 対応を上書きするため使わない。
 
-`Cmd+U` は対応が必要な pane へ全 session を横断して移動する（`common/rex/.config/rex/next_ready.lua`、Rex Beta Discord で grindlemire が公開した action を取り込んだもの）。OSC 7501 の program status を読み、blocked → error → done の順、同じ状態なら古い順に巡回する。続けて押すと次の pane へ進む。done / error は表示済みの pane を飛ばし、blocked は対応するまで残る。表示済みの判定は client が pane の size を要求した時刻で行うため、見ている間に終わった pane は一度別の pane を見るまで対象に残る。
+`Cmd+U` は対応が必要な pane へ、手元と Rex の host（`rex hosts`）の全 session を横断して移動する（`common/rex/.config/rex/next_ready.lua`、Rex Beta Discord で grindlemire が公開した action を取り込んだもの）。OSC 7501 の program status を読み、blocked → error → done / idle の順、同じ状態なら古い順に巡回する。Claude Code は応答を終えると done ではなく idle を報告するため、idle を done と同じに扱う。続けて押すと次の pane へ進む。done / idle / error は表示済みの pane を飛ばし、blocked は対応するまで残る。表示済みの判定は client が pane の size を要求した時刻で行うため、見ている間に終わった pane は一度別の pane を見るまで対象に残る。
 
 ## Popup の保持と終了
 
