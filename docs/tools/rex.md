@@ -55,7 +55,7 @@ remote Rex は対象外。helper はネットワークの `REX_SERVER` を拒否
 | `v` / `[` | pane の scrollback を tmux の copy mode で開く（[rex-tmux-copy](https://github.com/tomarrell/rex-tmux-copy)、[Plugin](#plugin) で管理）。`v` / `V` / `Ctrl+v` で選択、`y` で OSC 52 にコピー、`Enter` / `q` で閉じる。`u` / `d` は半ページ、`Ctrl+u` / `Ctrl+d` は4行スクロール |
 | `Ctrl+u` | copy mode を開き半ページ戻る |
 
-prefix 不要の `Ctrl+Option+h/l` は前後の tab、`Ctrl+Option+k/j` は前後の session へ移動する。tmux の session group を Rex の session、group 内の tmux session を tab に対応させ、tmux の `C-M-hjkl` と同じ指使いで tab 移動と session 移動を区別する。
+prefix 不要の `Ctrl+Option+h/l` は前後の tab、`Ctrl+Option+k/j` は前後の session へ移動する。tab 移動は session 内で循環し、端の tab からは反対の端へ移る（隣の session へは進まない）。tmux の session group を Rex の session、group 内の tmux session を tab に対応させ、tmux の `C-M-hjkl` と同じ指使いで tab 移動と session 移動を区別する。
 
 prefix 不要の `Ctrl+h/j/k/l` は [vim-rex-navigator](https://github.com/paul-enz/vim-rex-navigator)（[Plugin](#plugin) で管理）で pane 移動する。前面が vim / nvim の pane ではキーを Neovim に渡し、Neovim は内部 split を先に移動して端で `rex focus` を呼ぶ（`common/nvim/.config/nvim/lua/plugins/tmux-navigator.lua`）。前面が ssh の pane（rcon のリモート nvim / tmux）でもキーを渡す。plugin は渡す先を vim / nvim に固定しているため、`init.lua` で binding の前にこの判定を挟んでいる。Rex 内でローカルの tmux / tuios を動かす運用は想定しない。plugin 同梱の Neovim 側 mapping は既存の tuios / snacks explorer 対応を上書きするため使わない。
 

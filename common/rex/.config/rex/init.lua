@@ -107,8 +107,21 @@ for _, entry in ipairs({ { "h", "left" }, { "j", "down" }, { "k", "up" }, { "l",
   rex.bind("ctrl+space>shift+" .. entry[1], "pane.resize", { direction = entry[2], amount = 2 })
 end
 -- tmux の session group 移動と同じ指使い。Ctrl+Option+h/l は tab、j/k は session を巡回する。
+-- client.tab.next/previous は session の端で隣の session の tab へ進むため、tab は session 内で循環させる。
+for _, entry in ipairs({ { "previous", "Previous" }, { "next", "Next" } }) do
+  rex.action{
+    name = "dotfiles_tab_" .. entry[1],
+    title = "Dotfiles: " .. entry[2] .. " Tab in Session",
+    category = "Dotfiles",
+    run = function(ctx)
+      local _, err = rex.call("session.focus_" .. entry[1] .. "_window",
+        { session_id = ctx.session_id, wrap = true })
+      if err then error(err) end
+    end,
+  }
+end
 for _, entry in ipairs({
-  { "h", "client.tab.previous" }, { "l", "client.tab.next" },
+  { "h", "dotfiles_tab_previous" }, { "l", "dotfiles_tab_next" },
   { "k", "session.previous" }, { "j", "session.next" },
 }) do
   rex.bind("ctrl+alt+" .. entry[1], entry[2])
