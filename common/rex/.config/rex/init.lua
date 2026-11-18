@@ -105,16 +105,34 @@ for _, entry in ipairs({ { "h", "left" }, { "j", "down" }, { "k", "up" }, { "l",
   rex.bind("ctrl+space>shift+" .. entry[1], "pane.resize", { direction = entry[2], amount = 2 })
 end
 -- tmux の session group 移動と同じ指使い。Ctrl+Option+h/l は tab、j/k は session を巡回する。
--- client.tab.next/previous は session の端で隣の session の tab へ進むため、tab は session 内で循環させる。
-for _, entry in ipairs({ { "previous", "Previous" }, { "next", "Next" } }) do
+-- client.tab.next/previous は session の端で隣の session の tab へ進むため、端では反対の端へ goto する。
+-- 表示中の tab は client が持ち、server の active window を変えても追従しないため client action を使う。
+for _, entry in ipairs({ { "previous", "Previous", 1, -1 }, { "next", "Next", -1, 1 } }) do
+  local name, title, edge, wrap_to = entry[1], entry[2], entry[3], entry[4]
   rex.action{
-    name = "dotfiles_tab_" .. entry[1],
-    title = "Dotfiles: " .. entry[2] .. " Tab in Session",
+    name = "dotfiles_tab_" .. name,
+    title = "Dotfiles: " .. title .. " Tab in Session",
     category = "Dotfiles",
     run = function(ctx)
-      local _, err = rex.call("session.focus_" .. entry[1] .. "_window",
-        { session_id = ctx.session_id, wrap = true })
-      if err then error(err) end
+      local view, err = rex.call("session.view", { session_id = ctx.session_id })
+      if not view then error(err) end
+      local windows, index = view.windows, nil
+      for i, window in ipairs(windows) do
+        for _, layer in ipairs(window.layers) do
+          for _, block in ipairs(layer.blocks) do
+            if block.block_id == ctx.block_id then index = i end
+          end
+        end
+      end
+      if not index then error("focused block の window が見つかりません") end
+      -- edge は端の tab 位置 (1 = 先頭, -1 = 最後)。
+      local at_edge = (edge == 1 and index == 1) or (edge == -1 and index == #windows)
+      if at_edge then
+        -- client.tab.goto の -1 は session の最後の tab にならないため、tab 数で指定する。
+        rex.client.queue("client.tab.goto", { index = wrap_to == -1 and #windows or wrap_to })
+      else
+        rex.client.queue("client.tab." .. name)
+      end
     end,
   }
 end
