@@ -20,7 +20,7 @@ rex config reload
 
 通常の prefix 操作は Rex client が直接実行する。補助の操作一覧 menu や project picker から CLI 経由で session 切替などを実行する場合は、Rex Settings → Rex Server → **Remote Control** が必要。dotfiles はこの許可を自動変更しない。
 
-remote Rex は対象外。helper はネットワークの `REX_SERVER` を拒否する。別ホストの cwd をローカル cwd とみなしたり、ローカルの統計を remote の値として表示したりしない。例外は swap picker（`m`）で、Rex の host（`rex hosts`）の session では host 側の `~/dotfiles/scripts/rex-tools` を popup 内で動かす。host にも dotfiles と fzf（mise）が必要。host の login shell は profile が command を実行させないことがあるため、popup は login shell を通さない。その他の popup は host の session ではエラーにする。
+remote Rex は対象外。helper はネットワークの `REX_SERVER` を拒否する。別ホストの cwd をローカル cwd とみなしたり、ローカルの統計を remote の値として表示したりしない。例外は swap picker（`m`）で、Rex の host（`rex hosts`）の session では `init.lua` が server の host 接続（`rex.server`）で popup を開き、host 側の `~/dotfiles/scripts/rex-tools` を動かす。CLI の `rex -S` は呼出ごとに ssh 接続を張り直し、不安定なため使わない。host にも dotfiles と fzf（mise）が必要。host の login shell は profile が command を実行させないことがあるため、popup は login shell を通さない。その他の popup は host の session ではエラーにする。
 
 ## Prefix は Rex 標準キーシーケンス
 

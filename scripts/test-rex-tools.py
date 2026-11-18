@@ -211,19 +211,6 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(args["layout"]["block"]["options"], {"cwd": "/tmp/project", "command": ["lazygit"]})
         self.assertEqual(args["bounds"][2:], [.8, .8])
 
-    def test_remote_swap_runs_host_rex_tools_without_login_shell(self):
-        entries = [{"block_id": "a", "label": "shell", "placement": "placed", "window_id": "w"}]
-        with patch.object(tool, "SERVER", "host"), patch.object(tool, "blocks", return_value=entries), \
-             patch.object(tool, "cwd_for") as cwd, patch.object(tool, "api") as api:
-            tool.popup("swap", "s", "a")
-            with self.assertRaises(RuntimeError):
-                tool.popup("git", "s", "a")
-        cwd.assert_not_called()
-        options = api.call_args.kwargs["layout"]["block"]["options"]
-        self.assertFalse(options["login"])
-        self.assertEqual(options["command"][:2], ["sh", "-c"])
-        self.assertEqual(options["command"][3:6], ["rex-tools", "view", "swap"])
-
     def test_unknown_popup_fails(self):
         with self.assertRaises(RuntimeError):
             tool.popup("typo", "s", "a")

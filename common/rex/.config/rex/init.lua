@@ -26,22 +26,46 @@ local function plugin(module, opts)
   return mod
 end
 
+-- remote host の session（ctx.server が host）では、手元の CLI から ssh で繋ぎ直さず
+-- server の接続で host 側に popup を開き、host の dotfiles の rex-tools を動かす。
+-- cwd を使う popup は手元のパスが前提なので swap だけ対応する。
+local function remote_popup(ctx, kind)
+  if kind ~= "swap" then error("remote host の session では swap のみ対応しています", 0) end
+  local server = rex.server(ctx.server)
+  -- host への接続は session に attach しないと session の操作を受け付けない。
+  assert(server.call("session.attach", { session_id = ctx.session_id }))
+  local list = assert(server.call("session.list_blocks", { session_id = ctx.session_id }))
+  local window
+  for _, b in ipairs(list.blocks) do
+    if b.block_id == ctx.block_id then window = b.window_id end
+  end
+  if not window then error("呼出元 pane が表示されていません", 0) end
+  local _, err = server.call("session.new_layer", {
+    session_id = ctx.session_id, window_id = window, bounds = { .1, .3, .8, .4 }, focus = true,
+    layout = { block = { flavor = "com.superlogical.terminal.shell", label = "dotfiles-popup/swap/" .. ctx.block_id,
+      options = {
+        -- host の login shell は profile が command を実行させないため通さない。
+        -- その分 PATH が最小になるので、mise の fzf / python3 を明示する。
+        login = false,
+        command = { "sh", "-c", 'PATH="$HOME/.local/share/mise/shims:$PATH" exec "$HOME/dotfiles/scripts/rex-tools" "$@"',
+          "rex-tools", "view", "swap", "--session", ctx.session_id, "--block", ctx.block_id },
+      } } },
+  })
+  if err then error(err, 0) end
+end
+
 local function action(name, title, command, kind)
   rex.action{
     name = name,
     title = title,
     category = "Dotfiles",
     run = function(ctx)
+      if ctx.server then return remote_popup(ctx, kind) end
       local argv = { helper, command, kind, "--session", ctx.session_id,
         "--block", ctx.block_id }
       if ctx.client_id then
         table.insert(argv, "--client")
         table.insert(argv, ctx.client_id)
-      end
-      -- remote host の session では ctx.server に host が入る。
-      if ctx.server then
-        table.insert(argv, "--server")
-        table.insert(argv, ctx.server)
       end
       local result, err = rex.exec(argv)
       if not result then error(err) end
