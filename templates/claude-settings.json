@@ -89,6 +89,10 @@
           {
             "type": "command",
             "command": "__HOME__/dotfiles/scripts/tmux-claude-pane.sh set idle claude"
+          },
+          {
+            "type": "command",
+            "command": "[ -z \"$REX_BLOCK\" ] || ! command -v rexurrect >/dev/null || rexurrect report claude"
           }
         ]
       }

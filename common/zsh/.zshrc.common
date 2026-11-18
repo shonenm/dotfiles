@@ -291,6 +291,11 @@ if [[ "${TUIOS_ENV:-}" == 1 ]]; then
   add-zsh-hook precmd _tuios_nav_precmd
 fi
 
+# --- rexurrect: Rex の block ごとに最後のコマンドを記録し、server 再起動後の復元で prompt に戻す ---
+if [[ -n "${REX_BLOCK:-}" && -r /opt/homebrew/share/rexurrect/rexurrect.plugin.zsh ]]; then
+  source /opt/homebrew/share/rexurrect/rexurrect.plugin.zsh
+fi
+
 # --- Claude Code fallback wrapper ---
 # Anthropic API障害時にOpenRouter経由で動作させる
 # 切替: claude-fallback.sh on/off

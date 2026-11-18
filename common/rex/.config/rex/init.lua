@@ -129,3 +129,19 @@ if copy_mode then
 end
 -- Cmd+U で対応が必要な agent の pane へ移動する。
 require("next_ready")
+
+-- rexurrect: server 起動時に前回の snapshot を復元する (保存は launchd の autosave)。
+-- server は bare な環境で動くため、本体の path と state / config の場所を明示する。
+do
+  local bin = "/opt/homebrew/bin/rexurrect"
+  local f = io.open(bin)
+  if f then
+    f:close()
+    local home = os.getenv("HOME")
+    local r = rex.exec({ bin, "auto-restore" }, { env = {
+      REXURRECT_STATE_DIR = (os.getenv("XDG_STATE_HOME") or home .. "/.local/state") .. "/rexurrect",
+      REXURRECT_CONFIG = (os.getenv("XDG_CONFIG_HOME") or home .. "/.config") .. "/rexurrect/config.toml",
+    } })
+    if r then io.stderr:write(r.stderr) end
+  end
+end

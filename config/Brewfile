@@ -8,10 +8,12 @@ tap "joshmedeski/sesh"
 tap "nikitabobko/tap"
 tap "trasta298/tap"
 tap "oven-sh/bun"
+tap "cemcatik/tap"
 
 # --- Shell & Terminal ---
 brew "tmux"
 brew "tuios"  # tmux と並行管理する移行先
+brew "cemcatik/tap/rexurrect"  # Rex session の保存と server 再起動後の復元
 brew "starship"
 brew "sheldon"
 brew "atuin"

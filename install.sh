@@ -1210,6 +1210,10 @@ main() {
   if command_exists rex; then
     "$DOTFILES_DIR/scripts/rex-plugins" sync || { log_error "Rex plugin sync failed"; SETUP_FAILED=true; }
   fi
+  # 3.7.2. rexurrect autosave (launchd agent). 復元は common/rex/.config/rex/init.lua の auto-restore
+  if command_exists rex && command_exists rexurrect; then
+    rexurrect autosave install >/dev/null || { log_error "rexurrect autosave install failed"; SETUP_FAILED=true; }
+  fi
 
   # 3.8. Link git hooks into .git/hooks (post-merge → tmux reload broadcast)
   setup_git_hooks

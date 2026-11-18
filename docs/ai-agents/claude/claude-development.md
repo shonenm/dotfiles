@@ -58,6 +58,10 @@ docs/ai-agents/ralph/       # Ralph利用文書
 
 **タイムアウト**: 10秒
 
+### SessionStart Hook (`rexurrect report claude`)
+
+Rex の block 内でだけ、会話 ID を rexurrect に記録する。Rex server の再起動後、その pane に `claude --resume <会話 ID>` が入力される（[Rex: Server 再起動後の復元](../../tools/rex.md#server-再起動後の復元)）。`rexurrect` がない環境と Rex の外では何もしない。
+
 ### Stop Hook (`ralph-stop-hook.sh`)
 
 Ralph ループの継続/終了を制御します。`CLAUDE_SESSION_ID` ベースのセッション固有状態管理。

@@ -1,6 +1,6 @@
 # Rex
 
-> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs) / **Configuration** `common/rex/` / **Custom** `scripts/rex-tools` の prefix menu・floating popup・メタデータ一覧・project picker・layout preset、`scripts/rex-plugins` の plugin 取得、`next_ready.lua` の agent pane 巡回（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs) / **Plugin** rexurrect（session 保存・復元） / **Configuration** `common/rex/` / **Custom** `scripts/rex-tools` の prefix menu・floating popup・メタデータ一覧・project picker・layout preset、`scripts/rex-plugins` の plugin 取得、`next_ready.lua` の agent pane 巡回（[区分](../provenance.md#区分)）
 
 Mac の Rex native session 用。既存の tmux / TUIOS と remote 環境は変更しない。Rex Beta 0.1.0 build 1591 の server API で検証している。GUI の floating layer 描画は別途確認が必要。
 
@@ -104,6 +104,19 @@ project の session 名は basename とパスの hash。既存 session は再利
 layout preset は `$XDG_DATA_HOME/rex/layouts/`、未設定なら `~/.local/share/rex/layouts/` に保存する。runtime の preset は Stow 対象外。保存時に既存名は上書きしない。
 
 適用は tiled layer の分割構造が一致する場合だけ、比率を復元する。block ID が変わっていても構造が同じなら適用できる。pane の追加・破棄や command 再起動はしない。floating popup は保存対象外。
+
+## Server 再起動後の復元
+
+[rexurrect](https://github.com/cemcatik/rexurrect)（macOS のみ、`config/Brewfile`）で session を保存し、Rex server の再起動後に戻す。Rex 自身の復元は tab と pane の配置だけなので、rexurrect が scrollback・cwd・最後のコマンドと Claude Code の会話を補う。
+
+| 役割 | 場所 |
+|---|---|
+| 15分ごとの保存（launchd agent） | `install.sh` が `rexurrect autosave install` を実行 |
+| server 起動時の復元 | `common/rex/.config/rex/init.lua` の `auto-restore`。`rex config reload` では復元しない |
+| block ごとの最後のコマンド | `common/zsh/.zshrc.common` が Rex 内でだけ recorder を読み込む |
+| Claude Code の会話 ID | `templates/claude-settings.json` の `SessionStart` hook が `rexurrect report claude` を実行 |
+
+復元した pane には最後のコマンドを入力するだけで実行しない。Claude Code が動いていた pane には `claude --resume <会話 ID>` を入力するので、Enter で再開する。Rex が自前で戻した session は scrollback を持たないため、rexurrect が自分の snapshot から作り直して置き換える。snapshot は `~/.local/state/rexurrect/`（直近10件）、手動操作は `rexurrect list` / `rexurrect restore --dry-run` / `rexurrect restore --session <label>`。設定は `~/.config/rexurrect/config.toml` で、既定のまま使う。
 
 ## Plugin
 
