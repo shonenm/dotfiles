@@ -52,12 +52,8 @@ def rex_binary():
     return binary
 
 
-# popup を remote host の session に開くときの接続先。
-SERVER = None
-
-
 def rex(*args):
-    result = run([rex_binary(), "--autostart=false", *(["-S", SERVER] if SERVER else []), *args])
+    result = run([rex_binary(), "--autostart=false", *args])
     if result.returncode:
         raise RuntimeError(result.stderr.strip() or "Rex command failed")
     return json.loads(result.stdout) if result.stdout.strip() else {}
@@ -108,9 +104,6 @@ def bounds(kind):
 def popup(kind, session, block, client=None):
     if kind not in {*POPUPS.values(), "prefix"}:
         raise RuntimeError("不明な popup: " + kind)
-    # remote host では host 側の dotfiles の rex-tools を popup 内で動かす。cwd を使う popup は未対応。
-    if SERVER and kind != "swap":
-        raise RuntimeError("remote host の session では swap のみ対応しています")
     anchor = origin(session, block)
     entries = blocks(session)
     source = next((b for b in entries if b["block_id"] == anchor), None)
@@ -135,17 +128,11 @@ def popup(kind, session, block, client=None):
             api(session, "session.float_block", block_id=bid, bounds=bounds(kind))
             api(session, "session.focus_block", block_id=bid)
         return
-    options = {} if SERVER else {"cwd": cwd_for(session, anchor)}
+    options = {"cwd": cwd_for(session, anchor)}
     commands = {"git": ["lazygit"], "pr": ["live-pr"], "editor": ["nvim", "."],
                 "ports": ["quay"], "database": ["sh", "-c", 'exec pgcli "${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/postgres}"']}
     if kind in ("prefix", "metadata", "project", "layout", "swap"):
         command = [SELF, "view", kind, "--session", session, "--block", anchor]
-        if SERVER:
-            # login shell を通すと host の profile が command を実行させないため使わない。
-            # その分 PATH が最小になるので、mise の fzf / python3 を明示する。
-            options["login"] = False
-            command = ["sh", "-c", 'PATH="$HOME/.local/share/mise/shims:$PATH" exec "$HOME/dotfiles/scripts/rex-tools" "$@"',
-                       "rex-tools", *command[1:]]
         if client:
             command += ["--client", client]
     else:
@@ -562,10 +549,7 @@ def main():
     parser.add_argument("--session", default=os.environ.get("REX_SESSION"))
     parser.add_argument("--block", default=os.environ.get("REX_BLOCK"))
     parser.add_argument("--client", default=os.environ.get("REX_CLIENT"))
-    parser.add_argument("--server")
     args = parser.parse_args()
-    global SERVER
-    SERVER = args.server
     if not args.session or not args.block:
         parser.error("Rex terminal 内で実行するか --session と --block を指定してください")
     # この helper はローカル専用。remote server への暗黙の API 呼出をしない。
