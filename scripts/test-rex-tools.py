@@ -44,9 +44,17 @@ class UnitTests(unittest.TestCase):
             path.write_text('not json')
             self.assertIsNone(tool.read_metadata_cache(path))
 
-    def test_metadata_cache_is_scoped_to_origin(self):
-        self.assertNotEqual(tool.metadata_cache("s", "a"), tool.metadata_cache("s", "b"))
-        self.assertNotEqual(tool.metadata_cache("s", "a"), tool.metadata_cache("t", "a"))
+    def test_session_agents_skips_popups_and_keeps_block_order(self):
+        session = {"session_id": "s", "label": "work"}
+        entries = [{"block_id": "a"}, {"block_id": "p", "label": tool.TAG + "metadata/a"}, {"block_id": "b"}]
+
+        def status(_session, block, _method):
+            time.sleep(.05 if block == "a" else 0)
+            return {"records": [{"app": block, "state": "working", "updated_at": "now"}]}
+        with patch.object(tool, "blocks", return_value=entries), patch.object(tool, "terminal", side_effect=status):
+            self.assertEqual([row["app"] for row in tool.session_agents(session)], ["a", "b"])
+        with patch.object(tool, "blocks", side_effect=RuntimeError("gone")):
+            self.assertEqual(tool.session_agents(session)[0]["state"], "取得失敗")
 
     def test_usage_keeps_zero_separate_from_missing(self):
         with patch.object(tool, "command_text", return_value="icon\x1fweekly\x1fgauge\x1f0%\x1f2d"):

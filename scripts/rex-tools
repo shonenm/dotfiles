@@ -310,40 +310,46 @@ def usage_rows(provider):
     return rows or [{"provider": provider, "window": "", "percent": "未取得", "reset": ""}]
 
 
+def session_agents(s):
+    def block_agents(b):
+        return [{"session": plain(s["label"]), "app": plain(record.get("app", "")),
+                 "state": plain(record["state"]),
+                 "message": plain(" ".join(filter(None, (record.get("kind", ""), record.get("msg", ""))))),
+                 "updated": plain(record["updated_at"])}
+                for record in terminal(s["session_id"], b["block_id"], "program_status")["records"]]
+    try:
+        # pane ごとの API 呼出は remote で 1 回 80ms 前後かかるため並列に投げる。
+        targets = [b for b in blocks(s["session_id"]) if not b.get("label", "").startswith(TAG)]
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            return [row for rows in pool.map(block_agents, targets) for row in rows]
+    except RuntimeError:
+        return [{"session": plain(s["label"]), "app": "", "state": "取得失敗",
+                 "message": "", "updated": ""}]
+
+
 def metadata(session, block):
     cwd = cwd_for(session, block)
     sessions = rex("ls", "--json")["sessions"]
     jobs = [("CPU", [str(ROOT / "tmux-cpu.sh")]), ("RAM", [str(ROOT / "tmux-ram.sh")]),
             ("GPU", [str(ROOT / "tmux-gpu.sh")]), ("Disk", [str(ROOT / "tmux-storage.sh")]),
             ("Git", [str(ROOT / "tmux-git-status.sh"), cwd])]
-    # system/Git と provider は同時に取得。既存 command 内の cache も再利用する。
-    with ThreadPoolExecutor(max_workers=10) as pool:
+    # system/Git・provider・agent は同時に取得。既存 command 内の cache も再利用する。
+    with ThreadPoolExecutor(max_workers=16) as pool:
         stats = [pool.submit(command_text, command) for _, command in jobs]
         usage = [pool.submit(usage_rows, p) for p in ("claude", "codex", "gemini", "cursor", "grok")]
+        agents = [pool.submit(session_agents, s) for s in sessions]
         values = {name: future.result() for (name, _), future in zip(jobs, stats)}
         usage = [row for future in usage for row in future.result()]
-    agents = []
-    for s in sessions:
-        try:
-            for b in blocks(s["session_id"]):
-                if b.get("label", "").startswith(TAG):
-                    continue
-                for record in terminal(s["session_id"], b["block_id"], "program_status")["records"]:
-                    agents.append({"session": plain(s["label"]), "app": plain(record.get("app", "")),
-                                   "state": plain(record["state"]),
-                                   "message": plain(" ".join(filter(None, (record.get("kind", ""), record.get("msg", ""))))),
-                                   "updated": plain(record["updated_at"])})
-        except RuntimeError:
-            agents.append({"session": plain(s["label"]), "app": "", "state": "取得失敗",
-                           "message": "", "updated": ""})
+        agents = [row for future in agents for row in future.result()]
     return {"version": 1, "updated": time.time(), "cwd": cwd, "host": os.uname().nodename,
             "session": next((s["label"] for s in sessions if s["session_id"] == session), session),
             "stats": values, "usage": usage, "agents": agents}
 
 
-def metadata_cache(session, block):
-    key = hashlib.sha256((session + "\0" + block + "\0" + os.getcwd()).encode()).hexdigest()
-    return Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "rex/metadata" / (key + ".json")
+def metadata_cache():
+    # pane ごとに分けると初めて開く pane で毎回空表示になる。cwd/Git は header で
+    # どの pane の snapshot か分かり、直後の取得で置き換わるため全 pane で共有する。
+    return Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "rex/metadata.json"
 
 
 def read_metadata_cache(path):
@@ -493,7 +499,7 @@ def screen(stdscr, kind, session, block):
         for index, (role, color) in enumerate((("heading", curses.COLOR_CYAN), ("good", curses.COLOR_GREEN), ("warning", curses.COLOR_YELLOW)), 1):
             curses.init_pair(index, color, -1)
             colors[role] = curses.color_pair(index) | curses.A_BOLD
-    path = metadata_cache(session, block)
+    path = metadata_cache()
     data = read_metadata_cache(path)
     offset, details, error = 0, False, ""
     # 保存済み snapshot は取得処理より先に描画する。
