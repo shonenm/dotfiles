@@ -132,8 +132,11 @@ class UnitTests(unittest.TestCase):
         layout["split"]["before"]["rect"] = [0, 0, .6, 1]
         layout["split"]["after"]["rect"] = [.6, 0, .4, 1]
         popup = {"rect": [.1, .1, .8, .8], "block_id": "p"}
-        floating = {"rect": [.5, 0, .5, 1], "block_id": "f"}
-        layers = [{"layout": layout}, {"layout": floating}, {"layout": popup}]
+        hidden = {"rect": [.7, .1, .2, .2], "block_id": "h"}
+        floating = {"rect": [.65, 0, .35, .5], "block_id": "f"}
+        layers = [{"layout": layout, "blocks": [{"block_id": "a"}]}, {"layout": hidden, "blocks": [{"block_id": "h"}]},
+                  {"layout": floating, "blocks": [{"block_id": "f"}]},
+                  {"layout": popup, "blocks": [{"block_id": "p", "label": tool.TAG + "swap/a"}]}]
         with patch.object(tool, "window_layers", return_value=layers), \
              patch.object(tool, "blocks", return_value=[{"block_id": "a", "label": "shell"},
                                                         {"block_id": "p", "label": tool.TAG + "swap/a"}]), \
@@ -142,9 +145,9 @@ class UnitTests(unittest.TestCase):
              patch.object(tool, "rex_binary", return_value="rex"), \
              patch.object(tool, "run", return_value=Mock(returncode=0)) as run:
             tool.swap("s", "a")
-        # floating pane は候補に含め、dotfiles の popup は除く。
+        # floating pane は候補に含め、dotfiles の popup と上の layer に隠れた pane は除く。
         self.assertEqual(choose.call_args_list[0].args[0], ["1* 60x100% @0,0  shell  zsh", "2  40x100% @60,0    zsh",
-                                                            "3  50x100% @50,0    zsh"])
+                                                            "3  35x50% @65,0    zsh"])
         # 2回目は1回目の選択を除く。
         self.assertEqual(choose.call_args_list[1].args[0], ["1* 60x100% @0,0  shell  zsh", "2  40x100% @60,0    zsh"])
         self.assertEqual(run.call_args.args[0][-5:], ["swap", "-s", "s", "f", "b"])

@@ -242,12 +242,20 @@ def panes(node):
     return panes(node["split"]["before"]) + panes(node["split"]["after"])
 
 
+def covers(outer, inner):
+    ox, oy, ow, oh = outer
+    x, y, w, h = inner
+    return ox <= x + 1e-6 and oy <= y + 1e-6 and x + w <= ox + ow + 1e-6 and y + h <= oy + oh + 1e-6
+
+
 def swap(session, block):
     # tmux の prefix m と同じく、同じ window の pane を2つ選んで中身を入れ替える。
-    # floating layer の pane も対象にし、dotfiles の popup は除く。
+    # floating layer の pane も対象にし、dotfiles の popup と上の layer に隠れた pane は除く。
     labels = {b["block_id"]: b.get("label", "") for b in blocks(session)}
-    candidates = [pane for layer in window_layers(session, block) for pane in panes(layer["layout"])
-                  if not labels.get(pane[0], "").startswith(TAG)]
+    layers = [layer for layer in window_layers(session, block)
+              if not any(b.get("label", "").startswith(TAG) for b in layer["blocks"])]
+    candidates = [pane for index, layer in enumerate(layers) for pane in panes(layer["layout"])
+                  if not any(covers(above["layout"]["rect"], pane[1]) for above in layers[index + 1:])]
     rows = []
     for index, (bid, (x, y, w, h)) in enumerate(candidates, 1):
         foreground = terminal(session, bid, "process").get("foreground") or {}
