@@ -114,7 +114,13 @@ for _, entry in ipairs({ { "previous", "Previous", 1, -1 }, { "next", "Next", -1
     title = "Dotfiles: " .. title .. " Tab in Session",
     category = "Dotfiles",
     run = function(ctx)
-      local view, err = rex.call("session.view", { session_id = ctx.session_id })
+      -- remote host の session は手元の server に無いため、host の接続で attach してから引く。
+      local server = rex
+      if ctx.server then
+        server = rex.server(ctx.server)
+        assert(server.call("session.attach", { session_id = ctx.session_id }))
+      end
+      local view, err = server.call("session.view", { session_id = ctx.session_id })
       if not view then error(err) end
       local windows, index = view.windows, nil
       for i, window in ipairs(windows) do
