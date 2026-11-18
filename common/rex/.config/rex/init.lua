@@ -127,3 +127,5 @@ if copy_mode then
   }
   rex.bind("ctrl+space>ctrl+u", "dotfiles_copy_halfpage")
 end
+-- Cmd+U で対応が必要な agent の pane へ移動する。
+require("next_ready")
