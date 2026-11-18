@@ -127,6 +127,41 @@ class UnitTests(unittest.TestCase):
                 tool.restore_layout("s", {"block_id": "a"}, split())
         api.assert_not_called()
 
+    def test_swap_picks_two_panes_of_layout(self):
+        layout = split()
+        layout["split"]["before"]["rect"] = [0, 0, .6, 1]
+        layout["split"]["after"]["rect"] = [.6, 0, .4, 1]
+        popup = {"rect": [.1, .1, .8, .8], "block_id": "p"}
+        hidden = {"rect": [.7, .1, .2, .2], "block_id": "h"}
+        floating = {"rect": [.65, 0, .35, .5], "block_id": "f"}
+        layers = [{"layout": layout, "blocks": [{"block_id": "a"}]}, {"layout": hidden, "blocks": [{"block_id": "h"}]},
+                  {"layout": floating, "blocks": [{"block_id": "f"}]},
+                  {"layout": popup, "blocks": [{"block_id": "p", "label": tool.TAG + "swap/a"}]}]
+        with patch.object(tool, "window_layers", return_value=layers), \
+             patch.object(tool, "blocks", return_value=[{"block_id": "a", "label": "shell"},
+                                                        {"block_id": "p", "label": tool.TAG + "swap/a"}]), \
+             patch.object(tool, "terminal", return_value={"foreground": {"name": "zsh"}}), \
+             patch.object(tool, "choose", side_effect=lambda rows, header: rows[-1]) as choose, \
+             patch.object(tool, "rex_binary", return_value="rex"), \
+             patch.object(tool, "run", return_value=Mock(returncode=0)) as run:
+            tool.swap("s", "a")
+        # floating pane は候補に含め、dotfiles の popup と上の layer に隠れた pane は除く。
+        self.assertEqual(choose.call_args_list[0].args[0], ["1* 60x100% @0,0  shell  zsh", "2  40x100% @60,0    zsh",
+                                                            "3  35x50% @65,0    zsh"])
+        # 2回目は1回目の選択を除く。
+        self.assertEqual(choose.call_args_list[1].args[0], ["1* 60x100% @0,0  shell  zsh", "2  40x100% @60,0    zsh"])
+        self.assertEqual(run.call_args.args[0][-5:], ["swap", "-s", "s", "f", "b"])
+
+    def test_tiled_layout_from_floating_pane_uses_its_window(self):
+        view = {"windows": [
+            {"layers": [{"kind": "tiled", "blocks": [{"block_id": "x"}], "layout": "other"}]},
+            {"layers": [{"kind": "tiled", "blocks": [{"block_id": "a"}], "layout": "mine"},
+                        {"kind": "floating", "blocks": [{"block_id": "f"}]}]}]}
+        with patch.object(tool, "api", return_value=view):
+            self.assertEqual(tool.tiled_layout("s", "f"), "mine")
+            with self.assertRaises(RuntimeError):
+                tool.tiled_layout("s", "missing")
+
     def test_cwd_decodes_osc7(self):
         with patch.object(tool, "terminal", return_value={"pwd": "file://localhost/tmp/a%20b"}), \
              patch.object(Path, "is_dir", return_value=True):
@@ -242,6 +277,10 @@ class IntegrationTests(unittest.TestCase):
             self.assertAlmostEqual(tool.tiled_layout(session, anchor)["split"]["ratio"], .4)
             tool.restore_layout(session, tool.tiled_layout(session, anchor), original)
             self.assertAlmostEqual(tool.tiled_layout(session, anchor)["split"]["ratio"], .65)
+            before = [bid for bid, _ in tool.panes(tool.tiled_layout(session, anchor))]
+            with patch.object(tool, "choose", side_effect=lambda rows, header: rows[0]):
+                tool.swap(session, anchor)
+            self.assertEqual([bid for bid, _ in tool.panes(tool.tiled_layout(session, anchor))], before[::-1])
             tool.popup("prefix", session, anchor)
             menu = next(b for b in tool.blocks(session) if b["label"].startswith(tool.TAG + "prefix/"))
             deadline = time.monotonic() + 5
