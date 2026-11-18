@@ -105,10 +105,11 @@ for _, entry in ipairs({ { "h", "left" }, { "j", "down" }, { "k", "up" }, { "l",
   rex.bind("ctrl+space>shift+" .. entry[1], "pane.resize", { direction = entry[2], amount = 2 })
 end
 -- tmux の session group 移動と同じ指使い。Ctrl+Option+h/l は tab、j/k は session を巡回する。
--- client.tab.next/previous は session の端で隣の session の tab へ進むため、端では反対の端へ goto する。
+-- client.tab.next/previous は session の端で隣の session の tab へ進むため、端では逆方向へ tab 数 - 1 回進めて反対の端へ移る。
+-- client.tab.goto の index は session 内ではなく client 全体の tab の通し番号なので、端の移動には使えない。
 -- 表示中の tab は client が持ち、server の active window を変えても追従しないため client action を使う。
-for _, entry in ipairs({ { "previous", "Previous", 1, -1 }, { "next", "Next", -1, 1 } }) do
-  local name, title, edge, wrap_to = entry[1], entry[2], entry[3], entry[4]
+for _, entry in ipairs({ { "previous", "Previous", 1, "next" }, { "next", "Next", -1, "previous" } }) do
+  local name, title, edge, opposite = entry[1], entry[2], entry[3], entry[4]
   rex.action{
     name = "dotfiles_tab_" .. name,
     title = "Dotfiles: " .. title .. " Tab in Session",
@@ -134,8 +135,7 @@ for _, entry in ipairs({ { "previous", "Previous", 1, -1 }, { "next", "Next", -1
       -- edge は端の tab 位置 (1 = 先頭, -1 = 最後)。
       local at_edge = (edge == 1 and index == 1) or (edge == -1 and index == #windows)
       if at_edge then
-        -- client.tab.goto の -1 は session の最後の tab にならないため、tab 数で指定する。
-        rex.client.queue("client.tab.goto", { index = wrap_to == -1 and #windows or wrap_to })
+        for _ = 2, #windows do rex.client.queue("client.tab." .. opposite) end
       else
         rex.client.queue("client.tab." .. name)
       end
