@@ -1,6 +1,6 @@
 # Rex
 
-> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs) / **Plugin** rexurrect（session 保存・復元） / **Configuration** `common/rex/` / **Custom** `scripts/rex-tools` の prefix menu・floating popup・メタデータ一覧・project picker・layout preset、`scripts/rex-plugins` の plugin 取得（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs) / **Plugin** rexurrect（session 保存・復元） / **Configuration** `common/rex/` / **Custom** `scripts/rex-tools` の prefix menu・floating popup・メタデータ一覧・project picker・layout preset、`scripts/rex-plugins` の plugin 取得、`next_ready.lua` の agent pane 巡回（[区分](../provenance.md#区分)）
 
 Mac の Rex native session 用。既存の tmux / TUIOS と remote 環境は変更しない。Rex Beta 0.1.0 build 1591 の server API で検証している。GUI の floating layer 描画は別途確認が必要。
 
@@ -57,6 +57,8 @@ remote Rex は対象外。helper はネットワークの `REX_SERVER` を拒否
 prefix 不要の `Ctrl+Option+h/l` は前後の tab、`Ctrl+Option+k/j` は前後の session へ移動する。tmux の session group を Rex の session、group 内の tmux session を tab に対応させ、tmux の `C-M-hjkl` と同じ指使いで tab 移動と session 移動を区別する。
 
 prefix 不要の `Ctrl+h/j/k/l` は [vim-rex-navigator](https://github.com/paul-enz/vim-rex-navigator)（[Plugin](#plugin) で管理）で pane 移動する。前面が vim / nvim の pane ではキーを Neovim に渡し、Neovim は内部 split を先に移動して端で `rex focus` を呼ぶ（`common/nvim/.config/nvim/lua/plugins/tmux-navigator.lua`）。前面が ssh の pane（rcon のリモート nvim / tmux）でもキーを渡す。plugin は渡す先を vim / nvim に固定しているため、`init.lua` で binding の前にこの判定を挟んでいる。Rex 内でローカルの tmux / tuios を動かす運用は想定しない。plugin 同梱の Neovim 側 mapping は既存の tuios / snacks explorer 対応を上書きするため使わない。
+
+`Cmd+U` は対応が必要な pane へ全 session を横断して移動する（`common/rex/.config/rex/next_ready.lua`、Rex Beta Discord で grindlemire が公開した action を取り込んだもの）。OSC 7501 の program status を読み、blocked → error → done の順、同じ状態なら古い順に巡回する。続けて押すと次の pane へ進む。done / error は表示済みの pane を飛ばし、blocked は対応するまで残る。表示済みの判定は client が pane の size を要求した時刻で行うため、見ている間に終わった pane は一度別の pane を見るまで対象に残る。
 
 ## Popup の保持と終了
 
