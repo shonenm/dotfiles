@@ -135,6 +135,7 @@ class UnitTests(unittest.TestCase):
              patch.object(tool, "blocks", return_value=[{"block_id": "a", "label": "shell"}]), \
              patch.object(tool, "terminal", return_value={"foreground": {"name": "zsh"}}), \
              patch.object(tool, "choose", side_effect=lambda rows, header: rows[-1]) as choose, \
+             patch.object(tool, "rex_binary", return_value="rex"), \
              patch.object(tool, "run", return_value=Mock(returncode=0)) as run:
             tool.swap("s", "a")
         self.assertEqual(choose.call_args_list[0].args[0], ["1* 60x100% @0,0  shell  zsh", "2  40x100% @60,0    zsh"])
