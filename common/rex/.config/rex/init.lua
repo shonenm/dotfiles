@@ -55,6 +55,7 @@ for _, entry in ipairs({
   { "database", "PostgreSQL", "shift+p" }, { "ports", "Quay", "shift+q" },
   { "scratch", "Scratch Shell", "j" }, { "metadata", "Metadata", "shift+a" },
   { "project", "Project Picker", "shift+f" }, { "layout", "Layout Presets", "l" },
+  { "swap", "Swap Panes", "m" },
 }) do
   action("dotfiles_" .. entry[1], "Dotfiles: " .. entry[2], "popup", entry[1])
   rex.bind("ctrl+space>" .. entry[3], "dotfiles_" .. entry[1])

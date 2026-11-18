@@ -127,6 +127,21 @@ class UnitTests(unittest.TestCase):
                 tool.restore_layout("s", {"block_id": "a"}, split())
         api.assert_not_called()
 
+    def test_swap_picks_two_panes_of_layout(self):
+        layout = split()
+        layout["split"]["before"]["rect"] = [0, 0, .6, 1]
+        layout["split"]["after"]["rect"] = [.6, 0, .4, 1]
+        with patch.object(tool, "tiled_layout", return_value=layout), \
+             patch.object(tool, "blocks", return_value=[{"block_id": "a", "label": "shell"}]), \
+             patch.object(tool, "terminal", return_value={"foreground": {"name": "zsh"}}), \
+             patch.object(tool, "choose", side_effect=lambda rows, header: rows[-1]) as choose, \
+             patch.object(tool, "run", return_value=Mock(returncode=0)) as run:
+            tool.swap("s", "a")
+        self.assertEqual(choose.call_args_list[0].args[0], ["1* 60x100% @0,0  shell  zsh", "2  40x100% @60,0    zsh"])
+        # 2回目は1回目の選択を除く。
+        self.assertEqual(choose.call_args_list[1].args[0], ["1* 60x100% @0,0  shell  zsh"])
+        self.assertEqual(run.call_args.args[0][-5:], ["swap", "-s", "s", "b", "a"])
+
     def test_cwd_decodes_osc7(self):
         with patch.object(tool, "terminal", return_value={"pwd": "file://localhost/tmp/a%20b"}), \
              patch.object(Path, "is_dir", return_value=True):
@@ -242,6 +257,10 @@ class IntegrationTests(unittest.TestCase):
             self.assertAlmostEqual(tool.tiled_layout(session, anchor)["split"]["ratio"], .4)
             tool.restore_layout(session, tool.tiled_layout(session, anchor), original)
             self.assertAlmostEqual(tool.tiled_layout(session, anchor)["split"]["ratio"], .65)
+            before = [bid for bid, _ in tool.panes(tool.tiled_layout(session, anchor))]
+            with patch.object(tool, "choose", side_effect=lambda rows, header: rows[0]):
+                tool.swap(session, anchor)
+            self.assertEqual([bid for bid, _ in tool.panes(tool.tiled_layout(session, anchor))], before[::-1])
             tool.popup("prefix", session, anchor)
             menu = next(b for b in tool.blocks(session) if b["label"].startswith(tool.TAG + "prefix/"))
             deadline = time.monotonic() + 5

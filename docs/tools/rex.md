@@ -1,6 +1,6 @@
 # Rex
 
-> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs) / **Plugin** rexurrect（session 保存・復元） / **Configuration** `common/rex/` / **Custom** `scripts/rex-tools` の prefix menu・floating popup・メタデータ一覧・project picker・layout preset、`scripts/rex-plugins` の plugin 取得、`next_ready.lua` の agent pane 巡回（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs) / **Plugin** rexurrect（session 保存・復元） / **Configuration** `common/rex/` / **Custom** `scripts/rex-tools` の prefix menu・floating popup・メタデータ一覧・project picker・layout preset・pane swap picker、`scripts/rex-plugins` の plugin 取得、`next_ready.lua` の agent pane 巡回（[区分](../provenance.md#区分)）
 
 Mac の Rex native session 用。既存の tmux / TUIOS と remote 環境は変更しない。Rex Beta 0.1.0 build 1591 の server API で検証している。GUI の floating layer 描画は別途確認が必要。
 
@@ -16,7 +16,7 @@ rex config check
 rex config reload
 ```
 
-正本は `common/rex/.config/rex/init.lua`。既存の独自 `~/.config/rex/init.lua` がある場合は、上書きせず内容を統合する。`rex-tools` は `~/dotfiles/scripts` から実行する。Python 3 と、各 popup の対象 command が必要。project / layout picker は既存の fzf を使う。
+正本は `common/rex/.config/rex/init.lua`。既存の独自 `~/.config/rex/init.lua` がある場合は、上書きせず内容を統合する。`rex-tools` は `~/dotfiles/scripts` から実行する。Python 3 と、各 popup の対象 command が必要。project / layout / swap picker は既存の fzf を使う。
 
 通常の prefix 操作は Rex client が直接実行する。補助の操作一覧 menu や project picker から CLI 経由で session 切替などを実行する場合は、Rex Settings → Rex Server → **Remote Control** が必要。dotfiles はこの許可を自動変更しない。
 
@@ -42,6 +42,7 @@ remote Rex は対象外。helper はネットワークの `REX_SERVER` を拒否
 | `A` | メタデータ一覧、80% × 80% |
 | `F` | ghq / zoxide / home / dotfiles から project 選択 |
 | `l` | layout の保存・適用 |
+| `m` | 同じ window の tiled pane を2つ fzf で選び、位置を入れ替える（tmux の `prefix m` と同じ） |
 | `N` | 新しい tab に Neovim / Claude / shell の雛形 |
 | `c` / `n` / `p` | 新規 / 次 / 前の tab |
 | `s` / `f` | Rex 標準 session picker |
