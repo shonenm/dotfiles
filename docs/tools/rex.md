@@ -57,7 +57,7 @@ helper はネットワークの `REX_SERVER` を拒否し、別ホストの cwd 
 
 prefix 不要の `Ctrl+Option+h/l` は前後の tab、`Ctrl+Option+k/j` は前後の session へ移動する。tab 移動は session 内で循環し、端の tab からは反対の端へ移る（隣の session へは進まない）。remote host の session でも、host の接続で tab 構成を取得して同じく循環する。端の移動は tab の通し番号ではなく逆方向の tab 移動で行う。tmux の session group を Rex の session、group 内の tmux session を tab に対応させ、tmux の `C-M-hjkl` と同じ指使いで tab 移動と session 移動を区別する。
 
-prefix 不要の `Ctrl+h/j/k/l` は [vim-rex-navigator](https://github.com/paul-enz/vim-rex-navigator)（[Plugin](#plugin) で管理）で pane 移動する。前面が vim / nvim の pane ではキーを Neovim に渡し、Neovim は内部 split を先に移動して端で `rex focus` を呼ぶ（`common/nvim/.config/nvim/lua/plugins/tmux-navigator.lua`）。前面が ssh の pane（rcon のリモート nvim / tmux）でもキーを渡す。plugin は渡す先を vim / nvim に固定しているため、`init.lua` で binding の前にこの判定を挟んでいる。Rex 内でローカルの tmux / tuios を動かす運用は想定しない。plugin 同梱の Neovim 側 mapping は既存の tuios / snacks explorer 対応を上書きするため使わない。
+prefix 不要の `Ctrl+h/j/k/l` は `init.lua` の binding で pane 移動する。前面が vim / nvim の pane ではキーを Neovim に渡し、Neovim は内部 split を先に移動して端で `rex do pane.focus` を呼ぶ（`common/nvim/.config/nvim/lua/plugins/tmux-navigator.lua`）。前面が ssh の pane（rcon のリモート nvim / tmux）でもキーを渡す。移動は app の `pane.focus` で行う。key handler の関数からは client action を送れないため action に割り当て、キーを渡すときは `pane.send_key` で送る。server の `session.focus_direction`（`rex focus`）で動かすと app が覚えている focus が更新されず、session を離れて戻ると前の pane に戻るため使わない。以前は [vim-rex-navigator](https://github.com/paul-enz/vim-rex-navigator) を使っていたが、server API で移動するため置き換えた。Rex 内でローカルの tmux / tuios を動かす運用は想定しない。隣に pane が複数あるとき直前に focus していた pane を選ばないのは Rex 本体の仕様（[Focus last pane](https://discord.com/channels/1546797889009881158/1560580339947020288) が対応予定）。
 
 ## Popup の保持と終了
 
