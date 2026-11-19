@@ -879,6 +879,9 @@ for name, config in servers.items():
       record_install_state claude-mcp "$claude_mcp_fp"
     fi
   fi
+  # ~/.claude.json は MCP の token を含みうる。umask 0002 の host では 664 で作られるため本人だけにする
+  # (Claude Code は書き直しても既存の権限を保つ)。
+  if [[ -f "$HOME/.claude.json" ]]; then chmod 600 "$HOME/.claude.json"; fi
 
   # Claude Code skills (from common/claude, skip if Stow symlinks exist)
   local skills_src="$DOTFILES_DIR/common/claude/.claude/skills"
