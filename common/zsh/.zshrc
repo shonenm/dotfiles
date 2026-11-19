@@ -17,7 +17,10 @@ if [[ -o interactive ]]; then
     local -a stale
     stale=( $dump(#qN.mh+24) )
     if [[ ! -f "$dump" || -n "$stale" ]]; then
+      # compinit は fpath と zsh の版が変わらなければ dump を書き直さないため、
+      # mtime を更新しないと 24h 後から毎起動フル compinit + compaudit になる。
       compinit
+      touch "$dump"
     else
       compinit -C
     fi
