@@ -63,7 +63,7 @@ prefix 不要の `Ctrl+h/j/k/l` は [vim-rex-navigator](https://github.com/paul-
 
 ## Popup の保持と終了
 
-popup は呼出元 block ごとに一つ。現在の block の cwd を API で取得し、同じ session / window に作成する。cwd が不明なら home へ勝手に切り替えずエラーにする。container 内 cwd の引き継ぎは未対応。
+popup は呼出元 block ごとに一つ。現在の block の cwd を API で取得し、同じ session / window に作成する。Rex は popup の command を login sh で起動し、対話 zsh が足す mise の shims が PATH に無いため、`rex-tools` は popup と dev template の command を shims（`~/.local/share/mise/shims`）を PATH の先頭に足して起動する。mise だけでツールを入れた host でも lazygit / nvim / fzf が見つかる。cwd が不明なら home へ勝手に切り替えずエラーにする。container 内 cwd の引き継ぎは未対応。
 
 同じ popup を再度呼ぶと detach し、さらに呼ぶと同じ block を再表示する。scratch の shell や Neovim の未保存 buffer は終了しない。command 自体を終了すると Rex が block を片付ける。
 
