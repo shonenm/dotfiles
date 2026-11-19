@@ -530,7 +530,9 @@ vim.cmd("qa!")
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "test.lua"
             path.write_text(lua)
-            env = {**os.environ, "NAV_CONFIG": str(ROOT / "common/nvim/.config/nvim/lua/plugins/tmux-navigator.lua")}
+            # Rex の pane から実行すると REX_SESSION で Rex 経路に入るため外す。
+            env = {key: value for key, value in os.environ.items() if key != "REX_SESSION"}
+            env["NAV_CONFIG"] = str(ROOT / "common/nvim/.config/nvim/lua/plugins/tmux-navigator.lua")
             subprocess.run(["nvim", "--headless", "-u", "NONE", "-i", "NONE", "-l", str(path)], env=env, capture_output=True, text=True, check=True, timeout=20)
 
 
