@@ -17,6 +17,10 @@
       "type": "http",
       "url": "https://mcp.example.com/mcp"
     },
+    "syntopic": {
+      "type": "http",
+      "url": "https://mcp.beta.syntopic.io/mcp"
+    },
     "serena": {
       "type": "stdio",
       "command": "serena",
