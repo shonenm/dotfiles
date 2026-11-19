@@ -33,7 +33,6 @@
       "Bash(git commit --all *)"
     ],
     "allow": [
-      "mcp__myproject__*",
       "mcp__notion__*",
       "mcp__tmux__*",
       "Skill",
