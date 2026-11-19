@@ -82,4 +82,23 @@ run_step false || true
 list_contains_line "${FAILED_STEPS# }" "false"
 [[ "$STEP_TIMINGS" == *"true:"* && "$STEP_TIMINGS" == *"false:"* ]]
 
+# gh hosts.yml: repo への旧 symlink を実ファイルへ移し、repo からは消す。
+(
+  HOME="$tmpdir/gh-home"
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/../install.sh"
+  DOTFILES_DIR="$tmpdir/gh-dots"
+  mkdir -p "$DOTFILES_DIR/common/gh/.config/gh" "$HOME/.config/gh"
+  printf 'token\n' > "$DOTFILES_DIR/common/gh/.config/gh/hosts.yml"
+  ln -s "$DOTFILES_DIR/common/gh/.config/gh/hosts.yml" "$HOME/.config/gh/hosts.yml"
+  prepare_gh_hosts_target >/dev/null
+  [[ -f "$HOME/.config/gh/hosts.yml" && ! -L "$HOME/.config/gh/hosts.yml" ]]
+  [[ ! -e "$DOTFILES_DIR/common/gh/.config/gh/hosts.yml" ]]
+  assert_eq "$(cat "$HOME/.config/gh/hosts.yml")" "token"
+  case "$(uname -s)" in Darwin) mode=$(stat -f %Lp "$HOME/.config/gh/hosts.yml") ;; *) mode=$(stat -c %a "$HOME/.config/gh/hosts.yml") ;; esac
+  assert_eq "$mode" "600"
+  prepare_gh_hosts_target >/dev/null
+  assert_eq "$(cat "$HOME/.config/gh/hosts.yml")" "token"
+)
+
 echo "install fast-path tests: OK"

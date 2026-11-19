@@ -196,6 +196,7 @@ Next steps:
 
 - `grep -qF "dotfiles:/home" <path>` で既存チェック、冪等に
 - `.bak-bindmount` として元を退避
+- mount 前に `git -C ~/dotfiles status --ignored --short` で、作業ツリーに token などの ignored ファイルが無いことを確認する (container 内のプロセスからも読めるため)。旧構成の `common/gh/.config/gh/hosts.yml` が残っていれば install.sh を再実行して `~/.config/gh` へ移す
 
 ### 5.3 container force-recreate
 

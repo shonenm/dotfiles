@@ -546,6 +546,19 @@ prepare_git_config_target() {
   fi
 }
 
+# gh の hosts.yml (OAuth token) は以前 stow で repo 内の実ファイルへリンクしていた。
+# token を dotfiles の作業ツリーに置かないよう、実ファイルとして ~/.config/gh へ移す。
+prepare_gh_hosts_target() {
+  local target="$HOME/.config/gh/hosts.yml"
+  local source="$DOTFILES_DIR/common/gh/.config/gh/hosts.yml"
+  if [[ -L "$target" && -f "$source" && "$(realpath "$target" 2>/dev/null)" == "$(realpath "$source" 2>/dev/null)" ]]; then
+    unlink "$target"
+    mv "$source" "$target"
+    chmod 600 "$target"
+    log_info "  Moved gh hosts.yml out of the dotfiles repo"
+  fi
+}
+
 # Fixup writable or bind-mounted config files that stow does not manage directly.
 fixup_bind_mounts() {
   # .gitconfig: inject [include] to pull in dotfiles gitconfig
@@ -624,6 +637,7 @@ link_dotfiles() {
   cleanup_broken_skill_links
   normalize_dotfiles_symlinks
   prepare_git_config_target
+  prepare_gh_hosts_target
 
   # Stow common packages
   if [[ -d "$DOTFILES_DIR/common" ]]; then
