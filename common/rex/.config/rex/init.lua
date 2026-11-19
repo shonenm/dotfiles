@@ -26,9 +26,11 @@ local function plugin(module, opts)
   return mod
 end
 
+-- floating popup は popup.lua が local / remote host とも server の接続から直接作る。
+local popup = require("popup")
+
 -- remote host の session（ctx.server が host）では、手元の CLI から ssh で繋ぎ直さず
--- server の接続で host 側に短命の pane を開き、host の dotfiles の rex-tools に popup を任せる。
--- cwd や toggle の扱いは手元と同じ rex-tools の処理になる。
+-- server の接続で host 側に短命の pane を開き、host の dotfiles の rex-tools に任せる。
 local function remote_popup(ctx, command, kind)
   local server = rex.server(ctx.server)
   -- host への接続は session に attach しないと session の操作を受け付けない。
@@ -58,6 +60,7 @@ local function action(name, title, command, kind)
     title = title,
     category = "Dotfiles",
     run = function(ctx)
+      if command == "popup" then return popup.open(ctx, kind) end
       if ctx.server then return remote_popup(ctx, command, kind) end
       local argv = { helper, command, kind, "--session", ctx.session_id,
         "--block", ctx.block_id }
