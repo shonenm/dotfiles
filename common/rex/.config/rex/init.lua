@@ -170,26 +170,34 @@ rex.action = function(spec)
   if spec.name == "tmux_copy_mode" then copy_mode = spec.run end
   return define(spec)
 end
-plugin("rex-tmux-copy", { key = "ctrl+space>v" })
+plugin("rex-tmux-copy", { key = false })
 rex.action = define
 if copy_mode then
-  rex.bind("ctrl+space>[", "tmux_copy_mode")
-  rex.action{
-    name = "dotfiles_copy_halfpage",
-    title = "Copy Mode (tmux): Half Page Up",
-    category = "Dotfiles",
-    run = function(ctx)
-      -- plugin は起動 command を受け取らないため、作成される block の command に印を付ける。
-      local block = rex.layout.block
-      rex.layout.block = function(spec)
-        spec.options.command = { "env", "REX_TMUX_COPY_HALFPAGE=1", unpack(spec.options.command) }
-        return block(spec)
-      end
-      local ok, err = pcall(copy_mode, ctx)
-      rex.layout.block = block
-      if not ok then error(err, 0) end
-    end,
-  }
+  -- plugin は起動 command を受け取らないため、作成される block の command を包む。
+  -- copy mode の pane は login shell を通らず server の PATH で動く。remote host の server は
+  -- PATH に ~/.local/bin を含まず、そこにある rex / tmux が見つからず即終了するため足す。
+  local function copy_action(name, title, env)
+    rex.action{
+      name = name,
+      title = title,
+      category = "Dotfiles",
+      run = function(ctx)
+        local block = rex.layout.block
+        rex.layout.block = function(spec)
+          spec.options.command = { "sh", "-c", 'PATH="$HOME/.local/bin:$PATH" exec env "$@"', "sh",
+            env, unpack(spec.options.command) }
+          return block(spec)
+        end
+        local ok, err = pcall(copy_mode, ctx)
+        rex.layout.block = block
+        if not ok then error(err, 0) end
+      end,
+    }
+  end
+  copy_action("dotfiles_copy_mode", "Copy Mode (tmux)", "REX_TMUX_COPY_HALFPAGE=")
+  copy_action("dotfiles_copy_halfpage", "Copy Mode (tmux): Half Page Up", "REX_TMUX_COPY_HALFPAGE=1")
+  rex.bind("ctrl+space>v", "dotfiles_copy_mode")
+  rex.bind("ctrl+space>[", "dotfiles_copy_mode")
   rex.bind("ctrl+space>ctrl+u", "dotfiles_copy_halfpage")
 end
 -- Cmd+U で対応が必要な agent の pane へ移動する。
