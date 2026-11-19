@@ -5,6 +5,7 @@ import importlib.machinery
 import importlib.util
 import os
 import signal
+import subprocess
 import tempfile
 import time
 from concurrent.futures import Future
@@ -55,6 +56,16 @@ class UnitTests(unittest.TestCase):
             self.assertEqual([row["app"] for row in tool.session_agents(session)], ["a", "b"])
         with patch.object(tool, "blocks", side_effect=RuntimeError("gone")):
             self.assertEqual(tool.session_agents(session)[0]["state"], "取得失敗")
+
+    def test_with_tools_finds_mise_shims(self):
+        with tempfile.TemporaryDirectory() as home:
+            shims = Path(home) / ".local/share/mise/shims"
+            shims.mkdir(parents=True)
+            (shims / "fake-tool").write_text("#!/bin/sh\necho shim $1\n")
+            (shims / "fake-tool").chmod(0o755)
+            result = subprocess.run(tool.with_tools(["fake-tool", "ok"]), capture_output=True, text=True,
+                                    env={"HOME": home, "PATH": "/usr/bin:/bin"})
+            self.assertEqual(result.stdout, "shim ok\n")
 
     def test_usage_keeps_zero_separate_from_missing(self):
         with patch.object(tool, "command_text", return_value="icon\x1fweekly\x1fgauge\x1f0%\x1f2d"):
@@ -216,7 +227,7 @@ class UnitTests(unittest.TestCase):
             tool.popup("git", "s", "a")
         args = api.call_args.kwargs
         self.assertEqual(args["window_id"], "w")
-        self.assertEqual(args["layout"]["block"]["options"], {"cwd": "/tmp/project", "command": ["lazygit"]})
+        self.assertEqual(args["layout"]["block"]["options"], {"cwd": "/tmp/project", "command": tool.with_tools(["lazygit"])})
         self.assertEqual(args["bounds"][2:], [.8, .8])
 
     def test_unknown_popup_fails(self):

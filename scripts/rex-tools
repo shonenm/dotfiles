@@ -101,6 +101,12 @@ def bounds(kind):
     return [(1 - width) / 2, (1 - height) / 2, width, height]
 
 
+def with_tools(command):
+    # Rex は command を login sh で起動するため、対話 zsh が PATH に足す mise の shims が無い。
+    # mise だけで入れたツール (lazygit / nvim / fzf など) が見つからず pane が即閉じるので足す。
+    return ["sh", "-c", 'PATH="$HOME/.local/share/mise/shims:$PATH" exec "$@"', "sh", *command]
+
+
 def popup(kind, session, block, client=None):
     if kind not in {*POPUPS.values(), "prefix"}:
         raise RuntimeError("不明な popup: " + kind)
@@ -138,7 +144,7 @@ def popup(kind, session, block, client=None):
     else:
         command = commands.get(kind)
     if command:
-        options["command"] = command
+        options["command"] = with_tools(command)
     api(session, "session.new_layer", window_id=source["window_id"],
         bounds=bounds(kind), focus=True,
         layout={"block": {"flavor": TERMINAL + ".shell", "label": label, "options": options}})
@@ -278,7 +284,7 @@ def template(session, block):
     def pane(label, command=None):
         options = {"cwd": cwd}
         if command:
-            options["command"] = command
+            options["command"] = with_tools(command)
         return {"block": {"flavor": TERMINAL + ".shell", "label": label, "options": options}}
     layout = {"split": {"direction": "horizontal", "ratio": .6,
               "before": pane("editor", ["nvim", "."]),
