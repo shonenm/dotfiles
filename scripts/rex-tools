@@ -21,8 +21,6 @@ ROOT = Path(__file__).resolve().parent
 SELF = str(Path(__file__).resolve())
 TAG = "dotfiles-popup/"
 TERMINAL = "com.superlogical.terminal"
-SIZES = {"editor": (.9, .9), "pr": (.85, .85), "prefix": (.65, .55),
-         "project": (.7, .7), "layout": (.7, .6), "swap": (.8, .4)}
 POPUPS = {"g": "git", "G": "pr", "k": "editor", "P": "database",
           "Q": "ports", "j": "scratch", "A": "metadata", "F": "project", "l": "layout", "m": "swap"}
 ACTIONS = {"c": ("client.tab.new", {}), "n": ("client.tab.next", {}),
@@ -96,58 +94,10 @@ def origin(session, block):
     return label.split("/", 2)[2] if label.startswith(TAG) else block
 
 
-def bounds(kind):
-    width, height = SIZES.get(kind, (.8, .8))
-    return [(1 - width) / 2, (1 - height) / 2, width, height]
-
-
 def with_tools(command):
     # Rex は command を login sh で起動するため、対話 zsh が PATH に足す mise の shims が無い。
     # mise だけで入れたツール (lazygit / nvim / fzf など) が見つからず pane が即閉じるので足す。
     return ["sh", "-c", 'PATH="$HOME/.local/share/mise/shims:$PATH" exec "$@"', "sh", *command]
-
-
-def popup(kind, session, block, client=None):
-    if kind not in {*POPUPS.values(), "prefix"}:
-        raise RuntimeError("不明な popup: " + kind)
-    anchor = origin(session, block)
-    entries = blocks(session)
-    source = next((b for b in entries if b["block_id"] == anchor), None)
-    if not source or source["placement"] != "placed":
-        raise RuntimeError("呼出元 pane が表示されていません")
-    label = TAG + kind + "/" + anchor
-    existing = next((b for b in entries if b.get("label") == label), None)
-    if existing:
-        bid = existing["block_id"]
-        if kind == "prefix":
-            # global binding が2回目も拾うため、menu の stdin ではなくここで送信する。
-            api(session, "block.close", block_id=bid)
-            api(session, "session.focus_block", block_id=anchor)
-            if block == bid:
-                rex("send-key", "-s", session, "-b", anchor, "ctrl+space")
-        elif existing["placement"] == "placed":
-            # 同じキーは隠すだけ。editor の未保存内容も終了させない。
-            api(session, "session.detach_block", block_id=bid)
-            api(session, "session.focus_block", block_id=anchor)
-        else:
-            api(session, "session.move_block", block_id=bid, anchor_block_id=anchor)
-            api(session, "session.float_block", block_id=bid, bounds=bounds(kind))
-            api(session, "session.focus_block", block_id=bid)
-        return
-    options = {"cwd": cwd_for(session, anchor)}
-    commands = {"git": ["lazygit"], "pr": ["live-pr"], "editor": ["nvim", "."],
-                "ports": ["quay"], "database": ["sh", "-c", 'exec pgcli "${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/postgres}"']}
-    if kind in ("prefix", "metadata", "project", "layout", "swap"):
-        command = [SELF, "view", kind, "--session", session, "--block", anchor]
-        if client:
-            command += ["--client", client]
-    else:
-        command = commands.get(kind)
-    if command:
-        options["command"] = with_tools(command)
-    api(session, "session.new_layer", window_id=source["window_id"],
-        bounds=bounds(kind), focus=True,
-        layout={"block": {"flavor": TERMINAL + ".shell", "label": label, "options": options}})
 
 
 def client_action(client, name, args):
@@ -556,7 +506,7 @@ def draw(stdscr, lines):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("popup", "view", "metadata"))
+    parser.add_argument("command", choices=("view", "metadata"))
     parser.add_argument("kind", nargs="?", default="metadata")
     parser.add_argument("--session", default=os.environ.get("REX_SESSION"))
     parser.add_argument("--block", default=os.environ.get("REX_BLOCK"))
@@ -568,9 +518,7 @@ def main():
     address = os.environ.get("REX_SERVER", "")
     if address and not address.startswith(("unix://", "/")):
         parser.error("remote Rex は未対応です")
-    if args.command == "popup":
-        popup(args.kind, args.session, args.block, args.client)
-    elif args.command == "metadata":
+    if args.command == "metadata":
         data = metadata(args.session, args.block)
         print(data["session"] + " · " + data["cwd"])
         print("\n".join(text for text, _ in metadata_rows(data, 100, details=True)))
@@ -592,7 +540,9 @@ def main():
             api(args.session, "session.focus_block", block_id=args.block)
             char = chr(key) if key is not None and 0 <= key < 256 else ""
             if char in POPUPS:
-                popup(POPUPS[char], args.session, args.block, args.client)
+                # popup の作成は init.lua の popup.lua が持つ。key binding と同じ action を呼ぶ。
+                rex(*(["-C", args.client] if args.client else []), "do", "dotfiles_" + POPUPS[char],
+                    "-s", args.session, "-b", args.block)
             elif char == "N":
                 template(args.session, args.block)
             elif key == 0:

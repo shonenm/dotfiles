@@ -1,6 +1,6 @@
 # Rex
 
-> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs) / **Plugin** rexurrect（session 保存・復元） / **Configuration** `common/rex/` / **Custom** `scripts/rex-tools` の prefix menu・floating popup・メタデータ一覧・project picker・layout preset・pane swap picker、`scripts/rex-plugins` の plugin 取得、`next_ready.lua` の agent pane 巡回（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs) / **Plugin** rexurrect（session 保存・復元） / **Configuration** `common/rex/` / **Custom** `popup.lua` の floating popup、`scripts/rex-tools` の prefix menu・メタデータ一覧・project picker・layout preset・pane swap picker、`scripts/rex-plugins` の plugin 取得、`next_ready.lua` の agent pane 巡回（[区分](../provenance.md#区分)）
 
 Mac の Rex native session 用。既存の tmux / TUIOS と remote 環境は変更しない。Rex Beta 0.1.0 build 1591 の server API で検証している。GUI の floating layer 描画は別途確認が必要。
 
@@ -16,11 +16,11 @@ rex config check
 rex config reload
 ```
 
-正本は `common/rex/.config/rex/init.lua`。既存の独自 `~/.config/rex/init.lua` がある場合は、上書きせず内容を統合する。`rex-tools` は `~/dotfiles/scripts` から実行する。Python 3 と、各 popup の対象 command が必要。project / layout / swap picker は既存の fzf を使う。
+正本は `common/rex/.config/rex/init.lua`。既存の独自 `~/.config/rex/init.lua` がある場合は、上書きせず内容を統合する。floating popup の作成・toggle は `popup.lua`（`init.lua` が require）が server API で行う。popup 内の画面（prefix menu・メタデータ一覧・picker）と dev template は `rex-tools` で、`~/dotfiles/scripts` から実行する。Python 3 と、各 popup の対象 command が必要。project / layout / swap picker は既存の fzf を使う。
 
 通常の prefix 操作は Rex client が直接実行する。補助の操作一覧 menu や project picker から CLI 経由で session 切替などを実行する場合は、Rex Settings → Rex Server → **Remote Control** が必要。dotfiles はこの許可を自動変更しない。
 
-helper はネットワークの `REX_SERVER` を拒否し、別ホストの cwd をローカル cwd とみなしたり、ローカルの統計を remote の値として表示したりしない。Rex の host（`rex hosts`）の session では、`init.lua` が server の host 接続（`rex.server`）で host 側に短命の pane を開き、host の `~/dotfiles/scripts/rex-tools popup` に任せる。cwd・toggle・label は手元と同じ処理になる。CLI の `rex -S` は呼出ごとに ssh 接続を張り直し、不安定なため使わない。host にも dotfiles と各 command が必要。no-sudo の host は `~/.profile` の zsh 切替が floating pane の command を捨てないこと（[Default Shell](../install/install-no-sudo.md#default-shell)）。
+helper はネットワークの `REX_SERVER` を拒否し、別ホストの cwd をローカル cwd とみなしたり、ローカルの統計を remote の値として表示したりしない。Rex の host（`rex hosts`）の session では、`popup.lua` が server の host 接続（`rex.server`）から host 側に popup を直接作る。cwd・toggle・label は手元と同じ処理になる。以前は host 側に中継 pane を開いて host の `rex-tools` に作らせていたが、login sh・Python・`rex` CLI の起動を順に待つため遅かった。host 接続は action 間で使い回される。dev template だけは中継 pane で host の `rex-tools view dev` に任せる。CLI の `rex -S` は呼出ごとに ssh 接続を張り直し、不安定なため使わない。host にも dotfiles と各 command が必要。no-sudo の host は `~/.profile` の zsh 切替が floating pane の command を捨てないこと（[Default Shell](../install/install-no-sudo.md#default-shell)）。
 
 ## Prefix は Rex 標準キーシーケンス
 
@@ -63,7 +63,7 @@ prefix 不要の `Ctrl+h/j/k/l` は [vim-rex-navigator](https://github.com/paul-
 
 ## Popup の保持と終了
 
-popup は呼出元 block ごとに一つ。現在の block の cwd を API で取得し、同じ session / window に作成する。Rex は popup の command を login sh で起動し、対話 zsh が足す mise の shims が PATH に無いため、`rex-tools` は popup と dev template の command を shims（`~/.local/share/mise/shims`）を PATH の先頭に足して起動する。mise だけでツールを入れた host でも lazygit / nvim / fzf が見つかる。cwd が不明なら home へ勝手に切り替えずエラーにする。container 内 cwd の引き継ぎは未対応。
+popup は呼出元 block ごとに一つ。現在の block の cwd を API で取得し、同じ session / window に作成する。Rex は popup の command を login sh で起動し、対話 zsh が足す mise の shims が PATH に無いため、`popup.lua` と `rex-tools`（dev template）は command を shims（`~/.local/share/mise/shims`）を PATH の先頭に足して起動する。mise だけでツールを入れた host でも lazygit / nvim / fzf が見つかる。cwd が不明なら home へ勝手に切り替えずエラーにする。container 内 cwd の引き継ぎは未対応。
 
 同じ popup を再度呼ぶと detach し、さらに呼ぶと同じ block を再表示する。scratch の shell や Neovim の未保存 buffer は終了しない。command 自体を終了すると Rex が block を片付ける。
 
@@ -146,7 +146,7 @@ plugin が別の binary を必要とする場合、binary は [新ツール追�
 ## 検証
 
 ```bash
-python3 scripts/test-rex-tools.py
+python3 scripts/test-rex-tools.py   # luajit があれば scripts/test-rex-popup.lua も実行する
 # この設定を reload 済みの local Rex で keymap を検査し、専用 session を作成・削除する
 REX_TEST_INTEGRATION=1 python3 scripts/test-rex-tools.py
 rex config check ~/dotfiles/common/rex/.config/rex/init.lua

@@ -4,6 +4,7 @@ import copy
 import importlib.machinery
 import importlib.util
 import os
+import shutil
 import signal
 import subprocess
 import tempfile
@@ -195,44 +196,19 @@ class UnitTests(unittest.TestCase):
         with patch.object(tool, "blocks", return_value=[{"block_id": "p", "label": tool.TAG + "prefix/block:source"}]):
             self.assertEqual(tool.origin("s", "p"), "block:source")
 
-    def test_toggle_preserves_process(self):
-        entries = [{"block_id": "a", "label": "shell", "placement": "placed", "window_id": "w"},
-                   {"block_id": "p", "label": tool.TAG + "scratch/a", "placement": "placed"}]
-        with patch.object(tool, "blocks", return_value=entries), patch.object(tool, "api") as api:
-            tool.popup("scratch", "s", "a")
-        self.assertEqual([c.args[1] for c in api.call_args_list], ["session.detach_block", "session.focus_block"])
+    @unittest.skipUnless(shutil.which("luajit"), "luajit がない")
+    def test_popup_lua(self):
+        # popup の作成は init.lua の popup.lua。rex を mock した Lua の test を実行する。
+        result = subprocess.run(["luajit", str(Path(__file__).with_name("test-rex-popup.lua"))],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_prefix_twice_closes_menu_and_sends_key(self):
-        entries = [{"block_id": "a", "label": "shell", "placement": "placed", "window_id": "w"},
-                   {"block_id": "p", "label": tool.TAG + "prefix/a", "placement": "placed"}]
-        with patch.object(tool, "blocks", return_value=entries), patch.object(tool, "api") as api, \
-             patch.object(tool, "rex") as rex:
-            tool.popup("prefix", "s", "p")
-        self.assertEqual([c.args[1] for c in api.call_args_list], ["block.close", "session.focus_block"])
-        rex.assert_called_once_with("send-key", "-s", "s", "-b", "a", "ctrl+space")
-
-    def test_reopen_same_block(self):
-        entries = [{"block_id": "a", "label": "shell", "placement": "placed", "window_id": "w"},
-                   {"block_id": "p", "label": tool.TAG + "scratch/a", "placement": "detached"}]
-        with patch.object(tool, "blocks", return_value=entries), patch.object(tool, "api") as api:
-            tool.popup("scratch", "s", "a")
-        self.assertEqual([c.args[1] for c in api.call_args_list],
-                         ["session.move_block", "session.float_block", "session.focus_block"])
-        self.assertTrue(all(c.kwargs["block_id"] == "p" for c in api.call_args_list))
-
-    def test_new_popup_uses_anchor_window_cwd_and_size(self):
-        entries = [{"block_id": "a", "label": "shell", "placement": "placed", "window_id": "w"}]
-        with patch.object(tool, "blocks", return_value=entries), \
-             patch.object(tool, "cwd_for", return_value="/tmp/project"), patch.object(tool, "api") as api:
-            tool.popup("git", "s", "a")
-        args = api.call_args.kwargs
-        self.assertEqual(args["window_id"], "w")
-        self.assertEqual(args["layout"]["block"]["options"], {"cwd": "/tmp/project", "command": tool.with_tools(["lazygit"])})
-        self.assertEqual(args["bounds"][2:], [.8, .8])
-
-    def test_unknown_popup_fails(self):
-        with self.assertRaises(RuntimeError):
-            tool.popup("typo", "s", "a")
+    def test_prefix_menu_opens_popup_through_action(self):
+        with patch.object(tool, "curses") as curses, patch.object(tool, "api"), patch.object(tool, "rex") as rex, \
+             patch("sys.argv", ["rex-tools", "view", "prefix", "--session", "s", "--block", "a", "--client", "c"]):
+            curses.wrapper.return_value = ord("g")
+            tool.main()
+        rex.assert_called_once_with("-C", "c", "do", "dotfiles_git", "-s", "s", "-b", "a")
 
 
 @unittest.skipUnless(os.environ.get("REX_TEST_INTEGRATION") == "1", "opt-in Rex integration")
@@ -259,6 +235,10 @@ class IntegrationTests(unittest.TestCase):
             (plugins / "root/init.lua").write_text(body.format("ctrl+alt+1"))
             (plugins / "nested/lua/nested/init.lua").write_text(body.format("ctrl+alt+2"))
             (config / "plugins.txt").write_text("# comment\nroot o/root abc\nnested o/nested abc lua\n")
+            # init.lua が require する同じ directory の module も置く。
+            for module in source.parent.glob("*.lua"):
+                if module.name != "init.lua":
+                    (config / module.name).write_text(module.read_text())
 
             def bindings(extra):
                 (config / "init.lua").write_text(source.read_text() + extra)
@@ -279,12 +259,17 @@ class IntegrationTests(unittest.TestCase):
         anchor = created["initial_windows"][0]["block_ids"][0]
         try:
             # cwd は prompt よりも process API で取得できる。
-            tool.popup("scratch", session, anchor)
+            popup_action = lambda kind, block: tool.rex("do", "dotfiles_" + kind, "-s", session, "-b", block)
+            # popup は pane の cwd を使うため、shell が起動して cwd を報告するまで待つ。
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline and not (tool.terminal(session, anchor, "process").get("foreground") or {}).get("cwd"):
+                time.sleep(.05)
+            popup_action("scratch", anchor)
             popup = next(b for b in tool.blocks(session) if b["label"].startswith(tool.TAG))
             pid = tool.terminal(session, popup["block_id"], "process")["child"]["pid"]
-            tool.popup("scratch", session, popup["block_id"])
+            popup_action("scratch", popup["block_id"])
             self.assertEqual(next(b for b in tool.blocks(session) if b["block_id"] == popup["block_id"])["placement"], "detached")
-            tool.popup("scratch", session, anchor)
+            popup_action("scratch", anchor)
             self.assertEqual(tool.terminal(session, popup["block_id"], "process")["child"]["pid"], pid)
             self.assertEqual(len([b for b in tool.blocks(session) if b["label"].startswith(tool.TAG)]), 1)
             tool.api(session, "session.new_split", anchor_id=anchor, direction="horizontal", side="after", ratio=.65,
@@ -300,7 +285,7 @@ class IntegrationTests(unittest.TestCase):
             with patch.object(tool, "choose", side_effect=lambda rows, header: rows[0]):
                 tool.swap(session, anchor)
             self.assertEqual([bid for bid, _ in tool.panes(tool.tiled_layout(session, anchor))], before[::-1])
-            tool.popup("prefix", session, anchor)
+            popup_action("prefix", anchor)
             menu = next(b for b in tool.blocks(session) if b["label"].startswith(tool.TAG + "prefix/"))
             deadline = time.monotonic() + 5
             captured = ""
