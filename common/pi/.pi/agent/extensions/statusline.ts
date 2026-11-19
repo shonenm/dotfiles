@@ -175,11 +175,15 @@ class StatusOverlay implements Focusable {
   focused = false;
   readonly width = Math.max(36, Math.min(84, (process.stdout.columns || 88) - 4));
 
-  constructor(
-    private readonly theme: Theme,
-    private readonly lines: Array<[string, string]>,
-    private readonly done: () => void,
-  ) {}
+  private readonly theme: Theme;
+  private readonly lines: Array<[string, string]>;
+  private readonly done: () => void;
+
+  constructor(theme: Theme, lines: Array<[string, string]>, done: () => void) {
+    this.theme = theme;
+    this.lines = lines;
+    this.done = done;
+  }
 
   handleInput(data: string): void {
     if (matchesKey(data, "escape") || matchesKey(data, "return") || data === "q") this.done();

@@ -41,7 +41,7 @@ SH
 chmod +x "$tmp/bin/pueue"
 
 cd "$tmp"
-HOME="$tmp/home" TEST_TMP="$tmp" PATH="$tmp/bin:$PATH" node --experimental-transform-types --preserve-symlinks --input-type=module - "$tmp" <<'JS'
+HOME="$tmp/home" TEST_TMP="$tmp" PATH="$tmp/bin:$PATH" node --experimental-strip-types --preserve-symlinks --input-type=module - "$tmp" <<'JS'
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";

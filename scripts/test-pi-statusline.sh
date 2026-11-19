@@ -2,8 +2,7 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-pi_bin=$(realpath "$(command -v pi)")
-pi_package=$(cd "$(dirname "$pi_bin")/.." && pwd)
+pi_package="$(npm root -g)/@earendil-works/pi-coding-agent"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -19,7 +18,7 @@ printf '%s\n' '#!/bin/sh' 'touch "$HOME/ai-usage-called"; exit 1' >"$tmp/bin/ai-
 chmod +x "$tmp/bin/pueue" "$tmp/bin/ai-usage"
 
 cd "$tmp"
-HOME="$tmp/home" PATH="$tmp/bin:$PATH" node --experimental-transform-types --input-type=module - "$tmp" <<'JS'
+HOME="$tmp/home" PATH="$tmp/bin:$PATH" node --experimental-strip-types --input-type=module - "$tmp" <<'JS'
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { stripVTControlCharacters } from "node:util";
@@ -89,7 +88,7 @@ const footerData = {
 const footer = () => footerFactory({ requestRender() {} }, theme, footerData);
 const text = (lines) => stripVTControlCharacters(lines.join("\n")).replace(/\s+/g, " ");
 const compactText = (lines) => text(lines).replace(/\s/g, "");
-const removed = /\b(?:CURSOR|yolo|ponytail|FULL|pkgs|auto-update|TOK|TOKENS|COST|WEB|MCP|CTX)\b/i;
+const removed = /\b(?:CURSOR|yolo|pkgs|auto-update|TOK|TOKENS|COST|WEB|MCP|CTX)\b/i;
 
 await emit("session_start");
 await emit("agent_start");
