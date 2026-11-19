@@ -1,0 +1,15 @@
+# gitleaks の設定。既定ルールに、過去 commit の既知の誤検知だけを除外として足す。
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "過去に追跡していた Raycast 拡張の公開 OAuth client id と、jj の conflict 作業ファイル"
+paths = [
+  '''^raycast/extensions/''',
+  '''^\.jjconflict-[^/]+/''',
+]
+
+[[allowlists]]
+description = "VS Code keybindings の \"key\" フィールド"
+targetRules = ["generic-api-key"]
+paths = ['''(^|/)keybindings\.json$''']
