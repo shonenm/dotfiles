@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Pre-commit hook for dotfiles repo.
+#
+# Stop commits that stage secrets (public repository). Uses .gitleaks.toml.
+# Linked into .git/hooks/pre-commit by install.sh.
+
+set -eu
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks not found; secret scan skipped" >&2
+  exit 0
+fi
+exec gitleaks git --pre-commit --staged --redact --no-banner

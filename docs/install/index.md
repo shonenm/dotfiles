@@ -102,7 +102,7 @@ dots lock              # maintainer向け: mise lockfileを更新
 
 ## CI
 
-GitHub Actionsとローカルの`dots check`は、`scripts/check`を正本としてShellCheck、installer/config test、package parity、Markdown/provenance、Stow dry-runを実行する。
+GitHub Actionsとローカルの`dots check`は、`scripts/check`を正本としてShellCheck、installer/config test、package parity、Markdown/provenance、Stow dry-run、gitleaksによる履歴全体のsecret scan（`.gitleaks.toml`）を実行する。commit時は`scripts/git-hooks/pre-commit`（install.shがリンク）がstageした差分をgitleaksで検査する。
 
 ## 関連文書
 

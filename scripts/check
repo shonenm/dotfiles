@@ -45,6 +45,8 @@ python3 scripts/test_check_markdown_links.py
 scripts/check-markdown-links.py
 scripts/check-doc-provenance.py
 scripts/check-package-duplication.sh
+# public repository なので、履歴全体に秘密情報が無いことを確認する (.gitleaks.toml)。
+gitleaks git --no-banner --redact --log-level warn .
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT

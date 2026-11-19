@@ -23,9 +23,9 @@
     },
     {
       customType: 'regex',
-      managerFilePatterns: ['/^\\.github\\/workflows\\/dependencies\\.yml$/'],
+      managerFilePatterns: ['/^\\.github\\/workflows\\/(?:dependencies|ci)\\.yml$/'],
       matchStrings: [
-        "version: '(?<currentValue>[^']+)' # renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)",
+        "(?:version|[A-Z_]+_VERSION): '(?<currentValue>[^']+)' # renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)",
       ],
     },
   ],
