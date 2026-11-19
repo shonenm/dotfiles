@@ -203,8 +203,6 @@ if copy_mode then
   rex.bind("ctrl+space>[", "dotfiles_copy_mode")
   rex.bind("ctrl+space>ctrl+u", "dotfiles_copy_halfpage")
 end
--- Cmd+U で対応が必要な agent の pane へ移動する。
-require("next_ready")
 
 -- rexurrect: server 起動時に前回の snapshot を復元する (保存は launchd の autosave)。
 -- server は bare な環境で動くため、本体の path と state / config の場所を明示する。
