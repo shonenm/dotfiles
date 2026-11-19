@@ -33,7 +33,7 @@ Zshのtied arrayをunique化し、nested shellやstartup fileの再読込で同�
 
 すべての`fpath`を追加した後、`.zshrc`末尾で`compinit`を一度だけ実行する。
 
-- `.zcompdump`が24時間より古い、または存在しない: `compinit`
+- `.zcompdump`が24時間より古い、または存在しない: `compinit`の後に`touch`で mtime を更新する（`compinit`は fpath と zsh の版が変わらなければ dump を書き直さないため）
 - それ以外: `compinit -C`
 
 静的な補完は`~/.zsh/completions`へ置く。毎回CLIから補完scriptを生成しない。

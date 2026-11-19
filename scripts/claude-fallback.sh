@@ -40,8 +40,12 @@ cmd_setup() {
     return 1
   }
 
-  mkdir -p "$DATA_DIR"
-  echo "OPENROUTER_API_KEY=$openrouter_key" > "$ENV_FILE"
+  # 作成時点から本人だけが読めるようにする (後から chmod すると umask の権限で作られる隙間がある)。
+  (
+    umask 077
+    mkdir -p "$DATA_DIR"
+    printf 'OPENROUTER_API_KEY=%s\n' "$openrouter_key" > "$ENV_FILE"
+  )
   chmod 600 "$ENV_FILE"
   log_success "OpenRouter API key cached"
 }

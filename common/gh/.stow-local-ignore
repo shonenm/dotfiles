@@ -1,0 +1,2 @@
+# gh が書く OAuth token。stow でリンクせず ~/.config/gh に実ファイルとして置く。
+\.config/gh/hosts\.yml

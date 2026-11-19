@@ -546,6 +546,19 @@ prepare_git_config_target() {
   fi
 }
 
+# gh の hosts.yml (OAuth token) は以前 stow で repo 内の実ファイルへリンクしていた。
+# token を dotfiles の作業ツリーに置かないよう、実ファイルとして ~/.config/gh へ移す。
+prepare_gh_hosts_target() {
+  local target="$HOME/.config/gh/hosts.yml"
+  local source="$DOTFILES_DIR/common/gh/.config/gh/hosts.yml"
+  if [[ -L "$target" && -f "$source" && "$(realpath "$target" 2>/dev/null)" == "$(realpath "$source" 2>/dev/null)" ]]; then
+    unlink "$target"
+    mv "$source" "$target"
+    chmod 600 "$target"
+    log_info "  Moved gh hosts.yml out of the dotfiles repo"
+  fi
+}
+
 # Fixup writable or bind-mounted config files that stow does not manage directly.
 fixup_bind_mounts() {
   # .gitconfig: inject [include] to pull in dotfiles gitconfig
@@ -624,6 +637,7 @@ link_dotfiles() {
   cleanup_broken_skill_links
   normalize_dotfiles_symlinks
   prepare_git_config_target
+  prepare_gh_hosts_target
 
   # Stow common packages
   if [[ -d "$DOTFILES_DIR/common" ]]; then
@@ -879,6 +893,9 @@ for name, config in servers.items():
       record_install_state claude-mcp "$claude_mcp_fp"
     fi
   fi
+  # ~/.claude.json は MCP の token を含みうる。umask 0002 の host では 664 で作られるため本人だけにする
+  # (Claude Code は書き直しても既存の権限を保つ)。
+  if [[ -f "$HOME/.claude.json" ]]; then chmod 600 "$HOME/.claude.json"; fi
 
   # Claude Code skills (from common/claude, skip if Stow symlinks exist)
   local skills_src="$DOTFILES_DIR/common/claude/.claude/skills"

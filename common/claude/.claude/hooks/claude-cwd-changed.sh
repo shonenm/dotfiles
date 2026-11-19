@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # claude-cwd-changed.sh - CwdChanged hook
-# ディレクトリ変更時に .envrc を読み込み、以降の Bash ツール実行用の
-# 環境変数を CLAUDE_ENV_FILE に書き出す。direnv がある場合はそちらを優先。
-# 依存: jq (オプション), direnv (オプション)
+# ディレクトリ変更時に direnv で .envrc を読み込み、以降の Bash ツール実行用の
+# 環境変数を CLAUDE_ENV_FILE に書き出す。
+# direnv の allow を通った .envrc だけを読む。direnv が無い環境では読まない
+# (未信頼の .envrc の export 行を CLAUDE_ENV_FILE に入れると、Bash ツールが
+# source するたびに `export X=$(...)` のコマンド置換が実行されるため)。
+# 依存: jq (オプション), direnv
 set -euo pipefail
 
 # CLAUDE_ENV_FILE が設定されていなければ何もしない
@@ -22,25 +25,21 @@ fi
 ENVRC="${NEW_CWD}/.envrc"
 [[ ! -f "$ENVRC" ]] && exit 0
 
-# direnv が使える場合は direnv exec で正確な環境を取得
-if command -v direnv &>/dev/null; then
-  TMPFILE=$(mktemp)
-  trap 'rm -f "$TMPFILE"' EXIT
+command -v direnv &>/dev/null || exit 0
 
-  # direnv exec で環境変数を列挙
-  if direnv exec "$NEW_CWD" env > "$TMPFILE" 2>/dev/null; then
-    # shell 内部変数・direnv 管理変数を除外してエクスポート
-    while IFS='=' read -r key rest; do
-      # 空キー・制御変数・direnv 管理変数をスキップ
-      case "$key" in
-        ''|_|SHLVL|OLDPWD|PWD|HOME|USER|SHELL|TERM*|DIRENV_*|BASH_*|ZSH_*) continue ;;
-      esac
-      # キー名が正当な識別子でなければスキップ
-      [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
-      printf 'export %s=%s\n' "$key" "$(printf '%q' "$rest")" >> "$CLAUDE_ENV_FILE"
-    done < "$TMPFILE"
-  fi
-else
-  # direnv がなければ .envrc の単純な export 行のみ抽出
-  grep -E '^export [A-Za-z_][A-Za-z0-9_]*=' "$ENVRC" >> "$CLAUDE_ENV_FILE" 2>/dev/null || true
+TMPFILE=$(mktemp)
+trap 'rm -f "$TMPFILE"' EXIT
+
+# direnv exec で環境変数を列挙
+if direnv exec "$NEW_CWD" env > "$TMPFILE" 2>/dev/null; then
+  # shell 内部変数・direnv 管理変数を除外してエクスポート
+  while IFS='=' read -r key rest; do
+    # 空キー・制御変数・direnv 管理変数をスキップ
+    case "$key" in
+      ''|_|SHLVL|OLDPWD|PWD|HOME|USER|SHELL|TERM*|DIRENV_*|BASH_*|ZSH_*) continue ;;
+    esac
+    # キー名が正当な識別子でなければスキップ
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    printf 'export %s=%s\n' "$key" "$(printf '%q' "$rest")" >> "$CLAUDE_ENV_FILE"
+  done < "$TMPFILE"
 fi
