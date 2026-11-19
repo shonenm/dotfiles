@@ -16,7 +16,7 @@ hunkdiff@0.18.0
 @ooples/token-optimizer-mcp@5.6.1
 
 # MCP servers (global install to avoid npx wrapper process per Claude session)
-@notionhq/notion-mcp-server@2.5.1
+@notionhq/notion-mcp-server@2.6.1
 tmux-mcp@0.2.2
 
 # Neovim dependencies
