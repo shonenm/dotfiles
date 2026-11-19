@@ -66,11 +66,11 @@ build requirements: `gcc make wget tar bison libevent-dev libncurses-dev`。sudo
 - no-sudo モード: `~/.profile` に以下を追記 (marker で冪等化):
   ```sh
   # dotfiles: exec zsh -l (no-sudo mode)
-  if [ -z "$ZSH_VERSION" ] && [ -z "$BASH_EXECUTION_STRING" ] && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then
+  if [ -z "$ZSH_VERSION" ] && case $- in *i*) true ;; *) false ;; esac && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then
     exec zsh -l
   fi
   ```
-  SSH ログインで bash → zsh exec に切り替わる。`chsh` が使えない環境の標準的な代替手法。`bash -l -c CMD` は端末付きでも CMD を捨てないよう zsh に移らない（Rex の floating pane 等が該当）。旧条件の行は再実行時に書き換える。
+  SSH ログインで bash → zsh exec に切り替わる。`chsh` が使えない環境の標準的な代替手法。対話 shell（`$-` に `i`）のときだけ移るため、`sh -l -c CMD` / `bash -l -c CMD` は端末付きでも CMD を捨てない（Rex の floating pane 等が該当。dash には `BASH_EXECUTION_STRING` が無く、以前の条件では `sh -c` の CMD が捨てられていた）。旧条件の行は再実行時に書き換える。
 
 ## 前提条件 (ホスト側に必要なもの)
 

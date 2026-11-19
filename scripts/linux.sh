@@ -463,16 +463,24 @@ set_default_shell() {
   if [[ "$NO_SUDO" == "true" ]]; then
     local profile="$HOME/.profile"
     local marker='# dotfiles: exec zsh -l (no-sudo mode)'
-    # `bash -l -c CMD`（Rex の floating pane 等）でも端末が付くため、-c の command を
-    # 捨てないよう BASH_EXECUTION_STRING が空のときだけ zsh へ移る。
+    # `sh -l -c CMD` / `bash -l -c CMD`（Rex の floating pane 等）でも端末が付くため、
+    # -c の command を捨てないよう対話 shell（$- に i）のときだけ zsh へ移る。
+    # dash には BASH_EXECUTION_STRING が無く、旧条件では sh -c の command が捨てられていた。
     # shellcheck disable=SC2016 # intentionally literal sh for ~/.profile
-    local old_cond='if [ -z "$ZSH_VERSION" ] && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then'
+    local old_conds=(
+      'if [ -z "$ZSH_VERSION" ] && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then'
+      'if [ -z "$ZSH_VERSION" ] && [ -z "$BASH_EXECUTION_STRING" ] && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then'
+    )
     # shellcheck disable=SC2016 # intentionally literal sh for ~/.profile
-    local cond='if [ -z "$ZSH_VERSION" ] && [ -z "$BASH_EXECUTION_STRING" ] && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then'
-    if [[ -f "$profile" ]] && grep -qF "$old_cond" "$profile"; then
+    local cond='if [ -z "$ZSH_VERSION" ] && case $- in *i*) true ;; *) false ;; esac && [ -t 0 ] && command -v zsh >/dev/null 2>&1; then'
+    local old_cond found=""
+    for old_cond in "${old_conds[@]}"; do
+      [[ -f "$profile" ]] && grep -qxF "$old_cond" "$profile" && found="$old_cond"
+    done
+    if [[ -n "$found" ]]; then
       local tmp
       tmp=$(mktemp)
-      awk -v old="$old_cond" -v new="$cond" '$0 == old { $0 = new } { print }' "$profile" >"$tmp" && cat "$tmp" >"$profile"
+      awk -v old="$found" -v new="$cond" '$0 == old { $0 = new } { print }' "$profile" >"$tmp" && cat "$tmp" >"$profile"
       rm -f "$tmp"
       log_success "Updated zsh exec condition in ~/.profile"
     elif [[ -f "$profile" ]] && grep -qF "$marker" "$profile"; then
