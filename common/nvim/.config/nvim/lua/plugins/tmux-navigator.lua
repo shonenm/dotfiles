@@ -1,5 +1,5 @@
 local in_tuios = vim.env.TUIOS_ENV == "1"
--- Rex 側の binding は vim-rex-navigator (common/rex)。
+-- Rex 側の binding は common/rex/.config/rex/init.lua の Ctrl+h/j/k/l。
 local in_rex = not in_tuios and (vim.env.REX_SESSION or "") ~= ""
 
 local function tuios_report(verb, value)
@@ -11,7 +11,8 @@ local function outer_focus(direction)
   if in_tuios then
     tuios_report("focus", direction)
   else
-    vim.system({ "rex", "focus", direction, "-s", vim.env.REX_SESSION })
+    -- server の rex focus ではなく app の pane.focus で動かす。app が覚える focus を更新するため。
+    vim.system({ "rex", "do", "pane.focus", "direction=" .. direction })
   end
 end
 

@@ -151,20 +151,29 @@ for _, entry in ipairs({
 }) do
   rex.bind("ctrl+alt+" .. entry[1], entry[2])
 end
--- Ctrl+h/j/k/l は vim-rex-navigator。vim/nvim が前面の pane では Neovim に渡す。
--- plugin は渡す先を vim/nvim に固定しているため、ssh 先 (rcon の nvim / tmux) へ渡す判定を binding の前に挟む。
-local bind = rex.bind
-rex.bind = function(key, action, args)
-  if type(action) ~= "function" then return bind(key, action, args) end
-  return bind(key, function(ctx)
-    local process = rex.block.call("com.superlogical.terminal", "process", { block_id = ctx.block_id })
-    local fg = process and process.foreground
-    if fg and (fg.name == "ssh" or fg.argv0 == "ssh") then return false end
-    return action(ctx)
-  end, args)
+-- Ctrl+h/j/k/l で pane を移動する。vim/nvim と ssh (rcon のリモート nvim / tmux) が前面の pane ではキーを渡し、
+-- Neovim は内部 split を先に移動して端で同じ pane.focus を呼ぶ (common/nvim/.config/nvim/lua/plugins/tmux-navigator.lua)。
+-- server の session.focus_direction で動かすと app が覚える focus が更新されず、session を離れて戻ると
+-- 前の pane に戻るため、app の pane.focus で動かす。
+-- key handler の関数からは client action を queue できないため action にし、渡す場合は pane.send_key で送る。
+local pass_keys = { vim = true, nvim = true, view = true, vimdiff = true, ssh = true }
+for key, direction in pairs({ h = "left", j = "down", k = "up", l = "right" }) do
+  rex.action{
+    name = "dotfiles_focus_" .. direction,
+    title = "Dotfiles: Focus Pane " .. direction,
+    category = "Dotfiles",
+    run = function(ctx)
+      local ok, process = pcall(rex.block.call, "com.superlogical.terminal", "process", { block_id = ctx.block_id })
+      local fg = ok and process and process.foreground
+      if fg and (pass_keys[fg.name] or pass_keys[fg.argv0]) then
+        rex.client.queue("pane.send_key", { key = "ctrl+" .. key })
+      else
+        rex.client.queue("pane.focus", { direction = direction })
+      end
+    end,
+  }
+  rex.bind("ctrl+" .. key, "dotfiles_focus_" .. direction)
 end
-plugin("vim-rex-navigator")
-rex.bind = bind
 -- Rex に copy mode がないため、prefix v / [ で pane の scrollback を tmux の copy mode で開く。
 -- copy mode 内の key は tmux-copy.conf。prefix C-u は tmux 時代と同じく半ページ戻った状態で開く。
 local copy_mode
