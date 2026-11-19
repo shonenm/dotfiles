@@ -66,6 +66,28 @@ local function ready()
   return out
 end
 
+-- 手元の client は remote host の session を解決できない (SessionNotFoundOnServer)。
+-- 同じ app は host の server にも client として繋いでいるため、そちらに選ばせる。
+local function select(ctx, go)
+  local args = { session_id = go.s, window_id = go.w }
+  if go.srv == rex then return rex.client.queue("session.select", args) end
+  local me
+  for _, c in ipairs(rex.call("client.list", {}).clients or {}) do
+    if c.client_id == ctx.client_id then me = c.info end
+  end
+  if not me then error("呼出元の client が見つかりません", 0) end
+  for _, c in ipairs(go.srv.call("client.list", {}).clients or {}) do
+    local info = c.info or {}
+    if c.connection_state == "connected" and info.kind == "app" and info.label == me.label
+        and info.platform == me.platform and info.version == me.version then
+      local _, err = go.srv.call("client.perform", { client_id = c.client_id, action = "session.select", args = args })
+      if err then error(err, 0) end
+      return
+    end
+  end
+  error("host に接続している同じ app の client が見つかりません", 0)
+end
+
 rex.action{
   name = "next_ready_pane",
   title = "Next Pane That Needs You",
@@ -77,9 +99,7 @@ rex.action{
       if x.b == ctx.block_id then go = list[i % #list + 1] break end
     end
     if not go or go.b == ctx.block_id then return end
-    if go.srv.call("session.focus_block", { session_id = go.s, block_id = go.b }) then
-      rex.client.queue("session.select", { session_id = go.s, window_id = go.w })
-    end
+    if go.srv.call("session.focus_block", { session_id = go.s, block_id = go.b }) then select(ctx, go) end
   end,
 }
 
