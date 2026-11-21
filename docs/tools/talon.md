@@ -19,4 +19,4 @@ Aqua Voice の録音状態は外部から取得できないため、状態は Ta
 
 1. `install.sh` で Talon を導入し、`mac/talon` を stow する。
 2. Talon を起動し、マイクとアクセシビリティを許可する。
-3. Aqua Voice の Settings > Keybindings で Activate Hands-Free を `F12`、Send を `F10` に登録する。Aqua Voice はキー設定をアカウント側に保存し、起動時に `settings.json` を上書きするため、ファイルではなく設定画面から登録する。
+3. Aqua Voice の Settings > Keybindings で Activate Hands-Free を `F12`、Send を `F10` に登録し、Settings > Send Command を Auto にする。Auto はアプリ・ドメイン・入力欄ごとに送信キーを選ぶ（Gmail や GitHub は `⌘+Enter`、ターミナルは `Enter`、メモや Word は送信しない）。Aqua Voice はキー設定をアカウント側に保存し、起動時に `settings.json` を上書きするため、ファイルではなく設定画面から登録する。
