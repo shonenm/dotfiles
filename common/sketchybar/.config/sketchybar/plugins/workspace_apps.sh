@@ -11,7 +11,7 @@ HIGHLIGHT_COLOR=$(get_mode_color)
 # Get focused workspace and focused app
 FOCUSED_WS=$(aerospace list-workspaces --focused)
 FOCUSED_APP=$(aerospace list-windows --focused --format '%{app-name}' 2>/dev/null)
-APPS=$(aerospace list-windows --workspace "$FOCUSED_WS" --format '%{app-name}' 2>/dev/null | sort -u)
+APPS=$(aerospace list-windows --workspace "$FOCUSED_WS" --format '%{app-name}' 2>/dev/null | sort -ur)  # ponytail: CLI がツリー順を返さないため名前の降順。ツリー順が取れるようになったら置き換える
 
 # State file to track current apps
 STATE_FILE="${XDG_RUNTIME_DIR:-${TMPDIR:-$HOME/.cache}}/sketchybar/apps_state"
@@ -41,7 +41,11 @@ if [ "$CURRENT_APPS" != "$PREV_APPS" ]; then
     while IFS= read -r app; do
         item_name="app.$(echo "$app" | tr ' .' '_')"
         APP_ITEMS+=("$item_name")
-        __icon_map "$app"
+        # upstream icon_map に無いアプリは近いグリフで補う
+        case "$app" in
+            "Aqua Voice") icon_result=":voice_memos:" ;;
+            *) __icon_map "$app" ;;
+        esac
 
         # shellcheck disable=SC2154  # icon_result is set by __icon_map
         sketchybar --add item "$item_name" left \
