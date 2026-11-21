@@ -1,3 +1,2 @@
 # Rex plugin の正本。scripts/rex-plugins sync が取得し、init.lua が package.path に加える。
 # name  owner/repo  commit  [Lua ディレクトリ。省略時は repo 直下の init.lua を name で require]
-rex-tmux-copy tomarrell/rex-tmux-copy c28bb8aa93f324d56a84a1b3e2cb7d444ece0ad2
