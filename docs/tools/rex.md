@@ -90,11 +90,13 @@ snapshot は `$XDG_CACHE_HOME/rex/metadata.json`（既定 `~/.cache/rex/metadata
 | CPU / RAM / GPU / disk | 既存 `tmux-*.sh` の結果から tmux 書式を除いて表示 |
 | branch・ahead/behind・変更ファイル数・追加削除行 | 既存 `tmux-git-status.sh` を再利用。untracked は含まない |
 | AI 使用量 | 既存 `ai-usage` の Claude / Codex / Gemini / Cursor / Grok 出力を再利用 |
-| program status の補足 | 全 local session の OSC 7501 state・kind・message。報告時刻は `d` |
+| program status の補足 | 全 local session の OSC 7501 state・kind・message。pane ごとに本体 (id なし record) の state と、配下で動く agent / shell の数を別の列に出す。agent の title と報告時刻は `d` |
 | group / space | 詳細画面で未対応と表示 |
 | container 内 cwd | 詳細画面で未対応と表示 |
 | heartbeat hang / agent resume | 詳細画面で未対応と表示。古い status を hang と断定しない |
 | COPY / SYNC 等の tmux mode | Rex の状態として表示しない。PREFIX 待機の自動表示はしない |
+
+Claude Code は OSC 7501 で、本体の状態 (id なし) と bg の Agent / Workflow ごとの record (id と title 付き) を報告する。`run_in_background` の shell と Monitor は報告しないため、ターンを終えて bg の shell だけが動く間は本体が `done` になる。Rex native の activity は record を合算するので、bg の agent が動く間は本体が入力待ちでも実行中に見える。AGENTS 欄は合算せず、本体の state、`agent N`（working / blocked の bg record 数）、`shell N`（`ps` で数えた foreground agent 直下の shell 数）を並べる。shell 数は本体が working の間は実行中の tool の shell も含む。
 
 統計はこの Mac 全体の値。Git は一覧 popup でなく呼出元 pane の cwd。取得失敗や値がない項目は0にしない。GPU 等は既存 helper が値を返さなければ表示対象なし。秘密情報や token を一覧へ出さず、使用量取得の認証処理は既存 command に任せる。
 

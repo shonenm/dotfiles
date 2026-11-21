@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parent
 SELF = str(Path(__file__).resolve())
 TAG = "dotfiles-popup/"
 TERMINAL = "com.superlogical.terminal"
+SHELLS = {"sh", "bash", "zsh", "fish", "dash"}
 POPUPS = {"g": "git", "G": "pr", "k": "editor", "P": "database",
           "Q": "ports", "j": "scratch", "A": "metadata", "F": "project", "l": "layout", "m": "swap"}
 ACTIONS = {"c": ("client.tab.new", {}), "n": ("client.tab.next", {}),
@@ -266,21 +267,41 @@ def usage_rows(provider):
     return rows or [{"provider": provider, "window": "", "percent": "未取得", "reset": ""}]
 
 
-def session_agents(s):
+def shell_children():
+    # OSC 7501 の自己申告は bg の shell / Monitor を含まないため、agent 直下の shell を数える。
+    counts = {}
+    for line in run(["ps", "-A", "-o", "ppid=,comm="]).stdout.splitlines():
+        ppid, _, comm = line.strip().partition(" ")
+        if Path(comm.strip()).name.lstrip("-") in SHELLS:
+            counts[ppid] = counts.get(ppid, 0) + 1
+    return counts
+
+
+def session_agents(s, shells=None):
     def block_agents(b):
+        records = terminal(s["session_id"], b["block_id"], "program_status")["records"]
+        if not records:
+            return []
+        # id 付きは bg の agent / workflow の record。本体 (id なし) の state と合算しない。
+        tasks = [r for r in records if r.get("id") and r["state"] in ("working", "blocked")]
+        process = terminal(s["session_id"], b["block_id"], "process")
+        count = (shells or {}).get(str((process.get("foreground") or {}).get("pid")), 0)
+        background = " · ".join(filter(None, (tasks and f"agent {len(tasks)}", count and f"shell {count}")))
+        main = [r for r in records if not r.get("id")] or [{**records[0], "state": "—", "kind": "", "msg": ""}]
         return [{"session": plain(s["label"]), "app": plain(record.get("app", "")),
-                 "state": plain(record["state"]),
+                 "state": plain(record["state"]), "background": background,
                  "message": plain(" ".join(filter(None, (record.get("kind", ""), record.get("msg", ""))))),
+                 "tasks": [plain(t.get("title") or t["id"]) for t in tasks],
                  "updated": plain(record["updated_at"])}
-                for record in terminal(s["session_id"], b["block_id"], "program_status")["records"]]
+                for record in main]
     try:
         # pane ごとの API 呼出は remote で 1 回 80ms 前後かかるため並列に投げる。
         targets = [b for b in blocks(s["session_id"]) if not b.get("label", "").startswith(TAG)]
         with ThreadPoolExecutor(max_workers=8) as pool:
             return [row for rows in pool.map(block_agents, targets) for row in rows]
     except RuntimeError:
-        return [{"session": plain(s["label"]), "app": "", "state": "取得失敗",
-                 "message": "", "updated": ""}]
+        return [{"session": plain(s["label"]), "app": "", "state": "取得失敗", "background": "",
+                 "message": "", "tasks": [], "updated": ""}]
 
 
 def metadata(session, block):
@@ -293,7 +314,8 @@ def metadata(session, block):
     with ThreadPoolExecutor(max_workers=16) as pool:
         stats = [pool.submit(command_text, command) for _, command in jobs]
         usage = [pool.submit(usage_rows, p) for p in ("claude", "codex", "gemini", "cursor", "grok")]
-        agents = [pool.submit(session_agents, s) for s in sessions]
+        shells = shell_children()
+        agents = [pool.submit(session_agents, s, shells) for s in sessions]
         values = {name: future.result() for (name, _), future in zip(jobs, stats)}
         usage = [row for future in usage for row in future.result()]
         agents = [row for future in agents for row in future.result()]
@@ -318,7 +340,8 @@ def read_metadata_cache(path):
                 and all(isinstance(v, str) for v in data["stats"].values())
                 and isinstance(data["usage"], list) and isinstance(data["agents"], list)
                 and all(all(isinstance(row[k], str) for k in ("provider", "window", "percent", "reset")) for row in data["usage"])
-                and all(all(isinstance(row[k], str) for k in ("session", "app", "state", "message", "updated")) for row in data["agents"])):
+                and all(all(isinstance(row[k], str) for k in ("session", "app", "state", "background", "message", "updated"))
+                        and isinstance(row["tasks"], list) for row in data["agents"])):
             return data
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
         pass
@@ -392,11 +415,13 @@ def metadata_rows(data, width, details=False):
     for agent in sorted(data["agents"], key=lambda a: priority.get(a["state"], 3)):
         role = {"waiting": "warning", "working": "heading", "done": "good"}.get(agent["state"], "muted")
         label = agent["session"] + " / " + agent["app"]
+        # 本体の state と配下で動く agent / shell を別の列に置き、本体が止まって配下だけ動く状態を区別する。
         if width >= 65:
-            rows.append((cell(label, 29) + cell(agent["state"], 12) + agent["message"], role))
+            rows.append((cell(label, 29) + cell(agent["state"], 9) + cell(agent["background"] or "—", 20) + agent["message"], role))
         else:
-            rows += [(label, role), ("  " + agent["state"] + "  " + agent["message"], "")]
+            rows += [(label, role), ("  " + "  ".join(filter(None, (agent["state"], agent["background"], agent["message"]))), "")]
         if details:
+            rows += [("  bg agent: " + task, "muted") for task in agent["tasks"]]
             rows.append(("  reported: " + agent["updated"], "muted"))
     if details:
         rows += [("", ""), ("未対応: container cwd / group・space / heartbeat hang / resume", "muted")]

@@ -32,7 +32,8 @@ class UnitTests(unittest.TestCase):
                 "stats": {"CPU": "25%", "RAM": "82%", "GPU": "", "Disk": "11%", "Git": "main +42/-18"},
                 "usage": [{"provider": "claude", "window": "weekly", "percent": "0%", "reset": ""},
                           {"provider": "codex", "window": "", "percent": "未取得", "reset": ""}],
-                "agents": [{"session": "test", "app": "pi", "state": "working", "message": "テスト中", "updated": "yesterday"}]}
+                "agents": [{"session": "test", "app": "pi", "state": "done", "background": "agent 1 · shell 2",
+                            "message": "テスト中", "tasks": ["Run local CI"], "updated": "yesterday"}]}
 
     def test_metadata_cache_roundtrip_and_permissions(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -57,6 +58,21 @@ class UnitTests(unittest.TestCase):
             self.assertEqual([row["app"] for row in tool.session_agents(session)], ["a", "b"])
         with patch.object(tool, "blocks", side_effect=RuntimeError("gone")):
             self.assertEqual(tool.session_agents(session)[0]["state"], "取得失敗")
+
+    def test_session_agents_separates_main_state_from_background(self):
+        session = {"session_id": "s", "label": "work"}
+        replies = {"program_status": {"records": [
+            {"app": "claude-code", "state": "done", "msg": "PR を作りました", "updated_at": "now"},
+            {"id": "a1", "app": "claude-code", "state": "working", "title": "Run local CI", "updated_at": "now"},
+            {"id": "a2", "app": "claude-code", "state": "done", "title": "Finished", "updated_at": "now"}]},
+            "process": {"foreground": {"pid": 42}}}
+        with patch.object(tool, "blocks", return_value=[{"block_id": "a"}]), \
+                patch.object(tool, "terminal", side_effect=lambda _s, _b, method: replies[method]):
+            row, = tool.session_agents(session, {"42": 2, "7": 5})
+        self.assertEqual((row["state"], row["background"], row["tasks"]), ("done", "agent 1 · shell 2", ["Run local CI"]))
+        ps = Mock(stdout="42 zsh\n42 -bash\n42 node\n7 /bin/zsh\n")
+        with patch.object(tool, "run", return_value=ps):
+            self.assertEqual(tool.shell_children(), {"42": 2, "7": 1})
 
     def test_with_tools_finds_mise_shims(self):
         with tempfile.TemporaryDirectory() as home:
@@ -83,7 +99,10 @@ class UnitTests(unittest.TestCase):
         self.assertIn('[----------] 0%', text)
         self.assertIn('未取得', text)
         self.assertNotIn('yesterday', text)
+        self.assertIn('done     agent 1 · shell 2', text)
+        self.assertIn('done  agent 1 · shell 2', "\n".join(t for t, _ in narrow))
         self.assertIn('yesterday', str(tool.metadata_rows(data, 90, True)))
+        self.assertIn('bg agent: Run local CI', str(tool.metadata_rows(data, 90, True)))
         self.assertEqual(tool.cell('日本abc', 5), '日本a')
 
     def test_fresh_cache_draws_without_collecting(self):
