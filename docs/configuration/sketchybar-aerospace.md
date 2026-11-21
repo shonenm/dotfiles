@@ -134,7 +134,9 @@ Notifications from Claude Code (permission, idle, complete) are displayed as bad
 
 - Shows **all apps in current workspace as icons**
 - Focused app shows **icon + label + highlight**
-- Icon mapping supports over 1000 apps
+- Apps are ordered by name descending. `aerospace list-windows` returns name order only and the CLI exposes no tree order, so this does not always match `alt-h` / `alt-l`
+- Icon mapping uses upstream [sketchybar-app-font](https://github.com/kvndrsslr/sketchybar-app-font) `icon_map.sh` (v3.0.28). Keep it in sync with the installed font version; only the shellcheck directive on line 2 is a local patch
+- Apps missing from upstream (e.g. Aqua Voice) are mapped in `workspace_apps.sh`
 
 ## Layout Popup
 
