@@ -22,6 +22,7 @@
 - [Starship](tools/starship.md)
 - [Ghostty](tools/ghostty.md)
 - [Clipboard](tools/clipboard.md)
+- [Talon](tools/talon.md)
 - [Zsh non-interactive guard](tools/zsh-non-interactive-guard.md)
 - [Zsh起動最適化](tools/zsh-startup-optimization.md)
 
