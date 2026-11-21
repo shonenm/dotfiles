@@ -52,8 +52,10 @@ helper はネットワークの `REX_SERVER` を拒否し、別ホストの cwd 
 | `Ctrl+h/j/k/l` | pane 移動（prefix なしでも可） |
 | `H/J/K/L` | pane resize |
 | `r` | 設定 reload |
-| `v` / `[` | pane の scrollback を tmux の copy mode で開く（[rex-tmux-copy](https://github.com/tomarrell/rex-tmux-copy)、[Plugin](#plugin) で管理）。`v` / `V` / `Ctrl+v` で選択、`y` で OSC 52 にコピー、`Enter` / `q` で閉じる。`u` / `d` は半ページ、`Ctrl+u` / `Ctrl+d` は4行スクロール |
+| `v` / `[` | Rex 標準の copy mode（`pane.copy_mode.enter`、⇧⌘C と同じ）。`v` / `V` / `Ctrl+v` で選択、`y` でコピーして閉じる、`Enter` / `Esc` / `q` で閉じる。`u` / `d` は半ページ、`Ctrl+u` / `Ctrl+d` は4行移動 |
 | `Ctrl+u` | copy mode を開き半ページ戻る |
+
+copy mode は Rex 標準の機能（Mac 0.1.0-preview.32 以降）を使う。以前は Rex に copy mode がなく [rex-tmux-copy](https://github.com/tomarrell/rex-tmux-copy) で pane の上に tmux を開いていたが、標準機能に置き換えた。copy mode 内の key は `init.lua` の `copy/` binding で tmux 時代（`common/tmux/.config/tmux/custom-keys.conf`）に合わせている。`Enter` は既定の yank ではなく終了にした。Rex 本体の仕様として、yank すると copy mode も終了し（[Discord](https://discord.com/channels/1546797889009881158/1572988933384708297)）、`Esc` は選択中でも copy mode を終了する（[Discord](https://discord.com/channels/1546797889009881158/1572970978693353614)）。
 
 prefix 不要の `Ctrl+Option+h/l` は前後の tab、`Ctrl+Option+k/j` は前後の session へ移動する。tab 移動は session 内で循環し、端の tab からは反対の端へ移る（隣の session へは進まない）。remote host の session でも、host の接続で tab 構成を取得して同じく循環する。端の移動は tab の通し番号ではなく逆方向の tab 移動で行う。tmux の session group を Rex の session、group 内の tmux session を tab に対応させ、tmux の `C-M-hjkl` と同じ指使いで tab 移動と session 移動を区別する。
 
@@ -136,8 +138,6 @@ rex config reload
 ```
 
 追加は manifest に1行足して `rex-plugins sync` し、`init.lua` に `plugin("<module>")` を書く。plugin の読み込みに失敗しても設定全体は止めず、Rex の log に警告して読み飛ばす。manifest から外した plugin の取得先は消さず、`sync` が `unlisted` と報告する。中身を確認してから手で削除する。
-
-copy mode は開いた時点の snapshot で、表示位置は scrollback の末尾から始まる。vim など全画面 program では現在の画面だけになる。pane の実行先 machine に tmux 3.2 以上が必要で、copy mode 内の key は tmux 時代に合わせて `common/rex/.config/rex/tmux-copy.conf` で上書きしており、plugin はこれを pane の実行先 machine の `~/.config/rex/tmux-copy.conf` から読む。`prefix v` / `[` / `Ctrl+u` は plugin の action を包み、起動 command の PATH に `~/.local/bin` を足す。copy mode の pane は login shell を通らず Rex server の PATH で動くため、remote host の server（systemd user unit）では `~/.local/bin` の `rex` / `tmux` が見つからず即終了していた。`prefix Ctrl+u` はさらに `REX_TMUX_COPY_HALFPAGE=1` を付けて copy mode 開始時に半ページ戻す。
 
 plugin が別の binary を必要とする場合、binary は [新ツール追加時の登録先](../install/setup-new-environment.md#新ツール追加時の登録先) に従って登録する。manifest は Lua module だけを扱う。`leaf rex install` のように `~/.config/rex/init.lua` を書き換える installer は Stow 先の正本を変更するため使わない。
 

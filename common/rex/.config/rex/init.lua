@@ -174,44 +174,25 @@ for key, direction in pairs({ h = "left", j = "down", k = "up", l = "right" }) d
   }
   rex.bind("ctrl+" .. key, "dotfiles_focus_" .. direction)
 end
--- Rex に copy mode がないため、prefix v / [ で pane の scrollback を tmux の copy mode で開く。
--- copy mode 内の key は tmux-copy.conf。prefix C-u は tmux 時代と同じく半ページ戻った状態で開く。
-local copy_mode
-local define = rex.action
-rex.action = function(spec)
-  if spec.name == "tmux_copy_mode" then copy_mode = spec.run end
-  return define(spec)
-end
-plugin("rex-tmux-copy", { key = false })
-rex.action = define
-if copy_mode then
-  -- plugin は起動 command を受け取らないため、作成される block の command を包む。
-  -- copy mode の pane は login shell を通らず server の PATH で動く。remote host の server は
-  -- PATH に ~/.local/bin を含まず、そこにある rex / tmux が見つからず即終了するため足す。
-  local function copy_action(name, title, env)
-    rex.action{
-      name = name,
-      title = title,
-      category = "Dotfiles",
-      run = function(ctx)
-        local block = rex.layout.block
-        rex.layout.block = function(spec)
-          spec.options.command = { "sh", "-c", 'PATH="$HOME/.local/bin:$PATH" exec env "$@"', "sh",
-            env, unpack(spec.options.command) }
-          return block(spec)
-        end
-        local ok, err = pcall(copy_mode, ctx)
-        rex.layout.block = block
-        if not ok then error(err, 0) end
-      end,
-    }
-  end
-  copy_action("dotfiles_copy_mode", "Copy Mode (tmux)", "REX_TMUX_COPY_HALFPAGE=")
-  copy_action("dotfiles_copy_halfpage", "Copy Mode (tmux): Half Page Up", "REX_TMUX_COPY_HALFPAGE=1")
-  rex.bind("ctrl+space>v", "dotfiles_copy_mode")
-  rex.bind("ctrl+space>[", "dotfiles_copy_mode")
-  rex.bind("ctrl+space>ctrl+u", "dotfiles_copy_halfpage")
-end
+-- prefix v / [ で Rex 標準の copy mode に入る。prefix C-u は tmux 時代と同じく半ページ戻った状態で開く。
+rex.bind("ctrl+space>v", "pane.copy_mode.enter")
+rex.bind("ctrl+space>[", "pane.copy_mode.enter")
+rex.action{
+  name = "dotfiles_copy_halfpage",
+  title = "Copy Mode: Half Page Up",
+  category = "Dotfiles",
+  run = function()
+    rex.client.queue("pane.copy_mode.enter")
+    rex.client.queue("pane.copy_mode.move", { to = "half_page_up" })
+  end,
+}
+rex.bind("ctrl+space>ctrl+u", "dotfiles_copy_halfpage")
+-- copy mode 内の key を tmux 時代 (common/tmux/.config/tmux/custom-keys.conf) の copy-mode-vi に合わせる。
+rex.bind("copy/u", "pane.copy_mode.move", { to = "half_page_up" })
+rex.bind("copy/d", "pane.copy_mode.move", { to = "half_page_down" })
+rex.bind("copy/ctrl+u", "pane.copy_mode.move", { to = "up", count = 4 })
+rex.bind("copy/ctrl+d", "pane.copy_mode.move", { to = "down", count = 4 })
+rex.bind("copy/enter", "pane.copy_mode.exit")
 
 -- rexurrect: server 起動時に前回の snapshot を復元する (保存は launchd の autosave)。
 -- server は bare な環境で動くため、本体の path と state / config の場所を明示する。
