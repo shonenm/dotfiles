@@ -52,10 +52,10 @@ helper はネットワークの `REX_SERVER` を拒否し、別ホストの cwd 
 | `Ctrl+h/j/k/l` | pane 移動（prefix なしでも可） |
 | `H/J/K/L` | pane resize |
 | `r` | 設定 reload |
-| `v` / `[` | Rex 標準の copy mode（`pane.copy_mode.enter`、⇧⌘C と同じ）。`v` / `V` / `Ctrl+v` で選択、`y` でコピーして閉じる、`Enter` / `Esc` / `q` で閉じる。`u` / `d` は半ページ、`Ctrl+u` / `Ctrl+d` は4行移動 |
+| `v` / `[` | Rex 標準の copy mode（`pane.copy_mode.enter`、⇧⌘C と同じ）。`v` / `V` / `Ctrl+v` で選択、`y` でコピーして選択を解除する（copy mode は抜けない）、`Enter` / `Esc` / `q` で閉じる。`u` / `d` は半ページ、`Ctrl+u` / `Ctrl+d` は4行移動 |
 | `Ctrl+u` | copy mode を開き半ページ戻る |
 
-copy mode は Rex 標準の機能（Mac 0.1.0-preview.32 以降）を使う。以前は Rex に copy mode がなく [rex-tmux-copy](https://github.com/tomarrell/rex-tmux-copy) で pane の上に tmux を開いていたが、標準機能に置き換えた。copy mode 内の key は `init.lua` の `copy/` binding で tmux 時代（`common/tmux/.config/tmux/custom-keys.conf`）に合わせている。`Enter` は既定の yank ではなく終了にした。Rex 本体の仕様として、yank すると copy mode も終了し（[Discord](https://discord.com/channels/1546797889009881158/1572988933384708297)）、`Esc` は選択中でも copy mode を終了する（[Discord](https://discord.com/channels/1546797889009881158/1572970978693353614)）。
+copy mode は Rex 標準の機能（Mac 0.1.0-preview.32 以降）を使う。以前は Rex に copy mode がなく [rex-tmux-copy](https://github.com/tomarrell/rex-tmux-copy) で pane の上に tmux を開いていたが、標準機能に置き換えた。copy mode 内の key は `init.lua` の `copy/` binding で tmux 時代（`common/tmux/.config/tmux/custom-keys.conf`）に合わせている。`Enter` は既定の yank ではなく終了にした。標準の yank（`pane.copy_mode.yank`）は copy mode も終了するため（[Discord](https://discord.com/channels/1546797889009881158/1572988933384708297)）、`y` は `pane.copy` で選択をコピーし、`pane.copy_mode.select` を `char` → `line` → `line` の順に送って選択だけを解除する。`select` は同じ mode なら解除、別の mode なら切り替えになり、現在の mode を取得できないため、どの mode からも解除で終わるこの順にしている。Rex 本体の仕様として、`Esc` は選択中でも copy mode を終了する（[Discord](https://discord.com/channels/1546797889009881158/1572970978693353614)）。
 
 prefix 不要の `Ctrl+Option+h/l` は前後の tab、`Ctrl+Option+k/j` は前後の session へ移動する。tab 移動は session 内で循環し、端の tab からは反対の端へ移る（隣の session へは進まない）。remote host の session でも、host の接続で tab 構成を取得して同じく循環する。端の移動は tab の通し番号ではなく逆方向の tab 移動で行う。tmux の session group を Rex の session、group 内の tmux session を tab に対応させ、tmux の `C-M-hjkl` と同じ指使いで tab 移動と session 移動を区別する。
 
