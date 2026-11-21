@@ -193,6 +193,21 @@ rex.bind("copy/d", "pane.copy_mode.move", { to = "half_page_down" })
 rex.bind("copy/ctrl+u", "pane.copy_mode.move", { to = "up", count = 4 })
 rex.bind("copy/ctrl+d", "pane.copy_mode.move", { to = "down", count = 4 })
 rex.bind("copy/enter", "pane.copy_mode.exit")
+-- 標準の yank は copy mode を抜けるため、tmux 時代の copy-pipe と同じく選択の解除だけに留める。
+-- pane.copy は copy mode の選択をコピーし、copy mode を抜けない。select は同じ mode なら解除、
+-- 別の mode なら切り替えで、現在の mode は取れない。char → line → line はどの mode からも解除で終わる。
+rex.action{
+  name = "dotfiles_copy_yank",
+  title = "Copy Mode: Yank and Stay",
+  category = "Dotfiles",
+  run = function()
+    rex.client.queue("pane.copy")
+    rex.client.queue("pane.copy_mode.select", { mode = "char" })
+    rex.client.queue("pane.copy_mode.select", { mode = "line" })
+    rex.client.queue("pane.copy_mode.select", { mode = "line" })
+  end,
+}
+rex.bind("copy/y", "dotfiles_copy_yank")
 
 -- rexurrect: server 起動時に前回の snapshot を復元する (保存は launchd の autosave)。
 -- server は bare な環境で動くため、本体の path と state / config の場所を明示する。
