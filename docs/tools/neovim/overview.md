@@ -439,6 +439,7 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 
 | コマンド | 場所 | 動作 |
 | -------- | ---- | ---- |
+| `<leader>gd` | nvim 内 | `:CodeReview`（`HEAD` を親コミットと比較） |
 | `:CodeReview [commit\|A..B\|A...B]` | nvim 内 | コミット範囲のレビューを新しいタブで開く（省略時 `HEAD`） |
 | `codereview-branch [base]` | shell function | `:CodeReview <base>...HEAD` を nvim で起動（省略時 `origin/HEAD`） |
 | `codereview <command>` | shell | coding agent 向け JSON CLI（`codereview --help`） |
