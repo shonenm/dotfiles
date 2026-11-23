@@ -177,27 +177,27 @@ url = "https://github.com/chmln/sd/releases/download/v1.1.0/sd-v1.1.0-x86_64-app
 url_api = "https://api.github.com/repos/chmln/sd/releases/assets/362325430"
 
 [[tools."aqua:dandavison/delta"]]
-version = "0.20.1"
+version = "0.21.2"
 backend = "aqua:dandavison/delta"
 specifiers = ["latest"]
 
 [tools."aqua:dandavison/delta"."platforms.linux-arm64"]
-checksum = "sha256:da7f4338f593572ff426ae153e0870e2fdc72729416eff551b40cdeb67940db8"
+checksum = "sha256:36dca3ddb293d2fa635aa2bf9c53c0ba2d38dcd749290d81c6685974cf3799c4"
 checksum_source = "mise-versions"
-url = "https://github.com/dandavison/delta/releases/download/0.20.1/delta-0.20.1-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/dandavison/delta/releases/assets/610499593"
+url = "https://github.com/dandavison/delta/releases/download/0.21.2/delta-0.21.2-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/dandavison/delta/releases/assets/768826544"
 
 [tools."aqua:dandavison/delta"."platforms.linux-x64"]
-checksum = "sha256:50f08c879f84c81ceb220e476491a7f492d2c9c671e79918cc44badf961a6240"
+checksum = "sha256:5d41046c4ada17e7d080e1e5dbbd46544146bb5597e2ab56881a8c594272cd06"
 checksum_source = "mise-versions"
-url = "https://github.com/dandavison/delta/releases/download/0.20.1/delta-0.20.1-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/dandavison/delta/releases/assets/610498121"
+url = "https://github.com/dandavison/delta/releases/download/0.21.2/delta-0.21.2-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/dandavison/delta/releases/assets/768821396"
 
 [tools."aqua:dandavison/delta"."platforms.macos-arm64"]
-checksum = "sha256:bc1839cea69288d4673a24faffbb825d408ca907e0f7d33b1678c9e6cdd5e58e"
+checksum = "sha256:ac78b8953c5087852437bfa0abfcc7908db1f7a7b7ab0e39e114a9454bb335a4"
 checksum_source = "mise-versions"
-url = "https://github.com/dandavison/delta/releases/download/0.20.1/delta-0.20.1-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/dandavison/delta/releases/assets/610498923"
+url = "https://github.com/dandavison/delta/releases/download/0.21.2/delta-0.21.2-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/dandavison/delta/releases/assets/768827689"
 
 [[tools."aqua:direnv/direnv"]]
 version = "2.38.2"
@@ -519,32 +519,32 @@ url = "https://github.com/sxyazi/yazi/releases/download/v26.9.1/yazi-x86_64-appl
 url_api = "https://api.github.com/repos/sxyazi/yazi/releases/assets/539261413"
 
 [[tools."aqua:topgrade-rs/topgrade"]]
-version = "17.15.0"
+version = "17.17.0"
 backend = "aqua:topgrade-rs/topgrade"
 specifiers = ["latest"]
 
 [tools."aqua:topgrade-rs/topgrade"."platforms.linux-arm64"]
-checksum = "sha256:9a80d6b63d3078c43b37b4ef40a5a45a6d215aeb85d49182766fb0e0bedff4c2"
-url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.15.0/topgrade-v17.15.0-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/706128667"
+checksum = "sha256:1c137db970eaad6298297a258d16f5d74015f0f5fdef0e56e4c7d83d8658212b"
+url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.17.0/topgrade-v17.17.0-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/759266538"
 provenance = "github-attestations"
 
 [tools."aqua:topgrade-rs/topgrade"."platforms.linux-x64"]
-checksum = "sha256:d360a75625e94c2d7288f86a7fbe21622bd73498b40168e7385edd71a8e1133d"
-url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.15.0/topgrade-v17.15.0-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/706103668"
+checksum = "sha256:559b836e737e8dfe698d81079aa86c9096d160679f7da3cf08a68e589f5da43d"
+url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.17.0/topgrade-v17.17.0-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/759263239"
 provenance = "github-attestations"
 
 [tools."aqua:topgrade-rs/topgrade"."platforms.macos-arm64"]
-checksum = "sha256:33f47f55f1834576f105847aefc3c29b8c5f283d0f7fcf83bff3aef700fe1881"
-url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.15.0/topgrade-v17.15.0-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/706118189"
+checksum = "sha256:8954d5ab7f559420be7cf4c6b4f10145abdb84e16d47d0379d42aa9c89de592b"
+url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.17.0/topgrade-v17.17.0-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/759267818"
 provenance = "github-attestations"
 
 [tools."aqua:topgrade-rs/topgrade"."platforms.macos-x64"]
-checksum = "sha256:01b9a691161bf8a15e3fbca7da018474b3943ac40d92eaae46d630a1a49171f1"
-url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.15.0/topgrade-v17.15.0-x86_64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/706162201"
+checksum = "sha256:16dca6ceb97021f26ea021faa98e00133d97f9cd42b30fa9e54a33d7021685a0"
+url = "https://github.com/topgrade-rs/topgrade/releases/download/v17.17.0/topgrade-v17.17.0-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/topgrade-rs/topgrade/releases/assets/759310891"
 provenance = "github-attestations"
 
 [[tools."aqua:typst/typst"]]
@@ -679,33 +679,33 @@ backend = "cargo:tree-sitter-cli"
 specifiers = ["0.25.10"]
 
 [[tools.cloudflared]]
-version = "2026.10.7"
+version = "2026.11.1"
 backend = "aqua:cloudflare/cloudflared"
 specifiers = ["latest"]
 
 [tools.cloudflared."platforms.linux-arm64"]
-checksum = "sha256:3df43aedc9ff291d1735b5cb576cb97e0b157488796db2e32b28aecabb445775"
+checksum = "sha256:b155cec3e48e489cfb8e5c602769fb8c771083018d8881d68b4d18a791567c5a"
 checksum_source = "mise-versions"
-url = "https://github.com/cloudflare/cloudflared/releases/download/2026.10.7/cloudflared-linux-arm64"
-url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/692818763"
+url = "https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-linux-arm64"
+url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/759527003"
 
 [tools.cloudflared."platforms.linux-x64"]
-checksum = "sha256:1f99fb518b83dec2ba8d870a7cc991d82a77e6196295a3d2754ba17ab9f91872"
+checksum = "sha256:97bb3b02d23a5980fc9c15a1a270e692da1923f103f920d5b16d4931d5ab55e7"
 checksum_source = "mise-versions"
-url = "https://github.com/cloudflare/cloudflared/releases/download/2026.10.7/cloudflared-linux-amd64"
-url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/692817008"
+url = "https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-linux-amd64"
+url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/759526142"
 
 [tools.cloudflared."platforms.macos-arm64"]
-checksum = "sha256:3586ccf397e98e5f437e60e7c307ca6ac463e110580503af8bb8e6f9ebf831bd"
+checksum = "sha256:02fe4bcf08f2c09699cff30658228a739a0c47fb75f3653d1b8772a27ade4462"
 checksum_source = "mise-versions"
-url = "https://github.com/cloudflare/cloudflared/releases/download/2026.10.7/cloudflared-darwin-arm64.tgz"
-url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/692819281"
+url = "https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-darwin-arm64.tgz"
+url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/759523594"
 
 [tools.cloudflared."platforms.macos-x64"]
-checksum = "sha256:02f3edfd87684dd5b705607688e4eb4b323f6e777b81e7b3a85af556aa356848"
+checksum = "sha256:5e0403b188dfee71fbd9b995e7dc9910d61b661c52371935ab6475d41185632f"
 checksum_source = "mise-versions"
-url = "https://github.com/cloudflare/cloudflared/releases/download/2026.10.7/cloudflared-darwin-amd64.tgz"
-url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/692819049"
+url = "https://github.com/cloudflare/cloudflared/releases/download/2026.11.1/cloudflared-darwin-amd64.tgz"
+url_api = "https://api.github.com/repos/cloudflare/cloudflared/releases/assets/759524027"
 
 [[tools.deno]]
 version = "2.9.8"
@@ -816,62 +816,62 @@ url = "https://github.com/MilesCranmer/rip2/releases/download/v0.9.7/rip-macOS-D
 url_api = "https://api.github.com/repos/MilesCranmer/rip2/releases/assets/610862711"
 
 [[tools."github:achristmascarl/rainfrog"]]
-version = "0.4.6"
+version = "0.4.7"
 backend = "github:achristmascarl/rainfrog"
 specifiers = ["latest"]
 
 [tools."github:achristmascarl/rainfrog"."platforms.linux-arm64"]
-checksum = "sha256:eba0da06d15bbfa7e8ad325819aa5db457bb24353ec649a1601947d7f5179d16"
+checksum = "sha256:468f5195e4bea38e4e826020089f9dbd85aa5d4fd766fb3c71ed99a4a4104c80"
 checksum_source = "mise-versions"
-url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.6/rainfrog-v0.4.6-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/586349225"
+url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.7/rainfrog-v0.4.7-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/736813451"
 
 [tools."github:achristmascarl/rainfrog"."platforms.linux-x64"]
-checksum = "sha256:03e2418ae9e5de77b0918fb2bbe95e4e5e3cb956221bf33f7591e98682b17c5b"
+checksum = "sha256:c46d24bc075d640a3d09ca5f8b2939247df73f61081bfe04e998290d1f238c10"
 checksum_source = "mise-versions"
-url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.6/rainfrog-v0.4.6-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/586335204"
+url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.7/rainfrog-v0.4.7-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/736791644"
 
 [tools."github:achristmascarl/rainfrog"."platforms.macos-arm64"]
-checksum = "sha256:60d8c5c5fb89f8b0b5bd27af44f324e95a0612248d973e4dfc38867cb009a583"
+checksum = "sha256:09ceaa811d99eafb449d7d4aac4d21a50403c275138add1a8259215f73be6352"
 checksum_source = "mise-versions"
-url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.6/rainfrog-v0.4.6-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/586344632"
+url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.7/rainfrog-v0.4.7-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/736763253"
 
 [tools."github:achristmascarl/rainfrog"."platforms.macos-x64"]
-checksum = "sha256:17d248764e67d35cce29a45c59ebbcbfc11e016bf0dace61ca900c52dc324576"
+checksum = "sha256:a1a49097f1627241c521dcbfcd98c5c15d7e8949cc0139dcc8eed058ea00b9c9"
 checksum_source = "mise-versions"
-url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.6/rainfrog-v0.4.6-x86_64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/586346331"
+url = "https://github.com/achristmascarl/rainfrog/releases/download/v0.4.7/rainfrog-v0.4.7-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/achristmascarl/rainfrog/releases/assets/736797090"
 
 [[tools."github:babashka/babashka"]]
-version = "1.13.229"
+version = "1.13.230"
 backend = "github:babashka/babashka"
 specifiers = ["latest"]
 
 [tools."github:babashka/babashka"."platforms.linux-arm64"]
-checksum = "sha256:d85a95210efe6d8fd3b534f3d594948e3f30fa1c5864044773105ad3e2d79096"
+checksum = "sha256:d3935b08e8e2e81d1dd56be0ad72715cf1ebcd01cae6f8a6c909b5e4faa23884"
 checksum_source = "mise-versions"
-url = "https://github.com/babashka/babashka/releases/download/v1.13.229/babashka-1.13.229-linux-aarch64-static.tar.gz"
-url_api = "https://api.github.com/repos/babashka/babashka/releases/assets/681418789"
+url = "https://github.com/babashka/babashka/releases/download/v1.13.230/babashka-1.13.230-linux-aarch64-static.tar.gz"
+url_api = "https://api.github.com/repos/babashka/babashka/releases/assets/768850880"
 
 [tools."github:babashka/babashka"."platforms.linux-x64"]
-checksum = "sha256:a98c90a0530943dfa9a0b03bcccbc2030777a6ce094af303d5bb47d77e193299"
+checksum = "sha256:590a131ec3456c2313ebcb5ae2ee6836ca1f01f481da08320cd8c8f46d3644f9"
 checksum_source = "mise-versions"
-url = "https://github.com/babashka/babashka/releases/download/v1.13.229/babashka-1.13.229-linux-amd64.tar.gz"
-url_api = "https://api.github.com/repos/babashka/babashka/releases/assets/681414474"
+url = "https://github.com/babashka/babashka/releases/download/v1.13.230/babashka-1.13.230-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/babashka/babashka/releases/assets/768848362"
 
 [tools."github:babashka/babashka"."platforms.macos-arm64"]
-checksum = "sha256:2d96ff06ce66883caa873fb717941a58c45523e3db9d91424e9f81b038896331"
+checksum = "sha256:3adcd97eeb3ebe324cf3a0be6d969a5626a14783596d3cad911b2f4b95809cea"
 checksum_source = "mise-versions"
-url = "https://github.com/babashka/babashka/releases/download/v1.13.229/babashka-1.13.229-macos-aarch64.tar.gz"
-url_api = "https://api.github.com/repos/babashka/babashka/releases/assets/681434159"
+url = "https://github.com/babashka/babashka/releases/download/v1.13.230/babashka-1.13.230-macos-aarch64.tar.gz"
+url_api = "https://api.github.com/repos/babashka/babashka/releases/assets/768852416"
 
 [tools."github:babashka/babashka"."platforms.macos-x64"]
-checksum = "sha256:5d7aff8ffa8237f6e12cf879fde98777d9378e7fa78bb943815c3cfba184d78f"
+checksum = "sha256:b4b6b4e78f90a507fb660e0ed2d3e65bdab68ba20ad0151330f48fa32c4c1f49"
 checksum_source = "mise-versions"
-url = "https://github.com/babashka/babashka/releases/download/v1.13.229/babashka-1.13.229-macos-amd64.tar.gz"
-url_api = "https://api.github.com/repos/babashka/babashka/releases/assets/681421942"
+url = "https://github.com/babashka/babashka/releases/download/v1.13.230/babashka-1.13.230-macos-amd64.tar.gz"
+url_api = "https://api.github.com/repos/babashka/babashka/releases/assets/768853847"
 
 [[tools."github:ivaaaan/smug"]]
 version = "0.3.19"
@@ -1015,114 +1015,114 @@ url = "https://github.com/ouch-org/ouch/releases/download/0.8.3/ouch-x86_64-appl
 url_api = "https://api.github.com/repos/ouch-org/ouch/releases/assets/561447589"
 
 [[tools."github:pnpm/pnpm"]]
-version = "12.18.0"
+version = "12.22.0"
 backend = "github:pnpm/pnpm"
 specifiers = ["latest"]
 
 [tools."github:pnpm/pnpm"."platforms.linux-arm64"]
-checksum = "sha256:700bd1aa4028465b80e62b7c5bec8455be60bbafaf53a3262a4ab8e2057712ac"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.18.0/pnpm-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/711505548"
+checksum = "sha256:22b23da8b00d12c2fdfc41b5533b65b467c7b178d93fdfe9128c491585dff1a4"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.22.0/pnpm-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/760376163"
 provenance = "github-attestations"
 
 [tools."github:pnpm/pnpm"."platforms.linux-x64"]
-checksum = "sha256:3726060e236c0db3e7124c0a5af123c840ba0cb76682149b63ea0baf290017c2"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.18.0/pnpm-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/711505542"
+checksum = "sha256:07ee196f91af1e21edb0c794401f4152932c74b0dba5d415dc4dbd5783f3c7af"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.22.0/pnpm-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/760376184"
 provenance = "github-attestations"
 
 [tools."github:pnpm/pnpm"."platforms.macos-arm64"]
-checksum = "sha256:9b647f634d7e8f23162c9d3d1d0e0950d1152402ca0f4c331583ed7c75cd3706"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.18.0/pnpm-darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/711505537"
+checksum = "sha256:af43c44f22ef89191d83163c3ef9f5ee021a7368f401c95d92731be7d6b21cc5"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.22.0/pnpm-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/760376177"
 provenance = "github-attestations"
 
 [tools."github:pnpm/pnpm"."platforms.macos-x64"]
-checksum = "sha256:34cc90fbaa060c458b587fbdb1f3f9477e97e3fd3f8e9ffb2d43ca45c0c9b005"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.18.0/pnpm-darwin-x64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/711505550"
+checksum = "sha256:f3323c08c43a409035c9fe4965abcb6260a24fc91ce6f70351bc207c833e324c"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.22.0/pnpm-darwin-x64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/760376193"
 provenance = "github-attestations"
 
 [[tools."github:shonenm/live-pr"]]
-version = "1.0.0"
+version = "2.0.0-alpha.1"
 backend = "github:shonenm/live-pr"
-specifiers = ["latest"]
+specifiers = ["2.0.0-alpha.1"]
 
 [tools."github:shonenm/live-pr"."platforms.linux-arm64"]
-checksum = "sha256:c8c177488c26221f69d886a792dc14a36dbd04a09408dd5ff44561863330594e"
-url = "https://github.com/shonenm/live-pr/releases/download/v1.0.0/live-pr_1.0.0_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/738303743"
+checksum = "sha256:8740a462e698ab037a9f27022ffe87a3b2f6f2744502e752d695b3f71e5d1374"
+url = "https://github.com/shonenm/live-pr/releases/download/v2.0.0-alpha.1/live-pr_2.0.0-alpha.1_Linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/738911812"
 provenance = "github-attestations"
 
 [tools."github:shonenm/live-pr"."platforms.linux-x64"]
-checksum = "sha256:112a9e86a0720ea46d8b249120ba26e0b4828d25152602271c3a4ba57a717e68"
-url = "https://github.com/shonenm/live-pr/releases/download/v1.0.0/live-pr_1.0.0_Linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/738303739"
+checksum = "sha256:4c78ab4a6010249576ec2cdc93b3261e2a401e4d39a8dac9712934ac008251f2"
+url = "https://github.com/shonenm/live-pr/releases/download/v2.0.0-alpha.1/live-pr_2.0.0-alpha.1_Linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/738911811"
 provenance = "github-attestations"
 
 [tools."github:shonenm/live-pr"."platforms.macos-arm64"]
-checksum = "sha256:a541418381b99bfb1d726637be12693d459875e2d74f3e7de8ff08bb5f229e94"
-url = "https://github.com/shonenm/live-pr/releases/download/v1.0.0/live-pr_1.0.0_Darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/738303780"
+checksum = "sha256:9940aac1c72e787634248fc328c1cf1a0a15c3f6d504c4c1715ca1ece80f201c"
+url = "https://github.com/shonenm/live-pr/releases/download/v2.0.0-alpha.1/live-pr_2.0.0-alpha.1_Darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/738911814"
 provenance = "github-attestations"
 
 [tools."github:shonenm/live-pr"."platforms.macos-x64"]
-checksum = "sha256:4e4433282fd27e1d78b9eef5d76bb141eb14f89e2b8331ea683780cb8e0a605a"
-url = "https://github.com/shonenm/live-pr/releases/download/v1.0.0/live-pr_1.0.0_Darwin_amd64.tar.gz"
-url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/738303740"
+checksum = "sha256:3e75957a2c6691ff46ecc87cc570abd5e1e9bf4f7a3e2ce514fea4e0f3a8fad1"
+url = "https://github.com/shonenm/live-pr/releases/download/v2.0.0-alpha.1/live-pr_2.0.0-alpha.1_Darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/738911813"
 provenance = "github-attestations"
 
 [[tools.go]]
-version = "1.27.3"
+version = "1.27.4"
 backend = "core:go"
 specifiers = ["latest"]
 
 [tools.go."platforms.linux-arm64"]
-checksum = "sha256:a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49"
-url = "https://dl.google.com/go/go1.27.3.linux-arm64.tar.gz"
+checksum = "sha256:3392582988a273a87ab5043ee1b2c9c17a2c3c00580bf9326c47a2e0aaaeac92"
+url = "https://dl.google.com/go/go1.27.4.linux-arm64.tar.gz"
 
 [tools.go."platforms.linux-x64"]
-checksum = "sha256:65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40"
-url = "https://dl.google.com/go/go1.27.3.linux-amd64.tar.gz"
+checksum = "sha256:7226736c2339719cda28fbf3a54d71aa63bcefe376e98cef00034268dab24840"
+url = "https://dl.google.com/go/go1.27.4.linux-amd64.tar.gz"
 
 [tools.go."platforms.macos-arm64"]
-checksum = "sha256:dd3908cf20959d798c1e06ebe5b72213f0505ce01373b40ce3110975a6cd99c2"
-url = "https://dl.google.com/go/go1.27.3.darwin-arm64.tar.gz"
+checksum = "sha256:91a44a2b8a716600ad94a4f143e156116620db8828086a6e3602291be9bd0bb4"
+url = "https://dl.google.com/go/go1.27.4.darwin-arm64.tar.gz"
 
 [tools.go."platforms.macos-x64"]
-checksum = "sha256:b6f8e931e4ab497fcde6da8ae4499a58f9d258e55c8a80824a516eae5950a750"
-url = "https://dl.google.com/go/go1.27.3.darwin-amd64.tar.gz"
+checksum = "sha256:2b799377704ef12db39bd254995d5c348c9cc8d86562ca817724390e56c38f43"
+url = "https://dl.google.com/go/go1.27.4.darwin-amd64.tar.gz"
 
 [[tools.node]]
-version = "26.13.0"
+version = "26.13.1"
 backend = "core:node"
 specifiers = ["lts"]
 
 [tools.node."platforms.linux-arm64"]
-checksum = "sha256:439e9c438acdf6a6ffe47418da709153d66c4bed812e30a473faacb107dd2791"
-url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-linux-arm64.tar.gz"
+checksum = "sha256:80a330b35415382878df18d41afbd106ea89bfb3be0087d6608e289a14c5cc7d"
+url = "https://nodejs.org/dist/v26.13.1/node-v26.13.1-linux-arm64.tar.gz"
 
 [tools.node."platforms.linux-x64"]
-checksum = "sha256:5848553868b402d3fabb5b09270649977780a390f832155721025a08b5104455"
-url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-linux-x64.tar.gz"
+checksum = "sha256:518674de2b621728a5e4486f5fb3b7d2900bb3cc4aa97969edaa463db99f9778"
+url = "https://nodejs.org/dist/v26.13.1/node-v26.13.1-linux-x64.tar.gz"
 
 [tools.node."platforms.macos-arm64"]
-checksum = "sha256:d38bd5e5a2ddce6bbb5ce45e46e208337da4d51fffe611e567fd32073d6439f6"
-url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-darwin-arm64.tar.gz"
+checksum = "sha256:aec2514ea1ceb2ba52455e9ec65986f6749a06dd759e5db2a72e6889668c9735"
+url = "https://nodejs.org/dist/v26.13.1/node-v26.13.1-darwin-arm64.tar.gz"
 
 [tools.node."platforms.macos-x64"]
-checksum = "sha256:525c9b29bb0263d687de60a4cec0e2a6db876a8eb032369e5795eca71e7c358e"
-url = "https://nodejs.org/dist/v26.13.0/node-v26.13.0-darwin-x64.tar.gz"
+checksum = "sha256:82bb96078a24ca50b9c9a38f2379e6be6d87171fcd400fc14c8934b3bce96e2f"
+url = "https://nodejs.org/dist/v26.13.1/node-v26.13.1-darwin-x64.tar.gz"
 
 [[tools."npm:@xai-official/grok"]]
-version = "1.0.77"
-aube = { path = "locks/npm-xai-official-grok/1.0.77", digest = "sha256:23c2aa4e5e0a0a70a5386cdd2696384171acf26467b412764d1145cfeca84c78" }
+version = "1.0.92"
+aube = { path = "locks/npm-xai-official-grok/1.0.92", digest = "sha256:82916c3a5d5ba7660ed1af6314668b613774cf493b6f6708a7ea6b62e00e5b6e" }
 backend = "npm:@xai-official/grok"
 specifiers = ["latest"]
 
 [[tools."npm:cspell"]]
-version = "10.4.1"
-aube = { path = "locks/npm-cspell/10.4.1", digest = "sha256:2f85ebdcb49e757a6e8c3f04295411004a8c18a7cc9f87a062aacfa4ec51b392" }
+version = "10.5.2"
+aube = { path = "locks/npm-cspell/10.5.2", digest = "sha256:9ce539c630ffd0a9ad7b745cc864d23264502522c3def8d3d60977811435411a" }
 backend = "npm:cspell"
 specifiers = ["latest"]
 
