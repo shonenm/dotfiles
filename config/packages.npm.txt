@@ -1,7 +1,7 @@
 # NPM packages to install globally (shared across all platforms)
 
 # AI CLI tools
-@openai/codex@0.147.0
+@openai/codex@0.171.0
 @google/gemini-cli@0.54.4
 @earendil-works/pi-coding-agent@1.5.2
 command-code@1.15.1
