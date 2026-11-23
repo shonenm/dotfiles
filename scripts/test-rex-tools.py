@@ -79,12 +79,25 @@ class UnitTests(unittest.TestCase):
         wide = tool.metadata_rows(data, 90)
         narrow = tool.metadata_rows(data, 40)
         self.assertGreater(len(narrow), len(wide))
-        text = "\n".join(t for t, _ in wide)
+        # 色を分ける行は [(text, role), ...]。
+        segments = [seg for row in wide for seg in (row if isinstance(row, list) else [row])]
+        text = "\n".join(t for t, _ in segments)
         self.assertIn('[----------] 0%', text)
         self.assertIn('未取得', text)
         self.assertNotIn('yesterday', text)
         self.assertIn('yesterday', str(tool.metadata_rows(data, 90, True)))
         self.assertEqual(tool.cell('日本abc', 5), '日本a')
+
+    def test_usage_rows_use_provider_color_and_icon(self):
+        data = self.snapshot()
+        data["usage"] = [{"provider": "claude", "icon": "\U000f06c4", "window": "weekly", "percent": "85%", "reset": "1h"},
+                         {"provider": "codex", "window": "weekly", "percent": "10%", "reset": "1h"}]
+        rows = [row for row in tool.metadata_rows(data, 90) if isinstance(row, list)]
+        (claude_label, claude_role), (_, claude_usage) = rows[0]
+        self.assertTrue(claude_label.startswith("\U000f06c4 Claude · weekly"))
+        self.assertEqual((claude_role, claude_usage), ("provider-claude", "warning"))
+        self.assertEqual(rows[1][1][1], "")  # 80% 未満は既定色
+        self.assertEqual(tool.plain("\U000f06c4\x07"), "\U000f06c4")  # Nerd Font は残し制御文字は除く
 
     def test_fresh_cache_draws_without_collecting(self):
         screen = Mock()
