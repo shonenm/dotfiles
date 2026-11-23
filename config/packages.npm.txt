@@ -4,7 +4,7 @@
 @openai/codex@0.147.0
 @google/gemini-cli@0.54.4
 @earendil-works/pi-coding-agent@1.5.2
-command-code@1.15.1
+command-code@1.92.0
 
 # Claude Code token usage analytics (local JSONL parser)
 ccusage@20.0.19
