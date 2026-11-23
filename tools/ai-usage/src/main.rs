@@ -12,13 +12,19 @@ mod render;
 use providers::{Provider, Usage};
 use std::process::ExitCode;
 
-fn provider_for(name: &str) -> Option<Box<dyn Provider>> {
+fn providers_for(name: &str) -> Option<Vec<Box<dyn Provider>>> {
     match name {
-        "claude" => Some(Box::new(providers::claude::Claude)),
-        "codex" => Some(Box::new(providers::codex::Codex)),
-        "gemini" => Some(Box::new(providers::gemini::Gemini)),
-        "cursor" => Some(Box::new(providers::cursor::Cursor)),
-        "grok" => Some(Box::new(providers::grok::Grok)),
+        // claude はアカウントごとに 1 provider
+        "claude" => Some(
+            providers::claude::Claude::accounts()
+                .into_iter()
+                .map(|c| Box::new(c) as Box<dyn Provider>)
+                .collect(),
+        ),
+        "codex" => Some(vec![Box::new(providers::codex::Codex)]),
+        "gemini" => Some(vec![Box::new(providers::gemini::Gemini)]),
+        "cursor" => Some(vec![Box::new(providers::cursor::Cursor)]),
+        "grok" => Some(vec![Box::new(providers::grok::Grok)]),
         _ => None,
     }
 }
@@ -74,9 +80,11 @@ fn run(p: &dyn Provider) {
 
 fn main() -> ExitCode {
     let name = std::env::args().nth(1).unwrap_or_default();
-    match provider_for(&name) {
-        Some(p) => {
-            run(&*p);
+    match providers_for(&name) {
+        Some(ps) => {
+            for p in &ps {
+                run(&**p);
+            }
             ExitCode::SUCCESS
         }
         None => {

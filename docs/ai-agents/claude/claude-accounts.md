@@ -26,8 +26,14 @@ claude-as work -c # 引数はそのまま claude に渡る
 
 symlink は起動ごとに作るため、`~/.claude` に後から増えた項目も追従する。
 
+## 使用量表示
+
+`ai-usage claude` は既定アカウントに続けて `claude-accounts/` 配下の全アカウントを名前順に出す。label は `utokyo current` / `utokyo weekly` のように名前を前置する。tmux sidebar・tuios の `tui usage`・rex の Metadata ポップアップはこの出力をそのまま表示する。
+
 ## 制約
 
 - `.claude.json` は初回コピー後は独立する。既定アカウントで追加した MCP サーバーは自動では反映されない
 - 起動時にアカウントが決まり、セッション途中では切り替わらない
 - リミット到達時の自動切替は行わない
+- 未ログインのアカウントは使用量が `--` になる。不要なら `claude-accounts/<name>` を削除する
+- `ai-usage` は token を refresh しないため、しばらく起動していないアカウントは access token の期限切れで `--` になる。`claude-as <name>` で一度起動すると戻る
