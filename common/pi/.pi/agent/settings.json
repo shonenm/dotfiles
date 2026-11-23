@@ -1,6 +1,6 @@
 {
-  "defaultProvider": "openai",
-  "defaultModel": "gpt-6-astra",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-6.1-sol",
   "defaultThinkingLevel": "low",
   "subagents": {
     "defaultModel": "openai/gpt-5.6-luna",
@@ -147,6 +147,18 @@
     "git:github.com/shrimpwtf/oh-my-pstack",
     "npm:pi-better-openai@0.1.22"
   ],
-  "lastChangelogVersion": "1.4.0",
-  "deviceId": "21e11a44-42bf-49de-8774-3d4ac2fc9523"
+  "lastChangelogVersion": "1.5.2",
+  "deviceId": "21e11a44-42bf-49de-8774-3d4ac2fc9523",
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:pi-subagents\",\"scope\":\"user\"}": "0.89.1",
+    "{\"source\":\"npm:@trevonistrevon/pi-loop\",\"scope\":\"user\"}": "0.8.0",
+    "{\"source\":\"npm:@narumitw/pi-goal\",\"scope\":\"user\"}": "0.55.3",
+    "{\"source\":\"git:github.com/chandra447/pi-hermes-memory@b42abd3\",\"scope\":\"user\"}": "0.9.9",
+    "{\"source\":\"npm:pi-permission-system\",\"scope\":\"user\"}": "0.8.0",
+    "{\"source\":\"npm:awesome-pi-themes\",\"scope\":\"user\"}": "1.2.19",
+    "{\"source\":\"npm:pi-studio\",\"scope\":\"user\"}": "0.11.18",
+    "{\"source\":\"git:github.com/kostyay/pi-k-excalidraw\",\"scope\":\"user\"}": "0.2.0",
+    "{\"source\":\"npm:pi-extmgr\",\"scope\":\"user\"}": "0.4.2",
+    "{\"source\":\"git:github.com/meirm/pi-agent-extensions@2f55903\",\"scope\":\"user\"}": "0.5.4"
+  }
 }
