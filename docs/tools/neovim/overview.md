@@ -446,6 +446,8 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 
 キー操作は `g?`、詳細は `:help codereview`。CLI（`~/.local/bin/codereview`）と Claude Code 用 skill（`~/.claude/skills/codereview`）は `install.sh` の `link_codereview` が plugin 同梱物へリンクする。略語（zsh-abbr）は `cr` = `codereview`、`crb` = `codereview-branch`。導入状態は `:checkhealth codereview` で確認する。
 
+live-pr の右ペイン（`[diff].command` / `commit_command`）も `common/live-pr/.config/live-pr/config.toml` で `:CodeReview` に向けている。live-pr 既定の `:CodeDiff` は codediff.nvim 無効化中は使えない。
+
 以下の CodeDiff 関連の節は codediff.nvim 無効化中は機能しない。
 
 ### CodeDiff 内操作
