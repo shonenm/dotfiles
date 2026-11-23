@@ -310,7 +310,9 @@ def usage():
                 print(f"{head}\033[2m--\033[0m")
                 continue
             _, label, gauge, pct, rem = record[:5]
-            pace = "" if f"{provider} {label}" in ("claude current", "grok extra") else pace_color(int(pct.rstrip("%") or 0), label, rem)
+            # claude-as のアカウントは "utokyo current" のように名前が前置されるので末尾の窓名で判定する
+            window = label.split()[-1]
+            pace = "" if f"{provider} {window}" in ("claude current", "grok extra") else pace_color(int(pct.rstrip("%") or 0), window, rem)
             print(f"{head}\033[2m{label}\033[0m")
             print(f"  {color}{gauge} {pct}\033[0m  {pace or chr(27) + '[2m'}{rem}\033[0m" + (f" {pace}●\033[0m" if pace else ""))
 
