@@ -28,6 +28,8 @@ end
 
 -- floating popup は popup.lua が local / remote host とも server の接続から直接作る。
 local popup = require("popup")
+-- Talon の音声コマンドから呼ぶ tab 一覧と agent pane への移動。
+require("voice")
 
 -- remote host の session（ctx.server が host）では、手元の CLI から ssh で繋ぎ直さず
 -- server の接続で host 側に短命の pane を開き、host の dotfiles の rex-tools に任せる。

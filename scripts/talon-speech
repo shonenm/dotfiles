@@ -1,0 +1,32 @@
+#!/bin/bash
+# Talon の音声操作を段階的に切り替える。
+#   off      音声認識を止める。ポップ音での Aqua Voice の起動も止まる
+#   pop      ポップ音での Aqua Voice の開始・送信だけ
+#   rex      pop + Rex の zoom
+#   tabs rex + tab 名での移動
+# Usage: talon-speech [off|pop|rex|tabs]  (引数なしは現在の段階を表示)
+
+# Raycast Script Command として登録できる。
+# @raycast.schemaVersion 1
+# @raycast.title Talon Voice Level
+# @raycast.mode compact
+# @raycast.packageName Dotfiles
+# @raycast.argument1 { "type": "dropdown", "placeholder": "level", "optional": true, "data": [{"title": "off", "value": "off"}, {"title": "pop", "value": "pop"}, {"title": "rex", "value": "rex"}, {"title": "tabs", "value": "tabs"}] }
+
+set -euo pipefail
+
+level="${1:-}"
+case "$level" in
+  ""|off|pop|rex|tabs) ;;
+  *) echo "Usage: talon-speech [off|pop|rex|tabs]" >&2; exit 1 ;;
+esac
+
+repl="$HOME/.talon/bin/repl"
+[[ -x "$repl" ]] || { echo "Talon が見つかりません" >&2; exit 1; }
+
+# repl は先頭に banner を出すため最後の行だけ使う。Talon が起動していなければ接続に失敗する。
+state=$(printf 'from talon import actions\nprint(actions.user.talon_voice_level("%s"))\n' "$level" | "$repl" 2>&1 | tail -n 1)
+case "$state" in
+  off|pop|rex|tabs) echo "Talon voice: $state" ;;
+  *) echo "Talon に接続できません: $state" >&2; exit 1 ;;
+esac
