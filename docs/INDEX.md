@@ -43,6 +43,7 @@
 
 - [開発ワークフロー](ai-agents/claude/claude-development.md)
 - [APIフォールバック](ai-agents/claude/claude-fallback.md)
+- [アカウント切替](ai-agents/claude/claude-accounts.md)
 - [スキル](ai-agents/claude/claude-skills.md)
 - [Beacon連携](ai-agents/claude/claude-beacon.md)
 - [Neovim連携](ai-agents/claude/claude-neovim.md)

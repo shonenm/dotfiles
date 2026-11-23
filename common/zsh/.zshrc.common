@@ -345,6 +345,30 @@ claude() {
   return $rc
 }
 
+# --- Claude Code アカウント切替 ---
+# 追加アカウントは CLAUDE_CONFIG_DIR で認証情報と .claude.json だけを分離し、
+# 設定・履歴・プラグインは ~/.claude への symlink で共有する。初回のみ /login が必要
+claude-as() {
+  local name="${1:-}"
+  if [[ ! "$name" =~ '^[A-Za-z0-9_-]+$' ]]; then
+    print -u2 "usage: claude-as <name> [claude args...]"
+    return 2
+  fi
+  shift
+  local dir="${XDG_STATE_HOME:-$HOME/.local/state}/claude-accounts/$name" src
+  mkdir -p "$dir" || return
+  # ~/.claude に後から増えた項目も起動ごとに追従する
+  for src in "$HOME"/.claude/*(DN); do
+    [[ "${src:t}" == .credentials.json ]] && continue
+    [[ -e "$dir/${src:t}" || -L "$dir/${src:t}" ]] || ln -s "$src" "$dir/${src:t}"
+  done
+  # MCP・trust 設定は引き継ぎ、ログイン中アカウントの情報だけ外す
+  if [[ ! -f "$dir/.claude.json" && -f "$HOME/.claude.json" ]]; then
+    jq 'del(.oauthAccount)' "$HOME/.claude.json" >"$dir/.claude.json" || return
+  fi
+  CLAUDE_CONFIG_DIR="$dir" claude "$@"
+}
+
 # --- Local bin ---
 [[ -f "$HOME/.local/bin/env" ]] && . "$HOME/.local/bin/env"
 
