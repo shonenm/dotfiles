@@ -97,7 +97,7 @@ LazyVim ベースの Neovim 設定。lazy.nvim によるプラグイン管理。
 | ----------------- | ------------------------------------------- |
 | gitsigns.nvim     | Git 差分表示・hunk 操作・インライン blame   |
 | vim-fugitive      | Git コマンド統合                            |
-| codediff.nvim     | サイドバイサイド diff・履歴・stage・commit・マルチrepo |
+| codereview.nvim   | コミット範囲のレビュー（hunk/ファイルのレビュー印・コメントスレッド・agent 連携） |
 | git-conflict.nvim | コンフリクト解決支援                        |
 | telescope-repo    | リポジトリ/サブモジュール切替               |
 
@@ -293,6 +293,7 @@ neotest は overseer.nvim と統合済み。テスト実行時の出力が overs
 | neotest-golang   | macOS で SIGKILL 発生     |
 | persistence.nvim | resession.nvim に置き換え |
 | image.nvim       | snacks.nvim image に置き換え |
+| codediff.nvim    | codereview.nvim と `:CodeReview` が衝突するため一旦無効化（設定は `codediff.lua` に残す） |
 
 ## カスタム設定ファイル
 
@@ -434,6 +435,21 @@ LazyVim のデフォルトキーバインドを使用。`<leader>` は `Space`�
 | `<leader>gH` | GH Dash（GitHub Dashboard）      |
 | `<leader>gR` | リポジトリ/サブモジュール切替    |
 
+### codereview.nvim
+
+| コマンド | 場所 | 動作 |
+| -------- | ---- | ---- |
+| `<leader>gd` | nvim 内 | `:CodeReview`（`HEAD` を親コミットと比較） |
+| `:CodeReview [commit\|A..B\|A...B]` | nvim 内 | コミット範囲のレビューを新しいタブで開く（省略時 `HEAD`） |
+| `codereview-branch [base]` | shell function | `:CodeReview <base>...HEAD` を nvim で起動（省略時 `origin/HEAD`） |
+| `codereview <command>` | shell | coding agent 向け JSON CLI（`codereview --help`） |
+
+キー操作は `g?`、詳細は `:help codereview`。CLI（`~/.local/bin/codereview`）と Claude Code 用 skill（`~/.claude/skills/codereview`）は `install.sh` の `link_codereview` が plugin 同梱物へリンクする。略語（zsh-abbr）は `cr` = `codereview`、`crb` = `codereview-branch`。導入状態は `:checkhealth codereview` で確認する。
+
+live-pr の右ペイン（`[diff].command` / `commit_command`）も `common/live-pr/.config/live-pr/config.toml` で `:CodeReview` に向けている。live-pr 既定の `:CodeDiff` は codediff.nvim 無効化中は使えない。
+
+以下の CodeDiff 関連の節は codediff.nvim 無効化中は機能しない。
+
 ### CodeDiff 内操作
 
 | キー    | 動作                          |
@@ -519,15 +535,6 @@ statusline に現在選択中ファイルのリポジトリ相対パスを表示
 | -------- | ---- | ---- |
 | `:CodeReview [base] [target]` | nvim 内 | 2コミット間レビュー（省略時 `HEAD~1 HEAD`） |
 | `:CodeReviewBranch [base]` | nvim 内 | 現在ブランチ vs デフォルトブランチの3点diff |
-| `codereview [base] [target]` | shell | `:CodeReview` を nvim で起動 |
-| `codereview status [base] [target]` | shell | チェック進捗を表示 |
-| `codereview unchecked [base] [target]` | shell | 未チェックファイルを1行1件で表示 |
-| `codereview checked [base] [target]` | shell | チェック済みファイルを1行1件で表示 |
-| `codereview check BASE TARGET PATH...` | shell | ファイルまたはディレクトリ配下をチェック |
-| `codereview uncheck BASE TARGET PATH...` | shell | ファイルまたはディレクトリ配下を未チェックへ戻す |
-| `codereview-branch [base]` | shell function | `:CodeReviewBranch` を nvim で起動 |
-
-`codereview` の実体は `scripts/codereview`。略語（zsh-abbr）は `cr` = `codereview`、`crb` = `codereview-branch`。一覧はパスだけを標準出力するため、そのままコピーしたりLLMへの指示に貼り付けられる。
 
 `:CodeReviewBranch` は3点diff（`merge-base..HEAD`、このブランチ独自のコミットのみ）で開く。`base` 省略時はデフォルトブランチを自動検出する（`origin/HEAD` → なければ `main`/`master`）。ロジックは nvim コマンド側に集約し、シェルコマンドは `nvim -c "..."` で起動するだけ。
 

@@ -415,10 +415,10 @@ dexec() {
   docker exec -it -e TERM="$TERM" -e COLORTERM="$COLORTERM" -e CLAUDE_CONTEXT="$context" "$container" "${@:-bash}"
 }
 
-# 現在ブランチをデフォルトブランチと3点diffでレビュー (:CodeReviewBranch のラッパー)
-# Usage: codereview-branch [base-ref]   (省略時デフォルトブランチ自動検出)
+# 現在ブランチを base と3点diffでレビュー (codereview.nvim の :CodeReview)
+# Usage: codereview-branch [base-ref]   (省略時 origin/HEAD)
 codereview-branch() {
-  nvim -c "CodeReviewBranch $*"
+  nvim -c "CodeReview ${1:-origin/HEAD}...HEAD"
 }
 # cr / crb は zsh-abbr（common/zsh-abbr）で定義する
 
