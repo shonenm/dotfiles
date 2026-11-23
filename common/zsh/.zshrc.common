@@ -322,7 +322,8 @@ claude() {
   # (`claude auth login`, `claude setup-token`) delivers plain keystrokes
   # — the raw-mode reader there rejects \e[200~...\e[201~ markers.
   # Restore after so the zsh prompt keeps bracketed-paste protections.
-  printf '\033[?2004l'
+  # Skip when stdout is piped so the markers don't corrupt the output.
+  [[ -t 1 ]] && printf '\033[?2004l'
   local rc
   local -a name_args=()
   if _claude_should_auto_name "$@"; then
@@ -341,7 +342,7 @@ claude() {
     command claude "${name_args[@]}" "$@"
   fi
   rc=$?
-  printf '\033[?2004h'
+  [[ -t 1 ]] && printf '\033[?2004h'
   return $rc
 }
 
