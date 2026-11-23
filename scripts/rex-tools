@@ -67,7 +67,8 @@ def terminal(session, block, method):
 
 def plain(value):
     text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]|#\[[^]]*\]", "", str(value).replace("\x1f", "  "))
-    return "".join(c for c in text if c.isprintable() or c == "\n")
+    # Nerd Font のアイコンは私用領域 (Co) で isprintable() が False になるため残す。
+    return "".join(c for c in text if c.isprintable() or c == "\n" or unicodedata.category(c) == "Co")
 
 
 def cwd_for(session, block):
@@ -253,17 +254,21 @@ def command_text(argv, raw=False):
         return "未取得"
 
 
+PROVIDER_COLORS = {"claude": 202, "codex": 117, "gemini": 33, "grok": 79}
+
+
 def usage_rows(provider):
     binary = shutil.which("ai-usage") or str(Path.home() / ".local/bin/ai-usage")
     output = command_text([binary, provider], raw=True)
-    rows = []
+    rows, icon = [], ""
     for line in output.splitlines():
         fields = line.split("\x1f")
+        icon = icon or plain(fields[0])  # 取得失敗の "ICON\x1f--" 行にも icon はある
         if len(fields) >= 5:
-            _, window, _, percent, reset = fields[:5]
-            rows.append({"provider": provider, "window": plain(window),
+            icon, window, _, percent, reset = fields[:5]
+            rows.append({"provider": provider, "icon": plain(icon), "window": plain(window),
                          "percent": plain(percent), "reset": plain(reset)})
-    return rows or [{"provider": provider, "window": "", "percent": "未取得", "reset": ""}]
+    return rows or [{"provider": provider, "icon": icon, "window": "", "percent": "未取得", "reset": ""}]
 
 
 def session_agents(s):
@@ -374,17 +379,19 @@ def metadata_rows(data, width, details=False):
     for row in data["usage"]:
         percent = row["percent"]
         match = re.fullmatch(r"(\d+(?:\.\d+)?)%", percent)
-        gauge, role = percent, "muted"
+        gauge, role = percent, ""
         if match:
             value = float(match[1])
             filled = min(10, max(0, round(value / 10)))
             gauge = "[" + "#" * filled + "-" * (10 - filled) + "] " + percent
-            role = "warning" if value >= 80 else "good"
-        label = row["provider"].capitalize() + " · " + row["window"]
+            role = "warning" if value >= 80 else ""
+        # 保存済み snapshot には icon が無いことがある。
+        label = (row.get("icon", "") + " " + " · ".join(filter(None, (row["provider"].capitalize(), row["window"])))).strip()
+        provider = "provider-" + row["provider"]
         if width >= 65:
-            rows.append((cell(label, 29) + cell(gauge, 22) + (row["reset"] or "—"), role))
+            rows.append([(cell(label, 29), provider), (cell(gauge, 22) + (row["reset"] or "—"), role)])
         else:
-            rows += [(label, ""), ("  " + gauge + "  " + (row["reset"] or "—"), role)]
+            rows += [(label, provider), ("  " + gauge + "  " + (row["reset"] or "—"), role)]
     rows += [("", ""), ("AGENTS", "heading")]
     if not data["agents"]:
         rows.append(("報告なし", "muted"))
@@ -418,11 +425,19 @@ def draw_metadata(stdscr, data, pending, error, offset, details, colors):
     offset = min(offset, max(0, len(body) - max(1, count)))
     rows = header + [("", "")] + body[offset:offset + count]
     stdscr.erase()
-    for y, (text, role) in enumerate(rows[:max(0, height - 1)]):
-        try:
-            stdscr.addstr(y, 0, cell(text, max(0, width - 1)), colors.get(role, 0))
-        except curses.error:
-            pass
+    for y, row in enumerate(rows[:max(0, height - 1)]):
+        # 1 行は (text, role) か、色を分ける場合は [(text, role), ...]。
+        segments = row if isinstance(row, list) else [row]
+        x = 0
+        for i, (text, role) in enumerate(segments):
+            text = cell(text, max(0, width - 1 - x))
+            if i < len(segments) - 1:
+                text = text[:len(plain(segments[i][0]))]  # 途中の segment は行末まで埋めない
+            try:
+                stdscr.addstr(y, x, text, colors.get(role, 0))
+            except curses.error:
+                pass
+            x += len(text)
     if height:
         try:
             stdscr.addstr(height - 1, 0, cell("q close · r refresh · j/k scroll · d details", max(0, width - 1)), curses.A_DIM)
@@ -455,6 +470,11 @@ def screen(stdscr, kind, session, block):
         for index, (role, color) in enumerate((("heading", curses.COLOR_CYAN), ("good", curses.COLOR_GREEN), ("warning", curses.COLOR_YELLOW)), 1):
             curses.init_pair(index, color, -1)
             colors[role] = curses.color_pair(index) | curses.A_BOLD
+        if curses.COLORS >= 256:
+            # tmux sidebar の provider 色 (truecolor) に近い 256 色。cursor は白なので既定色のまま。
+            for index, (provider, color) in enumerate(PROVIDER_COLORS.items(), 4):
+                curses.init_pair(index, color, -1)
+                colors["provider-" + provider] = curses.color_pair(index)
     path = metadata_cache()
     data = read_metadata_cache(path)
     offset, details, error = 0, False, ""

@@ -73,7 +73,7 @@ block の識別は `dotfiles-popup/<kind>/<呼出元block ID>` という label �
 
 ## メタデータ一覧
 
-`prefix A`、または command palette の **Dotfiles: Metadata**。固定 header に project / host / cwd / 取得時刻を表示し、本文を **GIT / SYSTEM / AI USAGE / AGENTS** に分ける。使用量は列揃えした数値とバー、agent は状態別の色で表示する。狭い画面では縦並び。色が使えなくてもラベルと数値は残る。
+`prefix A`、または command palette の **Dotfiles: Metadata**。固定 header に project / host / cwd / 取得時刻を表示し、本文を **GIT / SYSTEM / AI USAGE / AGENTS** に分ける。使用量は列揃えした数値とバーで、provider 名を `ai-usage` のアイコンと provider ごとの色（tmux sidebar と同系の 256 色）、数値を既定色で表示し、80% 以上だけ黄色にする。agent は状態別の色で表示する。狭い画面では縦並び。色が使えなくてもラベルと数値は残る。
 
 `q` / Esc で閉じ、`r` で手動更新、`j/k` で本文を scroll。`d` で agent の報告時刻と未対応項目の説明を表示する。内部 block ID は通常画面に出さない。
 
