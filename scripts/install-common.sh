@@ -279,6 +279,16 @@ install_termaid() {
   log_success "termaid installed"
 }
 
+# codereview.nvim 同梱の CLI と skill を PATH と Claude Code に公開する。plugin 本体は nvim
+# 初回起動時に lazy.nvim が入れるため、未インストールでもリンクだけ先に張る。
+link_codereview() {
+  local root="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/lazy/codereview.nvim"
+  mkdir -p "$HOME/.local/bin" "$HOME/.claude/skills"
+  ln -sfn "$root/bin/codereview" "$HOME/.local/bin/codereview"
+  ln -sfn "$root/skills/codereview" "$HOME/.claude/skills/codereview"
+  log_success "codereview CLI and skill linked"
+}
+
 install_auto_mode() {
   if ! command_exists jq; then
     log_warn "jq not found, skipping auto mode default"

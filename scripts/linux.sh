@@ -656,6 +656,7 @@ run_step install_serena
 run_step install_context_mode
 run_step install_pstack
 run_step install_code_review_graph
+run_step link_codereview
 run_step install_auto_mode
 run_step configure_claude_remote_control_autostart
 run_step link_ai_scripts

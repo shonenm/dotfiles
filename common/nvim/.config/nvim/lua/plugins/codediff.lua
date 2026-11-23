@@ -15,6 +15,8 @@ return {
   },
   {
     "esmuellert/codediff.nvim",
+    -- codereview.nvim と :CodeReview が衝突するため一旦無効化する。
+    enabled = false,
     -- e08a35a: v3+/v4 remove APIs used by config/codediff.lua.
     -- pin=true is required; lazy-lock.json is overwritten by :Lazy update.
     pin = true,
