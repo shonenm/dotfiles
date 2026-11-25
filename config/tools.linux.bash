@@ -164,6 +164,11 @@ TOOL_cursor_check_cmd="cursor-agent"
 TOOL_cursor_method="curl_pipe"
 TOOL_cursor_curl_cmd='curl https://cursor.com/install -fsS | bash'
 
+# terminal-browser: Rex / tmux の pane に開くブラウザ。installer は ~/.local/bin に置き rc を書き換えない
+TOOL_terminalbrowser_check_cmd="terminal-browser"
+TOOL_terminalbrowser_method="curl_pipe"
+TOOL_terminalbrowser_curl_cmd='curl -fsSL https://terminal-browser.sh/install | bash'
+
 # ════════════════════════════════════════
 # Install order (dependencies must come before dependents)
 # ════════════════════════════════════════
@@ -175,6 +180,8 @@ LINUX_TOOL_ORDER=(
   fzftmux
   # Cursor CLI (headless AI coding agent)
   cursor
+  # Browser in terminal panes (Rex / tmux)
+  terminalbrowser
   # APT-only (skipped on Alpine)
   gh eza bat postgresql
   # Cargo tools (depend on rust)
