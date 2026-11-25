@@ -1,6 +1,6 @@
 # Rex
 
-> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs) / **Plugin** rexurrect（session 保存・復元） / **Configuration** `common/rex/` / **Custom** `popup.lua` の floating popup、`scripts/rex-tools` の prefix menu・メタデータ一覧・project picker・layout preset・pane swap picker、`scripts/rex-plugins` の plugin 取得（[区分](../provenance.md#区分)）
+> **由来:** **Upstream** [Rex](https://www.superlogical.com/rex/docs)、[terminal-browser](https://github.com/zenbu-labs/terminal-browser) / **Plugin** rexurrect（session 保存・復元） / **Configuration** `common/rex/` / **Custom** `popup.lua` の floating popup、`scripts/rex-tools` の prefix menu・メタデータ一覧・project picker・layout preset・pane swap picker、`scripts/rex-plugins` の plugin 取得（[区分](../provenance.md#区分)）
 
 Mac の Rex native session 用。既存の tmux / TUIOS と remote 環境は変更しない。Rex Beta 0.1.0 build 1591 の server API で検証している。GUI の floating layer 描画は別途確認が必要。
 
@@ -140,6 +140,20 @@ rex config reload
 追加は manifest に1行足して `rex-plugins sync` し、`init.lua` に `plugin("<module>")` を書く。plugin の読み込みに失敗しても設定全体は止めず、Rex の log に警告して読み飛ばす。manifest から外した plugin の取得先は消さず、`sync` が `unlisted` と報告する。中身を確認してから手で削除する。
 
 plugin が別の binary を必要とする場合、binary は [新ツール追加時の登録先](../install/setup-new-environment.md#新ツール追加時の登録先) に従って登録する。manifest は Lua module だけを扱う。`leaf rex install` のように `~/.config/rex/init.lua` を書き換える installer は Stow 先の正本を変更するため使わない。
+
+## terminal-browser
+
+[terminal-browser](https://github.com/zenbu-labs/terminal-browser) は pane 内に実ブラウザを描画する。Rex 用の driver を内蔵し、`REX_BLOCK` で Rex を検出して `rex split` / `rex focus` / `rex send` などの CLI で Rex 自身の split と tab を操作する。Rex 側の設定は不要。導入は macOS が `config/Brewfile` の cask、Linux が `config/tools.linux.bash` の公式 installer（`~/.local/bin`、sudo 不要）。
+
+```bash
+terminal-browser open github.com      # この pane で開く
+terminal-browser --split right        # 右に Rex の split を作って開く
+terminal-browser new-tab github.com
+terminal-browser ls
+terminal-browser upgrade
+```
+
+`--size` による split 比率の指定は、driver が `REX_SESSION` を参照するため効かない。Rex Server 0.1.0-preview.23 以降は新しい terminal に `REX_SESSION` を設定しない（同 release note）。telemetry は `DO_NOT_TRACK=1` で無効化できる。
 
 ## 検証
 
