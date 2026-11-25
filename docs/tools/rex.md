@@ -143,7 +143,7 @@ plugin が別の binary を必要とする場合、binary は [新ツール追�
 
 ## terminal-browser
 
-[terminal-browser](https://github.com/zenbu-labs/terminal-browser) は pane 内に実ブラウザを描画する。Rex 用の driver を内蔵し、`REX_BLOCK` で Rex を検出して `rex split` / `rex focus` / `rex send` などの CLI で Rex 自身の split と tab を操作する。Rex 側の設定は不要。導入は macOS が `config/Brewfile` の cask、Linux が `config/tools.linux.bash` の公式 installer（`~/.local/bin`、sudo 不要）。
+[terminal-browser](https://github.com/zenbu-labs/terminal-browser) は pane 内に実ブラウザを描画する。Rex 用の driver を内蔵し、`REX_BLOCK` で Rex を検出して `rex split` / `rex focus` / `rex send` などの CLI で Rex 自身の split と tab を操作する。Rex 側の設定は不要。導入は macOS が `config/Brewfile` の cask、Linux が `config/tools.linux.bash` の公式 installer（`~/.local/bin`、sudo 不要）。zsh では abbreviation `tb` で `terminal-browser` に展開する。
 
 ```bash
 terminal-browser open github.com      # この pane で開く
