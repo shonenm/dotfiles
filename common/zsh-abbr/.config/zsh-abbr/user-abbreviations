@@ -41,6 +41,9 @@ abbr zshrc="code ~/.zshrc"
 abbr v="nvim"
 abbr vimconf="code ~/.config/nvim/init.vim"
 
+# terminal-browser
+abbr tb="terminal-browser"
+
 # Tmux
 abbr tm="tmux"
 abbr tmconf="code ~/.config/tmux/tmux.conf"
