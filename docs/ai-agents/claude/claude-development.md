@@ -41,6 +41,8 @@ docs/ai-agents/ralph/       # Ralph利用文書
 
 `~/.claude/settings.json`は`templates/claude-settings.json`を`install.sh`が既存設定へmergeする。`permissions.deny`はsecretの読み取りとcatch-all staging（`git add -A` / `.` / `-u`、`git commit -a`）を拒否し、`permissions.ask`はmerge・force push・既定ブランチ名を指定したpushを確認する。共通hookは`UserPromptSubmit`、tool実行、permission、Stop/StopFailure、SessionEndをtmux状態へ正規化する。現在の対応表は[AI agent状態管理](../../specs/agent-stop-notification.md)を参照。
 
+`env.CLAUDE_CODE_EXPERIMENTAL_CODE_MODE`で実験的なCode Modeを有効にする。対話セッションでのみ効き、`claude -p`やAgent SDKでは`--settings`の`env`に渡したときだけ有効になる。
+
 **Note**: skill frontmatter で定義された hooks (PreToolUse, PostToolUse, Stop) はグローバルにロードされます。
 
 ## Hooks
