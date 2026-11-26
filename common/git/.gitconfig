@@ -64,6 +64,13 @@
     autoStash = true
     updateRefs = true
 
+# === Maintenance ===
+# The incremental strategy set by `git maintenance register` never runs gc, so
+# lazily fetched promisor packs in partial clones pile up. Run gc daily.
+[maintenance "gc"]
+    enabled = true
+    schedule = daily
+
 # === Rerere (Reuse Recorded Resolution) ===
 [rerere]
     enabled = true
