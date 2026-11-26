@@ -407,6 +407,24 @@ cd ~/dotfiles && git pull
 | `rerere.enabled` | true | Record and reuse conflict resolutions |
 | `rerere.autoupdate` | true | Auto-apply recorded resolutions |
 
+### Maintenance
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `maintenance.gc.enabled` | true | `git maintenance run` の対象に gc を含める |
+| `maintenance.gc.schedule` | daily | daily timer で gc を実行する |
+
+`git maintenance start` で登録したリポジトリは `maintenance.strategy = incremental` になり、この strategy は gc を実行しない。partial clone (`blob:none`) では作業中に遅延取得した blob が promisor pack として溜まり続けるため、gc を daily で明示的に有効化して pack を統合する。`maintenance.<task>.schedule` は strategy の割り当てより優先される。
+
+```bash
+# 登録済みリポジトリと timer の確認
+git config --global --get-all maintenance.repo
+systemctl --user list-timers 'git-maintenance@*'   # Linux
+
+# gc が daily で起動することの確認
+GIT_TRACE=1 git maintenance run --schedule=daily 2>&1 | grep 'run_command: git gc'
+```
+
 ### Branch/Tag Display
 
 | Setting | Value | Description |
