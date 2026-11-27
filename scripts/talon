@@ -1,0 +1,37 @@
+#!/bin/bash
+# Talon の音声操作を切り替える。
+#   off      音声認識を止める。ポップ音での Aqua Voice の起動も止まる
+#   pop      ポップ音での Aqua Voice の開始・送信だけ
+#   rex      pop + Rex の zoom
+#   tabs     rex + tab 名での移動
+#   pops N   Aqua Voice の録音開始に要るポップ音の回数
+# Usage: talon [off|pop|rex|tabs]  (引数なしは現在の段階を表示)
+#        talon pops [N]            (N なしは現在の回数を表示)
+
+# Raycast Script Command として登録できる。
+# @raycast.schemaVersion 1
+# @raycast.title Talon Voice Level
+# @raycast.mode compact
+# @raycast.packageName Dotfiles
+# @raycast.argument1 { "type": "dropdown", "placeholder": "level", "optional": true, "data": [{"title": "off", "value": "off"}, {"title": "pop", "value": "pop"}, {"title": "rex", "value": "rex"}, {"title": "tabs", "value": "tabs"}] }
+
+set -euo pipefail
+
+usage() { echo "Usage: talon [off|pop|rex|tabs] | talon pops [N]" >&2; exit 1; }
+
+case "${1:-}" in
+  ""|off|pop|rex|tabs) call="talon_voice_level(\"${1:-}\")"; label="Talon voice"; valid='^(off|pop|rex|tabs)$' ;;
+  pops)
+    count="${2:-0}"
+    [[ "$count" =~ ^[0-9]+$ ]] || usage
+    call="aqua_pop_count($count)"; label="Aqua start pops"; valid='^[1-9][0-9]*$' ;;
+  *) usage ;;
+esac
+
+repl="$HOME/.talon/bin/repl"
+[[ -x "$repl" ]] || { echo "Talon が見つかりません" >&2; exit 1; }
+
+# repl は先頭に banner を出すため最後の行だけ使う。Talon が起動していなければ接続に失敗する。
+state=$(printf 'from talon import actions\nprint(actions.user.%s)\n' "$call" | "$repl" 2>&1 | tail -n 1)
+[[ "$state" =~ $valid ]] || { echo "Talon に接続できません: $state" >&2; exit 1; }
+echo "$label: $state"
