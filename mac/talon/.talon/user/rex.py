@@ -21,7 +21,7 @@ mod.tag("rex_commands", desc="rex.talon の zoom を有効にする")
 mod.tag("rex_tabs", desc="rex.talon の tab 名での移動を有効にする")
 # 同じ tab 名を続けて言われたら、その中の agent pane を順に移る。
 last_target = None
-# talon-speech で段階的に切り替える。Talon の再起動や rex.py の reload で pop に戻る。
+# talon コマンドで段階的に切り替える。Talon の再起動や rex.py の reload で pop に戻る。
 level_ctx = Context()
 LEVELS = {"pop": [], "rex": ["user.rex_commands"], "tabs": ["user.rex_commands", "user.rex_tabs"]}
 

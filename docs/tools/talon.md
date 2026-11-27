@@ -1,6 +1,6 @@
 # Talon
 
-> **由来:** **Upstream** Talon 本体 (`cask "talon"`) / **Configuration** `mac/talon/` / **Custom** `mac/talon/.talon/user/aqua_pop.py`、`scripts/talon-speech`、`rex.py` / `rex.talon` / `settings.talon`、`common/rex/.config/rex/voice.lua`
+> **由来:** **Upstream** Talon 本体 (`cask "talon"`) / **Configuration** `mac/talon/` / **Custom** `mac/talon/.talon/user/aqua_pop.py`、`scripts/talon`、`rex.py` / `rex.talon` / `settings.talon`、`common/rex/.config/rex/voice.lua`
 
 macOS のみ。キーボードを使わずに Aqua Voice の音声入力を開始・送信するため、Talon のノイズ認識（ポップ音）を使う。Rex が前面のときは、英語の音声コマンドで pane と tab を操作する。
 
@@ -10,11 +10,10 @@ macOS のみ。キーボードを使わずに Aqua Voice の音声入力を開�
 
 | 状態 | 操作 | 送るキー | Aqua Voice の動作 |
 |---|---|---|---|
-| 録音していない | 0.5 秒以内に 2 回ポップ | `F12` | hands-free で入力開始 |
+| 録音していない | 0.5 秒以内の間隔で 2 回ポップ（回数は変更可） | `F12` | hands-free で入力開始 |
 | 録音中 | 1 回ポップ | `F10` | 送信 |
 
-Talon のポップ検出には感度設定がなく、物音でも反応するため、開始だけ 2 連続のポップを要求する。間隔は `aqua_pop.py` の `DOUBLE_POP_WINDOW` で変える。
-
+Talon のポップ検出には感度設定がなく、物音でも反応するため、開始だけ連続したポップを要求する。回数は `talon pops N` で変え（既定 2、Talon の再起動や `aqua_pop.py` の reload で 2 に戻る）、ポップの間隔は `aqua_pop.py` の `POP_WINDOW` で変える。
 Aqua Voice の録音状態は外部から取得できないため、状態は Talon 側で交互に切り替えるだけである。Esc や「送信して」で入力を終えると順序がずれるので、空打ちのポップを 1 回入れて戻す。
 
 ## セットアップ
@@ -26,7 +25,7 @@ Aqua Voice の録音状態は外部から取得できないため、状態は Ta
 
 ## Rex の音声コマンド
 
-`rex.talon` は、Rex が前面にあり、Aqua Voice が録音中でなく、`talon-speech` でその段階まで有効にしたときだけ反応する。Rex 以外が前面のときは何を言っても動かない。Talon のコマンド認識（Conformer）は英語のみのため、コマンドは英単語にしている。
+`rex.talon` は、Rex が前面にあり、Aqua Voice が録音中でなく、`talon` でその段階まで有効にしたときだけ反応する。Rex 以外が前面のときは何を言っても動かない。Talon のコマンド認識（Conformer）は英語のみのため、コマンドは英単語にしている。
 
 | 発話 | 動作 |
 |---|---|
@@ -44,7 +43,7 @@ tab の取得は `voice.lua` の `dotfiles_voice_tabs` を `rex do` で script �
 
 ## 音声操作の段階
 
-`talon-speech` で音声操作を段階的に切り替える。周りに人がいるときは `pop`、いないときは `tabs` のように使い分ける。
+`talon` で音声操作を段階的に切り替える。周りに人がいるときは `pop`、いないときは `tabs` のように使い分ける。
 
 | 段階 | 有効になるもの |
 |---|---|
@@ -54,10 +53,12 @@ tab の取得は `voice.lua` の `dotfiles_voice_tabs` を `rex do` で script �
 | `tabs` | `rex` + tab 名での移動 |
 
 ```bash
-talon-speech            # 現在の段階を表示
-talon-speech pop
-talon-speech tabs
-talon-speech off
+talon            # 現在の段階を表示
+talon pop
+talon tabs
+talon off
+talon pops      # 録音開始に要るポップ音の回数を表示
+talon pops 3
 ```
 
 段階は Talon の再起動や `rex.py` の reload で `pop` に戻る。Talon の REPL（`~/.talon/bin/repl`）経由で `user.talon_voice_level` を呼ぶため、Talon が起動している必要がある。Raycast から使う場合は、Settings > Extensions > Script Commands > Add Directories で `~/dotfiles/scripts` を追加すると、段階を選べる「Talon Voice Level」が出る（Raycast の見出しを持つファイルだけが登録される）。
