@@ -94,6 +94,8 @@ if [ -n "$param_summary" ]; then
   model_label="${model_label} ${param_summary}"
 fi
 [ "$max_mode" = "1" ] && model_label="${model_label} MAX"
+# claude-as はアカウントごとに CLAUDE_CONFIG_DIR を分ける。既定アカウント (~/.claude) では出さない
+[ "$host" = "claude" ] && [ -n "${CLAUDE_CONFIG_DIR:-}" ] && model_label="${model_label} @${CLAUDE_CONFIG_DIR##*/}"
 
 # --- Cost / duration / lines (Claude-heavy; Cursor usually empty) ---
 cost_str=""

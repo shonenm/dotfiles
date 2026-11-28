@@ -26,6 +26,10 @@ claude-as work -c # 引数はそのまま claude に渡る
 
 symlink は起動ごとに作るため、`~/.claude` に後から増えた項目も追従する。
 
+## statusline 表示
+
+statusline のモデル名の後ろに `@<name>` を付け、どのアカウントの認証情報で動いているかを示す。`scripts/statusline-render.sh` が `CLAUDE_CONFIG_DIR` の末尾を名前として使う。既定アカウントでは何も付けない。
+
 ## 使用量表示
 
 `ai-usage claude` は既定アカウントに続けて `claude-accounts/` 配下の全アカウントを名前順に出す。label は `utokyo current` / `utokyo weekly` のように名前を前置する。tmux sidebar・tuios の `tui usage`・rex の Metadata ポップアップはこの出力をそのまま表示する。
