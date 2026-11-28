@@ -16,6 +16,10 @@
 - タスクが 1 件もないまま 3 回目の編集（Edit / Write / NotebookEdit）をしようとすると、セッションにつき 1 回だけ拒否して分解を促す。サブエージェントの編集は数えない
 - 作業中のタスクがあるのに、編集した turn で一度もタスクを更新せずに終えようとすると 1 回だけ差し戻す。調査だけの turn は対象外
 
+## 明示的な登録
+
+`/d-tasks` で、会話で決めた計画やロードマップを PR 単位のタスクに分解して登録できる（[スキル](claude-skills.md#d-tasks)）。
+
 ## 導入
 
 `install.sh` の `install_dotfiles_claude_plugins` が `claude-plugins/` を folder marketplace `dotfiles` として登録し、`task-progress@dotfiles` を導入する。相対 source の plugin は folder から直接読まれるため、編集後は `/reload-plugins` で反映される。

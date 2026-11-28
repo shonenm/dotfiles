@@ -12,6 +12,7 @@ Claude Code で使用可能なカスタムスキルのリファレンス。
 | `/d-commit` | セッション内の変更を分析してコミット作成 |
 | `/d-diff-explain` | hunk 単位の解説つき差分ビュー HTML を生成 |
 | `/d-news` | プロファイルベースのパーソナライズドニュース収集 |
+| `/d-tasks` | 計画を PR 単位のタスクに分解してタスク一覧に登録 |
 | `/d-setup-rcon-target` | rcon ターゲットの登録 + 接続検証 + docker mount スニペット生成 |
 | `/d-update-md` | セッション内の変更に関連するドキュメント更新 |
 
@@ -239,6 +240,24 @@ interests:
 - container: docker daemon と docker CLI 利用可能
 
 詳細は[rconセットアップ](../../infrastructure/rcon-setup.md)。
+
+## /d-tasks
+
+会話で決めた計画やロードマップを PR 単位のタスクに分解し、タスク一覧に登録します。進捗は [task-progress](claude-task-progress.md) がプロンプトの上に表示します。
+
+### 使い方
+
+```
+/d-tasks                         # 会話で合意した計画を登録
+/d-tasks docs/roadmap.md         # ファイルから登録
+/d-tasks reset                   # 未完了タスクを消して登録し直す
+```
+
+### 動作
+
+1. 既存タスクを確認（未完了があれば追加か置き換えかを確認）
+2. PR が複数なら 1 PR = 1 タスク（`PR<n>: <内容>`）、1 PR ならステップ単位で登録
+3. 登録結果を報告
 
 ## /d-update-md
 
