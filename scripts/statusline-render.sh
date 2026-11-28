@@ -97,8 +97,8 @@ fi
 # claude-as はアカウントごとに CLAUDE_CONFIG_DIR を分ける。未設定なら既定アカウント (~/.claude)
 if [ "$host" = "claude" ]; then
   _acct="${CLAUDE_CONFIG_DIR:-}"
-  model_label="${model_label} @${_acct:+${_acct##*/}}"
-  [ -z "$_acct" ] && model_label="${model_label}default"
+  _acct="${_acct##*/}"
+  model_label="${model_label} @${_acct:-default}"
 fi
 
 # --- Cost / duration / lines (Claude-heavy; Cursor usually empty) ---
