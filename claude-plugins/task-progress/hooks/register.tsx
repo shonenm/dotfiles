@@ -7,8 +7,9 @@ const tasks = atom({ plugin: 'task-progress', key: 'tasks' } as const, [], { sha
 const isListOpen = atom({ plugin: 'task-progress', key: 'isListOpen' } as const, false)
 
 const BAR = 20
-// 進捗率でゲージの色を変える: 半分未満は黄、半分以上は水色、完了で緑
-const gaugeColor = (ratio: number) => (ratio >= 1 ? 'green' : ratio >= 0.5 ? 'cyan' : 'yellow')
+// 進捗率でゲージの色を変える: 1/3 未満は赤、2/3 未満は黄、完了前は水色、完了で緑
+const gaugeColor = (ratio: number) =>
+  ratio >= 1 ? 'green' : ratio >= 2 / 3 ? 'cyan' : ratio >= 1 / 3 ? 'yellow' : 'red'
 // タスクが1件もないまま編集できる回数。これを超える最初の編集を1回だけ止める
 const EDITS_BEFORE_PLAN = 2
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit'])
