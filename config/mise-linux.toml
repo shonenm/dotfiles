@@ -42,7 +42,7 @@
 "aqua:typst/typst" = "latest"
 "aqua:direnv/direnv" = "latest"
 
-# --- github backend (aqua 未収録の 8 tools) ---
+# --- github backend (aqua 未収録の 9 tools) ---
 "github:Gaurav-Gosain/tuios" = "0.10.1"
 "github:ivaaaan/smug" = "latest"
 "github:MilesCranmer/rip2[exe=rip]" = "latest"
@@ -51,6 +51,9 @@
 "github:achristmascarl/rainfrog" = "latest"
 "github:lemonade-command/lemonade" = "latest"
 "github:Mikescher/better-docker-ps[exe=dops]" = "latest"
+# gittype 0.10.5 のソースビルドは rustc の trait solver で 1 時間以上止まるため、
+# GitHub Release のバイナリを使う。Linux 版は glibc 2.39 以上を要求する。
+"github:unhappychoice/gittype" = "latest"
 
 # --- cargo ---
 "cargo:grex" = "latest"

@@ -107,11 +107,6 @@ TOOL_gitabsorb_method="cargo"
 TOOL_gitabsorb_cargo_crate="git-absorb"
 TOOL_gitabsorb_depends_on="rust"
 
-TOOL_gittype_check_cmd="gittype"
-TOOL_gittype_method="cargo"
-TOOL_gittype_cargo_crate="gittype"
-TOOL_gittype_depends_on="rust"
-
 TOOL_cargoupdate_check_cmd="cargo-install-update"
 TOOL_cargoupdate_method="cargo"
 TOOL_cargoupdate_cargo_crate="cargo-update"
@@ -185,12 +180,12 @@ LINUX_TOOL_ORDER=(
   # APT-only (skipped on Alpine)
   gh eza bat postgresql
   # Cargo tools (depend on rust)
-  tokei procs quay gitabsorb cargoupdate gittype tmuxexpose
+  tokei procs quay gitabsorb cargoupdate tmuxexpose
   # Python tools (depend on uv)
   pgcli termaid
 )
 # GitHub-release tools (fzf, fastfetch, delta, lazygit, ghq, smug, dops, yazi,
 # rainfrog, typst, just, watchexec, hyperfine, gitleaks, xh, ouch, glow, gum, viddy,
-# doggo, topgrade, grex, sesh, lemonade, neovim, direnv, sd, dust,
+# doggo, topgrade, gittype, grex, sesh, lemonade, neovim, direnv, sd, dust,
 # bottom, rip2, lsd, tealdeer) are installed via mise — see config/mise-linux.toml
 # and the mise block in scripts/linux.sh. They no longer use the eval/scrape engine.

@@ -1072,6 +1072,35 @@ url = "https://github.com/shonenm/live-pr/releases/download/v2.0.0-alpha.1/live-
 url_api = "https://api.github.com/repos/shonenm/live-pr/releases/assets/738911813"
 provenance = "github-attestations"
 
+[[tools."github:unhappychoice/gittype"]]
+version = "0.10.5"
+backend = "github:unhappychoice/gittype"
+specifiers = ["latest"]
+
+[tools."github:unhappychoice/gittype"."platforms.linux-arm64"]
+checksum = "sha256:99bae9803a5b697234a681eca127ee41c624fc84539faf30fb1a2fe38082d5a7"
+checksum_source = "mise-versions"
+url = "https://github.com/unhappychoice/gittype/releases/download/v0.10.5/gittype-v0.10.5-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/unhappychoice/gittype/releases/assets/747755221"
+
+[tools."github:unhappychoice/gittype"."platforms.linux-x64"]
+checksum = "sha256:b96a20bef9e5bc1b1cf22d15cb76a4f45efc120cb44f39ec56b1170149f2631c"
+checksum_source = "mise-versions"
+url = "https://github.com/unhappychoice/gittype/releases/download/v0.10.5/gittype-v0.10.5-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/unhappychoice/gittype/releases/assets/747754967"
+
+[tools."github:unhappychoice/gittype"."platforms.macos-arm64"]
+checksum = "sha256:4c87b6206ff3db3aa8c3130a214145f789e9325dfa5534e9e4037253d84e85ea"
+checksum_source = "mise-versions"
+url = "https://github.com/unhappychoice/gittype/releases/download/v0.10.5/gittype-v0.10.5-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/unhappychoice/gittype/releases/assets/747750428"
+
+[tools."github:unhappychoice/gittype"."platforms.macos-x64"]
+checksum = "sha256:bd3b789b44aeb9789a8a317be3b698498531c2e26e726673e85f7d93e2f515cd"
+checksum_source = "mise-versions"
+url = "https://github.com/unhappychoice/gittype/releases/download/v0.10.5/gittype-v0.10.5-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/unhappychoice/gittype/releases/assets/747762598"
+
 [[tools.go]]
 version = "1.27.4"
 backend = "core:go"
