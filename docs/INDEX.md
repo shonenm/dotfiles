@@ -48,6 +48,7 @@
 - [Beacon連携](ai-agents/claude/claude-beacon.md)
 - [Neovim連携](ai-agents/claude/claude-neovim.md)
 - [ccusage](ai-agents/claude/ccusage.md)
+- [タスク進捗表示](ai-agents/claude/claude-task-progress.md)
 
 ### その他
 

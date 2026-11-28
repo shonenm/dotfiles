@@ -7,6 +7,7 @@ macOS / Linux の開発環境設定を GNU Stow で管理する。
 - `common/` — 共通設定
 - `mac/` / `linux/` — OS 固有設定
 - `config/` — パッケージ・ツールの宣言
+- `claude-plugins/` — Claude Code の mod（folder marketplace `dotfiles`）
 - `scripts/` — インストーラーとユーザー向けコマンド
 - `docs/` — 利用手順と設計資料
 - `install.sh` — 全環境共通の入口
