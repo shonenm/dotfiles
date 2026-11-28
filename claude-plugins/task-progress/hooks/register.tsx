@@ -7,6 +7,8 @@ const tasks = atom({ plugin: 'task-progress', key: 'tasks' } as const, [], { sha
 const isListOpen = atom({ plugin: 'task-progress', key: 'isListOpen' } as const, false)
 
 const BAR = 20
+// 進捗率でゲージの色を変える: 半分未満は黄、半分以上は水色、完了で緑
+const gaugeColor = (ratio: number) => (ratio >= 1 ? 'green' : ratio >= 0.5 ? 'cyan' : 'yellow')
 // タスクが1件もないまま編集できる回数。これを超える最初の編集を1回だけ止める
 const EDITS_BEFORE_PLAN = 2
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'NotebookEdit'])
@@ -127,7 +129,7 @@ export const register: Register = on => {
       <Box flexDirection="column">
         <Box>
         <Text>
-          <Text color={done === list.length ? 'green' : undefined}>{'█'.repeat(filled)}</Text>
+          <Text color={gaugeColor(done / list.length)}>{'█'.repeat(filled)}</Text>
           <Text dimColor>{'░'.repeat(BAR - filled)}</Text> {done}/{list.length}
           {current ? `  ▸ ${current.subject}` : ''}
         </Text>

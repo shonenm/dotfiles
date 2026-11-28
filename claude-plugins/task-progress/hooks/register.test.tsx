@@ -40,6 +40,8 @@ test('タスクの作成・更新がバーと一覧に出て、未更新の作�
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
     expect((await ui.find({ type: 'Text', text: /1\/2/ }))?.text).toMatch(/1\/2 {2}▸ PR2/)
+    // 1/2 完了なので半分以上の色
+    expect((await ui.find({ type: 'Text', text: /^█+$/ }))?.props.color).toBe('cyan')
     expect(await ui.find({ type: 'Text', text: /\[x\] PR1/ })).toBeUndefined()
     await ui.unmount()
   }
