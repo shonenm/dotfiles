@@ -60,7 +60,7 @@ printf '%s\n' "$out" | grep -q 'Opus 5' || fail "claude model: $out"
 printf '%s\n' "$out" | grep -q '\$1.2500' || fail "claude cost: $out"
 printf '%s\n' "$out" | grep -qv 'cursor ' || fail "claude should not show cursor plan: $out"
 [[ -f "$TMP/state/claude/statusline-input.json" ]] || fail "claude state file not written"
-printf '%s\n' "$out" | grep -q '@' && fail "default account should not show account: $out"
+printf '%s\n' "$out" | grep -q 'Opus 5 @default' || fail "default account missing: $out"
 out=$(CLAUDE_CONFIG_DIR="$TMP/claude-accounts/work" run claude "$claude_json")
 printf '%s\n' "$out" | grep -q 'Opus 5 @work' || fail "claude-as account missing: $out"
 

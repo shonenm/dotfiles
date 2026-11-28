@@ -28,7 +28,7 @@ symlink は起動ごとに作るため、`~/.claude` に後から増えた項目
 
 ## statusline 表示
 
-statusline のモデル名の後ろに `@<name>` を付け、どのアカウントの認証情報で動いているかを示す。`scripts/statusline-render.sh` が `CLAUDE_CONFIG_DIR` の末尾を名前として使う。既定アカウントでは何も付けない。
+statusline のモデル名の後ろに `@<name>` を付け、どのアカウントの認証情報で動いているかを示す。`scripts/statusline-render.sh` が `CLAUDE_CONFIG_DIR` の末尾を名前として使う。既定アカウントでは `@default` を付ける。
 
 ## 使用量表示
 
