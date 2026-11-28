@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "dotfiles",
+  "description": "dotfiles で管理する Claude Code の mod",
+  "owner": {
+    "name": "shonenm"
+  },
+  "plugins": [
+    {
+      "name": "task-progress",
+      "description": "タスク一覧を進捗バーとチェックリストでプロンプトの上に表示する",
+      "source": "./task-progress"
+    }
+  ]
+}

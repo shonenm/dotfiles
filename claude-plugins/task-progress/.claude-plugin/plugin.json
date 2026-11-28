@@ -1,0 +1,6 @@
+{
+  "name": "task-progress",
+  "version": "0.1.0",
+  "description": "Claude Code のタスク一覧を進捗バーとチェックリストでプロンプトの上に常時表示する",
+  "types": "./types/index.d.ts"
+}

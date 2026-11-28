@@ -245,6 +245,25 @@ install_pstack() {
   log_success "pstack plugin installed"
 }
 
+# dotfiles の claude-plugins/ を folder marketplace として登録する。
+# 相対 source の plugin は folder から直接読まれるため、編集は /reload-plugins で反映される
+install_dotfiles_claude_plugins() {
+  if ! command_exists claude; then
+    log_warn "claude CLI not found, skipping dotfiles Claude plugins"
+    return
+  fi
+
+  if ! claude plugin marketplace list 2>/dev/null | grep -q "^  ❯ dotfiles$"; then
+    claude plugin marketplace add "$DOTFILES_DIR/claude-plugins"
+  fi
+  if claude plugin list 2>/dev/null | grep -q "task-progress@dotfiles"; then
+    log_success "task-progress plugin already installed"
+    return
+  fi
+  claude plugin install task-progress@dotfiles
+  log_success "task-progress plugin installed"
+}
+
 install_code_review_graph() {
   if ! command_exists uv; then
     log_warn "uv not found, skipping code-review-graph"
